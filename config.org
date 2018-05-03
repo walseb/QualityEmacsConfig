@@ -141,6 +141,18 @@ use =M-x gnus-agent-add-server=
 *** Mail server mails aren't marked as read when marking as read in gnus, and gnus isn't marking them as read either after exit
 You have to press =q= in order to save changes
 
+* Theme
+#+BEGIN_SRC emacs-lisp
+(use-package twilight-anti-bright-theme)
+(load-theme 'twilight-anti-bright t)
+#+END_SRC
+
+* Generic functions
+** Give buffer unique name
+#+BEGIN_SRC emacs-lisp
+  (defun give-buffer-unique-name(base-name)
+    (rename-buffer base-name t))
+#+END_SRC
 * Startup processes 
 ** Benchmark startup time
 #+BEGIN_SRC emacs-lisp
@@ -506,6 +518,12 @@ Help mode doesn't have a normal mode or insert mode, so just overwrite help-mode
 Disable rainbow delimiters
 #+BEGIN_SRC emacs-lisp
   (add-hook 'eshell-mode-hook 'rainbow-delimiters-mode-disable)
+#+END_SRC
+
+** Generate unique name
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'eshell-mode-hook `(lambda () (interactive)
+                                 (give-buffer-unique-name "*eshell*")))
 #+END_SRC
 
 ** Keys
@@ -1565,10 +1583,65 @@ More rebind options and more reliable
   (exwm-enable)
 #+END_SRC
 
+** Name buffers after window name
+We use class names for all windows expect for Java applications and GIMP (because of problems with those).
+#+BEGIN_SRC emacs-lisp
+(add-hook 'exwm-update-class-hook
+          (lambda ()
+            (unless (or (string-prefix-p "sun-awt-X11-" exwm-instance-name)
+                        (string= "gimp" exwm-instance-name))
+              (exwm-workspace-rename-buffer exwm-class-name))))
+(add-hook 'exwm-update-title-hook
+          (lambda ()
+            (when (or (not exwm-instance-name)
+                      (string-prefix-p "sun-awt-X11-" exwm-instance-name)
+                      (string= "gimp" exwm-instance-name))
+              (exwm-workspace-rename-buffer exwm-title))))
+#+END_SRC
+
+** Launch programs with hotkeys
+*** Define functions
+Define main function
+#+BEGIN_SRC emacs-lisp
+  (defun exwm-async-run (name)
+    (interactive)
+    (start-process name nil name))
+#+END_SRC
+
+*** Run programs functions
+#+BEGIN_SRC emacs-lisp
+;;  (defun my/launch-browser ()
+;;    (interactive)
+;;    (exwm-async-run "firefox"))
+
+;;  (global-set-key (kbd "s-b") 'my/launch-browser)
+;;  (define-key leader-map (kbd "x b") 'my/launch-browser)
+
+  (defun my/launch-virt-manager ()
+    (interactive)
+    (exwm-async-run "virt-manager"))
+
+  (global-set-key (kbd "s-z") 'my/launch-virt-manager)
+  (define-key leader-map (kbd "x z") 'my/launch-virt-manager)
+
+  (defun lock-screen ()
+    (interactive)
+    (exwm-async-run "slock"))
+
+  (global-set-key (kbd "<XF86ScreenSaver>") 'lock-screen)
+  (define-key leader-map (kbd "x l") 'lock-screen)
+#+END_SRC
+
+** Systembar
+#+BEGIN_SRC emacs-lisp
+;; (require 'exwm-systemtray)
+;; (exwm-systemtray-enable)
+#+END_SRC
+
 ** Keys
 #+BEGIN_SRC emacs-lisp
   ;; a n e t o s h d i r
-  (global-set-key (kbd "s-a") `(lambda () (interactive)
+(global-set-key (kbd "s-a") `(lambda () (interactive)
                                  (exwm-workspace-switch-create 0)))
   (exwm-input-set-key (kbd "s-a") `(lambda () (interactive)
                                      (exwm-workspace-switch-create 0)))
@@ -1699,61 +1772,6 @@ More rebind options and more reliable
   ;; Enter and exit char mode
   (exwm-input-set-key (kbd "s-j") 'exwm-input-grab-keyboard)
   (exwm-input-set-key (kbd "s-k") 'exwm-input-release-keyboard)
-#+END_SRC
-
-** Name buffers after window name
-We use class names for all windows expect for Java applications and GIMP (because of problems with those).
-#+BEGIN_SRC emacs-lisp
-(add-hook 'exwm-update-class-hook
-          (lambda ()
-            (unless (or (string-prefix-p "sun-awt-X11-" exwm-instance-name)
-                        (string= "gimp" exwm-instance-name))
-              (exwm-workspace-rename-buffer exwm-class-name))))
-(add-hook 'exwm-update-title-hook
-          (lambda ()
-            (when (or (not exwm-instance-name)
-                      (string-prefix-p "sun-awt-X11-" exwm-instance-name)
-                      (string= "gimp" exwm-instance-name))
-              (exwm-workspace-rename-buffer exwm-title))))
-#+END_SRC
-
-** Launch programs with hotkeys
-*** Define functions
-Define main function
-#+BEGIN_SRC emacs-lisp
-  (defun exwm-async-run (name)
-    (interactive)
-    (start-process name nil name))
-#+END_SRC
-
-*** Run programs functions
-#+BEGIN_SRC emacs-lisp
-;;  (defun my/launch-browser ()
-;;    (interactive)
-;;    (exwm-async-run "firefox"))
-
-;;  (global-set-key (kbd "s-b") 'my/launch-browser)
-;;  (define-key leader-map (kbd "x b") 'my/launch-browser)
-
-  (defun my/launch-virt-manager ()
-    (interactive)
-    (exwm-async-run "virt-manager"))
-
-  (global-set-key (kbd "s-z") 'my/launch-virt-manager)
-  (define-key leader-map (kbd "x z") 'my/launch-virt-manager)
-
-  (defun lock-screen ()
-    (interactive)
-    (exwm-async-run "slock"))
-
-  (global-set-key (kbd "<XF86ScreenSaver>") 'lock-screen)
-  (define-key leader-map (kbd "x l") 'lock-screen)
-#+END_SRC
-
-** Systembar
-#+BEGIN_SRC emacs-lisp
-;; (require 'exwm-systemtray)
-;; (exwm-systemtray-enable)
 #+END_SRC
 
 * Version control
@@ -2391,17 +2409,17 @@ Create =.gnus.el=, which gnus reads from
 #+END_SRC
 
 * Browser
-** Default browser
+** Set default browser
 #+BEGIN_SRC emacs-lisp
   ;;  (setq browse-url-browser-function 'browse-url-generic
   ;;        browse-url-generic-program "firefox")
   (setq-default browse-url-browser-function 'eww-browse-url)
 #+END_SRC
 
-** Keys
+** Generate unique name
 #+BEGIN_SRC emacs-lisp
-  (evil-define-key 'normal eww-mode-map (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
-  (evil-define-key 'normal eww-mode-map (kbd "M-p") 'my/avy-goto-line-above-keep-horizontal-position)
+  (add-hook 'eshell-mode-hook `(lambda () (interactive)
+                                 (give-buffer-unique-name "eww")))
 #+END_SRC
 
 ** webjump
@@ -2449,8 +2467,12 @@ Create =.gnus.el=, which gnus reads from
     (setq browse-url-browser-function old-browser))
 #+END_SRC
 
-*** Keys
+** Keys
 #+BEGIN_SRC emacs-lisp
+  (evil-define-key 'normal eww-mode-map (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
+  (evil-define-key 'normal eww-mode-map (kbd "M-p") 'my/avy-goto-line-above-keep-horizontal-position)
+  
+  ;; Webjump
   (define-key leader-map (kbd "b") 'webjump)
   (define-key leader-map (kbd "C-b") (lambda () (interactive) (my/webjump-use-browser "firefox")))
 #+END_SRC
