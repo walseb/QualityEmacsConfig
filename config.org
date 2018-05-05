@@ -260,6 +260,12 @@ You have to press =q= in order to save changes
     )
 #+END_SRC
 
+** Garbage collection
+#+BEGIN_SRC emacs-lisp
+  (setq gc-cons-threshold 100000000)
+  (add-hook 'exwm-mode-hook 'garbage-collect)
+#+END_SRC
+
 * Evil
 #+BEGIN_SRC emacs-lisp
   (use-package evil)
@@ -274,6 +280,19 @@ You have to press =q= in order to save changes
   (setq evil-want-C-u-scroll t)
   (define-key evil-normal-state-map (kbd "C-u") 'evil-scroll-up)
 
+#+END_SRC
+
+** Disable messages in echo area
+Evil spams message area
+#+BEGIN_SRC emacs-lisp
+(setq
+    evil-emacs-state-message nil
+    evil-operator-state-message nil
+    evil-insert-state-message nil
+    evil-replace-state-message nil
+    evil-motion-state-message nil
+    evil-normal-state-message nil
+    evil-visual-state-message nil)
 #+END_SRC
 
 ** Cursor states
@@ -474,6 +493,16 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 Help mode doesn't have a normal mode or insert mode, so just overwrite help-mode-map directly
 #+BEGIN_SRC emacs-lisp
   (define-key help-mode-map (kbd "C-u") 'evil-scroll-up)
+  (define-key help-mode-map (kbd "t") 'leader-map)
+#+END_SRC
+
+** Midnight mode
+#+BEGIN_SRC emacs-lisp
+  (require 'midnight)
+  (midnight-mode)
+
+  ;; Clear hook events
+  (setq midnight-hook nil)
 #+END_SRC
 
 * Terminal
@@ -974,6 +1003,10 @@ Version 2015-07-30"
 #+END_SRC
 
 * Org
+** Load
+#+BEGIN_SRC emacs-lisp
+(use-package org)
+#+END_SRC
 ** Babel
 *** Supported runnable languages
   (org-babel-do-load-languages
@@ -1268,7 +1301,7 @@ fsharp mode auto-enables quickhelp by default, disable it
 *** Eldoc
 Shows information in echo area
 #+BEGIN_SRC emacs-lisp
-(add-hook 'emacs-lisp-mode-hook 'eldoc-mode)
+  (add-hook 'emacs-lisp-mode-hook 'eldoc-mode)
 #+END_SRC
 
 *** Slime
@@ -1372,7 +1405,6 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 #+BEGIN_SRC emacs-lisp
   (use-package fsharp-mode)
 
-  (setq fsharp-doc-timer 0.05)
   (setq fsharp-doc-idle-delay 0.5)
 
   ;;(setq-default fsharp-indent-offset 2)
@@ -1783,33 +1815,6 @@ Define main function
   (projectile-mode 0)
 #+END_SRC
 
-*** Mode line git 
-When projectile-mode is on, project name is updated on every keypress, here it is fixed
-#+BEGIN_SRC emacs-lisp
-  (defvar my/projectile-mode-line-project-name "")
-
-  (defun my/update-projectile-mode-line-project-name()
-    (interactive)
-    (setq my/projectile-mode-line-project-name (projectile-project-name)))
-#+END_SRC
-
-**** Add hook
-#+BEGIN_SRC emacs-lisp
-  ;; Update when switching buffer
-
-  (add-hook 'switch-window-finish-hook 'my/update-projectile-mode-line-project-name)
-
-  (defvar my/projectile-mode-line-project-name-update-time-interval 5)
-
-  ;; Update git directory in mode line from time to time
-  (run-with-timer 0 my/projectile-mode-line-project-name-update-time-interval
-                  (if (not (eq my/projectile-mode-line-project-name "-"))
-                      'my/update-projectile-mode-line-project-name))
-
-  ;; Update when switching workspace
-  (add-hook 'exwm-workspace-switch-hook 'my/update-projectile-mode-line-project-name)
-#+END_SRC
-
 ** Counsel projectile
 If enabled, auto enables projectile, which has high CPU usage
 #+BEGIN_SRC emacs-lisp
@@ -2090,15 +2095,9 @@ emms doesn't automatically connect to mpd when loading playlist, results in empt
     "Takes a fullscreen screenshot of the current workspace"
     (interactive)
     (when window-system
-    (loop for i downfrom 3 to 1 do
-          (progn
-            (message (concat (number-to-string i) "..."))
-            (sit-for 1)))
-    (message "Cheese!")
-    (sit-for 1)
-    (start-process "screenshot" nil "import" "-window" "root" 
-               (concat (getenv "HOME") "/Pictures/Screenshots/" (subseq (number-to-string (float-time)) 0 10) ".png"))
-    (message "Screenshot taken!")))
+      (sit-for 1)
+      (start-process "screenshot" nil "import" "-window" "root" 
+                     (concat (getenv "HOME") "/Pictures/Screenshots/" (subseq (number-to-string (float-time)) 0 10) ".png"))))
 #+END_SRC
 
 *** Region
@@ -2418,8 +2417,8 @@ Create =.gnus.el=, which gnus reads from
 
 ** Generate unique name
 #+BEGIN_SRC emacs-lisp
-  (add-hook 'eshell-mode-hook `(lambda () (interactive)
-                                 (give-buffer-unique-name "eww")))
+  (add-hook 'eww-mode `(lambda () (interactive)
+                         (give-buffer-unique-name "eww")))
 #+END_SRC
 
 ** webjump
@@ -2427,7 +2426,7 @@ Create =.gnus.el=, which gnus reads from
   (require 'webjump)
   (setq webjump-sites
         (append '(
-                  ("Go" .
+                  (">" .
                    [simple-query "" "" ""])
 
                   ("Discord" . "www.discordapp.com/channels/@me")
@@ -2568,85 +2567,186 @@ Highlight thing under cursor and all other occurrences
 ** Modeline
 *** Visuals
 #+BEGIN_SRC emacs-lisp
-  (set-face-background 'mode-line "#003300")
+  ;;(set-face-background 'mode-line "#003300")
   ;;  (set-face-foreground 'mode-line "#FFFFFF")
-  (set-face-background 'mode-line-inactive "FFFFFF")
+  (set-face-background 'mode-line-inactive "#003300")
+  (set-face-foreground 'mode-line-inactive "#D3D3D3")
 
   ;;(set-face-attribute 'mode-line nil
   ;;                    :box '(:width 1))
 
   ;; Disable border
-  (set-face-attribute 'mode-line nil :box nil)
-  (set-face-attribute 'mode-line-inactive nil :box nil)
+  ;;(set-face-attribute 'mode-line nil :box nil)
+  ;;(set-face-attribute 'mode-line-inactive nil :box nil)
 #+END_SRC
-*** Display total line numbers
+
+*** More hooks
+**** Save buffer hook
 #+BEGIN_SRC emacs-lisp
-  (defvar ml-selected-window nil)
+  (defvar my/save-buffer-hook nil
+    "Runs after buffer is saved with C-x C-s")
 
-  (defvar ml-total-lines nil
-    "Previously recorded total lines in a buffer -- used for inactive windows.")
-  (make-variable-buffer-local 'ml-total-lines)
+  (defun my/save-buffer (&optional arg)
+    (interactive "p")
+    (save-buffer arg)
+    (run-hooks 'my/save-buffer-hook))
 
-  (defun ml-record-selected-window ()
-    (setq ml-selected-window (selected-window)))
-
-  (defun ml-update-all ()
-    (force-mode-line-update t))
-
-  (add-hook 'post-command-hook 'ml-record-selected-window)
-
-  (add-hook 'buffer-list-update-hook 'ml-update-all)
+  (define-key ctl-x-map "\C-s" 'my/save-buffer)
 #+END_SRC
 
-*** Mail
+*** Mode line modules
+**** Display total line numbers
+#+BEGIN_SRC emacs-lisp
+  (defvar my/buffer-total-lines nil)
+
+  (defun my/update-total-lines ()
+    (save-excursion
+      (setq my/buffer-total-lines (format-mode-line "%l" (goto-char (point-max))))))
+
+  (add-hook 'window-configuration-change-hook 'my/update-total-lines)
+  (add-hook 'exwm-workspace-switch-hook 'my/update-total-lines)
+  (add-hook 'my/save-buffer-hook 'my/update-total-lines)
+#+END_SRC
+
+**** Mail
 #+BEGIN_SRC emacs-lisp
   ;;  (display-time-use-mail-icon 1)
   ;;  (setq display-time-mail-directory t)
-
 #+END_SRC
 
-*** Display directory and name
-#+BEGIN_SRC emacs-lisp
-  ;; Print file name + Directory
-;;  (defun mode-line-buffer-file-parent-directory ()
-;;    (when buffer-file-name
-;;      (concat "[" (file-name-nondirectory (directory-file-name (file-name-directory buffer-file-name))) "]")))
-
-  ;; Apply
-;;  (setq-default mode-line-buffer-identification
-;;                (cons (car mode-line-buffer-identification) '((:eval (mode-line-buffer-file-parent-directory)))))
-#+END_SRC
-
-*** Battery
+**** Battery
 If there is a battery, display it in the mode line
 #+BEGIN_SRC emacs-lisp
+  (require 'battery)
+
   (display-battery-mode 1)
   (setq battery-mode-line-format "| %p%% - %t | ")
+  
+  ;; Original function forces mode line update
+  (defun battery-update ()
+    "Update battery status information in the mode line."
+    (let* ((data (and battery-status-function (funcall battery-status-function)))
+           (percentage (car (read-from-string (cdr (assq ?p data))))))
+      (setq battery-mode-line-string
+            (propertize (if (and battery-mode-line-format
+                               (numberp percentage)
+                               (<= percentage battery-mode-line-limit))
+                            (battery-format battery-mode-line-format data)
+                          "")
+                        'face
+                        (and (numberp percentage)
+                           (<= percentage battery-load-critical)
+                           'error)
+                        'help-echo "Battery status information"))))
 #+END_SRC
 
-*** Date and time
+**** Date and time
 Display time and date in good format (also displays CPU load)
 #+BEGIN_SRC emacs-lisp
-  (display-time-mode 1)
+  (defvar my/date "")
+  (defvar my/time "")
 
-  (setq display-time-format "| %H:%M | %d-%m-%Y |")
+  (defun my/update-date ()
+    (interactive)
+    (setq my/date (format-time-string "%d-%m-%Y")))
+
+  (defun my/update-time ()
+    (interactive)
+    (setq my/time (format-time-string "%H:%M")))
+
+  (run-with-timer 0 60 'my/update-time)
+
+
+  ;; Update date now
+  (my/update-date)
+
+  ;; Auto update date at midnight
+  (add-hook 'midnight-hook 'my/update-date)
+#+END_SRC
+
+**** Git branch name
+#+BEGIN_SRC emacs-lisp
+  (require 'vc-git)
+
+  (defvar my/buffer-git-branch "")
+
+  (defun my/update-buffer-git-branch ()
+    (interactive)
+    (setq my/git-branch (car (vc-git-branches))))
+
+  (add-hook 'switch-window-finish-hook 'my/update-buffer-git-branch)
+  (add-hook 'exwm-workspace-switch-hook 'my/update-buffer-git-branch)
+  (add-hook 'window-configuration-change-hook 'my/update-buffer-git-branch)
+#+END_SRC
+
+**** Git project name
+When projectile-mode is on, project name is updated on every keypress, here it is fixed
+#+BEGIN_SRC emacs-lisp
+  (defvar my/projectile-project-name "")
+
+  (defun my/update-projectile-project-name()
+    (interactive)
+    (setq my/projectile-project-name (projectile-project-name)))
+
+  (add-hook 'switch-window-finish-hook 'my/update-projectile-project-name)
+  (add-hook 'exwm-workspace-switch-hook 'my/update-projectile-project-name)
+  (add-hook 'window-configuration-change-hook 'my/update-projectile-project-name)
+
+#+END_SRC
+
+**** Load average
+#+BEGIN_SRC emacs-lisp
+  (defvar my/load-average "")
+
+  (defun my/update-load-average ()
+    (interactive)
+    (setq my/load-average (number-to-string(/ (nth 0 (load-average)) 100.0))))
+
+  (run-with-timer 0 60 'my/update-load-average)
+#+END_SRC
+
+**** Ram usage
+#+BEGIN_SRC emacs-lisp
+ ;; (defvar my/ram-left "")
+
+  ;; Multiply by 10 to keep one decimal when rounding it with ffloor
+;;  (defun my/update-ram-left ()
+  ;;  (interactive)
+ ;;   (setq my/ram-left (number-to-string(/ (ffloor (* (/ (nth 1 (memory-info)) (expt 1024.0 2)) 10)) 10))))
+
+;;  (run-with-timer 0 60 'my/update-ram-left)
+#+END_SRC
+
+*** Minibuffer mode line
+Make mode line appear in echo area instead of in the mode line area. This saves space and makes it so that the mode line can't be split
+#+BEGIN_SRC emacs-lisp
+  (use-package minibuffer-line)
+
+  ;; Disable normal mode line
+  (setq mode-line-format nil)
+  (setq-default mode-line-format nil)
 #+END_SRC
 
 *** Mode line format
 #+BEGIN_SRC emacs-lisp
-  (defun simple-mode-line-render (left right)
+  (defun my/mode-line-align (left right)
     "Return a string of `window-width' length containing LEFT, and RIGHT aligned respectively."
-    (let* ((available-width (- (window-width) (length left) 2)))
+    (let* ((available-width (- (frame-width) (length left) 2)))
       (format (format "%%s %%%ds" available-width) left right)))
 
   (setq-default
-   mode-line-format
+   minibuffer-line-format
    '((:eval
-      (simple-mode-line-render
+      (my/mode-line-align
        ;; left
        (format-mode-line
         (quote
          (
+          ;; exwm workspace number
+          (:eval (number-to-string exwm-workspace-current-index))
+
+          " |"
+
           ;; Print error if any
           "%e"
 
@@ -2654,61 +2754,84 @@ Display time and date in good format (also displays CPU load)
           "%["
 
           ;; Information bar
-          ;; ???
           mode-line-front-space
-          ;; ???
           mode-line-mule-info
-          ;; ???
           mode-line-client
+
           ;; If buffer is modified
           mode-line-modified
+
           ;; Turns into @ when remote
           mode-line-remote
+
 
           " "
 
           ;; Print current line number
-          "%l"
-          "/" 
+          ;;"%l"
+          ;;"/" 
           ;; Print total line number
-          ((:eval
-            (let ((win (selected-window)))
-              (with-current-buffer (window-buffer win)
-                (if (or (eq ml-selected-window win) (null ml-total-lines))
-                    (save-excursion
-                      (goto-char (point-max))
-                      (setq ml-total-lines (format-mode-line "%l")))
-                  ml-total-lines)))))
+          (:eval my/buffer-total-lines)
+
           " | "
 
           ;; Print mode
-          "%m"
-          " - " 
+          "%m "
+          "> " 
           ;; Print buffer name
           "%b"
-          " | " 
 
-          (vc-mode vc-mode)
+          ;; Git branch
+          (:eval (my/update-buffer-git-branch))
+
           ;; Git projectile 
-          (:eval
-           (format "[%s]"
-                   my/projectile-mode-line-project-name))
-
-          " | "
-
-          ;; exwm workspace number
-;;          (exwm-workspace-current-index (format-mode-line "%l"))
- ;;         "|"
-
+          (:eval (if (not (string= my/projectile-project-name "-"))
+                     (progn
+                       (concat " > " 
+                               "@"
+                               "["
+                               my/projectile-project-name
+                               "] "))))
           )))
        ;; right
        (format-mode-line
         (quote
          (
-          "|"
-          mode-line-end-spaces
-          mode-line-misc-info
+
+          ;;       " R: "
+          ;;        (:eval my/ram-left)
+          ;;         "G"
+
+          " GC: "
+          (:eval (number-to-string (truncate gc-elapsed)))
+
+          "("
+          (:eval (number-to-string gcs-done))
+          ")"
+
+          " C: "
+
+          (:eval my/load-average)
+
+          (:eval (if (not (eq battery-mode-line-string ""))
+                     (concat "BAT: " battery-mode-line-string " ")))
+
+          " | "
+
+          (:eval my/time)
+
+          " - "
+
+          (:eval my/date)
+
           )))))))
+#+END_SRC
+
+*** Keep mode line updated
+By default, minibuffer line is updated every 60 seconds, this is good for clocks but not for anything else
+t as last parameter because the mode line should always be updated last, after any changes to its components (such as projectile project name, vc mode, etc)
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'post-command-hook 'minibuffer-line--update t)
 #+END_SRC
 
 * Private config
