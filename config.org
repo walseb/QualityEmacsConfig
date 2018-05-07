@@ -2389,8 +2389,6 @@ Create =.gnus.el=, which gnus reads from
   ;;  (setq my/gnus-random-colors (nth (random (length gnus-logo-color-alist)) gnus-logo-color-alist))
   ;;  (setq gnus-logo-colors  (list (nth 1 my/gnus-random-colors) (nth 2 my/gnus-random-colors)))
 
-
-
   ;;; Example
   ;;  '(gnus-parameters
   ;;   (quote
