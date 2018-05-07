@@ -17,7 +17,7 @@
 (defvar my/config-exported-location (expand-file-name "~/.emacs.d/config.el"))
 
 ;; Export config if it has changed since last export
-(if (or (time-less-p (nth 5 (file-attributes my/config-exported-location)) (nth 5 (file-attributes my/config-location))) (not (file-directory-p my/config-exported-location)))
+(if (and (time-less-p (nth 5 (file-attributes my/config-exported-location)) (nth 5 (file-attributes my/config-location))) (file-exists-p my/config-exported-location))
     (progn
       (org-babel-load-file my/config-location)
       (message "Config.el updated!"))

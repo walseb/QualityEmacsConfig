@@ -1070,7 +1070,8 @@ Version 2015-07-30"
 ** Agenda
 Give agenda file to use
 #+BEGIN_SRC emacs-lisp
-  (setq org-agenda-files (quote ("~/Notes/Agenda.org")))
+  (if (file-exists-p "~/Notes/Agenda.org")
+      (setq org-agenda-files (quote ("~/Notes/Agenda.org"))))
 #+END_SRC
 
 *** Display at startup
