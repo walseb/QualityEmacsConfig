@@ -263,7 +263,6 @@ You have to press =q= in order to save changes
 ** Garbage collection
 #+BEGIN_SRC emacs-lisp
   (setq gc-cons-threshold 100000000)
-  (add-hook 'exwm-mode-hook 'garbage-collect)
 #+END_SRC
 
 * Evil
@@ -391,9 +390,11 @@ Disable startup message
   (set-default 'truncate-lines t)
 #+END_SRC
 
-*** Enable visual-line
+*** Visual-line mode
 #+BEGIN_SRC emacs-lisp
   (global-visual-line-mode t)
+
+  (define-key leader-map (kbd "C-v") 'visual-line-mode)
 #+END_SRC
 
 ** Disable useless functionallity
@@ -1100,7 +1101,7 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 #+BEGIN_SRC emacs-lisp
   (defun org/org-agenda-show-agenda-and-todo (&optional arg)
     (interactive "P")
-    (org-agenda arg "n"))
+    (org-agenda arg "a"))
 
   (define-key leader-map (kbd "v") 'org/org-agenda-show-agenda-and-todo)
 #+END_SRC
@@ -1158,15 +1159,6 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
   (global-company-mode t)
 #+END_SRC
 
-*** Company custom mode
-#+BEGIN_SRC emacs-lisp
-  (defun my/company-mode ()
-    ;; company doc-buffer disables visual line mode by default because of some reason, doc-mode doesn't have a hook, it calls the major mode hooks
-    (visual-line-mode 1))
-
-;;  (add-hook 'fundamental-mode-m 'my/company-mode)
-#+END_SRC
-
 *** Company doc buffer
 Company doc mode disables visual line mode for whatever reason, enable it inside this redefinition of company-show-doc-buffer
 #+BEGIN_SRC emacs-lisp
@@ -1191,20 +1183,6 @@ Company doc mode disables visual line mode for whatever reason, enable it inside
   (define-key company-active-map (kbd "<f1>") 'my/company-show-doc-buffer)
 #+END_SRC
 
-*** Keys
-#+BEGIN_SRC emacs-lisp
-  (define-key company-active-map (kbd "M-n") nil)
-  (define-key company-active-map (kbd "M-p") nil)
-  (define-key company-active-map (kbd "C-n") 'company-select-next)
-  (define-key company-active-map (kbd "C-p") 'company-select-previous)
-
-  ;; using C-h is better in every way 
-  (define-key company-active-map (kbd "<f1>") 'nil)
-
-  ;; Force autocomplete button
-  (define-key evil-insert-state-map (kbd "C-a") 'company-complete)
-#+END_SRC
-
 *** Company-show-numbers but with letters
 Need to implement
 Letters, etc for autocomplete
@@ -1221,6 +1199,51 @@ name "company-complete-number"
 fsharp mode auto-enables quickhelp by default, disable it
 #+BEGIN_SRC emacs-lisp
   (setq company-quickhelp-delay nil)
+#+END_SRC
+
+*** Visuals
+Make company mode inherit colors from theme, change later maybe
+#+BEGIN_SRC emacs-lisp
+  (require 'color)
+
+  (let ((bg (face-attribute 'default :background)))
+    (custom-set-faces
+     `(company-tooltip ((t (:inherit default :background ,(color-lighten-name bg 2)))))
+     `(company-scrollbar-bg ((t (:background ,(color-lighten-name bg 10)))))
+     `(company-scrollbar-fg ((t (:background ,(color-lighten-name bg 5)))))
+     `(company-tooltip-selection ((t (:inherit font-lock-function-name-face))))
+     `(company-tooltip-common ((t (:inherit font-lock-constant-face))))))
+#+END_SRC
+
+*** Keys
+#+BEGIN_SRC emacs-lisp
+  (define-key company-active-map (kbd "M-n") nil)
+  (define-key company-active-map (kbd "M-p") nil)
+  (define-key company-active-map (kbd "C-n") 'company-select-next)
+  (define-key company-active-map (kbd "C-p") 'company-select-previous)
+
+  ;; using C-h is better in every way 
+  (define-key company-active-map (kbd "<f1>") 'nil)
+
+  ;; Force autocomplete button
+  (define-key evil-insert-state-map (kbd "C-a") 'company-complete)
+#+END_SRC
+
+** Company-box
+Company with icons
+Doesn't work with my setup right now
+#+BEGIN_SRC emacs-lisp
+;;(when window-system
+;;  (use-package company-box)
+;;
+;;  (add-hook 'company-mode-hook 'company-box-mode)
+;;
+;;  ;;(setq company-box-minimum-width 100)
+;;  ;;(setq company-box--height 500)
+;;  ;;(setq company-tooltip-minimum 10)
+;;
+;;  (remove-hook 'company-box-selection-hook 'company-box-doc)
+;;  (remove-hook 'company-box-hide-hook 'company-box-doc--hide))
 #+END_SRC
 
 ** Flycheck
@@ -1472,7 +1495,8 @@ omnisharp.json should be in ~/.omnisharp on all OSs
     (interactive)
     (visual-line-mode 0))
 
-  (add-hook 'proced-post-display-hook 'my/proced-mode)
+  ;;(add-hook 'proced-post-display-hook 'my/proced-mode)
+  (add-hook 'proced-mode-hook 'my/proced-mode)
 #+END_SRC
 
 ** Profiler
@@ -1668,6 +1692,15 @@ Define main function
 #+BEGIN_SRC emacs-lisp
 ;; (require 'exwm-systemtray)
 ;; (exwm-systemtray-enable)
+#+END_SRC
+
+** Settings
+#+BEGIN_SRC emacs-lisp
+  ;; Garbage collect when entering x window (because x is not in sync with emacs)
+  (add-hook 'exwm-mode-hook 'garbage-collect)
+
+  (setq exwm-workspace-show-all-buffers t)
+  (setq exwm-layout-show-all-buffers t)
 #+END_SRC
 
 ** Keys
@@ -2672,7 +2705,7 @@ Display time and date in good format (also displays CPU load)
 
   (defun my/update-buffer-git-branch ()
     (interactive)
-    (setq my/git-branch (car (vc-git-branches))))
+    (setq my/buffer-git-branch (car (vc-git-branches))))
 
   (add-hook 'switch-window-finish-hook 'my/update-buffer-git-branch)
   (add-hook 'exwm-workspace-switch-hook 'my/update-buffer-git-branch)
@@ -2691,7 +2724,6 @@ When projectile-mode is on, project name is updated on every keypress, here it i
   (add-hook 'switch-window-finish-hook 'my/update-projectile-project-name)
   (add-hook 'exwm-workspace-switch-hook 'my/update-projectile-project-name)
   (add-hook 'window-configuration-change-hook 'my/update-projectile-project-name)
-
 #+END_SRC
 
 **** Load average
@@ -2764,7 +2796,6 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
           ;; Turns into @ when remote
           mode-line-remote
 
-
           " "
 
           ;; Print current line number
@@ -2781,17 +2812,17 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
           ;; Print buffer name
           "%b"
 
-          ;; Git branch
-          (:eval (my/update-buffer-git-branch))
-
-          ;; Git projectile 
+          ;; Git branch and project name
           (:eval (if (not (string= my/projectile-project-name "-"))
                      (progn
-                       (concat " > " 
-                               "@"
-                               "["
-                               my/projectile-project-name
-                               "] "))))
+                       (concat
+                        " > " 
+                        my/buffer-git-branch
+                        "@"
+                        "["
+                        my/projectile-project-name
+                        "] "))))
+
           )))
        ;; right
        (format-mode-line
