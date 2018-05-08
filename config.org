@@ -506,6 +506,20 @@ Help mode doesn't have a normal mode or insert mode, so just overwrite help-mode
   (setq midnight-hook nil)
 #+END_SRC
 
+** Increase and decrease brightness
+#+BEGIN_SRC emacs-lisp
+  (defun my/increase-brightness ()
+    (interactive)
+    (shell-command "xbacklight +5"))
+
+  (defun my/decrease-brightness ()
+    (interactive)
+    (shell-command "xbacklight -5"))
+
+  (global-set-key (kbd "<XF86MonBrightnessUp>") 'my/increase-brightness)
+  (global-set-key (kbd "<XF86MonBrightnessDown>") 'my/decrease-brightness)
+#+END_SRC
+
 * Terminal
 ** Toggle between line and char mode
 *** Function
@@ -1570,42 +1584,72 @@ More rebind options and more reliable
 
 ** k(Move up) <--> p(Paste)
 #+BEGIN_SRC emacs-lisp
-  (define-key evil-normal-state-map (kbd "p") 'nil)
-  ;;(define-key evil-normal-state-map (kbd "p") 'evil-previous-line)
-  (general-mmap "p" 'evil-previous-line)
-
-  (define-key evil-motion-state-map (kbd "k") 'nil)
-  (define-key evil-motion-state-map (kbd "k") 'my/pass-pop-killring-evil-paste-after)
-
-  ;; Capital
-  (define-key evil-normal-state-map (kbd "P") nil)
-  ;; find more useful function
-  ;;(general-mmap "P" 'evil-lookup)
-
-  (define-key evil-motion-state-map (kbd "K") 'nil)
-  (define-key evil-motion-state-map (kbd "K") 'my/pass-pop-killring-evil-paste-before)
-
+  (require 'evil-maps)
 #+END_SRC
 
-** j(Move down) <--> k(next search)
+*** k
 #+BEGIN_SRC emacs-lisp
-  (define-key evil-motion-state-map (kbd "n") 'nil)
-  (define-key evil-motion-state-map (kbd "n") 'evil-next-line)
-  ;;  (general-mmap "n" 'evil-next-line)
-  (define-key evil-motion-state-map (kbd "j") 'nil)
-  (define-key evil-motion-state-map (kbd "j") 'evil-ex-search-next)
-  ;; (general-mmap "j" 'evil-ex-search-next)
+  (define-key evil-normal-state-map "k" 'my/pass-pop-killring-evil-paste-after)
+  (define-key evil-normal-state-map "K" 'my/pass-pop-killring-evil-paste-before)
+
+  (define-key evil-window-map "k" 'evil-window-mru)
+  (define-key evil-outer-text-objects-map "k" 'evil-a-paragraph)
+  (define-key evil-inner-text-objects-map "k" 'evil-inner-paragraph)
 #+END_SRC
 
+**** Universal paste key
 #+BEGIN_SRC emacs-lisp
-  ;; Capital
-  (define-key evil-normal-state-map (kbd "N") 'nil)
-  (define-key evil-normal-state-map (kbd "N") 'evil-join)
-  ;;(general-mmap "N" 'evil-join)
-  (define-key evil-normal-state-map (kbd "J") 'nil)
-  (define-key evil-normal-state-map (kbd "J") 'evil-ex-search-previous)
-  ;;(general-mmap "J" 'evil-ex-search-previous)
+;;  (global-set-key (kbd "C-k") 'evil-yank)
+;;  (define-key evil-motion-state-map (kbd "C-k") 'evil-yank)
+;;  (define-key evil-insert-state-map (kbd "C-k") 'evil-yank)
 #+END_SRC
+
+*** p
+#+BEGIN_SRC emacs-lisp
+(define-key evil-window-map "p" 'evil-window-up)
+(define-key evil-window-map "P" 'evil-window-move-very-top)
+
+(define-key evil-normal-state-map "p" 'evil-previous-line)
+(define-key evil-motion-state-map "p" 'evil-previous-line)
+
+(define-key evil-normal-state-map "P" 'evil-lookup)
+(define-key evil-motion-state-map "P" 'evil-lookup)
+#+END_SRC
+
+** n(Move up) <--> j(search-next)
+*** n
+#+BEGIN_SRC emacs-lisp
+  (define-key evil-window-map "n" 'evil-window-down)
+  (define-key evil-window-map "N" 'evil-window-move-very-bottom)
+
+  (define-key evil-normal-state-map "n" 'evil-next-line)
+  (define-key evil-motion-state-map "n" 'evil-next-line)
+  
+  (define-key evil-normal-state-map "N" 'evil-join)
+
+
+  ;; ex
+;;  (evil-ex-define-cmd "j[oin]" 'evil-ex-join)
+;;  (evil-ex-define-cmd "ju[mps]" 'evil-show-jumps)
+#+END_SRC
+
+*** j 
+#+BEGIN_SRC emacs-lisp
+(define-key evil-window-map "j" 'evil-window-new)
+
+(define-key evil-normal-state-map "j" 'evil-search-next)
+(define-key evil-motion-state-map "j" 'evil-search-next)
+
+(define-key evil-normal-state-map "J" 'evil-search-previous)
+(define-key evil-motion-state-map "J" 'evil-search-previous)
+
+
+;; ex
+;;(evil-ex-define-cmd "new" 'evil-window-new)
+;;(evil-ex-define-cmd "norm[al]" 'evil-ex-normal)
+;;(evil-ex-define-cmd "noh[lsearch]" 'evil-ex-nohighlight)
+#+END_SRC
+
 
 ** Make space useful
 #+BEGIN_SRC emacs-lisp
@@ -2601,8 +2645,44 @@ Highlight thing under cursor and all other occurrences
 #+BEGIN_SRC emacs-lisp
   ;;(set-face-background 'mode-line "#003300")
   ;;  (set-face-foreground 'mode-line "#FFFFFF")
-  (set-face-background 'mode-line-inactive "#003300")
-  (set-face-foreground 'mode-line-inactive "#D3D3D3")
+  (setq my/mode-line-background "#003300")
+  (setq my/mode-line-foreground "#D3D3D3")
+
+  (setq my/mode-line-warning-background "#555500")
+  (setq my/mode-line-warning-foreground "#D3D3D3")
+
+  (setq my/mode-line-caution-background "#330000")
+  (setq my/mode-line-caution-foreground "#D3D3D3")
+
+  ;;(deftype my/mode-line-alert-states () '(member normal warning caution))
+
+  (defvar my/mode-line-alert-status 'warning)
+
+  (defun my/set-mode-line-normal ()
+    (interactive)
+    (if (not (eq my/mode-line-alert-status 'normal))
+        (progn
+          (setq my/mode-line-alert-status 'normal)
+          (set-face-background 'mode-line-inactive my/mode-line-background)
+          (set-face-foreground 'mode-line-inactive my/mode-line-foreground))))
+
+  (defun my/set-mode-line-warning ()
+    (interactive)
+    (if (not (eq my/mode-line-alert-status 'warning))
+        (progn
+          (setq my/mode-line-alert-status 'warning)
+          (set-face-background 'mode-line-inactive my/mode-line-warning-background)
+          (set-face-foreground 'mode-line-inactive my/mode-line-warning-foreground))))
+
+  (defun my/set-mode-line-caution ()
+    (interactive)
+    (if (not (eq my/mode-line-alert-status 'caution))
+        (progn
+          (setq my/mode-line-alert-status 'caution)
+          (set-face-background 'mode-line-inactive my/mode-line-caution-background)
+          (set-face-foreground 'mode-line-inactive my/mode-line-caution-foreground))))
+
+  (my/set-mode-line-normal)
 
   ;;(set-face-attribute 'mode-line nil
   ;;                    :box '(:width 1))
@@ -2638,6 +2718,7 @@ Highlight thing under cursor and all other occurrences
   (add-hook 'window-configuration-change-hook 'my/update-total-lines)
   (add-hook 'exwm-workspace-switch-hook 'my/update-total-lines)
   (add-hook 'my/save-buffer-hook 'my/update-total-lines)
+  (add-hook 'switch-window-finish-hook 'my/update-total-lines)
 #+END_SRC
 
 **** Mail
@@ -2652,7 +2733,7 @@ If there is a battery, display it in the mode line
   (require 'battery)
 
   (display-battery-mode 1)
-  (setq battery-mode-line-format "| %p%% - %t | ")
+  (setq battery-mode-line-format "%th - %p")
   
   ;; Original function forces mode line update
   (defun battery-update ()
@@ -2731,7 +2812,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
   (defun my/update-load-average ()
     (interactive)
-    (setq my/load-average (number-to-string(/ (nth 0 (load-average)) 100.0))))
+    (setq my/load-average (/ (nth 0 (load-average)) 100.0)))
 
   (run-with-timer 0 60 'my/update-load-average)
 #+END_SRC
@@ -2765,96 +2846,101 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
     (let* ((available-width (- (frame-width) (length left) 2)))
       (format (format "%%s %%%ds" available-width) left right)))
 
-  (setq-default
-   minibuffer-line-format
-   '((:eval
-      (my/mode-line-align
-       ;; left
-       (format-mode-line
-        (quote
-         (
-          ;; exwm workspace number
-          (:eval (number-to-string exwm-workspace-current-index))
+  (setq-default minibuffer-line-format
+                '((:eval
+                   (my/mode-line-align
+                    ;; left
+                    (format-mode-line
+                     (quote
+                      (
+                       ;; exwm workspace number
+                       (:eval (number-to-string exwm-workspace-current-index))
 
-          " |"
+                       " |"
 
-          ;; Print error if any
-          "%e"
+                       ;; Print error if any
+                       "%e"
 
-          ;; Print if recursive editing
-          "%["
+                       ;; Print if recursive editing
+                       "%["
 
-          ;; Information bar
-          mode-line-front-space
-          mode-line-mule-info
-          mode-line-client
+                       ;; Information bar
+                       mode-line-front-space
+                       mode-line-mule-info
+                       mode-line-client
 
-          ;; If buffer is modified
-          mode-line-modified
+                       ;; If buffer is modified
+                       mode-line-modified
 
-          ;; Turns into @ when remote
-          mode-line-remote
+                       ;; Turns into @ when remote
+                       mode-line-remote
 
-          " "
+                       " "
 
-          ;; Print current line number
-          ;;"%l"
-          ;;"/" 
-          ;; Print total line number
-          (:eval my/buffer-total-lines)
+                       ;; Print current line number
+                       ;;"%l"
+                       ;;"/" 
+                       ;; Print total line number
+                       (:eval my/buffer-total-lines)
 
-          " | "
+                       " | "
 
-          ;; Print mode
-          "%m "
-          "> " 
-          ;; Print buffer name
-          "%b"
+                       ;; Print mode
+                       "%m "
+                       "> " 
+                       ;; Print buffer name
+                       "%b"
 
-          ;; Git branch and project name
-          (:eval (if (not (string= my/projectile-project-name "-"))
-                     (progn
-                       (concat
-                        " > " 
-                        my/buffer-git-branch
-                        "@"
-                        "["
-                        my/projectile-project-name
-                        "] "))))
+                       ;; Git branch and project name
+                       (:eval (if (not (string= my/projectile-project-name "-"))
+                                  (progn
+                                    (concat
+                                     " > " 
+                                     my/buffer-git-branch
+                                     "@"
+                                     "["
+                                     my/projectile-project-name
+                                     "] "))))
 
-          )))
-       ;; right
-       (format-mode-line
-        (quote
-         (
+                       )))
+                    ;; right
+                    (format-mode-line
+                     (quote
+                      (
 
-          ;;       " R: "
-          ;;        (:eval my/ram-left)
-          ;;         "G"
+                       ;;       " R: "
+                       ;;        (:eval my/ram-left)
+                       ;;         "G"
 
-          " GC: "
-          (:eval (number-to-string (truncate gc-elapsed)))
+                       " GC: "
+                       (:eval (number-to-string (truncate gc-elapsed)))
 
-          "("
-          (:eval (number-to-string gcs-done))
-          ")"
+                       "("
+                       (:eval (number-to-string gcs-done))
+                       ")"
 
-          " C: "
+                       " C: "
 
-          (:eval my/load-average)
+                       (:eval (if (> my/load-average 0.9)
+                                  (my/set-mode-line-warning)))
 
-          (:eval (if (not (eq battery-mode-line-string ""))
-                     (concat "BAT: " battery-mode-line-string " ")))
+                       (:eval (number-to-string my/load-average))
 
-          " | "
+                       (:eval (if (not (eq battery-mode-line-string ""))
+                                  (progn
+                                    (if (< (length battery-mode-line-string) 10)
+                                        (my/set-mode-line-warning)
+                                      (my/set-mode-line-normal))
+                                    (concat " BAT: " battery-mode-line-string "%%%%"))))
 
-          (:eval my/time)
+                       " | "
 
-          " - "
 
-          (:eval my/date)
+                       (:eval my/time)
 
-          )))))))
+                       " - "
+
+                       (:eval my/date))))))))
 #+END_SRC
 
 *** Keep mode line updated
