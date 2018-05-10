@@ -147,12 +147,19 @@ You have to press =q= in order to save changes
 (load-theme 'twilight-anti-bright t)
 #+END_SRC
 
+** Make sure mode line is disabled before any windows are created
+#+BEGIN_SRC emacs-lisp
+(setq mode-line-format nil)
+(setq-default mode-line-format nil)
+#+END_SRC
+
 * Generic functions
 ** Give buffer unique name
 #+BEGIN_SRC emacs-lisp
   (defun give-buffer-unique-name(base-name)
     (rename-buffer base-name t))
 #+END_SRC
+
 * Startup processes 
 ** Benchmark startup time
 #+BEGIN_SRC emacs-lisp
@@ -277,11 +284,9 @@ You have to press =q= in order to save changes
   (setq evil-split-window-below t)
   (setq evil-shift-round nil)
   (setq evil-want-C-u-scroll t)
-  (define-key evil-normal-state-map (kbd "C-u") 'evil-scroll-up)
-
 #+END_SRC
-
-** Disable messages in echo area
+** Settings
+*** Disable messages in echo area
 Evil spams message area
 #+BEGIN_SRC emacs-lisp
 (setq
@@ -294,7 +299,7 @@ Evil spams message area
     evil-visual-state-message nil)
 #+END_SRC
 
-** Cursor states
+*** Cursor states
 #+BEGIN_SRC emacs-lisp
   (setq evil-emacs-state-cursor '("purple" box))
   (setq evil-normal-state-cursor '("white" box))
@@ -304,24 +309,24 @@ Evil spams message area
   (setq evil-operator-state-cursor '("white" hollow))
 #+END_SRC
 
-** Universal paste key
+*** Universal paste key
 #+BEGIN_SRC emacs-lisp
   (global-set-key (kbd "C-k") 'yank)
   (define-key evil-motion-state-map (kbd "C-k") 'yank)
   (define-key evil-insert-state-map (kbd "C-k") 'yank)
 #+END_SRC
 
-** Exit emacs state with esc
+*** Exit emacs state with esc
 #+BEGIN_SRC emacs-lisp
   (define-key evil-emacs-state-map [escape] 'evil-normal-state)
 #+END_SRC
 
-** Disable emacs mode 
+*** Disable emacs mode 
 #+BEGIN_SRC emacs-lisp
   (setq evil-emacs-state-modes nil)
 #+END_SRC
 
-** Set which modes use which evil state by default
+*** Set which modes use which evil state by default
 Example
 #+BEGIN_SRC emacs-lisp
   (setq evil-insert-state-modes nil)
@@ -341,18 +346,88 @@ Example
            do (evil-set-initial-state mode state))
 #+END_SRC
 
+*** Switching to normal state without moving cursor
+#+BEGIN_SRC emacs-lisp
+  (defun my/evil-normal-state (&optional arg)
+    (if (not(eq evil-state 'normal))
+        (progn
+          (evil-normal-state arg)
+          (move-to-column (+ 1 (current-column))))))
+#+END_SRC
+
+*** Redefinitions
+**** C-u and C-d forces normal mode after run
+#+BEGIN_SRC emacs-lisp
+  (defun my/evil-scroll-up (&optional arg)
+    (interactive)
+    (evil-scroll-up arg)
+    (my/evil-normal-state))
+
+  (defun my/evil-scroll-down (&optional arg)
+    (interactive)
+    (evil-scroll-down arg)
+    (my/evil-normal-state))
+#+END_SRC
+
+*** Settings
+**** Make one space enough to end work for use with evil sentence motion
+#+BEGIN_SRC emacs-lisp
+(setq sentence-end-double-space nil)
+#+END_SRC
+
+** evil indent plus
+Allows for using indention as text objects
+#+BEGIN_SRC emacs-lisp
+  (use-package evil-indent-plus)
+
+  (evil-indent-plus-default-bindings)
+#+END_SRC
+
+** Lion
+#+BEGIN_SRC emacs-lisp
+  (use-package evil-lion)
+
+  (evil-lion-mode)
+#+END_SRC
+
 * Leader
 #+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'leader-map)
+  (define-prefix-command 'my/leader-map)
 
   (global-unset-key (kbd "C-t"))
 
-  (define-key evil-normal-state-map (kbd "t") 'leader-map)
-  (define-key evil-emacs-state-map (kbd "C-t") 'leader-map)
+  (define-key evil-normal-state-map (kbd "t") 'my/leader-map)
+  (define-key evil-emacs-state-map (kbd "C-t") 'my/leader-map)
+#+END_SRC
+** Leader menus
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/music-menu-map)
+  (define-key my/leader-map (kbd "m") 'my/music-menu-map)
+
+  (define-prefix-command 'my/net-utils-menu-map)
+  (define-key my/leader-map (kbd "n") 'my/net-utils-menu-map)
+
+  (define-prefix-command 'my/git-menu-map)
+  (define-key my/leader-map (kbd "g") 'my/git-menu-map)
+
+  (define-prefix-command 'my/processes-menu-map)
+  (define-key my/leader-map (kbd "p") 'my/processes-menu-map)
+
+  (define-prefix-command 'my/spell-menu-map)
+  (define-key my/leader-map (kbd "s") 'my/spell-menu-map)
+
+  (define-prefix-command 'my/open-menu-map)
+  (define-key my/leader-map (kbd "o") 'my/open-menu-map)
+
+  (define-prefix-command 'my/help-menu-map)
+  (define-key my/leader-map (kbd "h") 'my/help-menu-map)
+
+  (define-prefix-command 'my/x-menu-map)
+  (define-key my/leader-map (kbd "x") 'my/x-menu-map)
 #+END_SRC
 
 ** Example
-(define-key leader-map (kbd "key") 'function)
+(define-key my/leader-map (kbd "key") 'function)
 * Minor
 ** Startup
 Disable startup message
@@ -372,7 +447,7 @@ Disable startup message
     (interactive)
     (switch-to-buffer "*scratch*"))
 
-  (define-key leader-map (kbd "o s") 'my/switch-to-scratch)
+  (define-key my/open-menu-map (kbd "s") 'my/switch-to-scratch)
 #+END_SRC
 
 ** Encoding
@@ -394,7 +469,7 @@ Disable startup message
 #+BEGIN_SRC emacs-lisp
   (global-visual-line-mode t)
 
-  (define-key leader-map (kbd "C-v") 'visual-line-mode)
+  (define-key my/leader-map (kbd "C-v") 'visual-line-mode)
 #+END_SRC
 
 ** Disable useless functionallity
@@ -465,11 +540,10 @@ Stop emacs from creating backup files on every save
 
 *** Binds
 #+BEGIN_SRC emacs-lisp
-  (define-key leader-map (kbd "o c") 'my/config-visit)
-  (define-key leader-map (kbd "o r c") 'my/config-reload)
-
-  (define-key leader-map (kbd "o a") 'my/agenda-file-visit)
-  (define-key leader-map (kbd "o t") 'my/trash-visit)
+  (define-key my/open-menu-map (kbd "c") 'my/config-visit)
+  (define-key my/open-menu-map (kbd "r c") 'my/config-reload)
+  (define-key my/open-menu-map (kbd "a") 'my/agenda-file-visit)
+  (define-key my/open-menu-map (kbd "t") 'my/trash-visit)
 #+END_SRC
 
 ** Change max killring size
@@ -493,8 +567,8 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 ** Help mode
 Help mode doesn't have a normal mode or insert mode, so just overwrite help-mode-map directly
 #+BEGIN_SRC emacs-lisp
-  (define-key help-mode-map (kbd "C-u") 'evil-scroll-up)
-  (define-key help-mode-map (kbd "t") 'leader-map)
+  (define-key help-mode-map (kbd "C-u") 'my/evil-scroll-up)
+  (define-key help-mode-map (kbd "t") 'my/leader-map)
 #+END_SRC
 
 ** Midnight mode
@@ -552,36 +626,6 @@ Help mode doesn't have a normal mode or insert mode, so just overwrite help-mode
   (ad-activate 'ansi-term)
 #+END_SRC
 
-* Shell
-** Hotkey
-#+BEGIN_SRC emacs-lisp
-  (define-key leader-map (kbd "[") 'eshell)
-#+END_SRC
-
-** Disable minor modes
-Disable rainbow delimiters
-#+BEGIN_SRC emacs-lisp
-  (add-hook 'eshell-mode-hook 'rainbow-delimiters-mode-disable)
-#+END_SRC
-
-** Generate unique name
-#+BEGIN_SRC emacs-lisp
-  (add-hook 'eshell-mode-hook `(lambda () (interactive)
-                                 (give-buffer-unique-name "*eshell*")))
-#+END_SRC
-
-** Keys
-Unbind C-d so that the global bind is used instead
-#+BEGIN_SRC emacs-lisp
-  (evil-define-key 'normal shell-mode-map (kbd "C-d") 'evil-scroll-down)
-
-  (evil-define-key 'normal shell-mode-map (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
-  (evil-define-key 'normal shell-mode-map (kbd "M-p") 'my/avy-goto-line-above-keep-horizontal-position)
-
-  (evil-define-key 'normal eshell-mode-map (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
-  (evil-define-key 'normal eshell-mode-map (kbd "M-p") 'my/avy-goto-line-above-keep-horizontal-position)
-#+END_SRC
-
 * Folding
 #+BEGIN_SRC emacs-lisp
   (use-package origami)
@@ -632,25 +676,27 @@ Vim bindings to change fold
 
 *** Functions
 #+BEGIN_SRC emacs-lisp
-  (defun my/avy-goto-word-0-in-line()
-    (interactive)
-    ;; If visual
-    (if (eq evil-state 'visual)
-        ;; Get hits inside selection
-        (avy-goto-subword-0 t nil evil-visual-beginning evil-visual-end))
-    ;; Else, get hits from current line
+  (defun my/avy-goto-word-0-in-line(&optional arg)
+    (interactive "p")
+
+    (if (not (eq evil-state 'visual))
+        (my/evil-normal-state arg))
+
     (avy-goto-subword-0 t nil (line-beginning-position) (line-end-position)))
 
-  (defun my/avy-goto-line-above-keep-horizontal-position ()
-    (interactive)
+  (defun my/avy-goto-line-above-keep-horizontal-position (&optional arg)
+    (interactive "p")
     (setq cursor-horizontal-pos (current-column))
 
     ;; Fixes problem with goto-line and visual line mode
-    (if (and (eq evil-state 'visual) (eq (evil-visual-type) 'line))
-        (progn
-          (setq was-visual-line t)
-          (evil-visual-char))
-      (setq was-visual-line nil))
+    (if (eq evil-state 'visual) 
+        (if (eq (evil-visual-type) 'line)
+            (progn
+              (setq was-visual-line t)
+              (evil-visual-char)))
+      (progn
+        (setq was-visual-line nil)
+        (my/evil-normal-state arg)))
 
     (avy-goto-line-above 2 t)
 
@@ -659,16 +705,19 @@ Vim bindings to change fold
 
     (move-to-column cursor-horizontal-pos))
 
-  (defun my/avy-goto-line-below-keep-horizontal-position ()
-    (interactive)
+  (defun my/avy-goto-line-below-keep-horizontal-position (&optional arg)
+    (interactive "p")
     (setq cursor-horizontal-pos (current-column))
 
     ;; Fixes problem with goto-line and visual line mode
-    (if (and (eq evil-state 'visual) (eq (evil-visual-type) 'line))
-        (progn
-          (setq was-visual-line t)
-          (evil-visual-char))
-      (setq was-visual-line nil))
+    (if (eq evil-state 'visual) 
+        (if (eq (evil-visual-type) 'line)
+            (progn
+              (setq was-visual-line t)
+              (evil-visual-char)))
+      (progn
+        (setq was-visual-line nil)
+        (my/evil-normal-state arg)))
 
     (avy-goto-line-below 2)
 
@@ -692,7 +741,7 @@ Vim bindings to change fold
 #+BEGIN_SRC emacs-lisp
   (use-package avy-flycheck)
 
-  (define-key leader-map (kbd "e") 'avy-flycheck-goto-error)
+  (define-key my/leader-map (kbd "e") 'avy-flycheck-goto-error)
 #+END_SRC
 
 ** Ivy
@@ -715,6 +764,15 @@ Vim bindings to change fold
   ;;(setq ivy-re-builders-alist
   ;;      '((swiper . ivy--regex-plus)
   ;;       (t      . ivy--regex-fuzzy)))
+#+END_SRC
+
+*** Ivy occur mode
+Doesn't work??
+#+BEGIN_SRC emacs-lisp
+;;  (evil-define-key 'normal ivy-occur-mode-map (kbd "C-u") 'evil-scroll-up)
+;;  (evil-define-key 'normal ivy-occur-mode-map (kbd "C-d") 'evil-scroll-down)
+
+;;  (evil-define-key 'normal ivy-occur-mode-map (kbd "i") 'evil-insert)
 #+END_SRC
 
 *** Visuals
@@ -755,15 +813,14 @@ Vim bindings to change fold
   (global-set-key (kbd "<f1> l") 'counsel-find-library)
   (global-set-key (kbd "<f2> i") 'counsel-info-lookup-symbol)
   (global-set-key (kbd "<f2> u") 'counsel-unicode-char)
-  (define-key leader-map (kbd "h C-c") 'counsel-colors-emacs)
-  (define-key leader-map (kbd "h C") 'counsel-colors-web)
 
-  (define-key leader-map (kbd "i") 'counsel-imenu)
+  (define-key my/help-menu-map (kbd "C-c") 'counsel-colors-emacs)
+  (define-key my/help-menu-map (kbd "C") 'counsel-colors-web)
 
-  (define-key leader-map (kbd "f") 'counsel-ag)
-  (define-key leader-map (kbd "l") 'counsel-locate)
+  (define-key my/leader-map (kbd "i") 'counsel-imenu)
 
-
+  (define-key my/leader-map (kbd "f") 'counsel-ag)
+  (define-key my/leader-map (kbd "l") 'counsel-locate)
 
   (global-set-key (kbd "s-x") 'counsel-linux-app)
 
@@ -843,6 +900,13 @@ https://www.reddit.com/r/emacs/comments/57fnar/ivy_completion_at_point_in_an_ove
   (jammer-mode)
 #+END_SRC
 
+* Undo tree
+#+BEGIN_SRC emacs-lisp
+  (use-package undo-tree)
+
+  (setq undo-tree-visualizer-diff t)
+#+END_SRC
+
 * Buffer management
 Just unbind C-x b
 #+BEGIN_SRC emacs-lisp
@@ -880,13 +944,16 @@ Just unbind C-x b
   (setq switch-window-input-style 'minibuffer)
   (setq switch-window-increase 4)
   (setq switch-window-threshold 2)
+
+  ;; Disable hints
+  (setq switch-window-shortcut-appearance nil)
+
   (setq switch-window-shortcut-style 'qwerty)
   (setq switch-window-qwerty-shortcuts
         '("a" "n" "e" "t" "o" "s" "h" "d"))
 
   (global-set-key (kbd "C-x o") 'switch-window)
-  ;;:bind
-  ;;([remap other-window] . switch-window)
+  (global-set-key (kbd "C-x C-o") 'switch-window)
 #+END_SRC
 
 ** Make cursor auto move to new split window
@@ -930,7 +997,7 @@ Global mode
 
 ** Binds
 #+BEGIN_SRC emacs-lisp
-  (define-key leader-map (kbd "h C-m") 'manage-minor-mode)
+  (define-key my/help-menu-map (kbd "C-m") 'manage-minor-mode)
 #+END_SRC
 
 * Dired
@@ -994,7 +1061,7 @@ Version 2015-07-30"
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
-  (evil-define-key 'normal dired-mode-map (kbd "t") 'leader-map)
+  (evil-define-key 'normal dired-mode-map (kbd "t") 'my/leader-map)
 
   (global-set-key (kbd "C-x d") 'dired-at-point)
 
@@ -1022,6 +1089,7 @@ Version 2015-07-30"
 #+BEGIN_SRC emacs-lisp
 (use-package org)
 #+END_SRC
+
 ** Babel
 *** Supported runnable languages
   (org-babel-do-load-languages
@@ -1118,7 +1186,7 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
     (interactive "P")
     (org-agenda arg "a"))
 
-  (define-key leader-map (kbd "v") 'org/org-agenda-show-agenda-and-todo)
+  (define-key my/leader-map (kbd "v") 'org/org-agenda-show-agenda-and-todo)
 #+END_SRC
 
 ** Keys
@@ -1135,7 +1203,7 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 #+BEGIN_SRC emacs-lisp
   (use-package sudo-edit)
 
-  (define-key leader-map (kbd "o '") 'sudo-edit)
+  (define-key my/open-menu-map (kbd "'") 'sudo-edit)
 #+END_SRC
 
 * Completion
@@ -1277,7 +1345,7 @@ Doesn't work with my setup right now
 
 *** Bind
 #+BEGIN_SRC emacs-lisp
-  (define-key leader-map (kbd "h m") 'which-key-show-major-mode)
+  (define-key my/help-menu-map (kbd "m") 'which-key-show-major-mode)
 #+END_SRC
 
 ** Yasnippet
@@ -1292,9 +1360,9 @@ Doesn't work with my setup right now
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-key leader-map (kbd "S") 'yas-insert-snippet)
+  (define-key my/leader-map (kbd "S") 'yas-insert-snippet)
 
-  (define-key leader-map (kbd "h y") 'yas-describe-tables)
+  (define-key my/help-menu-map (kbd "y") 'yas-describe-tables)
 #+END_SRC
 
 * Code
@@ -1332,7 +1400,7 @@ Doesn't work with my setup right now
 #+BEGIN_SRC emacs-lisp
   (use-package zeal-at-point)
 
-  (define-key leader-map (kbd "d") 'zeal-at-point)
+  (define-key my/leader-map (kbd "d") 'zeal-at-point)
 #+END_SRC
 
 ** Emacs-lisp
@@ -1496,7 +1564,7 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 * Process monitors
 ** Top - proced
 #+BEGIN_SRC emacs-lisp
-  (define-key leader-map (kbd "p t") 'proced)
+  (define-key my/processes-menu-map (kbd "t") 'proced)
 #+END_SRC
 
 *** Disable rainbow delimiters
@@ -1516,9 +1584,9 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 
 ** Profiler
 #+BEGIN_SRC emacs-lisp
-  (define-key leader-map (kbd "p p s") 'profiler-start)
-  (define-key leader-map (kbd "p p e") 'profiler-stop)
-  (define-key leader-map (kbd "p p r") 'profiler-report)
+  (define-key my/processes-menu-map (kbd "p s") 'profiler-start)
+  (define-key my/processes-menu-map (kbd "p e") 'profiler-stop)
+  (define-key my/processes-menu-map (kbd "p r") 'profiler-report)
 #+END_SRC
 
 * Auto update
@@ -1529,7 +1597,7 @@ omnisharp.json should be in ~/.omnisharp on all OSs
     (use-package auto-package-update)
     (auto-package-update-now))
 
-  (define-key leader-map (kbd "C-u") 'my/update-packages)
+  (define-key my/leader-map (kbd "C-u") 'my/update-packages)
 #+END_SRC
 
 * Pass
@@ -1573,6 +1641,36 @@ Required by ivy-pass
 
 #+END_SRC
 
+* Shell
+** Hotkey
+#+BEGIN_SRC emacs-lisp
+  (define-key my/leader-map (kbd "[") 'eshell)
+#+END_SRC
+
+** Disable minor modes
+Disable rainbow delimiters
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'eshell-mode-hook 'rainbow-delimiters-mode-disable)
+#+END_SRC
+
+** Generate unique name
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'eshell-mode-hook `(lambda () (interactive)
+                                 (give-buffer-unique-name "*eshell*")))
+#+END_SRC
+
+** Keys
+Unbind C-d so that the global bind is used instead
+#+BEGIN_SRC emacs-lisp
+  (evil-define-key 'normal shell-mode-map (kbd "C-d") 'my/evil-scroll-down)
+
+  (evil-define-key 'normal shell-mode-map (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
+  (evil-define-key 'normal shell-mode-map (kbd "M-p") 'my/avy-goto-line-above-keep-horizontal-position)
+
+  (evil-define-key 'normal eshell-mode-map (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
+  (evil-define-key 'normal eshell-mode-map (kbd "M-p") 'my/avy-goto-line-above-keep-horizontal-position)
+#+END_SRC
+
 * Key rebinds
 ** General
 More rebind options and more reliable
@@ -1597,6 +1695,9 @@ More rebind options and more reliable
   (define-key evil-inner-text-objects-map "k" 'evil-inner-paragraph)
 #+END_SRC
 
+**** Combination keys
+There aren't really any worth changing
+
 **** Universal paste key
 #+BEGIN_SRC emacs-lisp
 ;;  (global-set-key (kbd "C-k") 'evil-yank)
@@ -1616,6 +1717,15 @@ More rebind options and more reliable
 (define-key evil-motion-state-map "P" 'evil-lookup)
 #+END_SRC
 
+**** Combination keys
+#+BEGIN_SRC emacs-lisp
+(define-key evil-window-map (kbd "C-S-p") 'evil-window-move-very-top)
+
+(define-key evil-normal-state-map "gp" 'evil-previous-visual-line)
+(define-key evil-motion-state-map "gp" 'evil-previous-visual-line)
+
+#+END_SRC
+
 ** n(Move up) <--> j(search-next)
 *** n
 #+BEGIN_SRC emacs-lisp
@@ -1633,30 +1743,52 @@ More rebind options and more reliable
 ;;  (evil-ex-define-cmd "ju[mps]" 'evil-show-jumps)
 #+END_SRC
 
-*** j 
+
+**** Combination keys
 #+BEGIN_SRC emacs-lisp
-(define-key evil-window-map "j" 'evil-window-new)
+(define-key evil-normal-state-map "gN" 'evil-join-whitespace)
 
-(define-key evil-normal-state-map "j" 'evil-search-next)
-(define-key evil-motion-state-map "j" 'evil-search-next)
+(define-key evil-normal-state-map "gn" 'evil-next-visual-line)
+(define-key evil-motion-state-map "gn" 'evil-next-visual-line)
 
-(define-key evil-normal-state-map "J" 'evil-search-previous)
-(define-key evil-motion-state-map "J" 'evil-search-previous)
-
-
-;; ex
-;;(evil-ex-define-cmd "new" 'evil-window-new)
-;;(evil-ex-define-cmd "norm[al]" 'evil-ex-normal)
-;;(evil-ex-define-cmd "noh[lsearch]" 'evil-ex-nohighlight)
+(define-key evil-window-map (kbd "C-S-n") 'evil-window-move-very-bottom)
 #+END_SRC
 
+*** j 
+#+BEGIN_SRC emacs-lisp
+  (define-key evil-normal-state-map "j" 'evil-search-next)
+  (define-key evil-motion-state-map "j" 'evil-search-next)
+
+  (define-key evil-normal-state-map "J" 'evil-search-previous)
+  (define-key evil-motion-state-map "J" 'evil-search-previous)
+
+  ;; ex
+  ;;(evil-ex-define-cmd "new" 'evil-window-new)
+  ;;(evil-ex-define-cmd "norm[al]" 'evil-ex-normal)
+  ;;(evil-ex-define-cmd "noh[lsearch]" 'evil-ex-nohighlight)
+#+END_SRC
+
+**** Combination keys
+#+BEGIN_SRC emacs-lisp
+(define-key evil-motion-state-map "gj" 'evil-next-match)
+(define-key evil-motion-state-map "gJ" 'evil-previous-match)
+#+END_SRC
+
+** Make C-u and C-u exit insert mode
+#+BEGIN_SRC emacs-lisp
+  (define-key evil-insert-state-map (kbd "C-u") 'my/evil-scroll-up)
+  (define-key evil-normal-state-map (kbd "C-u") 'my/evil-scroll-up)
+
+  (define-key evil-insert-state-map (kbd "C-d") 'my/evil-scroll-down)
+  (define-key evil-normal-state-map (kbd "C-d") 'my/evil-scroll-down)
+#+END_SRC
 
 ** Make space useful
 #+BEGIN_SRC emacs-lisp
-    ;; Space --> C-x
-    (general-mmap "SPC" (general-simulate-key "C-x"))
-    (general-mmap "C-SPC" (general-simulate-key "C-c"))
-    (general-mmap "M-SPC" 'counsel-linux-app)
+  ;; Space --> C-x
+  ;;(general-mmap "SPC" (general-simulate-key "C-x"))
+  ;;(general-mmap "C-SPC" (general-simulate-key "C-c"))
+  ;;(general-mmap "M-SPC" 'counsel-linux-app)
 #+END_SRC
 
 ** Resize windows
@@ -1711,26 +1843,26 @@ Define main function
 
 *** Run programs functions
 #+BEGIN_SRC emacs-lisp
-;;  (defun my/launch-browser ()
-;;    (interactive)
-;;    (exwm-async-run "firefox"))
+  ;;  (defun my/launch-browser ()
+  ;;    (interactive)
+  ;;    (exwm-async-run "firefox"))
 
-;;  (global-set-key (kbd "s-b") 'my/launch-browser)
-;;  (define-key leader-map (kbd "x b") 'my/launch-browser)
+  ;;  (global-set-key (kbd "s-b") 'my/launch-browser)
+  ;; (define-key my/x-menu-map (kbd "b") 'my/launch-browser)
 
   (defun my/launch-virt-manager ()
     (interactive)
     (exwm-async-run "virt-manager"))
 
   (global-set-key (kbd "s-z") 'my/launch-virt-manager)
-  (define-key leader-map (kbd "x z") 'my/launch-virt-manager)
+  (define-key my/x-menu-map (kbd "z") 'my/launch-virt-manager)
 
   (defun lock-screen ()
     (interactive)
     (exwm-async-run "slock"))
 
   (global-set-key (kbd "<XF86ScreenSaver>") 'lock-screen)
-  (define-key leader-map (kbd "x l") 'lock-screen)
+  (define-key my/x-menu-map (kbd "l") 'lock-screen)
 #+END_SRC
 
 ** Systembar
@@ -1876,7 +2008,7 @@ Define main function
   ;; Built in??
   ;;(exwm-input-set-key (kbd "C-x") 'general-simulate-C-x)
 
-  (exwm-input-set-key (kbd "C-t") 'leader-map)
+  (exwm-input-set-key (kbd "C-t") 'my/leader-map)
 
 
   ;; Enter and exit char mode
@@ -1904,26 +2036,33 @@ If enabled, auto enables projectile, which has high CPU usage
   (use-package magit)
 
   (setq git-commit-summary-max-length 50)
-  (define-key leader-map (kbd "g s") 'magit-status)
+#+END_SRC
+
+** git-gutter
+#+BEGIN_SRC emacs-lisp
+  (use-package git-gutter)
 #+END_SRC
 
 ** Version control keys 
 #+BEGIN_SRC emacs-lisp
-  (define-key leader-map (kbd "g o") 'counsel-projectile)
-  (define-key leader-map (kbd "g f") 'counsel-projectile-ag)
-  (define-key leader-map (kbd "g d") 'projectile-dired)
-  (define-key leader-map (kbd "g D") 'counsel-projectile-find-dir)
-  (define-key leader-map (kbd "g l") 'counsel-projectile-find-file)
+  (define-key my/git-menu-map (kbd "o") 'counsel-projectile)
+  (define-key my/git-menu-map (kbd "f") 'counsel-projectile-ag)
+  (define-key my/git-menu-map (kbd "d") 'projectile-dired)
+  (define-key my/git-menu-map (kbd "D") 'counsel-projectile-find-dir)
+  (define-key my/git-menu-map (kbd "l") 'counsel-projectile-find-file)
 
-  (define-key leader-map (kbd "g K") 'projectile-kill-buffers)
-  (define-key leader-map (kbd "g b") 'counsel-projectile-switch-to-buffer)
-  (define-key leader-map (kbd "g B") 'projectile-ibuffer)
+  (define-key my/git-menu-map (kbd "K") 'projectile-kill-buffers)
+  (define-key my/git-menu-map (kbd "b") 'counsel-projectile-switch-to-buffer)
+  (define-key my/git-menu-map (kbd "B") 'projectile-ibuffer)
 
-  (define-key leader-map (kbd "g S") 'projectile-save-project-buffers)
-  (define-key leader-map (kbd "g C") 'projectile-compile-project)
+  (define-key my/git-menu-map (kbd "S") 'projectile-save-project-buffers)
+  (define-key my/git-menu-map (kbd "C") 'projectile-compile-project)
 
-  (define-key leader-map (kbd "g !") 'projectile-run-shell-command-in-root)
-  (define-key leader-map (kbd "g &") 'projectile-run-async-shell-command-in-root)
+  (define-key my/git-menu-map (kbd "!") 'projectile-run-shell-command-in-root)
+  (define-key my/git-menu-map (kbd "&") 'projectile-run-async-shell-command-in-root)
+
+  (define-key my/git-menu-map (kbd "g") 'git-gutter)
+  (define-key my/git-menu-map (kbd "s") 'magit-status)
 #+END_SRC
 
 * Media
@@ -2090,20 +2229,20 @@ set port
 
 **** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-key leader-map (kbd "m C-s") 'my/start-music-daemon)
-  (define-key leader-map (kbd "m C-k") 'my/kill-music-daemon)
-  (define-key leader-map (kbd "m C-u") 'my/update-mpd-and-emms-database)
 
-  (define-key leader-map (kbd "m i") 'my/mpd-info)
+  (define-key my/music-menu-map (kbd "C-s") 'my/start-music-daemon)
+  (define-key my/music-menu-map (kbd "C-k") 'my/kill-music-daemon)
+  (define-key my/music-menu-map (kbd "C-u") 'my/update-mpd-and-emms-database)
+  (define-key my/music-menu-map (kbd "i") 'my/mpd-info)
 
-  (define-key leader-map (kbd "m r") 'my/mpd-random-on)
-  (define-key leader-map (kbd "m C-r") 'my/mpd-random-off)
+  (define-key my/music-menu-map (kbd "r") 'my/mpd-random-on)
+  (define-key my/music-menu-map (kbd "C-r") 'my/mpd-random-off)
 
-  (define-key leader-map (kbd "m =") 'my/mpd-raise-volume)
-  (define-key leader-map (kbd "m -") 'my/mpd-lower-volume)
+  (define-key my/music-menu-map (kbd "=") 'my/mpd-raise-volume)
+  (define-key my/music-menu-map (kbd "-") 'my/mpd-lower-volume)
 
-  (define-key leader-map (kbd "m n") 'my/mpd-next-song)
-  (define-key leader-map (kbd "m p") 'my/mpd-previous-song)
+  (define-key my/music-menu-map (kbd "n") 'my/mpd-next-song)
+  (define-key my/music-menu-map (kbd "p") 'my/mpd-previous-song)
 
   (global-set-key (kbd "<XF86AudioNext>") 'my/mpd-next-song)
   (global-set-key (kbd "<XF86AudioPrev>") 'my/mpd-previous-song)
@@ -2155,11 +2294,9 @@ emms doesn't automatically connect to mpd when loading playlist, results in empt
 
 **** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-key leader-map (kbd "m o") 'my/open-emms-and-connect)
-
-  (define-key leader-map (kbd "m g") 'emms-seek-to)
-
-  (define-key leader-map (kbd "m s") 'emms-pause)
+  (define-key my/music-menu-map (kbd "o") 'my/open-emms-and-connect)
+  (define-key my/music-menu-map (kbd "g") 'emms-seek-to)
+  (define-key my/music-menu-map (kbd "s") 'emms-pause)
 
   (global-set-key (kbd "<XF86AudioPlay>") 'emms-pause)
   (global-set-key (kbd "<XF86AudioStop>") 'emms-stop)
@@ -2216,8 +2353,8 @@ emms doesn't automatically connect to mpd when loading playlist, results in empt
 #+BEGIN_SRC emacs-lisp
   (global-set-key (kbd "<print>") 'my/take-screenshot-region-and-ask-for-name)
 
-  (define-key leader-map (kbd "p r") 'my/take-screenshot-region)
-  (define-key leader-map (kbd "p w") 'my/take-screenshot)
+;;  (define-key my/leader-map (kbd "p r") 'my/take-screenshot-region)
+;;  (define-key my/leader-map (kbd "p w") 'my/take-screenshot)
 #+END_SRC
 
 * Email
@@ -2466,7 +2603,7 @@ Create =.gnus.el=, which gnus reads from
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-key leader-map (kbd "C-e") 'gnus)
+  (define-key my/leader-map (kbd "C-e") 'gnus)
 
   ;; Group mode
   (evil-define-key 'normal gnus-group-mode-map (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
@@ -2481,6 +2618,23 @@ Create =.gnus.el=, which gnus reads from
   ;; Summary mode
   (evil-define-key 'normal message-mode-map (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
   (evil-define-key 'normal message-mode-map (kbd "M-p") 'my/avy-goto-line-above-keep-horizontal-position)
+#+END_SRC
+
+* Networking
+** Netstat
+#+BEGIN_SRC emacs-lisp
+  (defun my/net-utils-mode ()
+    (interactive)
+    (visual-line-mode 0))
+
+  (add-hook 'net-utils-mode-hook 'my/net-utils-mode)
+#+END_SRC
+
+** Binds
+#+BEGIN_SRC emacs-lisp
+  (define-key my/net-utils-menu-map (kbd "s") 'netstat)
+  (define-key my/net-utils-menu-map (kbd "p") 'ping)
+  (define-key my/net-utils-menu-map (kbd "i") 'ifconfig)
 #+END_SRC
 
 * Browser
@@ -2546,10 +2700,10 @@ Create =.gnus.el=, which gnus reads from
 #+BEGIN_SRC emacs-lisp
   (evil-define-key 'normal eww-mode-map (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
   (evil-define-key 'normal eww-mode-map (kbd "M-p") 'my/avy-goto-line-above-keep-horizontal-position)
-  
+
   ;; Webjump
-  (define-key leader-map (kbd "b") 'webjump)
-  (define-key leader-map (kbd "C-b") (lambda () (interactive) (my/webjump-use-browser "firefox")))
+  (define-key my/leader-map (kbd "b") 'webjump)
+  (define-key my/leader-map (kbd "C-b") (lambda () (interactive) (my/webjump-use-browser "firefox")))
 #+END_SRC
 
 * Spelling
@@ -2564,9 +2718,9 @@ Create =.gnus.el=, which gnus reads from
       (add-to-list 'company-backends 'company-ispell)
       (message "company-ispell enabled!"))))
 
-  (define-key leader-map (kbd "s l") 'ispell-change-dictionary)
-  (define-key leader-map (kbd "s s") 'flyspell-mode)
-  (define-key leader-map (kbd "s c") 'my/toggle-company-ispell)
+  (define-key my/spell-menu-map (kbd "l") 'ispell-change-dictionary)
+  (define-key my/spell-menu-map (kbd "s") 'flyspell-mode)
+  (define-key my/spell-menu-map (kbd "c") 'my/toggle-company-ispell)
 #+END_SRC
 
 * Visuals
@@ -2582,7 +2736,7 @@ Changes background of eg. #FF00FF to represent color
 #+BEGIN_SRC emacs-lisp
   (use-package rainbow-mode)
 
-  (define-key leader-map (kbd "h c") 'rainbow-mode)
+  (define-key my/help-menu-map (kbd "c") 'rainbow-mode)
 #+END_SRC
 
 ** Rainbow delimiters
@@ -2640,7 +2794,23 @@ Highlight thing under cursor and all other occurrences
   (scroll-bar-mode -1)
 #+END_SRC
 
+** Auto dim inactive buffers
+#+BEGIN_SRC emacs-lisp
+  (use-package auto-dim-other-buffers)
+
+  (auto-dim-other-buffers-mode)
+#+END_SRC
+
 ** Modeline
+Make mode line appear in echo area instead of in the mode line area. This saves space and makes it so that the mode line can't be split
+#+BEGIN_SRC emacs-lisp
+  (use-package minibuffer-line)
+
+  ;; Disable normal mode line
+  (setq mode-line-format nil)
+  (setq-default mode-line-format nil)
+#+END_SRC
+
 *** Visuals
 #+BEGIN_SRC emacs-lisp
   ;;(set-face-background 'mode-line "#003300")
@@ -2692,7 +2862,7 @@ Highlight thing under cursor and all other occurrences
   ;;(set-face-attribute 'mode-line-inactive nil :box nil)
 #+END_SRC
 
-*** More hooks
+*** New hooks
 **** Save buffer hook
 #+BEGIN_SRC emacs-lisp
   (defvar my/save-buffer-hook nil
@@ -2707,6 +2877,78 @@ Highlight thing under cursor and all other occurrences
 #+END_SRC
 
 *** Mode line modules
+**** Network traffic
+#+BEGIN_SRC emacs-lisp
+  (defun my/convert-kilo-byte-to-mega-byte (kilo)
+    (/ kilo 1024))
+
+  (defun my/convert-byte-to-kilo-byte (byte)
+    (/ byte 1024))
+
+  (defun my/convert-to-best-unit (byte)
+    (if (> byte 1000)
+        (progn
+          (setq kilo-byte (my/convert-byte-to-kilo-byte byte))
+          (if (> kilo-byte 1000)
+              (progn
+                (setq mega-byte (my/convert-kilo-byte-to-mega-byte kilo-byte))
+                (concat (number-to-string mega-byte) "M"))
+            (concat (number-to-string kilo-byte) "K")))
+      (concat (number-to-string byte) "B")))
+#+END_SRC
+
+***** Linux
+****** RX
+Received
+#+BEGIN_SRC emacs-lisp
+  (defvar my/rx 0)
+  (defvar my/rx-delta-formatted "0")
+
+  (defun my/linux-get-network-rx ()
+    (with-temp-buffer
+      (insert-file-contents "/proc/net/dev")
+      (goto-char 1)
+      (let ((rx 0))
+        (while (search-forward-regexp "^[\s\t]*\\(.*\\):" nil t)
+          (unless (string= (match-string 1) "lo")
+            (setq rx (+ rx (read (current-buffer)))))) rx)))
+
+  (defun my/linux-update-network-rx-delta ()
+    (interactive)
+    (setq my/rx-new (my/linux-get-network-rx))
+    (if (> my/rx 0)
+        (setq my/rx-delta-formatted (my/convert-to-best-unit (- my/rx-new my/rx))))
+    (setq my/rx my/rx-new))
+
+  (run-with-timer 0 60 'my/linux-update-network-rx-delta)
+#+END_SRC
+
+****** TX
+Transmitted
+#+BEGIN_SRC emacs-lisp
+  (setq my/tx 0)
+  (defvar my/tx-delta-formatted "0")
+
+  (defun my/linux-get-network-tx ()
+    (with-temp-buffer
+      (insert-file-contents "/proc/net/dev")
+      (goto-char 1)
+      (let ((tx 0))
+        (while (search-forward-regexp "^[\s\t]*\\(.*\\):" nil t)
+          (unless (string= (match-string 1) "lo")
+            (forward-word 8)
+            (setq tx (+ tx (read (current-buffer)))))) tx)))
+
+  (defun my/linux-update-network-tx-delta ()
+    (interactive)
+    (setq my/tx-new (my/linux-get-network-tx))
+    (if (> my/tx 0)
+        (setq my/tx-delta-formatted (my/convert-to-best-unit (- my/tx-new my/tx))))
+    (setq my/tx my/tx-new))
+
+  (run-with-timer 0 60 'my/linux-update-network-tx-delta)
+#+END_SRC
+
 **** Display total line numbers
 #+BEGIN_SRC emacs-lisp
   (defvar my/buffer-total-lines nil)
@@ -2769,7 +3011,6 @@ Display time and date in good format (also displays CPU load)
 
   (run-with-timer 0 60 'my/update-time)
 
-
   ;; Update date now
   (my/update-date)
 
@@ -2827,16 +3068,6 @@ When projectile-mode is on, project name is updated on every keypress, here it i
  ;;   (setq my/ram-left (number-to-string(/ (ffloor (* (/ (nth 1 (memory-info)) (expt 1024.0 2)) 10)) 10))))
 
 ;;  (run-with-timer 0 60 'my/update-ram-left)
-#+END_SRC
-
-*** Minibuffer mode line
-Make mode line appear in echo area instead of in the mode line area. This saves space and makes it so that the mode line can't be split
-#+BEGIN_SRC emacs-lisp
-  (use-package minibuffer-line)
-
-  ;; Disable normal mode line
-  (setq mode-line-format nil)
-  (setq-default mode-line-format nil)
 #+END_SRC
 
 *** Mode line format
@@ -2912,6 +3143,10 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
                        ;;        (:eval my/ram-left)
                        ;;         "G"
 
+                       " NET:"
+                       (:eval my/rx-delta-formatted)
+                       "|"
+                       (:eval my/tx-delta-formatted)
                        " GC: "
                        (:eval (number-to-string (truncate gc-elapsed)))
 
@@ -2921,8 +3156,9 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
 
                        " C: "
 
-                       (:eval (if (> my/load-average 0.9)
-                                  (my/set-mode-line-warning)))
+                       (:eval (if (> my/load-average 3.5)
+                                  (my/set-mode-line-warning)
+                                (my/set-mode-line-normal)))
 
                        (:eval (number-to-string my/load-average))
 
