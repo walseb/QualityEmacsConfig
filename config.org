@@ -401,15 +401,7 @@ Allows for using indention as text objects
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/leader-map)
 
-  (global-unset-key (kbd "C-t"))
-
-  (define-key evil-motion-state-map (kbd "t") 'my/leader-map)
-  (define-key evil-normal-state-map (kbd "t") 'my/leader-map)
-  (define-key evil-emacs-state-map (kbd "C-t") 'my/leader-map)
-#+END_SRC
-
-** Leader menus
-#+BEGIN_SRC emacs-lisp
+  ;; Menus
   (define-prefix-command 'my/music-menu-map)
   (define-key my/leader-map (kbd "m") 'my/music-menu-map)
 
@@ -433,11 +425,6 @@ Allows for using indention as text objects
 
   (define-prefix-command 'my/x-menu-map)
   (define-key my/leader-map (kbd "x") 'my/x-menu-map)
-#+END_SRC
-
-** Fix leader bind in modes
-#+BEGIN_SRC emacs-lisp
-  (evil-define-key 'normal compilation-mode-map (kbd "t") 'my/leader-map)
 #+END_SRC
 
 * Minor
@@ -775,8 +762,6 @@ Vim bindings to change fold
 #+BEGIN_SRC emacs-lisp
   (define-key evil-normal-state-map (kbd "C-/") 'ivy-resume)
 
-  (define-key my/leader-map (kbd "b") 'ivy-switch-buffer)
-
   ;; Enable avy movements in ivy buffer
   (define-key ivy-minibuffer-map (kbd "M-p") 'ivy-avy)
   (define-key ivy-minibuffer-map (kbd "M-n") 'ivy-avy)
@@ -891,8 +876,6 @@ https://www.reddit.com/r/emacs/comments/57fnar/ivy_completion_at_point_in_an_ove
 * Undo tree
 #+BEGIN_SRC emacs-lisp
   (use-package undo-tree)
-
-  (setq undo-tree-visualizer-diff t)
 #+END_SRC
 
 * Buffer management
@@ -949,31 +932,39 @@ Just unbind C-x b
 
   (setq aw-dispatch-alist
         '(
-          (?g aw-swap-window "Swap Windows")
           ;;(?M aw-move-window "Move Window")
 
           ;; Switch buffer then jump to it
           ;;(?b aw-switch-buffer-in-window "Select Buffer")
-          ;; Switch buffer
-          ;;(?B aw-switch-buffer-other-window "Switch Buffer Other Window")
-          
-          ;; Previous window
-          (?p aw-flip-window)
 
+          ;; Switch buffer
+          (?f aw-switch-buffer-other-window "Change buffer")
+          ;; Switch buffer
+          (?F ivy-switch-buffer)
+
+          ;; Split vertically
           (?v aw-split-window-vert "Split Vert Window")
           (?V my/split-and-follow-vertically)
 
-          (?m aw-split-window-horz "Split Horz Window")
-          (?M my/split-and-follow-horozontally)
+          ;; Split horizontally
+          (?p aw-split-window-horz "Split Horz Window")
+          (?P my/split-and-follow-horozontally)
 
           ;; Delete one window
           (?l aw-delete-window "Delete Window")
           (?L delete-window)
 
           ;; Focus
-          (?f delete-other-windows "Delete Other Windows")
-          (?F delete-other-windows)
+          (?w delete-other-windows "Focus on window")
+          (?W delete-other-windows)
 
+          ;; Swap
+          (?g aw-swap-window "Swap Windows")
+
+          ;; Previous window
+          (?m aw-flip-window)
+
+          ;; Help
           (?? aw-show-dispatch-help)))
 
   (setq aw-scope 'frame)
@@ -1792,9 +1783,9 @@ There aren't really any worth changing
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
-  (evil-define-key 'normal my/keys-mode-map (kbd "C-u") 'my/evil-scroll-up)
-  (evil-define-key 'normal my/keys-mode-map (kbd "C-d") 'my/evil-scroll-down)
-  (evil-define-key 'normal my/keys-mode-map (kbd "t") 'my/leader-map)
+  (evil-define-key 'motion my/keys-mode-map (kbd "C-u") 'my/evil-scroll-up)
+  (evil-define-key 'motion my/keys-mode-map (kbd "C-d") 'my/evil-scroll-down)
+  (evil-define-key 'motion my/keys-mode-map (kbd "t") 'my/leader-map)
 
   (define-key my/keys-mode-map (kbd "M-o") 'ace-window)
 
@@ -1850,13 +1841,6 @@ Define main function
 
 *** Run programs functions
 #+BEGIN_SRC emacs-lisp
-  ;;  (defun my/launch-browser ()
-  ;;    (interactive)
-  ;;    (exwm-async-run "firefox"))
-
-  ;;  (global-set-key (kbd "s-b") 'my/launch-browser)
-  ;; (define-key my/x-menu-map (kbd "b") 'my/launch-browser)
-
   (defun my/launch-virt-manager ()
     (interactive)
     (exwm-async-run "virt-manager"))
@@ -1870,12 +1854,6 @@ Define main function
 
   (global-set-key (kbd "<XF86ScreenSaver>") 'lock-screen)
   (define-key my/x-menu-map (kbd "l") 'lock-screen)
-#+END_SRC
-
-** Systembar
-#+BEGIN_SRC emacs-lisp
-;; (require 'exwm-systemtray)
-;; (exwm-systemtray-enable)
 #+END_SRC
 
 ** Settings
@@ -1940,14 +1918,6 @@ Define main function
   (exwm-input-set-key (kbd "s-r") `(lambda () (interactive)
                                      (exwm-workspace-switch-create 9)))
 
-
-  ;; loop and bind s-<number> to switch workspace
-  ;;(dotimes (i 10)
-  ;;(exwm-input-set-key (kbd (format "s-%s" i))
-  ;;`(lambda ()
-  ;;(interactive)
-  ;;(exwm-workspace-switch-create ,i))))
-
   ;; Rebind keys in exwm bufffers
   (setq exwm-input-simulation-keys
         '(
@@ -1994,18 +1964,8 @@ Define main function
                C-g
                C-h
                M-o
-               C-o
                ;; Workspaces
-               s-a
-               s-n
-               s-e
-               s-t
-               s-o
-               s-s
-               s-h
-               s-d
-               s-i
-               s-r
+               s-a s-n s-e s-t s-o s-s s-h s-d s-i s-r
                ;; Exwm grab and release keyboard
                s-j
                s-k
@@ -2014,13 +1974,9 @@ Define main function
 
   ;; Some keys have to be defined using "exwm-input-set-key" in order to be usable if they are in "exwm-input-prefix-keys"
 
-  ;; Built in??
-  ;;(exwm-input-set-key (kbd "C-x") 'general-simulate-C-x)
-
   (exwm-input-set-key (kbd "C-t") 'my/leader-map)
 
-  (exwm-input-set-key (kbd "C-o") 'ace-window)
-
+  (exwm-input-set-key (kbd "M-o") 'ace-window)
 
   ;; Enter and exit char mode
   (exwm-input-set-key (kbd "s-j") 'exwm-input-grab-keyboard)
@@ -2057,14 +2013,14 @@ If enabled, auto enables projectile, which has high CPU usage
 ** Version control keys 
 #+BEGIN_SRC emacs-lisp
   (define-key my/git-menu-map (kbd "o") 'counsel-projectile)
-  (define-key my/git-menu-map (kbd "f") 'counsel-projectile-ag)
+  (define-key my/git-menu-map (kbd "a") 'counsel-projectile-ag)
   (define-key my/git-menu-map (kbd "d") 'projectile-dired)
   (define-key my/git-menu-map (kbd "D") 'counsel-projectile-find-dir)
   (define-key my/git-menu-map (kbd "l") 'counsel-projectile-find-file)
 
   (define-key my/git-menu-map (kbd "K") 'projectile-kill-buffers)
-  (define-key my/git-menu-map (kbd "b") 'counsel-projectile-switch-to-buffer)
-  (define-key my/git-menu-map (kbd "B") 'projectile-ibuffer)
+  (define-key my/git-menu-map (kbd "f") 'counsel-projectile-switch-to-buffer)
+  (define-key my/git-menu-map (kbd "F") 'projectile-ibuffer)
 
   (define-key my/git-menu-map (kbd "S") 'projectile-save-project-buffers)
   (define-key my/git-menu-map (kbd "C") 'projectile-compile-project)
@@ -2953,9 +2909,7 @@ Transmitted
 
   (add-hook 'window-configuration-change-hook 'my/update-total-lines)
   (add-hook 'exwm-workspace-switch-hook 'my/update-total-lines)
-  ;;(add-hook 'write-file-hooks 'my/update-total-lines)
-;; before save hook
-  (add-hook 'switch-window-finish-hook 'my/update-total-lines)
+  ;;(add-hook 'before-save-hook 'my/update-total-lines)
 #+END_SRC
 
 **** Mail
@@ -3006,7 +2960,6 @@ Display time and date in good format (also displays CPU load)
     (interactive)
     (setq my/buffer-git-branch (car (vc-git-branches))))
 
-  (add-hook 'switch-window-finish-hook 'my/update-buffer-git-branch)
   (add-hook 'exwm-workspace-switch-hook 'my/update-buffer-git-branch)
   (add-hook 'window-configuration-change-hook 'my/update-buffer-git-branch)
 #+END_SRC
@@ -3020,7 +2973,6 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     (interactive)
     (setq my/projectile-project-name (projectile-project-name)))
 
-  (add-hook 'switch-window-finish-hook 'my/update-projectile-project-name)
   (add-hook 'exwm-workspace-switch-hook 'my/update-projectile-project-name)
   (add-hook 'window-configuration-change-hook 'my/update-projectile-project-name)
 #+END_SRC
