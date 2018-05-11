@@ -285,6 +285,7 @@ You have to press =q= in order to save changes
   (setq evil-shift-round nil)
   (setq evil-want-C-u-scroll t)
 #+END_SRC
+
 ** Settings
 *** Disable messages in echo area
 Evil spams message area
@@ -367,6 +368,12 @@ Example
     (interactive)
     (evil-scroll-down arg)
     (my/evil-normal-state))
+
+  (define-key evil-insert-state-map (kbd "C-u") 'my/evil-scroll-up)
+  (define-key evil-normal-state-map (kbd "C-u") 'my/evil-scroll-up)
+
+  (define-key evil-insert-state-map (kbd "C-d") 'my/evil-scroll-down)
+  (define-key evil-normal-state-map (kbd "C-d") 'my/evil-scroll-down)
 #+END_SRC
 
 *** Settings
@@ -396,9 +403,11 @@ Allows for using indention as text objects
 
   (global-unset-key (kbd "C-t"))
 
+  (define-key evil-motion-state-map (kbd "t") 'my/leader-map)
   (define-key evil-normal-state-map (kbd "t") 'my/leader-map)
   (define-key evil-emacs-state-map (kbd "C-t") 'my/leader-map)
 #+END_SRC
+
 ** Leader menus
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/music-menu-map)
@@ -414,7 +423,7 @@ Allows for using indention as text objects
   (define-key my/leader-map (kbd "p") 'my/processes-menu-map)
 
   (define-prefix-command 'my/spell-menu-map)
-  (define-key my/leader-map (kbd "s") 'my/spell-menu-map)
+  (define-key my/leader-map (kbd "S") 'my/spell-menu-map)
 
   (define-prefix-command 'my/open-menu-map)
   (define-key my/leader-map (kbd "o") 'my/open-menu-map)
@@ -565,13 +574,6 @@ Set fringe size to 0
 In org mode when displaying images pixel scroll mode can be useful maybe
 #+BEGIN_SRC emacs-lisp
   ;;(add-hook 'org-mode-hook 'pixel-scroll-mode)
-#+END_SRC
-
-** Help mode
-Help mode doesn't have a normal mode or insert mode, so just overwrite help-mode-map directly
-#+BEGIN_SRC emacs-lisp
-  (define-key help-mode-map (kbd "C-u") 'my/evil-scroll-up)
-  (define-key help-mode-map (kbd "t") 'my/leader-map)
 #+END_SRC
 
 ** Midnight mode
@@ -730,15 +732,6 @@ Vim bindings to change fold
     (move-to-column cursor-horizontal-pos))
 #+END_SRC
 
-*** Binds
-#+BEGIN_SRC emacs-lisp
-  (global-set-key (kbd "M-f") 'avy-goto-char-in-line)
-  (global-set-key (kbd "M-w") 'my/avy-goto-word-0-in-line)
-  (global-set-key (kbd "M-g") 'avy-goto-char-timer)
-
-  (global-set-key (kbd "M-p") 'my/avy-goto-line-above-keep-horizontal-position)
-  (global-set-key (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
-#+END_SRC
 
 ** Avy flycheck
 #+BEGIN_SRC emacs-lisp
@@ -767,15 +760,6 @@ Vim bindings to change fold
   ;;(setq ivy-re-builders-alist
   ;;      '((swiper . ivy--regex-plus)
   ;;       (t      . ivy--regex-fuzzy)))
-#+END_SRC
-
-*** Ivy occur mode
-Doesn't work??
-#+BEGIN_SRC emacs-lisp
-;;  (evil-define-key 'normal ivy-occur-mode-map (kbd "C-u") 'evil-scroll-up)
-;;  (evil-define-key 'normal ivy-occur-mode-map (kbd "C-d") 'evil-scroll-down)
-
-;;  (evil-define-key 'normal ivy-occur-mode-map (kbd "i") 'evil-insert)
 #+END_SRC
 
 *** Visuals
@@ -973,8 +957,8 @@ Just unbind C-x b
           ;; Switch buffer
           ;;(?B aw-switch-buffer-other-window "Switch Buffer Other Window")
           
-          ;; Previous buffer
-          (?q aw-flip-window)
+          ;; Previous window
+          (?p aw-flip-window)
 
           (?v aw-split-window-vert "Split Vert Window")
           (?V my/split-and-follow-vertically)
@@ -982,10 +966,13 @@ Just unbind C-x b
           (?m aw-split-window-horz "Split Horz Window")
           (?M my/split-and-follow-horozontally)
 
-          (?l delete-window)
-          ;;(?l aw-delete-window "Delete Window")
-          (?L delete-other-windows)
-          ;;(?L delete-other-windows "Delete Other Windows")
+          ;; Delete one window
+          (?l aw-delete-window "Delete Window")
+          (?L delete-window)
+
+          ;; Focus
+          (?f delete-other-windows "Delete Other Windows")
+          (?F delete-other-windows)
 
           (?? aw-show-dispatch-help)))
 
@@ -995,7 +982,7 @@ Just unbind C-x b
 
   (setq aw-background nil)
 
-  (global-set-key (kbd "M-o") 'ace-window)
+  (setq aw-minibuffer-flag t)
 #+END_SRC
 
 ** Don't ask for confirmation when killing window
@@ -1533,9 +1520,6 @@ omnisharp.json should be in ~/.omnisharp on all OSs
   (evil-define-key 'normal fsharp-mode-map (kbd "t a C-r") 'fsharp-ac-status)
   (evil-define-key 'normal fsharp-mode-map (kbd "t a C-k") 'fsharp-ac/stop-process)
   (evil-define-key 'normal fsharp-mode-map (kbd "t a C-s") 'fsharp-ac/start-process)
-
-  (evil-define-key 'normal fsharp-mode-map (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
-  (evil-define-key 'normal fsharp-mode-map (kbd "M-p") 'my/avy-goto-line-above-keep-horizontal-position)
 #+END_SRC
 
 *** Settings
@@ -1665,18 +1649,6 @@ Disable rainbow delimiters
                                  (give-buffer-unique-name "*eshell*")))
 #+END_SRC
 
-** Keys
-Unbind C-d so that the global bind is used instead
-#+BEGIN_SRC emacs-lisp
-  (evil-define-key 'normal shell-mode-map (kbd "C-d") 'my/evil-scroll-down)
-
-  (evil-define-key 'normal shell-mode-map (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
-  (evil-define-key 'normal shell-mode-map (kbd "M-p") 'my/avy-goto-line-above-keep-horizontal-position)
-
-  (evil-define-key 'normal eshell-mode-map (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
-  (evil-define-key 'normal eshell-mode-map (kbd "M-p") 'my/avy-goto-line-above-keep-horizontal-position)
-#+END_SRC
-
 * Key rebinds
 ** General
 More rebind options and more reliable
@@ -1780,21 +1752,9 @@ There aren't really any worth changing
 (define-key evil-motion-state-map "gJ" 'evil-previous-match)
 #+END_SRC
 
-** Make C-u and C-u exit insert mode
+** Rebind save key
 #+BEGIN_SRC emacs-lisp
-  (define-key evil-insert-state-map (kbd "C-u") 'my/evil-scroll-up)
-  (define-key evil-normal-state-map (kbd "C-u") 'my/evil-scroll-up)
-
-  (define-key evil-insert-state-map (kbd "C-d") 'my/evil-scroll-down)
-  (define-key evil-normal-state-map (kbd "C-d") 'my/evil-scroll-down)
-#+END_SRC
-
-** Make space useful
-#+BEGIN_SRC emacs-lisp
-  ;; Space --> C-x
-  ;;(general-mmap "SPC" (general-simulate-key "C-x"))
-  ;;(general-mmap "C-SPC" (general-simulate-key "C-c"))
-  ;;(general-mmap "M-SPC" 'counsel-linux-app)
+  (general-nmap "t s" (general-simulate-key "C-x C-s"))
 #+END_SRC
 
 ** Resize windows
@@ -1803,6 +1763,47 @@ There aren't really any worth changing
 ;; (global-set-key (kbd "s-n") 'shrink-window)
 ;;  (global-set-key (kbd "s-h") 'shrink-window-horizontally)
 ;;  (global-set-key (kbd "s-l") 'enlarge-window-horizontally)
+#+END_SRC
+
+* Persistent keys
+#+BEGIN_SRC emacs-lisp
+  (defvar my/keys-mode-map (make-sparse-keymap))
+
+  (define-minor-mode my/mode
+    ;; init value t to enable it in fundamental mode
+    ;; More info: http://emacs.stackexchange.com/q/16693/115
+    :init-value t
+    :keymap my/keys-mode-map)
+
+  (define-globalized-minor-mode global-my/mode my/keys-mode my/keys-mode)
+
+  (add-to-list 'emulation-mode-map-alists `((my/mode . ,my/keys-mode-map)))
+
+  ;; Turn off the minor mode in the minibuffer
+  (defun my/mode-turn-off ()
+    (my/mode -1))
+#+END_SRC
+
+** Don't run in these modes
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'minibuffer-setup-hook 'my/mode-turn-off)
+  (add-hook 'company-mode-map 'my/mode-turn-off)
+#+END_SRC
+
+** Keys
+#+BEGIN_SRC emacs-lisp
+  (evil-define-key 'normal my/keys-mode-map (kbd "C-u") 'my/evil-scroll-up)
+  (evil-define-key 'normal my/keys-mode-map (kbd "C-d") 'my/evil-scroll-down)
+  (evil-define-key 'normal my/keys-mode-map (kbd "t") 'my/leader-map)
+
+  (define-key my/keys-mode-map (kbd "M-o") 'ace-window)
+
+  (define-key my/keys-mode-map (kbd "M-f") 'avy-goto-char-in-line)
+  (define-key my/keys-mode-map (kbd "M-w") 'my/avy-goto-word-0-in-line)
+  (define-key my/keys-mode-map (kbd "M-g") 'avy-goto-char-timer)
+
+  (define-key my/keys-mode-map (kbd "M-p") 'my/avy-goto-line-above-keep-horizontal-position)
+  (define-key my/keys-mode-map (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
 #+END_SRC
 
 * exwm
@@ -1993,6 +1994,7 @@ Define main function
                C-g
                C-h
                M-o
+               C-o
                ;; Workspaces
                s-a
                s-n
@@ -2016,6 +2018,8 @@ Define main function
   ;;(exwm-input-set-key (kbd "C-x") 'general-simulate-C-x)
 
   (exwm-input-set-key (kbd "C-t") 'my/leader-map)
+
+  (exwm-input-set-key (kbd "C-o") 'ace-window)
 
 
   ;; Enter and exit char mode
@@ -2613,18 +2617,12 @@ Create =.gnus.el=, which gnus reads from
   (define-key my/leader-map (kbd "C-e") 'gnus)
 
   ;; Group mode
-  (evil-define-key 'normal gnus-group-mode-map (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
-  (evil-define-key 'normal gnus-group-mode-map (kbd "M-p") 'my/avy-goto-line-above-keep-horizontal-position)
   (evil-define-key 'normal gnus-group-mode-map (kbd "i") 'nil)
 
   ;; Summary mode
-  (evil-define-key 'normal gnus-summary-mode-map (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
-  (evil-define-key 'normal gnus-summary-mode-map (kbd "M-p") 'my/avy-goto-line-above-keep-horizontal-position)
   (evil-define-key 'normal gnus-summary-mode-map (kbd "i") 'nil)
 
   ;; Summary mode
-  (evil-define-key 'normal message-mode-map (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
-  (evil-define-key 'normal message-mode-map (kbd "M-p") 'my/avy-goto-line-above-keep-horizontal-position)
 #+END_SRC
 
 * Networking
@@ -2705,9 +2703,6 @@ Create =.gnus.el=, which gnus reads from
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
-  (evil-define-key 'normal eww-mode-map (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
-  (evil-define-key 'normal eww-mode-map (kbd "M-p") 'my/avy-goto-line-above-keep-horizontal-position)
-
   ;; Webjump
   (define-key my/leader-map (kbd "w") 'webjump)
   (define-key my/leader-map (kbd "W") (lambda () (interactive) (my/webjump-use-browser "firefox")))
@@ -2875,20 +2870,6 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
   ;;(set-face-attribute 'mode-line-inactive nil :box nil)
 #+END_SRC
 
-*** New hooks
-**** Save buffer hook
-#+BEGIN_SRC emacs-lisp
-  (defvar my/save-buffer-hook nil
-    "Runs after buffer is saved with C-x C-s")
-
-  (defun my/save-buffer (&optional arg)
-    (interactive "p")
-    (save-buffer arg)
-    (run-hooks 'my/save-buffer-hook))
-
-  (define-key ctl-x-map "\C-s" 'my/save-buffer)
-#+END_SRC
-
 *** Mode line modules
 **** Network traffic
 #+BEGIN_SRC emacs-lisp
@@ -2972,7 +2953,8 @@ Transmitted
 
   (add-hook 'window-configuration-change-hook 'my/update-total-lines)
   (add-hook 'exwm-workspace-switch-hook 'my/update-total-lines)
-  (add-hook 'my/save-buffer-hook 'my/update-total-lines)
+  ;;(add-hook 'write-file-hooks 'my/update-total-lines)
+;; before save hook
   (add-hook 'switch-window-finish-hook 'my/update-total-lines)
 #+END_SRC
 
