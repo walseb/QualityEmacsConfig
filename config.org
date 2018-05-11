@@ -426,8 +426,11 @@ Allows for using indention as text objects
   (define-key my/leader-map (kbd "x") 'my/x-menu-map)
 #+END_SRC
 
-** Example
-(define-key my/leader-map (kbd "key") 'function)
+** Fix leader bind in modes
+#+BEGIN_SRC emacs-lisp
+  (evil-define-key 'normal compilation-mode-map (kbd "t") 'my/leader-map)
+#+END_SRC
+
 * Minor
 ** Startup
 Disable startup message
@@ -508,7 +511,7 @@ Stop emacs from creating backup files on every save
 (global-subword-mode 1)
  #+END_SRC
 
-** Open directory hotkeys
+** Visit file hotkeys
 *** Functions
 **** Visit agenda
 #+BEGIN_SRC emacs-lisp
@@ -787,7 +790,8 @@ Doesn't work??
 *** Keys
 #+BEGIN_SRC emacs-lisp
   (define-key evil-normal-state-map (kbd "C-/") 'ivy-resume)
-  (global-set-key (kbd "C-x C-b") 'ivy-switch-buffer)
+
+  (define-key my/leader-map (kbd "b") 'ivy-switch-buffer)
 
   ;; Enable avy movements in ivy buffer
   (define-key ivy-minibuffer-map (kbd "M-p") 'ivy-avy)
@@ -807,26 +811,26 @@ Doesn't work??
 *** Keys
 #+BEGIN_SRC emacs-lisp
   (global-set-key (kbd "M-x") 'counsel-M-x)
-  (global-set-key (kbd "C-x C-f") 'counsel-find-file)
   (global-set-key (kbd "<f1> f") 'counsel-describe-function)
   (global-set-key (kbd "<f1> v") 'counsel-describe-variable)
   (global-set-key (kbd "<f1> l") 'counsel-find-library)
   (global-set-key (kbd "<f2> i") 'counsel-info-lookup-symbol)
   (global-set-key (kbd "<f2> u") 'counsel-unicode-char)
 
-  (define-key my/help-menu-map (kbd "C-c") 'counsel-colors-emacs)
-  (define-key my/help-menu-map (kbd "C") 'counsel-colors-web)
-
-  (define-key my/leader-map (kbd "i") 'counsel-imenu)
-
-  (define-key my/leader-map (kbd "f") 'counsel-ag)
-  (define-key my/leader-map (kbd "l") 'counsel-locate)
-
   (global-set-key (kbd "s-x") 'counsel-linux-app)
 
   (global-set-key (kbd "M-k") 'counsel-yank-pop)
 
   (global-set-key (kbd "M-m") 'counsel-mark-ring)
+
+  (define-key my/leader-map (kbd "f") 'counsel-find-file)
+  (define-key my/leader-map (kbd "F") 'counsel-ag)
+  (define-key my/leader-map (kbd "l") 'counsel-locate)
+
+  (define-key my/help-menu-map (kbd "C-c") 'counsel-colors-emacs)
+  (define-key my/help-menu-map (kbd "C") 'counsel-colors-web)
+
+  (define-key my/leader-map (kbd "i") 'counsel-imenu)
 #+END_SRC
 
 ** Swiper 
@@ -915,18 +919,19 @@ Just unbind C-x b
 
 ** Kill current buffer
 #+BEGIN_SRC emacs-lisp
-  (defun kill-curr-buffer ()
+  (defun my/kill-curr-buffer ()
     (interactive)
     (kill-buffer (current-buffer)))
-  (global-set-key (kbd "C-x k") 'kill-curr-buffer)
+
+  (define-key my/leader-map (kbd "k") 'my/kill-curr-buffer)
 #+END_SRC
 
 ** Kill all buffers
 #+BEGIN_SRC emacs-lisp
-  (defun kill-all-buffers ()
+  (defun my/kill-all-buffers ()
     (interactive)
     (mapc 'kill-buffer (buffer-list)))
-  (global-set-key (kbd "C-M-s-k") 'kill-all-buffers)
+  (global-set-key (kbd "C-M-s-k") 'my/kill-all-buffers)
 #+END_SRC
 
 ** Unique names for identical buffer names
@@ -937,67 +942,65 @@ Just unbind C-x b
 #+END_SRC
 
 * Window management
-** Switch-window
-#+BEGIN_SRC emacs-lisp
-  (use-package switch-window)
-
-  (setq switch-window-input-style 'minibuffer)
-  (setq switch-window-increase 4)
-  (setq switch-window-threshold 2)
-
-  ;; Disable hints
-  (setq switch-window-shortcut-appearance nil)
-
-  (setq switch-window-shortcut-style 'qwerty)
-  (setq switch-window-qwerty-shortcuts
-        '("a" "n" "e" "t" "o" "s" "h" "d"))
-
-  (global-set-key (kbd "C-x o") 'switch-window)
-  (global-set-key (kbd "C-x C-o") 'switch-window)
-#+END_SRC
-
 ** Make cursor auto move to new split window
 #+BEGIN_SRC emacs-lisp
-  (defun split-and-follow-horozontally ()
+  (defun my/split-and-follow-horozontally ()
     (interactive)
     (split-window-below)
-    (balance-windows)
+    ;;(balance-windows)
     (other-window 1))
-  (global-set-key (kbd "C-x 2") 'split-and-follow-horozontally)
 
-  (defun split-and-follow-vertically()
+  (defun my/split-and-follow-vertically()
     (interactive)
     (split-window-right)
-    (balance-windows)
+    ;;(balance-windows)
     (other-window 1))
-  (global-set-key (kbd "C-x 3") 'split-and-follow-vertically)
+#+END_SRC
+
+** Switch-window
+#+BEGIN_SRC emacs-lisp
+  (use-package ace-window)
+
+  (setq aw-keys '(?a ?n ?e ?t ?o ?s ?h ?d ?i ?r))
+
+  (setq aw-dispatch-alist
+        '(
+          (?g aw-swap-window "Swap Windows")
+          ;;(?M aw-move-window "Move Window")
+
+          ;; Switch buffer then jump to it
+          ;;(?b aw-switch-buffer-in-window "Select Buffer")
+          ;; Switch buffer
+          ;;(?B aw-switch-buffer-other-window "Switch Buffer Other Window")
+          
+          ;; Previous buffer
+          (?q aw-flip-window)
+
+          (?v aw-split-window-vert "Split Vert Window")
+          (?V my/split-and-follow-vertically)
+
+          (?m aw-split-window-horz "Split Horz Window")
+          (?M my/split-and-follow-horozontally)
+
+          (?l delete-window)
+          ;;(?l aw-delete-window "Delete Window")
+          (?L delete-other-windows)
+          ;;(?L delete-other-windows "Delete Other Windows")
+
+          (?? aw-show-dispatch-help)))
+
+  (setq aw-scope 'frame)
+
+  (setq aw-dispatch-always t)
+
+  (setq aw-background nil)
+
+  (global-set-key (kbd "M-o") 'ace-window)
 #+END_SRC
 
 ** Don't ask for confirmation when killing window
 #+BEGIN_SRC emacs-lisp
   (setq kill-buffer-query-functions (delq 'process-kill-buffer-query-function kill-buffer-query-functions))
-#+END_SRC
-
-** DWM
-DOESN'T WORK - try C-c ' at code
-Global mode
-#+BEGIN_SRC emacs-lisp
-;;    (define-globalized-minor-mode global-dwm-mode dwm-mode
-;;    (lambda () (dwm-mode 1))
-;;    (global-dwm-mode 1))
-
-;; 'dwm-create-window
-
-#+END_SRC
-
-* Minor modes management
-#+BEGIN_SRC emacs-lisp
-  (use-package manage-minor-mode)
-#+END_SRC
-
-** Binds
-#+BEGIN_SRC emacs-lisp
-  (define-key my/help-menu-map (kbd "C-m") 'manage-minor-mode)
 #+END_SRC
 
 * Dired
@@ -1305,11 +1308,14 @@ Make company mode inherit colors from theme, change later maybe
   (define-key company-active-map (kbd "C-n") 'company-select-next)
   (define-key company-active-map (kbd "C-p") 'company-select-previous)
 
+  (define-key company-active-map (kbd "C-u") 'company-previous-page)
+  (define-key company-active-map (kbd "C-d") 'company-next-page)
+
   ;; using C-h is better in every way 
   (define-key company-active-map (kbd "<f1>") 'nil)
 
   ;; Force autocomplete button
-  (define-key evil-insert-state-map (kbd "C-a") 'company-complete)
+  ;; (define-key evil-insert-state-map (kbd "C-a") 'company-complete)
 #+END_SRC
 
 ** Company-box
@@ -1883,7 +1889,7 @@ Define main function
 ** Keys
 #+BEGIN_SRC emacs-lisp
   ;; a n e t o s h d i r
-(global-set-key (kbd "s-a") `(lambda () (interactive)
+  (global-set-key (kbd "s-a") `(lambda () (interactive)
                                  (exwm-workspace-switch-create 0)))
   (exwm-input-set-key (kbd "s-a") `(lambda () (interactive)
                                      (exwm-workspace-switch-create 0)))
@@ -1986,6 +1992,7 @@ Define main function
                C-t
                C-g
                C-h
+               M-o
                ;; Workspaces
                s-a
                s-n
@@ -2702,8 +2709,8 @@ Create =.gnus.el=, which gnus reads from
   (evil-define-key 'normal eww-mode-map (kbd "M-p") 'my/avy-goto-line-above-keep-horizontal-position)
 
   ;; Webjump
-  (define-key my/leader-map (kbd "b") 'webjump)
-  (define-key my/leader-map (kbd "C-b") (lambda () (interactive) (my/webjump-use-browser "firefox")))
+  (define-key my/leader-map (kbd "w") 'webjump)
+  (define-key my/leader-map (kbd "W") (lambda () (interactive) (my/webjump-use-browser "firefox")))
 #+END_SRC
 
 * Spelling
@@ -2796,9 +2803,15 @@ Highlight thing under cursor and all other occurrences
 
 ** Auto dim inactive buffers
 #+BEGIN_SRC emacs-lisp
-  (use-package auto-dim-other-buffers)
+  (defun highlight-selected-window ()
+    "Highlight selected window with a different background color."
+    (walk-windows (lambda (w)
+                    (unless (eq w (selected-window))
+                      (with-current-buffer (window-buffer w)
+                        (buffer-face-set '(:background "#111"))))))
+    (buffer-face-set 'default))
 
-  (auto-dim-other-buffers-mode)
+  (add-hook 'buffer-list-update-hook 'highlight-selected-window)
 #+END_SRC
 
 ** Modeline
@@ -2976,23 +2989,6 @@ If there is a battery, display it in the mode line
 
   (display-battery-mode 1)
   (setq battery-mode-line-format "%th - %p")
-  
-  ;; Original function forces mode line update
-  (defun battery-update ()
-    "Update battery status information in the mode line."
-    (let* ((data (and battery-status-function (funcall battery-status-function)))
-           (percentage (car (read-from-string (cdr (assq ?p data))))))
-      (setq battery-mode-line-string
-            (propertize (if (and battery-mode-line-format
-                               (numberp percentage)
-                               (<= percentage battery-mode-line-limit))
-                            (battery-format battery-mode-line-format data)
-                          "")
-                        'face
-                        (and (numberp percentage)
-                           (<= percentage battery-load-critical)
-                           'error)
-                        'help-echo "Battery status information"))))
 #+END_SRC
 
 **** Date and time
