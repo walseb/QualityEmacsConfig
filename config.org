@@ -182,7 +182,8 @@ You have to press =q= in order to save changes
 #+END_SRC
 
 ** Improve startup time
-*** Disable scrollbar, etc before launching emacs
+*** Write .Xdefaults
+emacs. commands to disable scrollbar, etc before launching emacs, improving startup time
 #+BEGIN_SRC emacs-lisp
   (if(eq fully-compatible-system t)
       (if(not(file-exists-p "~/.Xdefaults"))
@@ -197,31 +198,28 @@ You have to press =q= in order to save changes
             (message "~/.Xdefaults created"))))
 #+END_SRC
 
-** Set keyboard layout
+** Write .xinitrc
+xset disables screen saver
+setxkbmap to select keyboard layout
 #+BEGIN_SRC emacs-lisp
   (if(eq fully-compatible-system t)
-      (shell-command "
+      (if(not(file-exists-p "~/.xinitrc"))
+          (progn
+            (write-region "
 
-     setxkbmap -layout us -variant altgr-intl
+             xset s off
+             xset s noblank
+             xset s off
+             xset s off -dpms
 
-     ")
-    )
+             setxkbmap -layout us -variant altgr-intl
+
+             exec emacs
+
+             " nil "~/.xinitrc")
+            (message "~/.xinitrc created"))))
 #+END_SRC
 
-** Disable screen saver
-#+BEGIN_SRC emacs-lisp
-  (if(eq fully-compatible-system t)
-
-      (shell-command "
-
-     xset s off
-     xset s noblank
-     xset s off
-     xset s off -dpms
-
-     ")
-    )
-#+END_SRC
 
 ** Redshift 
 #+BEGIN_SRC emacs-lisp
@@ -362,12 +360,14 @@ Example
   (defun my/evil-scroll-up (&optional arg)
     (interactive)
     (evil-scroll-up arg)
-    (my/evil-normal-state))
+    (if (not (eq evil-state 'visual)) 
+        (my/evil-normal-state)))
 
   (defun my/evil-scroll-down (&optional arg)
     (interactive)
     (evil-scroll-down arg)
-    (my/evil-normal-state))
+    (if (not (eq evil-state 'visual)) 
+        (my/evil-normal-state)))
 
   (define-key evil-insert-state-map (kbd "C-u") 'my/evil-scroll-up)
   (define-key evil-normal-state-map (kbd "C-u") 'my/evil-scroll-up)
@@ -584,6 +584,75 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
   (global-set-key (kbd "<XF86MonBrightnessUp>") 'my/increase-brightness)
   (global-set-key (kbd "<XF86MonBrightnessDown>") 'my/decrease-brightness)
+#+END_SRC
+
+* Hydra
+#+BEGIN_SRC emacs-lisp
+  (use-package hydra)
+#+END_SRC
+
+**  Window and buffer management
+#+BEGIN_SRC emacs-lisp
+  (defhydra my/window-hydra (:color amaranth
+                                    ;; Make hydra work with exwm
+                                    :pre (progn
+                                           (set-cursor-color "#018220")
+                                           (setq exwm-input-line-mode-passthrough 't))
+                                    :post (setq exwm-input-line-mode-passthrough nil))
+    "window"
+
+    ;; Move focus
+    ("p" evil-window-up "Focus up")
+    ("n" evil-window-down "Focus down")
+    ("l" evil-window-right "Focus right")
+    ("h" evil-window-left "Focus left")
+
+    ;; Move focus to edge window
+    ("|" evil-window-mru "Frame border window")
+
+    ;; Move window
+    ("P" evil-move-very-top "Move up")
+    ("N" evil-move-very-bottom "Move down")
+    ("L" evil-move-far-right "Move right")
+    ("H" evil-move-far-left "Move left")
+
+    ;; Rotate window
+    ;;("r" evil-window-rotate-upwards "Rotate window")
+    ;;("r" evil-window-rotate-downwards "Rotate window")
+
+    ;; Resize window
+    ("C-p" (evil-window-increase-height 10) "Resize up")
+    ("C-n" (evil-window-decrease-height 10) "Resize down")
+    ("C-l" (evil-window-decrease-width 10) "Resize right")
+    ("C-h" (evil-window-increase-width 10) "Resize left")
+
+    ;; Resize full
+    ("M-p" evil-window-set-height "Resize full height")
+    ("M-n" evil-window-set-height "Resize full height")
+    ("M-l" evil-window-set-width "Resize full width")
+    ("M-h" evil-window-set-width "Resize full width")
+
+    ;; Split
+    ("v" split-window-horizontally "Split horizontally")
+    ("j" split-window-vertically "Split vertically")
+
+    ;; Close window
+    ("s" delete-window "Delete")
+
+    ;; Focus on window
+    ("d" delete-other-windows "Focus")
+
+    ;; Buffer management
+    ("e" counsel-find-file "Find file")
+    ("a" ivy-switch-buffer "Switch buffer")
+    ("k" (kill-buffer(current-buffer)) "Kill buffer")
+
+    ;; Move around in buffer
+    ("C-u" evil-scroll-up "Resize right")
+    ("C-d" evil-scroll-down "Resize left")
+
+    ("r" nil "cancel")
+    ("i" nil "cancel"))
 #+END_SRC
 
 * Terminal
@@ -884,15 +953,6 @@ Just unbind C-x b
   (global-set-key (kbd "C-x b") nil)
 #+END_SRC
 
-** Kill current buffer
-#+BEGIN_SRC emacs-lisp
-  (defun my/kill-curr-buffer ()
-    (interactive)
-    (kill-buffer (current-buffer)))
-
-  (define-key my/leader-map (kbd "k") 'my/kill-curr-buffer)
-#+END_SRC
-
 ** Kill all buffers
 #+BEGIN_SRC emacs-lisp
   (defun my/kill-all-buffers ()
@@ -924,58 +984,7 @@ Just unbind C-x b
     (other-window 1))
 #+END_SRC
 
-** Switch-window
-#+BEGIN_SRC emacs-lisp
-  (use-package ace-window)
-
-  (setq aw-keys '(?a ?n ?e ?t ?o ?s ?h ?d ?i ?r))
-
-  (setq aw-dispatch-alist
-        '(
-          ;;(?M aw-move-window "Move Window")
-
-          ;; Switch buffer then jump to it
-          ;;(?b aw-switch-buffer-in-window "Select Buffer")
-
-          ;; Switch buffer
-          (?f aw-switch-buffer-other-window "Change buffer")
-          ;; Switch buffer
-          (?F ivy-switch-buffer)
-
-          ;; Split vertically
-          (?v aw-split-window-vert "Split Vert Window")
-          (?V my/split-and-follow-vertically)
-
-          ;; Split horizontally
-          (?p aw-split-window-horz "Split Horz Window")
-          (?P my/split-and-follow-horozontally)
-
-          ;; Delete one window
-          (?l aw-delete-window "Delete Window")
-          (?L delete-window)
-
-          ;; Focus
-          (?w delete-other-windows "Focus on window")
-          (?W delete-other-windows)
-
-          ;; Swap
-          (?g aw-swap-window "Swap Windows")
-
-          ;; Previous window
-          (?m aw-flip-window)
-
-          ;; Help
-          (?? aw-show-dispatch-help)))
-
-  (setq aw-scope 'frame)
-
-  (setq aw-dispatch-always t)
-
-  (setq aw-background nil)
-
-  (setq aw-minibuffer-flag t)
-#+END_SRC
-
+** Thing
 ** Don't ask for confirmation when killing window
 #+BEGIN_SRC emacs-lisp
   (setq kill-buffer-query-functions (delq 'process-kill-buffer-query-function kill-buffer-query-functions))
@@ -1056,10 +1065,10 @@ Version 2015-07-30"
         (setq delete-by-moving-to-trash nil)
         (message "Delete to trash disabled"))))
 
-
   (evil-define-key 'normal dired-mode-map (kbd "t a t") 'my/toggle-delete-to-trash)
 
   (evil-define-key 'normal dired-mode-map (kbd "i") 'evil-insert)
+  (evil-define-key 'normal dired-mode-map (kbd "RET") 'dired-find-file)
   (evil-define-key 'normal dired-mode-map (kbd "a") 'evil-append)
   (evil-define-key 'normal dired-mode-map (kbd "0") 'evil-digit-argument-or-evil-beginning-of-line)
   (evil-define-key 'normal dired-mode-map (kbd "$") 'evil-end-of-line)
@@ -1221,6 +1230,9 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
   (setq company-tooltip-offset-display 'scrollbar) ;;'line
 
   (global-company-mode t)
+
+  ;; Remove dabbrev because evil has a better alternative and dabbrev is slow with long files
+  (setq company-backends (delete 'company-dabbrev company-backends))
 #+END_SRC
 
 *** Company doc buffer
@@ -1787,7 +1799,7 @@ There aren't really any worth changing
   (evil-define-key 'motion my/keys-mode-map (kbd "C-d") 'my/evil-scroll-down)
   (evil-define-key 'motion my/keys-mode-map (kbd "t") 'my/leader-map)
 
-  (define-key my/keys-mode-map (kbd "M-o") 'ace-window)
+  (define-key my/keys-mode-map (kbd "M-o") 'my/window-hydra/body)
 
   (define-key my/keys-mode-map (kbd "M-f") 'avy-goto-char-in-line)
   (define-key my/keys-mode-map (kbd "M-w") 'my/avy-goto-word-0-in-line)
@@ -1976,7 +1988,7 @@ Define main function
 
   (exwm-input-set-key (kbd "C-t") 'my/leader-map)
 
-  (exwm-input-set-key (kbd "M-o") 'ace-window)
+  (exwm-input-set-key (kbd "M-o") 'my/window-hydra/body)
 
   ;; Enter and exit char mode
   (exwm-input-set-key (kbd "s-j") 'exwm-input-grab-keyboard)
@@ -2194,9 +2206,37 @@ set port
   (shell-command "mpc prev"))
 #+END_SRC
 
+***** Change time on track
+****** Forward
+#+BEGIN_SRC emacs-lisp
+  (defun my/mpd-wind-forward()
+    (interactive)
+    (shell-command "mpc seek +10"))
+#+END_SRC
+
+****** Forward far
+#+BEGIN_SRC emacs-lisp
+  (defun my/mpd-wind-far-forward()
+    (interactive)
+    (shell-command "mpc seek +60"))
+#+END_SRC
+
+****** Backwards
+#+BEGIN_SRC emacs-lisp
+  (defun my/mpd-wind-backward()
+    (interactive)
+    (shell-command "mpc seek -10"))
+#+END_SRC
+
+****** Backwards far
+#+BEGIN_SRC emacs-lisp
+  (defun my/mpd-wind-far-backward()
+    (interactive)
+    (shell-command "mpc seek -60"))
+#+END_SRC
+
 **** Keys
 #+BEGIN_SRC emacs-lisp
-
   (define-key my/music-menu-map (kbd "C-s") 'my/start-music-daemon)
   (define-key my/music-menu-map (kbd "C-k") 'my/kill-music-daemon)
   (define-key my/music-menu-map (kbd "C-u") 'my/update-mpd-and-emms-database)
@@ -2210,6 +2250,11 @@ set port
 
   (define-key my/music-menu-map (kbd "n") 'my/mpd-next-song)
   (define-key my/music-menu-map (kbd "p") 'my/mpd-previous-song)
+
+  (define-key my/music-menu-map (kbd "l") 'my/mpd-wind-forward)
+  (define-key my/music-menu-map (kbd "h") 'my/mpd-wind-backward)
+  (define-key my/music-menu-map (kbd "L") 'my/mpd-wind-far-forward)
+  (define-key my/music-menu-map (kbd "H") 'my/mpd-wind-far-backward)
 
   (global-set-key (kbd "<XF86AudioNext>") 'my/mpd-next-song)
   (global-set-key (kbd "<XF86AudioPrev>") 'my/mpd-previous-song)
@@ -2228,6 +2273,7 @@ Setup emms
 
   ;; Disable name of playing track in modeline (time is kept though)
   (emms-mode-line-disable)
+  (setq emms-mode-line-format nil)
 
   (setq emms-seek-seconds 5)
   (setq emms-player-list '(emms-player-mpd))
@@ -2652,9 +2698,7 @@ Create =.gnus.el=, which gnus reads from
 
     (unwind-protect
         (webjump)
-      (setq browse-url-browser-function old-browser))
-
-    (setq browse-url-browser-function old-browser))
+      (setq browse-url-browser-function old-browser)))
 #+END_SRC
 
 ** Keys
@@ -2779,8 +2823,10 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
 #+BEGIN_SRC emacs-lisp
   ;;(set-face-background 'mode-line "#003300")
   ;;  (set-face-foreground 'mode-line "#FFFFFF")
-  (setq my/mode-line-background "#003300")
-  (setq my/mode-line-foreground "#D3D3D3")
+
+  ;;(setq my/mode-line-background "#300030")
+  (setq my/mode-line-background nil)
+  (setq my/mode-line-foreground nil)
 
   (setq my/mode-line-warning-background "#555500")
   (setq my/mode-line-warning-foreground "#D3D3D3")
@@ -2829,22 +2875,22 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
 *** Mode line modules
 **** Network traffic
 #+BEGIN_SRC emacs-lisp
-  (defun my/convert-kilo-byte-to-mega-byte (kilo)
-    (/ kilo 1024))
-
   (defun my/convert-byte-to-kilo-byte (byte)
-    (/ byte 1024))
+    (truncate (/ byte 1024)))
 
-  (defun my/convert-to-best-unit (byte)
-    (if (> byte 1000)
-        (progn
-          (setq kilo-byte (my/convert-byte-to-kilo-byte byte))
-          (if (> kilo-byte 1000)
-              (progn
-                (setq mega-byte (my/convert-kilo-byte-to-mega-byte kilo-byte))
-                (concat (number-to-string mega-byte) "M"))
-            (concat (number-to-string kilo-byte) "K")))
-      (concat (number-to-string byte) "B")))
+  (defun my/convert-kilo-byte-to-mega-byte (kilo)
+    (truncate (/ kilo 1024)))
+
+    (defun my/convert-to-best-unit (byte)
+      (if (> byte 1024)
+          (progn
+            (setq kilo-byte (my/convert-byte-to-kilo-byte byte))
+            (if (> kilo-byte 1024)
+                (progn
+                  (setq mega-byte (my/convert-kilo-byte-to-mega-byte kilo-byte))
+                  (concat (number-to-string mega-byte) "M"))
+              (concat (number-to-string kilo-byte) "K")))
+        (concat (number-to-string byte) "B")))
 #+END_SRC
 
 ***** Linux
@@ -2866,8 +2912,7 @@ Received
   (defun my/linux-update-network-rx-delta ()
     (interactive)
     (setq my/rx-new (my/linux-get-network-rx))
-    (if (> my/rx 0)
-        (setq my/rx-delta-formatted (my/convert-to-best-unit (- my/rx-new my/rx))))
+    (setq my/rx-delta-formatted (my/convert-to-best-unit (- my/rx-new my/rx)))
     (setq my/rx my/rx-new))
 
   (run-with-timer 0 60 'my/linux-update-network-rx-delta)
@@ -2892,8 +2937,7 @@ Transmitted
   (defun my/linux-update-network-tx-delta ()
     (interactive)
     (setq my/tx-new (my/linux-get-network-tx))
-    (if (> my/tx 0)
-        (setq my/tx-delta-formatted (my/convert-to-best-unit (- my/tx-new my/tx))))
+    (setq my/tx-delta-formatted (my/convert-to-best-unit (- my/tx-new my/tx)))
     (setq my/tx my/tx-new))
 
   (run-with-timer 0 60 'my/linux-update-network-tx-delta)
