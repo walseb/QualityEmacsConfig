@@ -270,6 +270,90 @@ setxkbmap to select keyboard layout
   (setq gc-cons-threshold 100000000)
 #+END_SRC
 
+* Backups
+Stop emacs from creating backup files on every save
+#+BEGIN_SRC emacs-lisp
+  ;;(setq make-backup-files nil)
+  ;;(setq auto-save-default nil)
+  ;; Make multiple backups
+  (setq version-control t)
+
+  (setq backup-by-copying t)      ; don't clobber symlinks
+  (setq delete-old-versions t)
+  (setq kept-new-versions 6)
+  (setq kept-old-versions 2)
+
+  (if (not fully-compatible-system)
+      (progn
+        (setq backup-directory-alist `((".*" . ,temporary-file-directory)))
+        (setq auto-save-file-name-transforms `((".*" ,temporary-file-directory t))))
+    (progn
+      (setq backup-directory-alist '(("." . "~/.emacs.d/saves/")))
+      (setq auto-save-file-name-transforms `(("." ,"~/.emacs.d/auto-saves/")))))
+
+  ;; Automatically delete old backup files
+  (message "Deleting old backup files...")
+  (let ((week (* 60 60 24 7))
+        (current (float-time (current-time))))
+    (dolist (file (directory-files temporary-file-directory t))
+      (when (and (backup-file-name-p file)
+               (> (- current (float-time (fifth (file-attributes file))))
+                  week))
+        (message "%s" file)
+        (delete-file file))))
+#+END_SRC
+** Disble backups for certain files
+#+BEGIN_SRC emacs-lisp
+  (define-minor-mode my/no-backups-mode
+    "http://anirudhsasikumar.net/blog/2005.01.21.html
+  For sensitive files like password lists.
+  It disables backup creation and auto saving.
+
+  With no argument, this command toggles the mode.
+  Non-null prefix argument turns on the mode.
+  Null prefix argument turns off the mode."
+    ;; The initial value.
+    nil
+    ;; The indicator for the mode line.
+    "no-backups"
+    ;; The minor mode bindings.
+    nil
+    (if (symbol-value my/no-backups-mode)
+        (progn
+          ;; disable backups
+          (set (make-local-variable 'backup-inhibited) t) 
+          ;; disable auto-save
+          (if auto-save-default
+              (auto-save-mode -1)))
+                                          ;resort to default value of backup-inhibited
+      (kill-local-variable 'backup-inhibited)
+                                          ;resort to default auto save setting
+      (if auto-save-default
+          (auto-save-mode 1))))
+#+END_SRC
+
+*** File types to not backup
+#+BEGIN_SRC emacs-lisp
+  (setq auto-mode-alist
+        (append '(("\\.gpg$" . my/no-backups-mode))
+                auto-mode-alist))
+#+END_SRC
+
+** Undo tree
+#+BEGIN_SRC emacs-lisp
+  (use-package undo-tree)
+
+  (setq global-undo-tree-mode t)
+
+  ;; Might fix undo tree
+  ;;(setq undo-tree-enable-undo-in-region nil)
+
+  ;;(setq undo-tree-auto-save-history t)
+
+  ;;(setq undo-tree-history-directory-alist '(("." . "~/.emacs.d/saves")))
+  ;;(make-directory (concat spacemacs-cache-directory "undo")))
+#+END_SRC
+
 * Evil
 #+BEGIN_SRC emacs-lisp
   (use-package evil)
@@ -354,29 +438,7 @@ Example
           (move-to-column (+ 1 (current-column))))))
 #+END_SRC
 
-*** Redefinitions
-**** C-u and C-d forces normal mode after run
-#+BEGIN_SRC emacs-lisp
-  (defun my/evil-scroll-up (&optional arg)
-    (interactive)
-    (evil-scroll-up arg)
-    (if (not (eq evil-state 'visual)) 
-        (my/evil-normal-state)))
-
-  (defun my/evil-scroll-down (&optional arg)
-    (interactive)
-    (evil-scroll-down arg)
-    (if (not (eq evil-state 'visual)) 
-        (my/evil-normal-state)))
-
-  (define-key evil-insert-state-map (kbd "C-u") 'my/evil-scroll-up)
-  (define-key evil-normal-state-map (kbd "C-u") 'my/evil-scroll-up)
-
-  (define-key evil-insert-state-map (kbd "C-d") 'my/evil-scroll-down)
-  (define-key evil-normal-state-map (kbd "C-d") 'my/evil-scroll-down)
-#+END_SRC
-
-**** Make one space enough to end work for use with evil sentence motion
+*** Make one space enough to end work for use with evil sentence motion
 #+BEGIN_SRC emacs-lisp
 (setq sentence-end-double-space nil)
 #+END_SRC
@@ -399,6 +461,9 @@ Allows for using indention as text objects
 * Leader
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/leader-map)
+
+  ;; Window management hydra
+  ;;(define-key my/leader-map (kbd "o") 'my/window-hydra/body)
 
   ;; Menus
   (define-prefix-command 'my/music-menu-map)
@@ -494,13 +559,6 @@ Disable bell
   (setq ring-bell-function 'ignore)
 #+END_SRC
 
-** Backups
-Stop emacs from creating backup files on every save
-#+BEGIN_SRC emacs-lisp
-  (setq make-backup-file nil)
-  (setq auto-save-default nil)
-#+END_SRC
-
 ** Subword (camel case movement)
  #+BEGIN_SRC emacs-lisp
 (global-subword-mode 1)
@@ -583,108 +641,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
   (global-set-key (kbd "<XF86MonBrightnessUp>") 'my/increase-brightness)
   (global-set-key (kbd "<XF86MonBrightnessDown>") 'my/decrease-brightness)
-#+END_SRC
-
-* Hydra
-#+BEGIN_SRC emacs-lisp
-  (use-package hydra)
-#+END_SRC
-
-**  Window and buffer management
-#+BEGIN_SRC emacs-lisp
-  (defhydra my/window-hydra (:color red ;;amaranth
-                                    ;; Make hydra work with exwm
-                                    :pre (progn
-                                           (set-cursor-color "#018220")
-                                           (setq exwm-input-line-mode-passthrough 't))
-                                           ;;(exwm-input-grab-keyboard)
-                                    :post (setq exwm-input-line-mode-passthrough nil))
-    "window"
-
-    ;; Move focus
-    ("p" evil-window-up "Focus up")
-    ("n" evil-window-down "Focus down")
-    ("l" evil-window-right "Focus right")
-    ("h" evil-window-left "Focus left")
-
-    ;; Move focus to edge window
-    ("|" evil-window-mru "Frame border window")
-
-    ;; Move window
-    ("P" evil-move-very-top "Move up")
-    ("N" evil-move-very-bottom "Move down")
-    ("L" evil-move-far-right "Move right")
-    ("H" evil-move-far-left "Move left")
-
-    ;; Rotate window
-    ;;("r" evil-window-rotate-upwards "Rotate window")
-    ;;("r" evil-window-rotate-downwards "Rotate window")
-
-    ;; Resize window
-    ("C-p" (evil-window-increase-height 10) "Resize up")
-    ("C-n" (evil-window-decrease-height 10) "Resize down")
-    ("C-l" (evil-window-decrease-width 10) "Resize right")
-    ("C-h" (evil-window-increase-width 10) "Resize left")
-
-    ;; Resize full
-    ("M-p" evil-window-set-height "Resize full height")
-    ("M-n" evil-window-set-height "Resize full height")
-    ("M-l" evil-window-set-width "Resize full width")
-    ("M-h" evil-window-set-width "Resize full width")
-
-    ;; Split
-    ("v" split-window-horizontally "Split horizontally")
-    ("j" split-window-vertically "Split vertically")
-
-    ;; Close window
-    ("s" delete-window "Delete")
-
-    ;; Focus on window
-    ("d" delete-other-windows "Focus")
-
-    ;; Buffer management
-    ("e" counsel-find-file "Find file")
-    ("a" ivy-switch-buffer "Switch buffer")
-    ("k" (kill-buffer(current-buffer)) "Kill buffer")
-
-    ;; Move around in buffer
-    ("C-u" evil-scroll-up "Resize right")
-    ("C-d" evil-scroll-down "Resize left")
-
-    ("r" nil "cancel")
-    ("i" nil "cancel"))
-#+END_SRC
-
-* Terminal
-** Toggle between line and char mode
-*** Function
-#+BEGIN_SRC emacs-lisp
-  (require 'term)
-
-  (defun term/term-toggle-mode ()
-    "Toggles term between line mode and char mode"
-    (interactive)
-    (if (term-in-line-mode)
-        (term-char-mode)
-      (term-line-mode)))
-#+END_SRC
-
-*** Bind
-#+BEGIN_SRC emacs-lisp
-  (define-key term-mode-map (kbd "C-c C-j") 'term/term-toggle-mode)
-  (define-key term-mode-map (kbd "C-c C-k") 'term/term-toggle-mode)
-
-  (define-key term-raw-map (kbd "C-c C-j") 'term/term-toggle-mode)
-  (define-key term-raw-map (kbd "C-c C-k") 'term/term-toggle-mode)
-#+END_SRC
-
-
-** Setting default shell to bash
-#+BEGIN_SRC emacs-lisp 
-  (defvar my/term-shell "/bin/bash")
-  (defadvice ansi-term (before force-bash)
-    (interactive (list my/term-shell)))
-  (ad-activate 'ansi-term)
 #+END_SRC
 
 * Folding
@@ -836,7 +792,7 @@ Vim bindings to change fold
   (define-key ivy-minibuffer-map (kbd "M-n") 'ivy-avy)
 
   (define-key ivy-minibuffer-map (kbd "C-u") 'ivy-scroll-down-command)
-  (define-key ivy-minibuffer-map (kbd "C-d") 'ivy-scroll-up-command)
+  (define-key ivy-minibuffer-map (kbd "C-w") 'ivy-scroll-up-command)
 #+END_SRC
 
 ** Counsel
@@ -940,14 +896,6 @@ https://www.reddit.com/r/emacs/comments/57fnar/ivy_completion_at_point_in_an_ove
                                                evil-forward-word evil-forward-word-begin evil-forward-word-end
                                                evil-backward-word-begin evil-backward-word-end))
   (jammer-mode)
-#+END_SRC
-
-* Undo tree
-#+BEGIN_SRC emacs-lisp
-  (use-package undo-tree)
-
-  ;; Might fix undo tree
-  (setq undo-tree-enable-undo-in-region nil)
 #+END_SRC
 
 * Buffer management
@@ -1319,7 +1267,7 @@ Make company mode inherit colors from theme, change later maybe
   (define-key company-active-map (kbd "C-p") 'company-select-previous)
 
   (define-key company-active-map (kbd "C-u") 'company-previous-page)
-  (define-key company-active-map (kbd "C-d") 'company-next-page)
+  (define-key company-active-map (kbd "C-w") 'company-next-page)
 
   ;; using C-h is better in every way 
   (define-key company-active-map (kbd "<f1>") 'nil)
@@ -1798,12 +1746,10 @@ There aren't really any worth changing
   (general-nmap "t s" (general-simulate-key "C-x C-s"))
 #+END_SRC
 
-** Resize windows
+** Rebind C-d
 #+BEGIN_SRC emacs-lisp
-;;  (global-set-key (kbd "s-p") 'enlarge-window)
-;; (global-set-key (kbd "s-n") 'shrink-window)
-;;  (global-set-key (kbd "s-h") 'shrink-window-horizontally)
-;;  (global-set-key (kbd "s-l") 'enlarge-window-horizontally)
+  (define-key evil-normal-state-map (kbd "C-d") nil)
+  (define-key evil-motion-state-map (kbd "C-d") nil)
 #+END_SRC
 
 * Persistent keys
@@ -1833,11 +1779,15 @@ There aren't really any worth changing
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
-  (evil-define-key 'motion my/keys-mode-map (kbd "C-u") 'my/evil-scroll-up)
-  (evil-define-key 'motion my/keys-mode-map (kbd "C-d") 'my/evil-scroll-down)
-  (evil-define-key 'motion my/keys-mode-map (kbd "t") 'my/leader-map)
+  (evil-define-key 'motion my/keys-mode-map (kbd "C-u") 'evil-scroll-up)
+  (evil-define-key 'motion my/keys-mode-map (kbd "C-w") 'evil-scroll-down)
 
-  (define-key my/keys-mode-map (kbd "M-o") 'my/window-hydra/body)
+  (evil-define-key 'insert my/keys-mode-map (kbd "C-u") '(lambda () (interactive) (evil-scroll-up) (evil-normal-state)))
+  (evil-define-key 'insert my/keys-mode-map (kbd "C-w") '(lambda () (interactive) (evil-scroll-up) (evil-normal-state)))
+
+  (evil-define-key 'insert my/keys-mode-map (kbd "C-w") 'my/evil-scroll-down)
+
+  (evil-define-key 'motion my/keys-mode-map (kbd "t") 'my/leader-map)
 
   (define-key my/keys-mode-map (kbd "M-f") 'avy-goto-char-in-line)
   (define-key my/keys-mode-map (kbd "M-w") 'my/avy-goto-word-0-in-line)
@@ -1845,6 +1795,9 @@ There aren't really any worth changing
 
   (define-key my/keys-mode-map (kbd "M-p") 'my/avy-goto-line-above-keep-horizontal-position)
   (define-key my/keys-mode-map (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
+
+
+  (define-key my/keys-mode-map (kbd "M-t") 'my/window-hydra/body)
 #+END_SRC
 
 * exwm
@@ -1917,57 +1870,6 @@ Define main function
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
-  ;; a n e t o s h d i r
-  (global-set-key (kbd "s-a") `(lambda () (interactive)
-                                 (exwm-workspace-switch-create 0)))
-  (exwm-input-set-key (kbd "s-a") `(lambda () (interactive)
-                                     (exwm-workspace-switch-create 0)))
-
-  (global-set-key (kbd "s-n") `(lambda () (interactive)
-                                 (exwm-workspace-switch-create 1)))
-  (exwm-input-set-key (kbd "s-n") `(lambda () (interactive)
-                                     (exwm-workspace-switch-create 1)))
-
-  (global-set-key (kbd "s-e") `(lambda () (interactive)
-                                 (exwm-workspace-switch-create 2)))
-  (exwm-input-set-key (kbd "s-e") `(lambda () (interactive)
-                                     (exwm-workspace-switch-create 2)))
-
-  (global-set-key (kbd "s-t") `(lambda () (interactive)
-                                 (exwm-workspace-switch-create 3)))
-  (exwm-input-set-key (kbd "s-t") `(lambda () (interactive)
-                                     (exwm-workspace-switch-create 3)))
-
-  (global-set-key (kbd "s-o") `(lambda () (interactive)
-                                 (exwm-workspace-switch-create 4)))
-  (exwm-input-set-key (kbd "s-o") `(lambda () (interactive)
-                                     (exwm-workspace-switch-create 4)))
-
-  (global-set-key (kbd "s-s") `(lambda () (interactive)
-                                 (exwm-workspace-switch-create 5)))
-  (exwm-input-set-key (kbd "s-s") `(lambda () (interactive)
-                                     (exwm-workspace-switch-create 5)))
-
-  (global-set-key (kbd "s-h") `(lambda () (interactive)
-                                 (exwm-workspace-switch-create 6)))
-  (exwm-input-set-key (kbd "s-h") `(lambda () (interactive)
-                                     (exwm-workspace-switch-create 6)))
-
-  (global-set-key (kbd "s-d") `(lambda () (interactive)
-                                 (exwm-workspace-switch-create 7)))
-  (exwm-input-set-key (kbd "s-d") `(lambda () (interactive)
-                                     (exwm-workspace-switch-create 7)))
-
-  (global-set-key (kbd "s-i") `(lambda () (interactive)
-                                 (exwm-workspace-switch-create 8)))
-  (exwm-input-set-key (kbd "s-i") `(lambda () (interactive)
-                                     (exwm-workspace-switch-create 8)))
-
-  (global-set-key (kbd "s-r") `(lambda () (interactive)
-                                 (exwm-workspace-switch-create 9)))
-  (exwm-input-set-key (kbd "s-r") `(lambda () (interactive)
-                                     (exwm-workspace-switch-create 9)))
-
   ;; Rebind keys in exwm bufffers
   (setq exwm-input-simulation-keys
         '(
@@ -1979,7 +1881,7 @@ Define main function
           ([?\C-p] . [up])
           ([?\C-n] . [down])
           ([?\C-u] . [prior])
-          ([?\C-d] . [next])
+          ([?\C-w] . [next])
 
           ;; cut/paste.
           ([?\C-y] . [?\C-c])
@@ -2026,7 +1928,7 @@ Define main function
 
   (exwm-input-set-key (kbd "C-t") 'my/leader-map)
 
-  (exwm-input-set-key (kbd "M-o") 'my/window-hydra/body)
+  (exwm-input-set-key (kbd "M-t") 'my/window-hydra/body)
 
   ;; Enter and exit char mode
   (exwm-input-set-key (kbd "s-j") 'exwm-input-grab-keyboard)
@@ -2761,6 +2663,99 @@ Create =.gnus.el=, which gnus reads from
   (define-key my/spell-menu-map (kbd "l") 'ispell-change-dictionary)
   (define-key my/spell-menu-map (kbd "s") 'flyspell-mode)
   (define-key my/spell-menu-map (kbd "c") 'my/toggle-company-ispell)
+#+END_SRC
+
+* Hydra
+#+BEGIN_SRC emacs-lisp
+  (use-package hydra)
+#+END_SRC
+
+**  Window and buffer management
+#+BEGIN_SRC emacs-lisp
+  (defhydra my/window-hydra (:color red
+                                    :pre (setq exwm-input-line-mode-passthrough t)
+                                    :post (setq exwm-input-line-mode-passthrough nil))
+    ;;"window"
+
+    ;; Move focus
+    ("p" evil-window-up nil)
+    ("n" evil-window-down nil)
+    ("l" evil-window-right nil)
+    ("h" evil-window-left nil)
+
+    ;; Move focus to edge window
+    ;; Frame border window
+    ("|" evil-window-mru nil)
+
+    ;; Move window
+    ;; Move up
+    ("P" evil-move-very-top nil)
+    ;; Move down
+    ("N" evil-move-very-bottom nil)
+    ;; Move right
+    ("L" evil-move-far-right nil)
+    ;; Move left
+    ("H" evil-move-far-left nil)
+
+    ;; Rotate window
+    ;;("r" evil-window-rotate-upwards "Rotate window")
+    ;;("r" evil-window-rotate-downwards "Rotate window")
+
+    ;; Resize window
+    ;; Resize up
+    ("C-p" (evil-window-increase-height 10) nil)
+    ;; Resize down
+    ("C-n" (evil-window-decrease-height 10) nil)
+    ;; Resize right
+    ("C-l" (evil-window-decrease-width 10) nil)
+    ;; Resize left
+    ("C-h" (evil-window-increase-width 10) nil)
+
+    ;; Resize full
+    ;; Resize full height
+    ("M-p" evil-window-set-height nil)
+    ("M-n" evil-window-set-height nil)
+    ("M-l" evil-window-set-width nil)
+    ("M-h" evil-window-set-width nil)
+
+    ;; Split
+    ("v" split-window-horizontally nil)
+    ("j" split-window-vertically nil)
+
+    ;; Close window
+    ("s" delete-window nil)
+
+    ;; Focus on window
+    ("d" delete-other-windows nil)
+
+    ;; Buffer management
+    ;; Find file
+    ("e" counsel-find-file nil)
+    ;; Switch buffer
+    ("a" ivy-switch-buffer nil)
+    ;; Kill buffer
+    ("k" (kill-buffer(current-buffer)) nil)
+
+    ;; Move around in buffer
+    ("C-u" evil-scroll-up nil)
+    ("C-w" evil-scroll-down nil)
+
+    ;;  Switch workspace
+    ;; Workspace 0
+    ("A" (lambda () (interactive) (exwm-workspace-switch-create 0)))
+    ("N" (lambda () (interactive) (exwm-workspace-switch-create 1)))
+    ("E" (lambda () (interactive) (exwm-workspace-switch-create 2)))
+    ("T" (lambda () (interactive) (exwm-workspace-switch-create 3)))
+    ("O" (lambda () (interactive) (exwm-workspace-switch-create 4)))
+    ("S" (lambda () (interactive) (exwm-workspace-switch-create 5)))
+    ("H" (lambda () (interactive) (exwm-workspace-switch-create 6)))
+    ("D" (lambda () (interactive) (exwm-workspace-switch-create 7)))
+    ("I" (lambda () (interactive) (exwm-workspace-switch-create 8)))
+    ("R" (lambda () (interactive) (exwm-workspace-switch-create 9)))
+
+    ;; "cancel"
+    ("r" nil)
+    ("i" nil))
 #+END_SRC
 
 * Visuals
