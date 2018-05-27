@@ -283,13 +283,8 @@ Stop emacs from creating backup files on every save
   (setq kept-new-versions 6)
   (setq kept-old-versions 2)
 
-  (if (not fully-compatible-system)
-      (progn
-        (setq backup-directory-alist `((".*" . ,temporary-file-directory)))
-        (setq auto-save-file-name-transforms `((".*" ,temporary-file-directory t))))
-    (progn
-      (setq backup-directory-alist '(("." . "~/.emacs.d/saves/")))
-      (setq auto-save-file-name-transforms `(("." ,"~/.emacs.d/auto-saves/")))))
+  (setq backup-directory-alist `(("." . ,(concat user-emacs-directory "backups"))))
+  (setq auto-save-file-name-transforms `((".*" ,(concat user-emacs-directory "auto-saves/") t)))
 
   ;; Automatically delete old backup files
   (message "Deleting old backup files...")
@@ -453,9 +448,9 @@ Allows for using indention as text objects
 
 ** Lion
 #+BEGIN_SRC emacs-lisp
-  (use-package evil-lion)
+  ;;(use-package evil-lion)
 
-  (evil-lion-mode)
+  ;;(evil-lion-mode)
 #+END_SRC
 
 * Leader
@@ -489,6 +484,8 @@ Allows for using indention as text objects
 
   (define-prefix-command 'my/x-menu-map)
   (define-key my/leader-map (kbd "x") 'my/x-menu-map)
+
+  (define-key my/leader-map (kbd "u") 'undo-tree-visualize)
 #+END_SRC
 
 * Minor
@@ -810,8 +807,6 @@ Vim bindings to change fold
   (global-set-key (kbd "<f1> l") 'counsel-find-library)
   (global-set-key (kbd "<f2> i") 'counsel-info-lookup-symbol)
   (global-set-key (kbd "<f2> u") 'counsel-unicode-char)
-
-  (global-set-key (kbd "s-x") 'counsel-linux-app)
 
   (global-set-key (kbd "M-k") 'counsel-yank-pop)
 
@@ -1896,7 +1891,6 @@ Define main function
           ;; search
           ([?\C-s] . [?\C-f])))
 
-
   ;; Exwm don't send back these keys
   (dolist (k '(XF86AudioLowerVolume
                XF86AudioRaiseVolume
@@ -1916,23 +1910,22 @@ Define main function
                C-g
                C-h
                M-o
-               ;; Workspaces
-               s-a s-n s-e s-t s-o s-s s-h s-d s-i s-r
                ;; Exwm grab and release keyboard
-               s-j
-               s-k
+               M-j
+               M-k
                ))
     (cl-pushnew k exwm-input-prefix-keys))
 
   ;; Some keys have to be defined using "exwm-input-set-key" in order to be usable if they are in "exwm-input-prefix-keys"
 
   (exwm-input-set-key (kbd "C-t") 'my/leader-map)
-
   (exwm-input-set-key (kbd "M-t") 'my/window-hydra/body)
 
+  ;;(exwm-input-set-key (kbd "C-h") help-map)
+
   ;; Enter and exit char mode
-  (exwm-input-set-key (kbd "s-j") 'exwm-input-grab-keyboard)
-  (exwm-input-set-key (kbd "s-k") 'exwm-input-release-keyboard)
+  (exwm-input-set-key (kbd "M-j") 'exwm-input-grab-keyboard)
+  (exwm-input-set-key (kbd "M-k") 'exwm-input-release-keyboard)
 #+END_SRC
 
 * Version control
@@ -2250,6 +2243,10 @@ emms doesn't automatically connect to mpd when loading playlist, results in empt
   (define-key my/music-menu-map (kbd "o") 'my/open-emms-and-connect)
   (define-key my/music-menu-map (kbd "g") 'emms-seek-to)
   (define-key my/music-menu-map (kbd "s") 'emms-pause)
+
+  (define-key emms-browser-mode-map (kbd "s") 'emms-pause)
+
+  (evil-define-key 'normal emms-browser-mode-map (kbd "RET") 'emms-browser-add-tracks)
 
   (global-set-key (kbd "<XF86AudioPlay>") 'emms-pause)
   (global-set-key (kbd "<XF86AudioStop>") 'emms-stop)
@@ -2739,6 +2736,8 @@ Create =.gnus.el=, which gnus reads from
     ;; Move around in buffer
     ("C-u" evil-scroll-up nil)
     ("C-w" evil-scroll-down nil)
+
+    ("o" counsel-linux-app)
 
     ;;  Switch workspace
     ;; Workspace 0
