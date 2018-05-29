@@ -284,20 +284,24 @@ Stop emacs from creating backup files on every save
   (setq kept-new-versions 6)
   (setq kept-old-versions 2)
 
-  (defvar my/backup-directory (concat user-emacs-directory "backups"))
+  (defvar my/backup-directory (concat user-emacs-directory "backups/"))
   (defvar my/saves-directory (concat user-emacs-directory "auto-saves/"))
 
   (if (not (file-directory-p my/backup-directory))
       (make-directory my/backup-directory))
 
-  (setq backup-directory-alist `(("." . ,(my/backup-directory))))
-  (setq auto-save-file-name-transforms `((".*" ,(my/saves-directory) t)))
+  (if (not (file-directory-p my/saves-directory))
+      (make-directory my/saves-directory))
+
+
+  (setq backup-directory-alist `(("." . ,my/backup-directory)))
+  (setq auto-save-file-name-transforms `((".*" ,my/saves-directory t)))
 
   ;; Automatically delete old backup files
   (message "Deleting old backup files...")
   (let ((week (* 60 60 24 7))
         (current (float-time (current-time))))
-    (dolist (file (directory-files (concat user-emacs-directory "backups/") t))
+    (dolist (file (directory-files my/backup-directory t))
       (when (and (backup-file-name-p file)
                (> (- current (float-time (nth 5 (file-attributes file))))
                   week))
@@ -2045,8 +2049,8 @@ If config already exists, don't overwrite it
 
 **** Run MPD
 #+BEGIN_SRC emacs-lisp
-  (if(eq fully-compatible-system t)
-      (start-process "mpd" nil "mpd"))
+  (defun my/start-mpd ()
+    (start-process "mpd" nil "mpd"))
 #+END_SRC
 
 **** Setup MPC
