@@ -2044,35 +2044,22 @@ If config already exists, don't overwrite it
 
                    " nil "~/.mpdconf")
             (message "~/.mpdconf created"))))
-
 #+END_SRC
 
-**** Run MPD
-#+BEGIN_SRC emacs-lisp
-  (defun my/start-mpd ()
-    (start-process "mpd" nil "mpd"))
-#+END_SRC
-
-**** Setup MPC
-set port
-#+BEGIN_SRC emacs-lisp
-  (setq mpc-host "localhost:6600")
-#+END_SRC
-
-**** Functions
-***** Start MPD
+**** Start MPD
 #+BEGIN_SRC emacs-lisp
  (defun my/start-music-daemon ()
    "Start MPD, connect to it and sync the metadata cache."
    (interactive)
-   (shell-command "mpd")
-   (my/update-mpd-database)
+   (start-process "mpd" nil "mpd")
    (emms-player-mpd-connect)
+   (my/update-mpd-database)
    (emms-cache-set-from-mpd-all)
+   (emms-player-mpd-update-all-reset-cache)
    (message "MPD started!"))
 #+END_SRC
 
-***** Kill daemon
+**** Kill daemon
 #+BEGIN_SRC emacs-lisp
  (defun my/kill-music-daemon ()
    "Stops playback and kill the music daemon."
@@ -2082,16 +2069,16 @@ set port
    (message "MPD killed!"))
 #+END_SRC
 
-***** Update MPD database
+**** Update MPD database
 #+BEGIN_SRC emacs-lisp
   (defun my/update-mpd-database ()
-    "Updates the MPD database synchronously."
+    "Updates the MPD database asynchronously."
     (interactive)
     (call-process "mpc" nil nil nil "update")
     (message "MPD database updated!"))
 #+END_SRC
 
-***** Update MPD and emms database
+**** Update MPD and emms database
 #+BEGIN_SRC emacs-lisp
   (defun my/update-mpd-and-emms-database ()
     "Updates the MPD and emms database synchronously."
@@ -2101,7 +2088,7 @@ set port
     (message "MPD database and emms updated!"))
 #+END_SRC
 
-***** View MPD info
+**** View MPD info
 #+BEGIN_SRC emacs-lisp
   (defun my/mpd-info ()
     "Runs mpc, showing info in message field"
@@ -2109,8 +2096,8 @@ set port
     (shell-command "mpc"))
 #+END_SRC
 
-***** Shuffle playlist random
-****** Random on
+**** Shuffle playlist random
+***** Random on
 #+BEGIN_SRC emacs-lisp
   (defun my/mpd-random-on ()
     "Turns on MPD random play"
@@ -2118,7 +2105,7 @@ set port
     (shell-command "mpc random on"))
 #+END_SRC
 
-****** Random off
+***** Random off
 #+BEGIN_SRC emacs-lisp
   (defun my/mpd-random-off ()
     "Turns off MPD random play"
@@ -2126,59 +2113,59 @@ set port
     (shell-command "mpc random off"))
 #+END_SRC
 
-***** Volume control
-****** Raise volume
+**** Volume control
+***** Raise volume
 #+BEGIN_SRC emacs-lisp
 (defun my/mpd-raise-volume()
   (interactive)
   (shell-command "mpc volume +4"))
 #+END_SRC
 
-****** Lower volume
+***** Lower volume
 #+BEGIN_SRC emacs-lisp
 (defun my/mpd-lower-volume ()
   (interactive)
   (shell-command "mpc volume -4"))
 #+END_SRC
 
-***** Change song
-****** Next song
+**** Change song
+***** Next song
 #+BEGIN_SRC emacs-lisp
 (defun my/mpd-next-song()
   (interactive)
   (shell-command "mpc next"))
 #+END_SRC
 
-****** Previous song
+***** Previous song
 #+BEGIN_SRC emacs-lisp
 (defun my/mpd-previous-song()
   (interactive)
   (shell-command "mpc prev"))
 #+END_SRC
 
-***** Change time on track
-****** Forward
+**** Change time on track
+***** Forward
 #+BEGIN_SRC emacs-lisp
   (defun my/mpd-wind-forward()
     (interactive)
     (shell-command "mpc seek +10"))
 #+END_SRC
 
-****** Forward far
+***** Forward far
 #+BEGIN_SRC emacs-lisp
   (defun my/mpd-wind-far-forward()
     (interactive)
     (shell-command "mpc seek +60"))
 #+END_SRC
 
-****** Backwards
+***** Backwards
 #+BEGIN_SRC emacs-lisp
   (defun my/mpd-wind-backward()
     (interactive)
     (shell-command "mpc seek -10"))
 #+END_SRC
 
-****** Backwards far
+***** Backwards far
 #+BEGIN_SRC emacs-lisp
   (defun my/mpd-wind-far-backward()
     (interactive)
@@ -2232,12 +2219,7 @@ Setup emms
   (setq emms-player-mpd-server-name "localhost")
   (setq emms-player-mpd-server-port "6600")
 
-  ;; Not needed
-  ;;(setq emms-source-file-default-directory "~/Music")
-
-  ;; Get emms connected to MPD
-  (emms-player-mpd-update-all-reset-cache)
-  (emms-player-mpd-connect)
+  (setq mpc-host "localhost:6600")
 #+END_SRC
 
 **** Sort by directory name instead of metadata
