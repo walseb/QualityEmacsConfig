@@ -284,8 +284,14 @@ Stop emacs from creating backup files on every save
   (setq kept-new-versions 6)
   (setq kept-old-versions 2)
 
-  (setq backup-directory-alist `(("." . ,(concat user-emacs-directory "backups"))))
-  (setq auto-save-file-name-transforms `((".*" ,(concat user-emacs-directory "auto-saves/") t)))
+  (defvar my/backup-directory (concat user-emacs-directory "backups"))
+  (defvar my/saves-directory (concat user-emacs-directory "auto-saves/"))
+
+  (if (not (file-directory-p my/backup-directory))
+      (make-directory my/backup-directory))
+
+  (setq backup-directory-alist `(("." . ,(my/backup-directory))))
+  (setq auto-save-file-name-transforms `((".*" ,(my/saves-directory) t)))
 
   ;; Automatically delete old backup files
   (message "Deleting old backup files...")
