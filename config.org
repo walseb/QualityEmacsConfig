@@ -213,6 +213,7 @@ setxkbmap to select keyboard layout
              xset s off -dpms
 
              setxkbmap -layout us -variant altgr-intl
+             # setxkbmap -layout carpalx -variant qgmlwy
 
              exec emacs
 
@@ -290,9 +291,9 @@ Stop emacs from creating backup files on every save
   (message "Deleting old backup files...")
   (let ((week (* 60 60 24 7))
         (current (float-time (current-time))))
-    (dolist (file (directory-files temporary-file-directory t))
+    (dolist (file (directory-files (concat user-emacs-directory "backups/") t))
       (when (and (backup-file-name-p file)
-               (> (- current (float-time (fifth (file-attributes file))))
+               (> (- current (float-time (nth 5 (file-attributes file))))
                   week))
         (message "%s" file)
         (delete-file file))))
@@ -454,8 +455,11 @@ Allows for using indention as text objects
 #+END_SRC
 
 * Leader
+When changing leader, change =my/leader-map-key= and manually change all general simulate key rebinds
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/leader-map)
+
+  (defvar my/leader-map-key "SPC")
 
   ;; Window management hydra
   ;;(define-key my/leader-map (kbd "o") 'my/window-hydra/body)
@@ -997,7 +1001,7 @@ Version 2015-07-30"
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
-  (evil-define-key 'normal dired-mode-map (kbd "t") 'my/leader-map)
+  (evil-define-key 'normal dired-mode-map (kbd my/leader-map-key) 'my/leader-map)
 
   (global-set-key (kbd "C-x d") 'dired-at-point)
 
@@ -1011,7 +1015,7 @@ Version 2015-07-30"
         (setq delete-by-moving-to-trash nil)
         (message "Delete to trash disabled"))))
 
-  (evil-define-key 'normal dired-mode-map (kbd "t a t") 'my/toggle-delete-to-trash)
+  (evil-define-key 'normal dired-mode-map (kbd (concat my/leader-map-key " a t")) 'my/toggle-delete-to-trash)
 
   (evil-define-key 'normal dired-mode-map (kbd "i") 'evil-insert)
   (evil-define-key 'normal dired-mode-map (kbd "RET") 'dired-find-file)
@@ -1144,12 +1148,12 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
-  (evil-define-key 'normal org-mode-map (kbd "t a i") 'org-toggle-inline-images)
-  (evil-define-key 'normal org-mode-map (kbd "t a f") 'org-insert-link)
-  (evil-define-key 'normal org-mode-map (kbd "t a e") 'org-babel-execute-src-block)
+  (evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a i")) 'org-toggle-inline-images)
+  (evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a f")) 'org-insert-link)
+  (evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a e")) 'org-babel-execute-src-block)
 
   ;; Export
-  (evil-define-key 'normal org-mode-map (kbd "t a c h") 'org-twbs-export-to-html)
+  (evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a c h")) 'org-twbs-export-to-html)
 #+END_SRC
 
 * Sudo edit
@@ -1405,18 +1409,18 @@ Shows information in echo area
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
-  ;;  (evil-define-key 'normal java-mode-map (kbd "t a e") 'eclim-problems)
-  (evil-define-key 'normal java-mode-map (kbd "t a e") 'eclim-problems)
+  ;;  (evil-define-key 'normal java-mode-map (kbd (concat my/leader-map-key " a e")) 'eclim-problems)
+  (evil-define-key 'normal java-mode-map (kbd (concat my/leader-map-key " a e")) 'eclim-problems)
 
-  (evil-define-key 'normal java-mode-map (kbd "t a s") 'start-eclimd)
-  (evil-define-key 'normal java-mode-map (kbd "t a S") 'stop-eclimd)
+  (evil-define-key 'normal java-mode-map (kbd (concat my/leader-map-key " a s")) 'start-eclimd)
+  (evil-define-key 'normal java-mode-map (kbd (concat my/leader-map-key " a S")) 'stop-eclimd)
 
-  (evil-define-key 'normal java-mode-map (kbd "t a g t") 'eclim-java-find-type)
-  (evil-define-key 'normal java-mode-map (kbd "t a g d") 'eclim-java-find-declaration)
-  (evil-define-key 'normal java-mode-map (kbd "t a g r") 'eclim-java-find-references)
-  (evil-define-key 'normal java-mode-map (kbd "t a l") 'eclim-java-find-generic)
+  (evil-define-key 'normal java-mode-map (kbd (concat my/leader-map-key " a g t")) 'eclim-java-find-type)
+  (evil-define-key 'normal java-mode-map (kbd (concat my/leader-map-key " a g d")) 'eclim-java-find-declaration)
+  (evil-define-key 'normal java-mode-map (kbd (concat my/leader-map-key " a g r")) 'eclim-java-find-references)
+  (evil-define-key 'normal java-mode-map (kbd (concat my/leader-map-key " a l")) 'eclim-java-find-generic)
 
-  (evil-define-key 'normal java-mode-map (kbd "t a f") 'eclim-java-format)
+  (evil-define-key 'normal java-mode-map (kbd (concat my/leader-map-key " a f")) 'eclim-java-format)
 #+END_SRC
 
 ** Python
@@ -1443,16 +1447,16 @@ Shows information in echo area
 
 **** Keys
 #+BEGIN_SRC emacs-lisp
-  (evil-define-key 'normal csharp-mode-map (kbd "t a r") 'omnisharp-run-code-action-refactoring)
-  (evil-define-key 'normal csharp-mode-map (kbd "t a f") 'omnisharp-code-format-entire-file)
-  (evil-define-key 'normal csharp-mode-map (kbd "t a R") 'omnisharp-rename-interactively)
-  (evil-define-key 'normal csharp-mode-map (kbd "t a s") 'omnisharp-reload-solution)
-  (evil-define-key 'normal csharp-mode-map (kbd "t a d") 'omnisharp-go-to-definition-other-window)
-  (evil-define-key 'normal csharp-mode-map (kbd "t a u") 'omnisharp-find-usages)
-  (evil-define-key 'normal csharp-mode-map (kbd "t a i") 'omnisharp-find-implementations)
-  (evil-define-key 'normal csharp-mode-map (kbd "t a p") 'omnisharp-navigate-to-solution-file)
-  (evil-define-key 'normal csharp-mode-map (kbd "t a a") 'omnisharp-solution-actions)
-  (evil-define-key 'normal csharp-mode-map (kbd "t a e") 'omnisharp-solution-errors)
+  (evil-define-key 'normal csharp-mode-map (kbd (concat my/leader-map-key "a r")) 'omnisharp-run-code-action-refactoring)
+  (evil-define-key 'normal csharp-mode-map (kbd (concat my/leader-map-key "a f")) 'omnisharp-code-format-entire-file)
+  (evil-define-key 'normal csharp-mode-map (kbd (concat my/leader-map-key "a R")) 'omnisharp-rename-interactively)
+  (evil-define-key 'normal csharp-mode-map (kbd (concat my/leader-map-key "a s")) 'omnisharp-reload-solution)
+  (evil-define-key 'normal csharp-mode-map (kbd (concat my/leader-map-key "a d")) 'omnisharp-go-to-definition-other-window)
+  (evil-define-key 'normal csharp-mode-map (kbd (concat my/leader-map-key "a u")) 'omnisharp-find-usages)
+  (evil-define-key 'normal csharp-mode-map (kbd (concat my/leader-map-key "a i")) 'omnisharp-find-implementations)
+  (evil-define-key 'normal csharp-mode-map (kbd (concat my/leader-map-key "a p")) 'omnisharp-navigate-to-solution-file)
+  (evil-define-key 'normal csharp-mode-map (kbd (concat my/leader-map-key "a a")) 'omnisharp-solution-actions)
+  (evil-define-key 'normal csharp-mode-map (kbd (concat my/leader-map-key "a e")) 'omnisharp-solution-errors)
 #+END_SRC
 
 **** Write formatting settings to omnisharp server config
@@ -1488,15 +1492,15 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
-  (evil-define-key 'normal fsharp-mode-map (kbd "t a d") 'fsharp-ac/gotodefn-at-point)
-  (evil-define-key 'normal fsharp-mode-map (kbd "t a v") 'fsharp-mark-phrase)
-  (evil-define-key 'normal fsharp-mode-map  (kbd "t a b") 'fsharp-goto-block-up)
+  (evil-define-key 'normal fsharp-mode-map (kbd (concat my/leader-map-key " a d")) 'fsharp-ac/gotodefn-at-point)
+  (evil-define-key 'normal fsharp-mode-map (kbd (concat my/leader-map-key " a v")) 'fsharp-mark-phrase)
+  (evil-define-key 'normal fsharp-mode-map  (kbd (concat my/leader-map-key " a b")) 'fsharp-goto-block-up)
 
   (define-key fsharp-mode-map (kbd "C-x e") 'fsharp-eval-region)
 
-  (evil-define-key 'normal fsharp-mode-map (kbd "t a C-r") 'fsharp-ac-status)
-  (evil-define-key 'normal fsharp-mode-map (kbd "t a C-k") 'fsharp-ac/stop-process)
-  (evil-define-key 'normal fsharp-mode-map (kbd "t a C-s") 'fsharp-ac/start-process)
+  (evil-define-key 'normal fsharp-mode-map (kbd (concat my/leader-map-key " a C-r")) 'fsharp-ac-status)
+  (evil-define-key 'normal fsharp-mode-map (kbd (concat my/leader-map-key " a C-k")) 'fsharp-ac/stop-process)
+  (evil-define-key 'normal fsharp-mode-map (kbd (concat my/leader-map-key " a C-s")) 'fsharp-ac/start-process)
 #+END_SRC
 
 *** Settings
@@ -1525,7 +1529,7 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
-  (evil-define-key 'normal clojure-mode-map (kbd "t a e") 'cider-eval-defun-at-point)
+  (evil-define-key 'normal clojure-mode-map (kbd (concat my/leader-map-key " a e")) 'cider-eval-defun-at-point)
 #+END_SRC
 
 * Process monitors
@@ -1738,7 +1742,7 @@ There aren't really any worth changing
 
 ** Rebind save key
 #+BEGIN_SRC emacs-lisp
-  (general-nmap "t s" (general-simulate-key "C-x C-s"))
+  (general-nmap "SPC s" (general-simulate-key "C-x C-s"))
 #+END_SRC
 
 ** Rebind C-d
@@ -1782,7 +1786,9 @@ There aren't really any worth changing
 
   (evil-define-key 'insert my/keys-mode-map (kbd "C-w") 'my/evil-scroll-down)
 
-  (evil-define-key 'motion my/keys-mode-map (kbd "t") 'my/leader-map)
+  (evil-define-key 'motion my/keys-mode-map (kbd "SPC") 'my/leader-map)
+  (define-key my/keys-mode-map (kbd "M-SPC") 'my/window-hydra/body)
+
 
   (define-key my/keys-mode-map (kbd "M-f") 'avy-goto-char-in-line)
   (define-key my/keys-mode-map (kbd "M-w") 'my/avy-goto-word-0-in-line)
@@ -1792,7 +1798,6 @@ There aren't really any worth changing
   (define-key my/keys-mode-map (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
 
 
-  (define-key my/keys-mode-map (kbd "M-t") 'my/window-hydra/body)
 #+END_SRC
 
 * exwm
@@ -1909,6 +1914,8 @@ Define main function
                C-t
                C-g
                C-h
+               C-SPC
+               M-SPC
                M-o
                ;; Exwm grab and release keyboard
                M-j
@@ -1918,8 +1925,8 @@ Define main function
 
   ;; Some keys have to be defined using "exwm-input-set-key" in order to be usable if they are in "exwm-input-prefix-keys"
 
-  (exwm-input-set-key (kbd "C-t") 'my/leader-map)
-  (exwm-input-set-key (kbd "M-t") 'my/window-hydra/body)
+  (exwm-input-set-key (kbd (concat "C-" my/leader-map-key)) 'my/leader-map)
+  (exwm-input-set-key (kbd (concat "M-" my/leader-map-key)) 'my/window-hydra/body)
 
   ;;(exwm-input-set-key (kbd "C-h") help-map)
 
@@ -2247,6 +2254,8 @@ emms doesn't automatically connect to mpd when loading playlist, results in empt
   (define-key emms-browser-mode-map (kbd "s") 'emms-pause)
 
   (evil-define-key 'normal emms-browser-mode-map (kbd "RET") 'emms-browser-add-tracks)
+
+  (evil-define-key 'normal emms-playlist-mode-map (kbd "RET") 'emms-playlist-mode-play-smart)
 
   (global-set-key (kbd "<XF86AudioPlay>") 'emms-pause)
   (global-set-key (kbd "<XF86AudioStop>") 'emms-stop)
@@ -2716,8 +2725,8 @@ Create =.gnus.el=, which gnus reads from
     ("M-h" evil-window-set-width nil)
 
     ;; Split
-    ("v" split-window-horizontally nil)
-    ("j" split-window-vertically nil)
+    ("o" split-window-horizontally nil)
+    ("v" split-window-vertically nil)
 
     ;; Close window
     ("s" delete-window nil)
@@ -2737,20 +2746,21 @@ Create =.gnus.el=, which gnus reads from
     ("C-u" evil-scroll-up nil)
     ("C-w" evil-scroll-down nil)
 
-    ("o" counsel-linux-app)
+    ("b" counsel-M-x)
+    ("y" counsel-linux-app)
 
     ;;  Switch workspace
     ;; Workspace 0
-    ("A" (lambda () (interactive) (exwm-workspace-switch-create 0)))
-    ("N" (lambda () (interactive) (exwm-workspace-switch-create 1)))
-    ("E" (lambda () (interactive) (exwm-workspace-switch-create 2)))
-    ("T" (lambda () (interactive) (exwm-workspace-switch-create 3)))
-    ("O" (lambda () (interactive) (exwm-workspace-switch-create 4)))
-    ("S" (lambda () (interactive) (exwm-workspace-switch-create 5)))
-    ("H" (lambda () (interactive) (exwm-workspace-switch-create 6)))
-    ("D" (lambda () (interactive) (exwm-workspace-switch-create 7)))
-    ("I" (lambda () (interactive) (exwm-workspace-switch-create 8)))
-    ("R" (lambda () (interactive) (exwm-workspace-switch-create 9)))
+    ("A" (exwm-workspace-switch-create 0) nil)
+    ("N" (exwm-workspace-switch-create 1) nil)
+    ("E" (exwm-workspace-switch-create 2) nil)
+    ("T" (exwm-workspace-switch-create 3) nil)
+    ("O" (exwm-workspace-switch-create 4) nil)
+    ("S" (exwm-workspace-switch-create 5) nil)
+    ("H" (exwm-workspace-switch-create 6) nil)
+    ("D" (exwm-workspace-switch-create 7) nil)
+    ("I" (exwm-workspace-switch-create 8) nil)
+    ("R" (exwm-workspace-switch-create 9) nil)
 
     ;; "cancel"
     ("r" nil)
@@ -2779,6 +2789,49 @@ Changes colors of delimiters eg. {()}
   (use-package rainbow-delimiters)
 
   (add-hook 'prog-mode 'rainbow-delimiters-mode-enable)
+#+END_SRC
+
+** Minimap
+#+BEGIN_SRC emacs-lisp
+  (use-package minimap)
+
+  (define-key my/leader-map (kbd "]") 'my/toggle-workspace-minimap)
+
+  (setq minimap-window-location 'right)
+#+END_SRC
+
+*** Toggle minimap in workspace
+#+BEGIN_SRC emacs-lisp
+  (defvar my/minimap-exists nil)
+
+  (defun my/kill-minimap()
+    (if my/minimap-exists
+        (progn
+          (minimap-kill)
+          (setf my/minimap-exists nil))))
+
+  (defun my/start-minimap()
+    (if (not my/minimap-exists)
+        (progn
+          (minimap-create)
+          (setf my/minimap-exists t))))
+
+  (defvar my/workspaces-with-minimap (list))
+
+  (defun my/toggle-workspace-minimap()
+    (interactive)
+    (if (memq exwm-workspace-current-index my/workspaces-with-minimap)
+        (setq my/workspaces-with-minimap (remq exwm-workspace-current-index my/workspaces-with-minimap))
+      (push exwm-workspace-current-index my/workspaces-with-minimap))
+    (my/workspace-minimap-refresh))
+
+  (defun my/workspace-minimap-refresh()
+    (if (memq exwm-workspace-current-index my/workspaces-with-minimap)
+        (my/start-minimap)
+      (my/kill-minimap)))
+  (setq my/workspaces-with-minimap nil)
+
+  (add-hook 'exwm-workspace-switch-hook 'my/workspace-minimap-refresh t)
 #+END_SRC
 
 ** Highlight matching delimiters
