@@ -1,0 +1,4 @@
+# name: fun
+# key: f
+# --
+(fun ${1:bindings} -> $0)

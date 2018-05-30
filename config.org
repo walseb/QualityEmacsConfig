@@ -1804,7 +1804,7 @@ There aren't really any worth changing
   (evil-define-key 'insert my/keys-mode-map (kbd "C-w") 'my/evil-scroll-down)
 
   (evil-define-key 'motion my/keys-mode-map (kbd "SPC") 'my/leader-map)
-  (define-key my/keys-mode-map (kbd "M-SPC") 'my/window-hydra/body)
+  (evil-define-key 'motion my/keys-mode-map (kbd "\\") 'my/window-hydra/body)
 
 
   (define-key my/keys-mode-map (kbd "M-f") 'avy-goto-char-in-line)
@@ -1932,8 +1932,7 @@ Define main function
                C-g
                C-h
                C-SPC
-               M-SPC
-               M-o
+               \
                ;; Exwm grab and release keyboard
                M-j
                M-k
@@ -1943,7 +1942,7 @@ Define main function
   ;; Some keys have to be defined using "exwm-input-set-key" in order to be usable if they are in "exwm-input-prefix-keys"
 
   (exwm-input-set-key (kbd (concat "C-" my/leader-map-key)) 'my/leader-map)
-  (exwm-input-set-key (kbd (concat "M-" my/leader-map-key)) 'my/window-hydra/body)
+  (exwm-input-set-key (kbd "\\") 'my/window-hydra/body)
 
   ;;(exwm-input-set-key (kbd "C-h") help-map)
 
@@ -2027,6 +2026,77 @@ If enabled, auto enables projectile, which has high CPU usage
 #+END_SRC
 
 ** Music
+*** EMMS
+Setup emms
+#+BEGIN_SRC emacs-lisp
+  (use-package emms)
+
+  (require 'emms-setup)
+  (require 'emms-player-mpd)
+
+  ;; Essential??
+  (emms-all) 
+
+  ;; Disable name of playing track in modeline (time is kept though)
+  (emms-mode-line-disable)
+  (setq emms-mode-line-format nil)
+
+  (setq emms-seek-seconds 5)
+  (setq emms-player-list '(emms-player-mpd))
+  (setq emms-info-functions '(emms-info-mpd))
+
+  (setq emms-player-mpd-server-name "localhost")
+  (setq emms-player-mpd-server-port "6600")
+
+  (setq mpc-host "localhost:6600")
+#+END_SRC
+
+**** Sort by directory name instead of metadata
+#+BEGIN_SRC emacs-lisp
+  (setq emms-browser-get-track-field-function 'emms-browser-get-track-field-use-directory-name)
+#+END_SRC
+
+**** Open playlist
+emms doesn't automatically connect to mpd when loading playlist, results in empty playlist
+#+BEGIN_SRC emacs-lisp
+  (defun my/open-emms-and-connect()
+    "Reconnect to MPD and open emms playlist"
+    (interactive)
+    (emms-player-mpd-connect)
+    (emms-smart-browse))
+#+END_SRC
+
+**** Sync MPD and emms
+#+BEGIN_SRC emacs-lisp
+  (defun my/sync-mpd-and-emms ()
+    "Updates the MPD and emms database synchronously."
+    (interactive)
+    (emms-player-mpd-connect)
+    (call-process "mpc" nil nil nil "update")
+    (emms-player-mpd-update-all-reset-cache)
+    (emms-cache-set-from-mpd-all)
+    (emms-player-mpd-update-all-reset-cache)
+    (message "MPD database and emms updated!"))
+#+END_SRC
+
+**** Keys
+#+BEGIN_SRC emacs-lisp
+  (define-key my/music-menu-map (kbd "u") 'my/sync-mpd-and-emms) 
+
+  (define-key my/music-menu-map (kbd "o") 'my/open-emms-and-connect)
+  (define-key my/music-menu-map (kbd "g") 'emms-seek-to)
+  (define-key my/music-menu-map (kbd "s") 'emms-pause)
+
+  (define-key emms-browser-mode-map (kbd "s") 'emms-pause)
+
+  (evil-define-key 'normal emms-browser-mode-map (kbd "RET") 'emms-browser-add-tracks)
+
+  (evil-define-key 'normal emms-playlist-mode-map (kbd "RET") 'emms-playlist-mode-play-smart)
+
+  (global-set-key (kbd "<XF86AudioPlay>") 'emms-pause)
+  (global-set-key (kbd "<XF86AudioStop>") 'emms-stop)
+#+END_SRC
+
 *** MPD
 **** Create config
 If config already exists, don't overwrite it
@@ -2059,11 +2129,8 @@ If config already exists, don't overwrite it
    "Start MPD, connect to it and sync the metadata cache."
    (interactive)
    (start-process "mpd" nil "mpd")
-   (emms-player-mpd-connect)
-   (my/update-mpd-database)
-   (emms-cache-set-from-mpd-all)
-   (emms-player-mpd-update-all-reset-cache)
-   (message "MPD started!"))
+   (my/sync-mpd-and-emms)
+   (message "MPD started and synced!"))
 #+END_SRC
 
 **** Kill daemon
@@ -2074,25 +2141,6 @@ If config already exists, don't overwrite it
    (emms-stop)
    (call-process "killall" nil nil nil "mpd")
    (message "MPD killed!"))
-#+END_SRC
-
-**** Update MPD database
-#+BEGIN_SRC emacs-lisp
-  (defun my/update-mpd-database ()
-    "Updates the MPD database asynchronously."
-    (interactive)
-    (call-process "mpc" nil nil nil "update")
-    (message "MPD database updated!"))
-#+END_SRC
-
-**** Update MPD and emms database
-#+BEGIN_SRC emacs-lisp
-  (defun my/update-mpd-and-emms-database ()
-    "Updates the MPD and emms database synchronously."
-    (interactive)
-    (my/update-mpd-database)
-    (emms-player-mpd-update-all-reset-cache)
-    (message "MPD database and emms updated!"))
 #+END_SRC
 
 **** View MPD info
@@ -2183,7 +2231,6 @@ If config already exists, don't overwrite it
 #+BEGIN_SRC emacs-lisp
   (define-key my/music-menu-map (kbd "C-s") 'my/start-music-daemon)
   (define-key my/music-menu-map (kbd "C-k") 'my/kill-music-daemon)
-  (define-key my/music-menu-map (kbd "C-u") 'my/update-mpd-and-emms-database)
   (define-key my/music-menu-map (kbd "i") 'my/mpd-info)
 
   (define-key my/music-menu-map (kbd "r") 'my/mpd-random-on)
@@ -2202,62 +2249,6 @@ If config already exists, don't overwrite it
 
   (global-set-key (kbd "<XF86AudioNext>") 'my/mpd-next-song)
   (global-set-key (kbd "<XF86AudioPrev>") 'my/mpd-previous-song)
-#+END_SRC
-
-*** EMMS
-Setup emms
-#+BEGIN_SRC emacs-lisp
-  (use-package emms)
-
-  (require 'emms-setup)
-  (require 'emms-player-mpd)
-
-  ;; Essential??
-  (emms-all) 
-
-  ;; Disable name of playing track in modeline (time is kept though)
-  (emms-mode-line-disable)
-  (setq emms-mode-line-format nil)
-
-  (setq emms-seek-seconds 5)
-  (setq emms-player-list '(emms-player-mpd))
-  (setq emms-info-functions '(emms-info-mpd))
-
-  (setq emms-player-mpd-server-name "localhost")
-  (setq emms-player-mpd-server-port "6600")
-
-  (setq mpc-host "localhost:6600")
-#+END_SRC
-
-**** Sort by directory name instead of metadata
-#+BEGIN_SRC emacs-lisp
-  (setq emms-browser-get-track-field-function #'emms-browser-get-track-field-use-directory-name)
-#+END_SRC
-
-**** Open playlist
-emms doesn't automatically connect to mpd when loading playlist, results in empty playlist
-#+BEGIN_SRC emacs-lisp
-  (defun my/open-emms-and-connect()
-    "Reconnect to MPD and open emms playlist"
-    (interactive)
-    (emms-player-mpd-connect)
-    (emms-smart-browse))
-#+END_SRC
-
-**** Keys
-#+BEGIN_SRC emacs-lisp
-  (define-key my/music-menu-map (kbd "o") 'my/open-emms-and-connect)
-  (define-key my/music-menu-map (kbd "g") 'emms-seek-to)
-  (define-key my/music-menu-map (kbd "s") 'emms-pause)
-
-  (define-key emms-browser-mode-map (kbd "s") 'emms-pause)
-
-  (evil-define-key 'normal emms-browser-mode-map (kbd "RET") 'emms-browser-add-tracks)
-
-  (evil-define-key 'normal emms-playlist-mode-map (kbd "RET") 'emms-playlist-mode-play-smart)
-
-  (global-set-key (kbd "<XF86AudioPlay>") 'emms-pause)
-  (global-set-key (kbd "<XF86AudioStop>") 'emms-stop)
 #+END_SRC
 
 * Screenshots

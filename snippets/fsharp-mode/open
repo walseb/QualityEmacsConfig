@@ -1,0 +1,4 @@
+# name: open
+# key: o
+# --
+open $0

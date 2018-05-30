@@ -1,0 +1,4 @@
+# key: t
+# name: type
+# --
+type ${1:name} =

@@ -1,6 +1,10 @@
-*
+/*
+/*/
 
 !.gitignore
 !init.el
 !config.org
 !readme.org
+!snippets
+
+!/snippets/
