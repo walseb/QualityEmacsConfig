@@ -77,6 +77,10 @@ Spelling =aspell-en= etc
 
 if using windows, =Cygwin= is needed
 
+*** Laptop
+=xorg-xbacklight=
+=wpa_supplicant=
+
 *** Misc
 =redshift= =feh=
 ** Overtone
@@ -140,6 +144,9 @@ use =M-x gnus-agent-add-server=
 
 *** Mail server mails aren't marked as read when marking as read in gnus, and gnus isn't marking them as read either after exit
 You have to press =q= in order to save changes
+
+** wpa supplicant
+https://wiki.archlinux.org/index.php/WPA_supplicant#Connecting_with_wpa_cli
 
 * Theme
 #+BEGIN_SRC emacs-lisp
@@ -3121,6 +3128,17 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 ;;  (run-with-timer 0 60 'my/update-ram-left)
 #+END_SRC
 
+*** Set mode line color
+#+BEGIN_SRC emacs-lisp
+  (defun my/update-mode-line-color()
+    (if (and (not (eq battery-mode-line-string "")) (< (length battery-mode-line-string) 10))
+        (my/set-mode-line-caution)
+      (progn
+        (if (> my/load-average 1)
+            (my/set-mode-line-warning)))
+      (my/set-mode-line-normal)))
+#+END_SRC
+
 *** Mode line format
 #+BEGIN_SRC emacs-lisp
   (defun my/mode-line-align (left right)
@@ -3135,6 +3153,8 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                     (format-mode-line
                      (quote
                       (
+                       (:eval (my/update-mode-line-color))
+
                        ;; exwm workspace number
                        (:eval (number-to-string exwm-workspace-current-index))
 
@@ -3190,10 +3210,6 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                      (quote
                       (
 
-                       ;;       " R: "
-                       ;;        (:eval my/ram-left)
-                       ;;         "G"
-
                        " NET:"
                        (:eval my/rx-delta-formatted)
                        "|"
@@ -3207,21 +3223,12 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
                        " C: "
 
-                       (:eval (if (> my/load-average 3.5)
-                                  (my/set-mode-line-warning)
-                                (my/set-mode-line-normal)))
-
                        (:eval (number-to-string my/load-average))
 
                        (:eval (if (not (eq battery-mode-line-string ""))
-                                  (progn
-                                    (if (< (length battery-mode-line-string) 10)
-                                        (my/set-mode-line-warning)
-                                      (my/set-mode-line-normal))
-                                    (concat " BAT: " battery-mode-line-string "%%%%"))))
+                                  (concat " BAT: " battery-mode-line-string "%%%%")))
 
                        " | "
-
 
                        (:eval my/time)
 
