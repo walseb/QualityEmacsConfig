@@ -3135,8 +3135,8 @@ When projectile-mode is on, project name is updated on every keypress, here it i
         (my/set-mode-line-caution)
       (progn
         (if (> my/load-average 1)
-            (my/set-mode-line-warning)))
-      (my/set-mode-line-normal)))
+            (my/set-mode-line-warning)
+          (my/set-mode-line-normal)))))
 #+END_SRC
 
 *** Mode line format
