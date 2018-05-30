@@ -3141,10 +3141,20 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
 *** Mode line format
 #+BEGIN_SRC emacs-lisp
-  (defun my/mode-line-align (left right)
-    "Return a string of `window-width' length containing LEFT, and RIGHT aligned respectively."
-    (let* ((available-width (- (frame-width) (length left) 2)))
-      (format (format "%%s %%%ds" available-width) left right)))
+  (defun my/mode-line-align (left-string right-string)
+    "Return a string of `window-width' length containing LEFT-STRING, and RIGHT-STRING aligned respectively."
+    (let* ((available-width (- (frame-width) (length left-string) 2)))
+      ;; The result of format inside of format could be for example "%s %78s"
+      (format (format "%%s %%%ds" available-width) left-string right-string)))
+  ;;(format "%100s" "test" "t")
+  ;;
+  ;;(defun my/mode-line-middle-space(left-string)
+  ;;
+  ;;(setq left-stuff "ttesdatoaesdatsdoeatoeasdoetoeaatsdoe34")
+  ;;(- (frame-width) (length left-stuff) 2)
+  ;;(format "----")
+  ;; 
+  ;;)
 
   (setq-default minibuffer-line-format
                 '((:eval
