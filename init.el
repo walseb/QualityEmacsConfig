@@ -50,16 +50,16 @@
  '(nil nil t)
  '(package-selected-packages
    (quote
-    (minimap farmhouse-theme org-beautify-theme hydra ace-window diff-hl git-gutter evil-space evil-lion evil-indent-plus auto-dim-other-buffers company-box tile minibuffer-line symon twilight-anti-bright-theme auto-package-update ivy-pass password-store avy-flycheck linum-relative nlinum-relative vertigo ivy-rich dired-du zeal-at-point manage-minor-mode uniquify yafolding polymode fsharp-mode yasnippet-snippets yasnippet omnisharp-emacs csharp-mode flycheck projectile company-jedi slime-company slime ox-twbs htmlize org-bullets magit expand-region general exwm diminish company rainbow-delimiters rainbow-mode beacon which-key use-package))))
+    (highlight-indent-guides minimap farmhouse-theme org-beautify-theme hydra ace-window diff-hl git-gutter evil-space evil-lion evil-indent-plus auto-dim-other-buffers company-box tile minibuffer-line symon twilight-anti-bright-theme auto-package-update ivy-pass password-store avy-flycheck linum-relative nlinum-relative vertigo ivy-rich dired-du zeal-at-point manage-minor-mode uniquify yafolding polymode fsharp-mode yasnippet-snippets yasnippet omnisharp-emacs csharp-mode flycheck projectile company-jedi slime-company slime ox-twbs htmlize org-bullets magit expand-region general exwm diminish company rainbow-delimiters rainbow-mode beacon which-key use-package))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(default ((t (:inherit nil :stipple nil :inverse-video nil :box nil :strike-through nil :overline nil :underline nil :slant normal :weight normal :height 128 :width normal :foundry "PfEd" :family "DejaVuSans"))))
- '(company-scrollbar-bg ((t (:background "#281432193e1f"))))
- '(company-scrollbar-fg ((t (:background "#1e0a258c2e8f"))))
- '(company-tooltip ((t (:inherit default :background "#18041e052539"))))
+ '(company-scrollbar-bg ((t (:background "#28323e"))))
+ '(company-scrollbar-fg ((t (:background "#1e252e"))))
+ '(company-tooltip ((t (:inherit default :background "#181e25"))))
  '(company-tooltip-common ((t (:inherit font-lock-constant-face))))
  '(company-tooltip-selection ((t (:inherit font-lock-function-name-face))))
  '(org-level-1 ((t (:inherit outline-1 :height 2.0))))

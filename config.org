@@ -121,7 +121,7 @@ To stop dired from creating new folder when unpacking, change in section "Dired 
 ** Can't find package error
 run
 =package-refresh-contents=
-or restart emacs/OS
+or restart emacs
 ** Gnus 
 *** How to setup name and password
 Create authinfo.pgp file. It is auto encrypted/decrypted
@@ -208,6 +208,14 @@ emacs. commands to disable scrollbar, etc before launching emacs, improving star
 ** Write .xinitrc
 xset disables screen saver
 setxkbmap to select keyboard layout
+In terminal do: =loadkeys carpalx=
+To make permanent:
+in =/etc/vconsole.conf=
+#+BEGIN_SRC
+KEYMAP=dvorak-uk
+FONT=lat9w-16
+#+END_SRC
+
 #+BEGIN_SRC emacs-lisp
   (if(eq fully-compatible-system t)
       (if(not(file-exists-p "~/.xinitrc"))
@@ -359,7 +367,7 @@ Stop emacs from creating backup files on every save
   (setq global-undo-tree-mode t)
 
   ;; Might fix undo tree
-  ;;(setq undo-tree-enable-undo-in-region nil)
+  (setq undo-tree-enable-undo-in-region nil)
 
   ;;(setq undo-tree-auto-save-history t)
 
@@ -495,7 +503,7 @@ When changing leader, change =my/leader-map-key= and manually change all general
   (define-key my/leader-map (kbd "p") 'my/processes-menu-map)
 
   (define-prefix-command 'my/spell-menu-map)
-  (define-key my/leader-map (kbd "S") 'my/spell-menu-map)
+  (define-key my/leader-map (kbd "C-s") 'my/spell-menu-map)
 
   (define-prefix-command 'my/open-menu-map)
   (define-key my/leader-map (kbd "o") 'my/open-menu-map)
@@ -659,6 +667,12 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
   (global-set-key (kbd "<XF86MonBrightnessUp>") 'my/increase-brightness)
   (global-set-key (kbd "<XF86MonBrightnessDown>") 'my/decrease-brightness)
+#+END_SRC
+
+** Count words of selection
+#+BEGIN_SRC emacs-lisp
+  (define-key my/leader-map (kbd "= =") 'count-words)
+  (define-key my/leader-map (kbd "= r") 'count-words-region)
 #+END_SRC
 
 * Folding
@@ -833,7 +847,6 @@ Vim bindings to change fold
 
   (global-set-key (kbd "M-m") 'counsel-mark-ring)
 
-  (define-key my/leader-map (kbd "f") 'counsel-find-file)
   (define-key my/leader-map (kbd "F") 'counsel-ag)
   (define-key my/leader-map (kbd "l") 'counsel-locate)
 
@@ -1165,6 +1178,8 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
+  (evil-define-key 'normal org-mode-map (kbd "C-s") 'swiper)
+
   (evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a i")) 'org-toggle-inline-images)
   (evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a f")) 'org-insert-link)
   (evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a e")) 'org-babel-execute-src-block)
@@ -1371,9 +1386,14 @@ Doesn't work with my setup right now
 
 *** indent guide
 #+BEGIN_SRC emacs-lisp
-  (use-package indent-guide)
+  (use-package highlight-indent-guides)
 
-  (add-hook 'prog-mode-hook 'indent-guide-mode)
+  (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
+
+  (setq highlight-indent-guides-method 'column)
+
+  (setq highlight-indent-guides-responsive 'top)
+  (setq highlight-indent-guides-delay 0)
 #+END_SRC
 
 ** Documentation
@@ -1803,9 +1823,8 @@ There aren't really any worth changing
 
   (evil-define-key 'insert my/keys-mode-map (kbd "C-w") 'my/evil-scroll-down)
 
-  (evil-define-key 'motion my/keys-mode-map (kbd "SPC") 'my/leader-map)
-  (evil-define-key 'motion my/keys-mode-map (kbd "\\") 'my/window-hydra/body)
-
+  (evil-define-key 'normal my/keys-mode-map (kbd "SPC") 'my/leader-map)
+  (evil-define-key 'normal my/keys-mode-map (kbd ",") 'my/window-hydra/body)
 
   (define-key my/keys-mode-map (kbd "M-f") 'avy-goto-char-in-line)
   (define-key my/keys-mode-map (kbd "M-w") 'my/avy-goto-word-0-in-line)
@@ -1837,17 +1856,17 @@ There aren't really any worth changing
 ** Name buffers after window name
 We use class names for all windows expect for Java applications and GIMP (because of problems with those).
 #+BEGIN_SRC emacs-lisp
-(add-hook 'exwm-update-class-hook
-          (lambda ()
-            (unless (or (string-prefix-p "sun-awt-X11-" exwm-instance-name)
+  (add-hook 'exwm-update-class-hook
+            (lambda ()
+              (unless (or (string-prefix-p "sun-awt-X11-" exwm-instance-name)
+                          (string= "gimp" exwm-instance-name))
+                (exwm-workspace-rename-buffer exwm-class-name))))
+  (add-hook 'exwm-update-title-hook
+            (lambda ()
+              (when (or (not exwm-instance-name)
+                        (string-prefix-p "sun-awt-X11-" exwm-instance-name)
                         (string= "gimp" exwm-instance-name))
-              (exwm-workspace-rename-buffer exwm-class-name))))
-(add-hook 'exwm-update-title-hook
-          (lambda ()
-            (when (or (not exwm-instance-name)
-                      (string-prefix-p "sun-awt-X11-" exwm-instance-name)
-                      (string= "gimp" exwm-instance-name))
-              (exwm-workspace-rename-buffer exwm-title))))
+                (exwm-workspace-rename-buffer exwm-title))))
 #+END_SRC
 
 ** Launch programs with hotkeys
@@ -1932,7 +1951,6 @@ Define main function
                C-g
                C-h
                C-SPC
-               \
                ;; Exwm grab and release keyboard
                M-j
                M-k
@@ -1942,13 +1960,13 @@ Define main function
   ;; Some keys have to be defined using "exwm-input-set-key" in order to be usable if they are in "exwm-input-prefix-keys"
 
   (exwm-input-set-key (kbd (concat "C-" my/leader-map-key)) 'my/leader-map)
-  (exwm-input-set-key (kbd "\\") 'my/window-hydra/body)
+  (exwm-input-set-key (kbd "C-,") 'my/window-hydra/body)
 
   ;;(exwm-input-set-key (kbd "C-h") help-map)
 
   ;; Enter and exit char mode
-  (exwm-input-set-key (kbd "M-j") 'exwm-input-grab-keyboard)
-  (exwm-input-set-key (kbd "M-k") 'exwm-input-release-keyboard)
+  (exwm-input-set-key (kbd "M-a") 'exwm-input-grab-keyboard)
+  (exwm-input-set-key (kbd "M-i") 'exwm-input-release-keyboard)
 #+END_SRC
 
 * Version control
@@ -2048,7 +2066,7 @@ Setup emms
   (setq emms-player-mpd-server-name "localhost")
   (setq emms-player-mpd-server-port "6600")
 
-  (setq mpc-host "localhost:6600")
+  ;;(setq mpc-host "localhost:6600")
 #+END_SRC
 
 **** Sort by directory name instead of metadata
@@ -2727,6 +2745,11 @@ Create =.gnus.el=, which gnus reads from
     ;; Buffer management
     ;; Find file
     ("e" counsel-find-file nil)
+
+    ;; Switch buffer
+    ("b" next-buffer nil)
+    ("B" previous-buffer nil)
+
     ;; Switch buffer
     ("a" ivy-switch-buffer nil)
     ;; Kill buffer
@@ -2736,8 +2759,12 @@ Create =.gnus.el=, which gnus reads from
     ("C-u" evil-scroll-up nil)
     ("C-w" evil-scroll-down nil)
 
-    ("b" counsel-M-x)
-    ("y" counsel-linux-app)
+    ("f" counsel-M-x nil)
+    ("y" counsel-linux-app nil)
+
+    ("u" revert-buffer nil)
+
+    ;;  ("SPC" my/leader-map nil)
 
     ;;  Switch workspace
     ;; Workspace 0
@@ -3181,8 +3208,8 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                        " "
 
                        ;; Print current line number
-                       ;;"%l"
-                       ;;"/" 
+                       "%l"
+                       "/" 
                        ;; Print total line number
                        (:eval my/buffer-total-lines)
 
