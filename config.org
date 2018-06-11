@@ -294,6 +294,9 @@ Stop emacs from creating backup files on every save
   ;; Make multiple backups
   (setq version-control t)
 
+  ;; Backup even if file is under version control
+  (setq vc-make-backup-files t)
+
   (setq backup-by-copying t)      ; don't clobber symlinks
   (setq delete-old-versions t)
   (setq kept-new-versions 6)
@@ -308,11 +311,12 @@ Stop emacs from creating backup files on every save
   (if (not (file-directory-p my/saves-directory))
       (make-directory my/saves-directory))
 
-
   (setq backup-directory-alist `(("." . ,my/backup-directory)))
   (setq auto-save-file-name-transforms `((".*" ,my/saves-directory t)))
-
-  ;; Automatically delete old backup files
+#+END_SRC
+** Delete old backups
+#+BEGIN_SRC emacs-lisp
+  ;; Automatically delete old backup files older than a week
   (message "Deleting old backup files...")
   (let ((week (* 60 60 24 7))
         (current (float-time (current-time))))
@@ -323,6 +327,29 @@ Stop emacs from creating backup files on every save
         (message "%s" file)
         (delete-file file))))
 #+END_SRC
+
+** Make backup on every save
+#+BEGIN_SRC emacs-lisp
+  (defvar my/create-per-session-backups t)
+
+  (defun my/force-backup-of-buffer ()
+    ;; Make a special "per session" backup at the first save of each
+    ;; emacs session.
+    (if my/create-per-session-backups
+        (when (not buffer-backed-up)
+          ;; Override the default parameters for per-session backups.
+          (let ((backup-directory-alist '(("" . (concat my/backup-directory "per-session"))))
+                (kept-new-versions 3))
+            (backup-buffer)))
+      ;; Make a "per save" backup on each save.  The first save results in
+      ;; both a per-session and a per-save backup, to keep the numbering
+      ;; of per-save backups consistent.
+      (let ((buffer-backed-up nil))
+        (backup-buffer))))
+
+  (add-hook 'before-save-hook  'my/force-backup-of-buffer)
+#+END_SRC
+
 ** Disble backups for certain files
 #+BEGIN_SRC emacs-lisp
   (define-minor-mode my/no-backups-mode
@@ -345,12 +372,16 @@ Stop emacs from creating backup files on every save
           (set (make-local-variable 'backup-inhibited) t) 
           ;; disable auto-save
           (if auto-save-default
-              (auto-save-mode -1)))
+              (progn
+                (my/create-per-session-backups nil)
+                (auto-save-mode -1))))
                                           ;resort to default value of backup-inhibited
       (kill-local-variable 'backup-inhibited)
                                           ;resort to default auto save setting
       (if auto-save-default
-          (auto-save-mode 1))))
+          (progn
+            (my/create-per-session-backups t)
+            (auto-save-mode 1)))))
 #+END_SRC
 
 *** File types to not backup
@@ -513,6 +544,9 @@ When changing leader, change =my/leader-map-key= and manually change all general
 
   (define-prefix-command 'my/x-menu-map)
   (define-key my/leader-map (kbd "x") 'my/x-menu-map)
+
+  (define-prefix-command 'my/system-commands-map)
+  (define-key my/leader-map (kbd "C-s") 'my/system-commands-map)
 
   (define-key my/leader-map (kbd "u") 'undo-tree-visualize)
 #+END_SRC
@@ -1859,13 +1893,13 @@ We use class names for all windows expect for Java applications and GIMP (becaus
   (add-hook 'exwm-update-class-hook
             (lambda ()
               (unless (or (string-prefix-p "sun-awt-X11-" exwm-instance-name)
-                          (string= "gimp" exwm-instance-name))
+                         (string= "gimp" exwm-instance-name))
                 (exwm-workspace-rename-buffer exwm-class-name))))
   (add-hook 'exwm-update-title-hook
             (lambda ()
               (when (or (not exwm-instance-name)
-                        (string-prefix-p "sun-awt-X11-" exwm-instance-name)
-                        (string= "gimp" exwm-instance-name))
+                       (string-prefix-p "sun-awt-X11-" exwm-instance-name)
+                       (string= "gimp" exwm-instance-name))
                 (exwm-workspace-rename-buffer exwm-title))))
 #+END_SRC
 
@@ -2598,6 +2632,14 @@ Create =.gnus.el=, which gnus reads from
   (define-key my/net-utils-menu-map (kbd "i") 'ifconfig)
 #+END_SRC
 
+* System
+#+BEGIN_SRC emacs-lisp
+  (define-key my/system-commands-map (kbd "s") '(shell-command "xset dpms force suspend"))
+
+  (define-key my/system-commands-map (kbd "C-s") '(shell-command "systemctl suspend"))
+  (define-key my/system-commands-map (kbd "C-h") '(shell-command "systemctl hibernate"))
+#+END_SRC
+
 * Browser
 ** Set default browser
 #+BEGIN_SRC emacs-lisp
@@ -2687,8 +2729,8 @@ Create =.gnus.el=, which gnus reads from
 **  Window and buffer management
 #+BEGIN_SRC emacs-lisp
   (defhydra my/window-hydra (:color red
-                                    :pre (setq exwm-input-line-mode-passthrough t)
-                                    :post (setq exwm-input-line-mode-passthrough nil))
+    :pre (setq exwm-input-line-mode-passthrough t)
+    :post (setq exwm-input-line-mode-passthrough nil))
     ;;"window"
 
     ;; Move focus
@@ -3238,10 +3280,14 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                      (quote
                       (
 
-                       " NET:"
+                       "NET: "
                        (:eval my/rx-delta-formatted)
-                       "|"
+                       "↓ "
                        (:eval my/tx-delta-formatted)
+                       "↑"
+
+                       " | "
+
                        " GC: "
                        (:eval (number-to-string (truncate gc-elapsed)))
 
@@ -3270,6 +3316,9 @@ By default, minibuffer line is updated every 60 seconds, this is good for clocks
 t as last parameter because the mode line should always be updated last, after any changes to its components (such as projectile project name, vc mode, etc)
 #+BEGIN_SRC emacs-lisp
   (add-hook 'post-command-hook 'minibuffer-line--update t)
+
+  ;;(setq minibuffer-line-refresh-interval 1)
+  ;;(run-with-timer 0 1 'minibuffer-line--update)
 #+END_SRC
 
 * Private config
