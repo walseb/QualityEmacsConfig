@@ -1862,12 +1862,10 @@ There aren't really any worth changing
 
   (define-key my/keys-mode-map (kbd "M-f") 'avy-goto-char-in-line)
   (define-key my/keys-mode-map (kbd "M-w") 'my/avy-goto-word-0-in-line)
-  (define-key my/keys-mode-map (kbd "M-g") 'avy-goto-char-timer)
+  (define-key my/keys-mode-map (kbd "M-g") 'avy-goto-char-2)
 
   (define-key my/keys-mode-map (kbd "M-p") 'my/avy-goto-line-above-keep-horizontal-position)
   (define-key my/keys-mode-map (kbd "M-n") 'my/avy-goto-line-below-keep-horizontal-position)
-
-
 #+END_SRC
 
 * exwm
