@@ -607,12 +607,6 @@ Disable bell
   (setq kill-ring-max 100)
 #+END_SRC
 
-** Fringe
-Set fringe size to 0
-#+BEGIN_SRC emacs-lisp
-  (fringe-mode 0)
-#+END_SRC
-
 ** Pixel scroll mode
 In org mode when displaying images pixel scroll mode can be useful maybe
 #+BEGIN_SRC emacs-lisp
@@ -2127,7 +2121,16 @@ If enabled, auto enables projectile, which has high CPU usage
 
 ** git-gutter
 #+BEGIN_SRC emacs-lisp
-  (use-package git-gutter)
+  (use-package diff-hl)
+
+  (global-diff-hl-mode)
+
+  ;; If there is no fringe (terminal), use margin instead
+  (unless (display-graphic-p) (diff-hl-margin-mode))
+
+  (add-hook 'dired-mode-hook 'diff-hl-dired-mode)
+
+  ;;(diff-hl-flydiff-mode)
 #+END_SRC
 
 ** Version control keys 
@@ -2148,7 +2151,6 @@ If enabled, auto enables projectile, which has high CPU usage
   (define-key my/vc-map (kbd "!") 'projectile-run-shell-command-in-root)
   (define-key my/vc-map (kbd "&") 'projectile-run-async-shell-command-in-root)
 
-  (define-key my/vc-map (kbd "g") 'git-gutter)
   (define-key my/vc-map (kbd "s") 'magit-status)
 #+END_SRC
 
@@ -3047,6 +3049,12 @@ Create =.gnus.el=, which gnus reads from
 #+END_SRC
 
 * Visuals
+** Fringe size
+Used by diff-hl and flycheck
+#+BEGIN_SRC emacs-lisp
+  (fringe-mode 6)
+#+END_SRC
+
 ** Beacon
 #+BEGIN_SRC emacs-lisp
   (use-package beacon)
