@@ -322,6 +322,22 @@ Stop emacs from creating backup files on every save
   (setq backup-directory-alist `(("." . ,my/backup-directory)))
   (setq auto-save-file-name-transforms `((".*" ,my/saves-directory t)))
 #+END_SRC
+
+** Make backup on every save
+https://www.emacswiki.org/emacs/ForceBackups
+#+BEGIN_SRC emacs-lisp
+  (defvar my/create-per-session-backups t)
+  ;; Max amount of characters, 200 000 ~200kb
+  (defvar my/per-session-backup-limit 200000)
+
+  (defvar my/backup-per-session-directory (concat my/backup-directory "per-session/"))
+
+  (defun my/force-backup-of-buffer ()
+    (interactive)
+    (if (and my/create-per-session-backups (< (point-max) my/per-session-backup-limit) (buffer-modified-p))
+        (save-restriction (widen) (write-region (point-min) (point-max) (concat my/backup-per-session-directory (buffer-name) (number-to-string (time-to-seconds))) nil nil nil))))
+#+END_SRC
+
 ** Delete old backups
 #+BEGIN_SRC emacs-lisp
   ;; Automatically delete old backup files older than a week
@@ -336,26 +352,9 @@ Stop emacs from creating backup files on every save
         (delete-file file))))
 #+END_SRC
 
-** Make backup on every save
+*** Delete per-session backups on startup
 #+BEGIN_SRC emacs-lisp
-  (defvar my/create-per-session-backups t)
-
-  (defun my/force-backup-of-buffer ()
-    ;; Make a special "per session" backup at the first save of each
-    ;; emacs session.
-    (if my/create-per-session-backups
-        (when (not buffer-backed-up)
-          ;; Override the default parameters for per-session backups.
-          (let ((backup-directory-alist '(("" . (concat my/backup-directory "per-session/"))))
-                (kept-new-versions 3))
-            (backup-buffer)))
-      ;; Make a "per save" backup on each save.  The first save results in
-      ;; both a per-session and a per-save backup, to keep the numbering
-      ;; of per-save backups consistent.
-      (let ((buffer-backed-up nil))
-        (backup-buffer))))
-
-  (add-hook 'before-save-hook  'my/force-backup-of-buffer)
+  (shell-command (concat "rm * " my/backup-per-session-directory "*" ))
 #+END_SRC
 
 ** Disble backups for certain files
@@ -381,14 +380,14 @@ Stop emacs from creating backup files on every save
           ;; disable auto-save
           (if auto-save-default
               (progn
-                (my/create-per-session-backups nil)
+                (setq my/create-per-session-backups nil)
                 (auto-save-mode -1))))
                                           ;resort to default value of backup-inhibited
       (kill-local-variable 'backup-inhibited)
                                           ;resort to default auto save setting
       (if auto-save-default
           (progn
-            (my/create-per-session-backups t)
+            (setq my/create-per-session-backups t)
             (auto-save-mode 1)))))
 #+END_SRC
 
@@ -533,7 +532,6 @@ When changing leader, change =my/leader-map-key= and manually change all general
   ;; Window management hydra
   ;;(define-key my/leader-map (kbd "o") 'my/window-hydra/body)
 
-  ;; Menus
   (define-prefix-command 'my/help-map)
   (define-key my/leader-map (kbd "h") 'my/help-map)
 
@@ -677,6 +675,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (define-prefix-command 'my/open-map)
   (define-key my/leader-map (kbd "o") 'my/open-map)
 #+END_SRC
+
 ** Scratch
 #+BEGIN_SRC emacs-lisp
   (defun my/switch-to-scratch()
@@ -915,13 +914,43 @@ Vim bindings to change fold
   (define-key my/leader-map (kbd "m") 'counsel-mark-ring)
   (define-key my/leader-map (kbd "b") 'counsel-bookmark)
 
-  (define-key my/leader-map (kbd "F") 'counsel-ag)
-  (define-key my/leader-map (kbd "l") 'counsel-locate)
-
   (define-key my/help-map (kbd "C-c") 'counsel-colors-emacs)
   (define-key my/help-map (kbd "C") 'counsel-colors-web)
 
   (define-key my/leader-map (kbd "i") 'counsel-imenu)
+#+END_SRC
+
+** Counsel flycheck
+  https://github.com/nathankot/dotemacs/blob/master/init.el
+#+BEGIN_SRC emacs-lisp
+
+  (defvar counsel-flycheck-history nil
+    "History for `counsel-flycheck'")
+
+  (defun counsel-flycheck ()
+    (interactive)
+    (if (not (bound-and-true-p flycheck-mode))
+        (message "Flycheck mode is not available or enabled")
+      (ivy-read "Error: "
+                (let ((source-buffer (current-buffer)))
+                  (with-current-buffer (or (get-buffer flycheck-error-list-buffer)
+                                          (progn
+                                            (with-current-buffer
+                                                (get-buffer-create flycheck-error-list-buffer)
+                                              (flycheck-error-list-mode)
+                                              (current-buffer))))
+                    (flycheck-error-list-set-source source-buffer)
+                    (flycheck-error-list-reset-filter)
+                    (revert-buffer t t t)
+                    (split-string (buffer-string) "\n" t " *")))
+                :action (lambda (s &rest _)
+                          (-when-let* ( (error (get-text-property 0 'tabulated-list-id s))
+                                        (pos (flycheck-error-pos error)) )
+                            (goto-char (flycheck-error-pos error))))
+                :history 'counsel-flycheck-history)))
+
+
+  (define-key my/leader-map (kbd "E") 'counsel-flycheck)
 #+END_SRC
 
 ** Swiper 
@@ -1100,13 +1129,19 @@ Version 2015-07-30"
         (setq delete-by-moving-to-trash nil)
         (message "Delete to trash disabled"))))
 
-  (evil-define-key 'normal dired-mode-map (kbd (concat my/leader-map-key " a t")) 'my/toggle-delete-to-trash)
+  (define-prefix-command 'my/dired-mode-map)
+  (evil-define-key 'normal dired-mode-map (kbd (concat my/leader-map-key " a")) 'my/dired-mode-map)
 
+  (define-key my/dired-mode-map (kbd "t") 'my/toggle-delete-to-trash)
+
+  ;; Make dired work good with evil normal mode
   (evil-define-key 'normal dired-mode-map (kbd "i") 'evil-insert)
   (evil-define-key 'normal dired-mode-map (kbd "RET") 'dired-find-file)
   (evil-define-key 'normal dired-mode-map (kbd "a") 'evil-append)
   (evil-define-key 'normal dired-mode-map (kbd "0") 'evil-digit-argument-or-evil-beginning-of-line)
   (evil-define-key 'normal dired-mode-map (kbd "$") 'evil-end-of-line)
+  (evil-define-key 'normal dired-mode-map (kbd "G") 'evil-goto-line)
+  (evil-define-key 'normal dired-mode-map (kbd "gg") 'evil-goto-first-line)
 
   ;; Bind =Backspace= to go up one directory
   (define-key dired-mode-map [?\d] 'dired-up-directory)
@@ -1158,6 +1193,7 @@ Version 2015-07-30"
   '(org-level-8 ((t (:inherit outline-5 :height 1.5))))
   '(org-level-9 ((t (:inherit outline-5 :height 1.25)))))
 #+END_SRC
+
 *** Ellipsis face
 #+BEGIN_SRC emacs-lisp
   (when window-system
@@ -1383,6 +1419,8 @@ Make company mode inherit colors from theme, change later maybe
 
   ;; Force autocomplete
   (define-key evil-normal-state-map (kbd "C-.") 'company-complete)
+  (evil-define-key 'normal evil-normal-state-map (kbd "C-.") 'company-complete)
+  (evil-define-key 'insert evil-insert-state-map (kbd "C-.") 'company-complete)
 #+END_SRC
 
 ** Company-box
@@ -1656,6 +1694,16 @@ omnisharp.json should be in ~/.omnisharp on all OSs
   (evil-define-key 'normal clojure-mode-map (kbd (concat my/leader-map-key " a e")) 'cider-eval-defun-at-point)
 #+END_SRC
 
+** Markdown
+#+BEGIN_SRC emacs-lisp
+  (use-package markdown-mode)
+#+END_SRC
+
+** Web mode
+#+BEGIN_SRC emacs-lisp
+  (use-package web-mode)
+#+END_SRC
+
 * Process monitors
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/processes-map)
@@ -1848,7 +1896,14 @@ More rebind options and more reliable
 
 *** Rebind save key
 #+BEGIN_SRC emacs-lisp
-  (general-nmap "SPC s" (general-simulate-key "C-x C-s"))
+  ;;(general-nmap "SPC s" (general-simulate-key "C-x C-s"))
+  (define-key my/leader-map (kbd "s") 'my/save-and-backup-session)
+
+  (defun my/save-and-backup-session()
+    (interactive)
+    (my/force-backup-of-buffer)
+    (general-simulate-key "C-x C-s")
+    (general-simulate-C-x_C-s))
 #+END_SRC
 
 *** Rebind C-d
@@ -1894,6 +1949,8 @@ More rebind options and more reliable
   (evil-define-key 'visual my/keys-mode-map (kbd my/leader-map-key) 'my/leader-map)
 
   (evil-define-key 'normal my/keys-mode-map (kbd my/window-leader-key) 'my/window-hydra/body)
+  (evil-define-key 'normal my/keys-mode-map (kbd (concat "C-" my/window-leader-key)) 'my/window-hydra/body)
+  (evil-define-key 'insert my/keys-mode-map (kbd (concat "C-" my/window-leader-key)) 'my/window-hydra/body)
 
   (define-key my/keys-mode-map (kbd "M-f") 'avy-goto-char-in-line)
   (define-key my/keys-mode-map (kbd "M-w") 'my/avy-goto-word-0-in-line)
@@ -2044,7 +2101,7 @@ Define main function
 * Version control
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/vc-map)
-  (define-key my/leader-map (kbd "g") 'my/vc-map)
+  (define-key my/leader-map (kbd "v") 'my/vc-map)
 #+END_SRC
 
 ** Projectile
@@ -2123,7 +2180,7 @@ If enabled, auto enables projectile, which has high CPU usage
 ** Music
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/music-map)
-  (define-key my/leader-map (kbd "C-m") 'my/music-map)
+  (define-key my/leader-map (kbd "M") 'my/music-map)
 #+END_SRC
 
 *** EMMS
@@ -2656,30 +2713,22 @@ Create =.gnus.el=, which gnus reads from
 
   ;; Group mode
   (define-prefix-command 'my/gnus-group-map)
-  (define-key my/leader-map (kbd "a") 'my/gnus-group-map)
-
-  (evil-define-key 'normal gnus-group-mode-map (kbd (concat my/leader-map-key "a")) 'my/gnus-group-map)
+  (evil-define-key 'normal gnus-group-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-group-map)
 
   (evil-define-key 'normal gnus-group-mode-map (kbd "i") 'nil)
 
   ;; Summary mode
   (define-prefix-command 'my/gnus-summary-map)
-  (define-key my/leader-map (kbd "a") 'my/gnus-summary-map)
-
-  (evil-define-key 'normal gnus-group-mode-map (kbd (concat my/leader-map-key "a")) 'my/gnus-summary-map)
+  (evil-define-key 'normal gnus-summary-mode-map (kbd (concat my/leader-map-key "a")) 'my/gnus-summary-map)
 
   (evil-define-key 'normal gnus-summary-mode-map (kbd "i") 'nil)
 
   ;; article mode
   (define-prefix-command 'my/gnus-article-map)
-  (define-key my/leader-map (kbd "a") 'my/gnus-article-map)
-
-  (evil-define-key 'normal gnus-group-mode-map (kbd (concat my/leader-map-key "a")) 'my/gnus-article-map)
+  (evil-define-key 'normal gnus-article-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-article-map)
 
   ;;  message
   (define-prefix-command 'my/gnus-message-map)
-  (define-key my/leader-map (kbd "a") 'my/gnus-message-map)
-
   (evil-define-key 'normal gnus-group-mode-map (kbd (concat my/leader-map-key "a")) 'my/gnus-message-map)
 #+END_SRC
 
@@ -2860,6 +2909,16 @@ Create =.gnus.el=, which gnus reads from
   ;; Webjump
   (define-key my/leader-map (kbd "w") 'webjump)
   (define-key my/leader-map (kbd "W") (lambda () (interactive) (my/webjump-use-browser "firefox")))
+#+END_SRC
+
+* Find
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/find-map)
+  (define-key my/leader-map (kbd "f") 'my/find-map)
+
+  (define-key my/find-map (kbd "l") 'counsel-locate)
+
+  (define-key my/find-map (kbd "g") 'counsel-ag)
 #+END_SRC
 
 * Spelling
@@ -3437,8 +3496,8 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                     (format-mode-line
                      (quote
                       (
-                       "Org:"
-                       (:eval org-mode-line-string)
+                       (:eval (if (boundp 'org-mode-line-string)
+                                  (concat "Org:" org-mode-line-string)))
 
                        " NET: "
                        (:eval my/rx-delta-formatted)
@@ -3494,3 +3553,4 @@ t as last parameter because the mode line should always be updated last, after a
 #+BEGIN_SRC emacs-lisp
 ;;(my/load-if-exists "~/.emacs.d/spotify.el")
 #+END_SRC
+
