@@ -1,4 +1,50 @@
-* Guide
+* Security
+#+BEGIN_SRC emacs-lisp
+  (setq network-security-level 'paranoid)
+#+END_SRC
+
+* Package management
+#+BEGIN_SRC emacs-lisp
+  (require 'package)
+  (setq package-enable-at-startup nil)
+
+  (setq package-archives '(("gnu" . "https://elpa.gnu.org/packages/")
+                           ("melpa" . "https://melpa.org/packages/")))
+  (package-initialize)
+
+  (unless (package-installed-p 'use-package)
+    (package-refresh-contents)
+    (package-install 'use-package))
+  (require 'use-package)
+  (setq use-package-always-ensure t)
+#+END_SRC
+
+** System package management
+#+BEGIN_SRC emacs-lisp
+  ;; (use-package system-packages)
+;; 
+  ;; (add-to-list 'system-packages-supported-package-managers
+               ;; '(pikaur .
+                        ;; ((default-sudo . nil)
+                         ;; (install . "pikaur -S")
+                         ;; (search . "pikaur -Ss")
+                         ;; (uninstall . "pikaur -Rs")
+                         ;; (update . "pikaur -Syu")
+                         ;; (clean-cache . "pikaur -Sc")
+                         ;; (log . "cat /var/log/pacman.log")
+                         ;; (get-info . "pikaur -Qi")
+                         ;; (get-info-remote . "pikaur -Si")
+                         ;; (list-files-provided-by . "pikaur -Ql")
+                         ;; (verify-all-packages . "pikaur -Qkk")
+                         ;; (verify-all-dependencies . "pikaur -Dk")
+                         ;; (remove-orphaned . "pikaur -Rns $(pacman -Qtdq)")
+                         ;; (list-installed-packages . "pikaur -Qe")
+                         ;; (list-installed-packages-all . "pikaur -Q")
+                         ;; (list-dependencies-of . "pikaur -Qi")
+                         ;; (noconfirm . "--noconfirm"))))
+#+END_SRC
+
+* Docs
 ** Requirements
 *** X
 =X server=
@@ -151,6 +197,9 @@ You have to press =q= in order to save changes
 ** wpa supplicant
 https://wiki.archlinux.org/index.php/WPA_supplicant#Connecting_with_wpa_cli
 
+** Interesting stuff
+highlight-changes-mode (built in)
+goto-chg (goto last change)
 * Theme
 #+BEGIN_SRC emacs-lisp
   (when window-system
@@ -165,6 +214,15 @@ https://wiki.archlinux.org/index.php/WPA_supplicant#Connecting_with_wpa_cli
 #+BEGIN_SRC emacs-lisp
 (setq mode-line-format nil)
 (setq-default mode-line-format nil)
+#+END_SRC
+
+* Fonts
+#+BEGIN_SRC emacs-lisp
+(custom-set-faces
+ '(default ((t (:slant normal :weight normal :height 128 :width normal :foundry "PfEd" :family "DejaVuSans")))))
+
+;; Inconsolata
+;;'(default ((t (:inherit nil :stipple nil :inverse-video nil :box nil :strike-through nil :overline nil :underline nil :slant normal :weight normal :height 150 :width normal :foundry "PfEd" :family "Inconsolata"))))
 #+END_SRC
 
 * Generic functions
@@ -335,7 +393,7 @@ https://www.emacswiki.org/emacs/ForceBackups
   (defun my/force-backup-of-buffer ()
     (interactive)
     (if (and my/create-per-session-backups (< (point-max) my/per-session-backup-limit) (buffer-modified-p))
-        (save-restriction (widen) (write-region (point-min) (point-max) (concat my/backup-per-session-directory (buffer-name) (number-to-string (time-to-seconds))) nil nil nil))))
+        (save-restriction (widen) (write-region (point-min) (point-max) (concat my/backup-per-session-directory (number-to-string (time-to-seconds)) (buffer-name)) nil nil nil))))
 #+END_SRC
 
 ** Delete old backups
@@ -354,7 +412,7 @@ https://www.emacswiki.org/emacs/ForceBackups
 
 *** Delete per-session backups on startup
 #+BEGIN_SRC emacs-lisp
-  (shell-command (concat "rm * " my/backup-per-session-directory "*" ))
+  (shell-command (concat "rm " my/backup-per-session-directory "*" ))
 #+END_SRC
 
 ** Disble backups for certain files
@@ -521,13 +579,40 @@ Allows for using indention as text objects
   (evil-goggles-use-diff-faces)
 #+END_SRC
 
+** Evil-matchit
+#+BEGIN_SRC emacs-lisp
+  (use-package evil-matchit)
+  (global-evil-matchit-mode 1)
+#+END_SRC
+
+** Evil-surround
+#+BEGIN_SRC emacs-lisp
+  (use-package evil-surround)
+  (global-evil-surround-mode 1)
+#+END_SRC
+
+** Evil-args
+#+BEGIN_SRC emacs-lisp
+  (use-package evil-args)
+
+  ;; bind evil-args text objects
+  (define-key evil-inner-text-objects-map "a" 'evil-inner-arg)
+  (define-key evil-outer-text-objects-map "a" 'evil-outer-arg)
+#+END_SRC
+
+** Evil-visual-mark-mode
+#+BEGIN_SRC emacs-lisp
+    (use-package evil-visual-mark-mode)
+    (evil-visual-mark-mode)
+#+END_SRC
+
 * Leader
 When changing leader, change =my/leader-map-key= and manually change all general simulate key rebinds
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/leader-map)
 
   (defvar my/leader-map-key "SPC")
-  (defvar my/window-leader-key ",")
+  (defvar my/window-leader-key "C-y")
 
   ;; Window management hydra
   ;;(define-key my/leader-map (kbd "o") 'my/window-hydra/body)
@@ -657,6 +742,33 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (define-key my/leader-map (kbd "'") 'sudo-edit)
 #+END_SRC
 
+** With-editor
+#+BEGIN_SRC emacs-lisp
+  (use-package with-editor)
+#+END_SRC
+
+** PDF tools
+#+BEGIN_SRC emacs-lisp
+  (use-package pdf-tools)
+
+  ;;(add-hook 'pdf-view-mode-hook  (lambda () (interactive) (my/mode-turn-off)))
+  (evil-define-key 'normal pdf-view-mode-map (kbd "C-u") 'pdf-view-scroll-down-or-previous-page)
+  (evil-define-key 'normal pdf-view-mode-map (kbd "C-w") 'pdf-view-scroll-up-or-next-page)
+
+  ;; Temp fix
+  (evil-define-key 'normal my/keys-mode-map (kbd my/window-leader-key) 'my/window-hydra/body)
+#+END_SRC
+
+** Disable all colors
+#+BEGIN_SRC emacs-lisp
+  (defun my/kill-all-colors()
+    (interactive)
+    (cl-loop for face in (face-list) do
+             (set-face-attribute face nil :foreground nil :background nil)))
+
+  (define-key my/leader-map (kbd "C-c") 'my/kill-all-colors)
+#+END_SRC
+
 ** Enable disabled commands
 #+BEGIN_SRC emacs-lisp
   (put 'narrow-to-region 'disabled nil)
@@ -753,97 +865,7 @@ Vim bindings to change fold
   (define-key evil-motion-state-map (kbd "z C-c") 'origami-close-all-nodes)
 #+END_SRC
 
-* Movement
-** Avy
-*** Install
-#+BEGIN_SRC emacs-lisp
-  (use-package avy)
-
-  (setq avy-keys '(
-                   ;; Easy
-                   ?a ?n ?e ?t ?o ?s ?h ?d ?i ?r
-                      ;; Med
-                      ?g ?m ?l ?w ?y ?f ?u ?b ?x ?c ?v ?k ?p ?, ?.
-                      ;; Hard
-                      ?q ?\; ?j ?\/ ?z
-
-                      ;; Shifted
-
-                      ;; Easy
-                      ?A ?N ?E ?T ?O ?S ?H ?D
-                      ;; Med
-                      ?R ?I ?G ?M ?L ?W ?Y ?F ?U ?B ?X ?C ?V ?K ?P
-                      ;; Hard
-                      ?Q ?\: ?J ?\? ?Z
-
-                      ;; Digits
-                      ?7 ?4 ?8 ?3 ?9 ?2 ?0 ?1
-                      ))
-
-  ;; Disable highlighting when avy is used
-  (setq avy-background t)
-#+END_SRC
-
-*** Functions
-#+BEGIN_SRC emacs-lisp
-  (defun my/avy-goto-word-0-in-line(&optional arg)
-    (interactive "p")
-
-    (if (not (eq evil-state 'visual))
-        (my/evil-normal-state arg))
-
-    (avy-goto-subword-0 t nil (line-beginning-position) (line-end-position)))
-
-  (defun my/avy-goto-line-above-keep-horizontal-position (&optional arg)
-    (interactive "p")
-    (setq cursor-horizontal-pos (current-column))
-
-    ;; Fixes problem with goto-line and visual line mode
-    (if (eq evil-state 'visual) 
-        (if (eq (evil-visual-type) 'line)
-            (progn
-              (setq was-visual-line t)
-              (evil-visual-char)))
-      (progn
-        (setq was-visual-line nil)
-        (my/evil-normal-state arg)))
-
-    (avy-goto-line-above 2 t)
-
-    (if (eq was-visual-line t)
-        (evil-visual-line))
-
-    (move-to-column cursor-horizontal-pos))
-
-  (defun my/avy-goto-line-below-keep-horizontal-position (&optional arg)
-    (interactive "p")
-    (setq cursor-horizontal-pos (current-column))
-
-    ;; Fixes problem with goto-line and visual line mode
-    (if (eq evil-state 'visual) 
-        (if (eq (evil-visual-type) 'line)
-            (progn
-              (setq was-visual-line t)
-              (evil-visual-char)))
-      (progn
-        (setq was-visual-line nil)
-        (my/evil-normal-state arg)))
-
-    (avy-goto-line-below 2)
-
-    (if (eq was-visual-line t)
-        (evil-visual-line))
-
-    (move-to-column cursor-horizontal-pos))
-#+END_SRC
-
-** Avy flycheck
-#+BEGIN_SRC emacs-lisp
-  (use-package avy-flycheck)
-
-  (define-key my/leader-map (kbd "e") 'avy-flycheck-goto-error)
-#+END_SRC
-
+* Ivy
 ** Ivy
 #+BEGIN_SRC emacs-lisp
   (use-package ivy)
@@ -977,6 +999,97 @@ Vim bindings to change fold
   (setq ivy-rich-path-style 'abbrev)
 #+END_SRC
 
+* Movement
+** Avy
+*** Install
+#+BEGIN_SRC emacs-lisp
+  (use-package avy)
+
+  (setq avy-keys '(
+                   ;; Easy
+                   ?a ?n ?e ?t ?o ?s ?h ?d ?i ?r
+                      ;; Med
+                      ?g ?m ?l ?w ?y ?f ?u ?b ?x ?c ?v ?k ?p ?, ?.
+                      ;; Hard
+                      ?q ?\; ?j ?\/ ?z
+
+                      ;; Shifted
+
+                      ;; Easy
+                      ?A ?N ?E ?T ?O ?S ?H ?D
+                      ;; Med
+                      ?R ?I ?G ?M ?L ?W ?Y ?F ?U ?B ?X ?C ?V ?K ?P
+                      ;; Hard
+                      ?Q ?\: ?J ?\? ?Z
+
+                      ;; Digits
+                      ?7 ?4 ?8 ?3 ?9 ?2 ?0 ?1
+                      ))
+
+  ;; Disable highlighting when avy is used
+  (setq avy-background t)
+#+END_SRC
+
+*** Functions
+#+BEGIN_SRC emacs-lisp
+  (defun my/avy-goto-word-0-in-line(&optional arg)
+    (interactive "p")
+
+    (if (not (eq evil-state 'visual))
+        (my/evil-normal-state arg))
+
+    (avy-goto-subword-0 t nil (line-beginning-position) (line-end-position)))
+
+  (defun my/avy-goto-line-above-keep-horizontal-position (&optional arg)
+    (interactive "p")
+    (setq cursor-horizontal-pos (current-column))
+
+    ;; Fixes problem with goto-line and visual line mode
+    (if (eq evil-state 'visual) 
+        (if (eq (evil-visual-type) 'line)
+            (progn
+              (setq was-visual-line t)
+              (evil-visual-char)))
+      (progn
+        (setq was-visual-line nil)
+        (my/evil-normal-state arg)))
+
+    (avy-goto-line-above 2 t)
+
+    (if (eq was-visual-line t)
+        (evil-visual-line))
+
+    (move-to-column cursor-horizontal-pos))
+
+  (defun my/avy-goto-line-below-keep-horizontal-position (&optional arg)
+    (interactive "p")
+    (setq cursor-horizontal-pos (current-column))
+
+    ;; Fixes problem with goto-line and visual line mode
+    (if (eq evil-state 'visual) 
+        (if (eq (evil-visual-type) 'line)
+            (progn
+              (setq was-visual-line t)
+              (evil-visual-char)))
+      (progn
+        (setq was-visual-line nil)
+        (my/evil-normal-state arg)))
+
+    (avy-goto-line-below 2)
+
+    (if (eq was-visual-line t)
+        (evil-visual-line))
+
+    (move-to-column cursor-horizontal-pos))
+#+END_SRC
+
+** Avy flycheck
+#+BEGIN_SRC emacs-lisp
+  (use-package avy-flycheck)
+
+  (define-key my/leader-map (kbd "e") 'avy-flycheck-goto-error)
+#+END_SRC
+
 ** Expand region
 #+BEGIN_SRC emacs-lisp
   (use-package expand-region)
@@ -1005,6 +1118,12 @@ Vim bindings to change fold
                                                evil-forward-word evil-forward-word-begin evil-forward-word-end
                                                evil-backward-word-begin evil-backward-word-end))
   (jammer-mode)
+#+END_SRC
+
+** goto change
+g-; and g-,
+#+BEGIN_SRC emacs-lisp
+  (use-package goto-chg)
 #+END_SRC
 
 * Buffer management
@@ -1142,6 +1261,11 @@ Version 2015-07-30"
 #+END_SRC
 
 * Org
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-mode-map)
+  (evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a")) 'my/org-mode-map)
+#+END_SRC
+
 ** Load
 #+BEGIN_SRC emacs-lisp
 (use-package org)
@@ -1170,7 +1294,7 @@ Version 2015-07-30"
   (when window-system
     (use-package org-bullets)
 
-    (add-hook 'org-mode-hook (lambda () (org-bullets-mode))))
+    (add-hook 'org-mode-hook (lambda () (interactive) (org-bullets-mode))))
 #+END_SRC
 
 ** Visuals
@@ -1221,6 +1345,9 @@ Version 2015-07-30"
 #+END_SRC
 
 ** Export
+TODO
+ox-html5slide
+org-html-themes
 *** Syntax highlighting for HTML export
 #+BEGIN_SRC emacs-lisp
   (use-package htmlize)
@@ -1279,25 +1406,130 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
   (define-key my/clock-map (kbd "e") 'org-clock-modify-effort-estimate)
 #+END_SRC
 
+** Export
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-export-map)
+  (define-key my/org-mode-map (kbd "C-e") 'my/org-export-map)
+#+END_SRC
+
+*** ASCII
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-export-ascii-map)
+  (define-key my/org-export-map (kbd "a") 'my/org-export-ascii-map)
+
+  (define-key my/org-export-ascii-map (kbd "a") 'org-ascii-export-to-ascii)
+#+END_SRC
+
+*** HTML
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-export-html-map)
+  (define-key my/org-export-map (kbd "h") 'my/org-export-html-map)
+
+  (define-key my/org-export-html-map (kbd "h") 'org-html-export-to-html)
+  (define-key my/org-export-html-map (kbd "t") 'org-twbs-export-to-html)
+#+END_SRC
+
+*** PDF
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-export-pdf-map)
+  (define-key my/org-export-map (kbd "p") 'my/org-export-pdf-map)
+
+  (define-key my/org-export-pdf-map (kbd "p") 'org-latex-export-to-pdf)
+#+END_SRC
+
+*** Beamer presentation
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-export-slides-map)
+  (define-key my/org-export-map (kbd "s") 'my/org-export-slides-map)
+
+  (define-key my/org-export-slides-map (kbd "b") 'org-beamer-export-to-pdf)
+#+END_SRC
+
+*** Markdown
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-export-markdown-map)
+  (define-key my/org-export-map (kbd "m") 'my/org-export-markdown-map)
+
+  (define-key my/org-export-markdown-map (kbd "m") 'org-md-export-to-markdown)
+#+END_SRC
+
+*** ODT
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-export-odt-map)
+  (define-key my/org-export-map (kbd "o") 'my/org-export-odt-map)
+
+  (define-key my/org-export-odt-map (kbd "o") 'org-odt-export-to-odt)
+#+END_SRC
+
+*** Latex
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-export-latex-map)
+  (define-key my/org-export-map (kbd "l") 'my/org-export-latex-map)
+
+  (define-key my/org-export-latex-map (kbd "l") 'org-latex-export-to-latex)
+#+END_SRC
+
 ** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/org-mode-map)
-  (evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a")) 'my/org-mode-map)
-
   (evil-define-key 'normal org-mode-map (kbd "C-s") 'swiper)
   (define-key my/org-mode-map (kbd "i") 'org-toggle-inline-images)
   (define-key my/org-mode-map (kbd "f") 'org-insert-link)
   (define-key my/org-mode-map (kbd "e") 'org-babel-execute-src-block)
   (define-key my/org-mode-map (kbd "l") 'org-shiftright)
   (define-key my/org-mode-map (kbd "h") 'org-shiftleft)
+
+  (define-key my/org-mode-map (kbd "|") 'org-table-create-or-convert-from-region)
 #+END_SRC
 
-*** Export
+*** Macros
 #+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/org-export-map)
-  (evil-define-key 'normal my/org-mode-map (kbd "C-e") 'my/org-export-map)
+  (define-prefix-command 'my/org-macros-map)
+  (define-key my/org-mode-map (kbd "m") 'my/org-macros-map)
+#+END_SRC
 
-  (define-key my/org-export-map (kbd "C-e") 'org-twbs-export-to-html)
+**** Org
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-org-macros-map)
+  (define-key my/org-macros-map (kbd "o") 'my/org-org-macros-map)
+
+  ;; Center text, doesn't work for all exports
+  (define-key my/org-org-macros-map (kbd "c") (lambda () (interactive) (insert "#+BEGIN_CENTER") (newline) (newline) (insert "#+END_CENTER")))
+
+  ;; Comment
+  (define-key my/org-org-macros-map (kbd "C") (lambda () (interactive) (insert "#+BEGIN_COMMENT") (newline) (newline) (insert "#+END_COMMENT")))
+#+END_SRC
+
+**** Latex
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-latex-macros-map)
+  (define-key my/org-macros-map (kbd "l") 'my/org-latex-macros-map)
+
+  ;;Literal latex code for export
+  (define-key my/org-latex-macros-map (kbd "i") (lambda () (interactive) (insert "#+LATEX: ")))
+
+  ;; Header
+  (define-key my/org-latex-macros-map (kbd "h") (lambda () (interactive) (insert "#+LATEX_HEADER: ")))
+
+  ;; Newline
+  (define-key my/org-latex-macros-map (kbd "RET") (lambda () (interactive) (insert "#+LATEX: \\newpage")))
+
+  ;; Fix huge margins
+  (define-key my/org-latex-macros-map (kbd "4") (lambda () (interactive) (insert "#+LATEX_HEADER: \\usepackage[a4paper, total={6in, 8in}]{geometry}")))
+
+  ;; Make lists compact
+  (define-key my/org-latex-macros-map (kbd "C-l") (lambda () (interactive) (insert "#+LATEX_HEADER: \\usepackage{enumitem}") (newline) (insert "#+LATEX_HEADER: \\setitemize{noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt}")))
+#+END_SRC
+
+**** HTML
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-html-macros-map)
+  (define-key my/org-macros-map (kbd "h") 'my/org-html-macros-map)
+
+  ;;Literal HTML code for export
+  (define-key my/org-html-macros-map (kbd "i") (lambda () (interactive) (insert "#+HTML: ")))
+
+  ;;HTML break line
+  (define-key my/org-html-macros-map (kbd "RET") (lambda () (interactive) (insert "#+HTML: <br><br />")))
 #+END_SRC
 
 * Completion
@@ -1412,9 +1644,8 @@ Make company mode inherit colors from theme, change later maybe
   (define-key company-active-map (kbd "<f1>") 'nil)
 
   ;; Force autocomplete
-  (define-key evil-normal-state-map (kbd "C-.") 'company-complete)
-  (evil-define-key 'normal evil-normal-state-map (kbd "C-.") 'company-complete)
-  (evil-define-key 'insert evil-insert-state-map (kbd "C-.") 'company-complete)
+  (define-key evil-normal-state-map  (kbd "C-.") 'company-complete)
+  (define-key evil-insert-state-map  (kbd "C-.") 'company-complete)
 #+END_SRC
 
 ** Company-box
@@ -1446,6 +1677,8 @@ Doesn't work with my setup right now
   (use-package which-key)
 
   (which-key-mode)
+
+  (setq which-key-idle-delay 0.5)
 #+END_SRC
 
 *** Bind
@@ -1474,9 +1707,9 @@ Doesn't work with my setup right now
 ** Generic
 *** Smartparens
 #+BEGIN_SRC emacs-lisp
-  (use-package smartparens)
-
-  (smartparens-global-mode)
+  ;; (use-package smartparens)
+;; 
+  ;; (smartparens-global-mode)
 #+END_SRC
     
 *** Aggressive indent
@@ -1694,8 +1927,20 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 #+END_SRC
 
 ** Web mode
+TODO: Fix settings, grab them from package site 
 #+BEGIN_SRC emacs-lisp
   (use-package web-mode)
+
+  (add-to-list 'auto-mode-alist '("\\.phtml\\'" . web-mode))
+  (add-to-list 'auto-mode-alist '("\\.tpl\\.php\\'" . web-mode))
+  (add-to-list 'auto-mode-alist '("\\.[agj]sp\\'" . web-mode))
+  (add-to-list 'auto-mode-alist '("\\.as[cp]x\\'" . web-mode))
+  (add-to-list 'auto-mode-alist '("\\.erb\\'" . web-mode))
+  (add-to-list 'auto-mode-alist '("\\.mustache\\'" . web-mode))
+  (add-to-list 'auto-mode-alist '("\\.djhtml\\'" . web-mode))
+  (add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
+  (add-to-list 'auto-mode-alist '("\\.css?\\'" . web-mode))
+  (add-to-list 'auto-mode-alist '("\\.xml?\\'" . web-mode))
 #+END_SRC
 
 * Process monitors
@@ -1942,9 +2187,21 @@ More rebind options and more reliable
   (evil-define-key 'normal my/keys-mode-map (kbd my/leader-map-key) 'my/leader-map)
   (evil-define-key 'visual my/keys-mode-map (kbd my/leader-map-key) 'my/leader-map)
 
+  (evil-define-key 'motion my/keys-mode-map (kbd my/window-leader-key) 'my/window-hydra/body)
   (evil-define-key 'normal my/keys-mode-map (kbd my/window-leader-key) 'my/window-hydra/body)
-  (evil-define-key 'normal my/keys-mode-map (kbd (concat "C-" my/window-leader-key)) 'my/window-hydra/body)
-  (evil-define-key 'insert my/keys-mode-map (kbd (concat "C-" my/window-leader-key)) 'my/window-hydra/body)
+  (evil-define-key 'insert my/keys-mode-map (kbd my/window-leader-key) 'my/window-hydra/body)
+  (define-key my/keys-mode-map (kbd my/window-leader-key) 'my/window-hydra/body)
+
+
+  (defun my/simulate-esc ()
+    (interactive)
+    (general-simulate-key "<escape>")
+    (general-simulate-<escape>))
+  ;; C-e as ESC
+  (evil-define-key 'motion my/keys-mode-map (kbd "C-e") 'my/simulate-esc)
+  (evil-define-key 'normal my/keys-mode-map (kbd "C-e") 'my/simulate-esc)
+  (evil-define-key 'insert my/keys-mode-map (kbd "C-e") 'my/simulate-esc)
+  (define-key my/keys-mode-map (kbd "C-e") 'my/simulate-esc)
 
   (define-key my/keys-mode-map (kbd "M-f") 'avy-goto-char-in-line)
   (define-key my/keys-mode-map (kbd "M-w") 'my/avy-goto-word-0-in-line)
@@ -2051,6 +2308,7 @@ Define main function
 
           ;; escape
           ([?\C-g] . [escape])
+          ([?\C-e] . [escape])
 
           ;; search
           ([?\C-s] . [?\C-f])))
@@ -2074,6 +2332,7 @@ Define main function
                C-g
                C-h
                C-SPC
+               C-y
                ;; Exwm grab and release keyboard
                M-j
                M-k
@@ -2083,7 +2342,7 @@ Define main function
   ;; Some keys have to be defined using "exwm-input-set-key" in order to be usable if they are in "exwm-input-prefix-keys"
 
   (exwm-input-set-key (kbd (concat "C-" my/leader-map-key)) 'my/leader-map)
-  (exwm-input-set-key (kbd (concat "C-" my/window-leader-key)) 'my/window-hydra/body)
+  (exwm-input-set-key (kbd my/window-leader-key) 'my/window-hydra/body)
 
   ;;(exwm-input-set-key (kbd "C-h") help-map)
 
@@ -2810,43 +3069,50 @@ Create =.gnus.el=, which gnus reads from
 ** CPU
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/cpu-info-map)
-  (define-key my/hardware-info-map (kbd "c") 'my/cpu-info-map)
+  ;; Linux temps
+  (if (file-exists-p "/proc/cpuinfo") (progn
+                                        (define-key my/hardware-info-map (kbd "c") 'my/cpu-info-map)
 
-  (defun my/unix-cpu-get-clock()
-    (interactive)
-    (shell-command "grep \"cpu MHz\" /proc/cpuinfo"))
-  ;; Clock speed
-  (define-key my/cpu-info-map (kbd "f") 'my/unix-cpu-get-clock)
-  ;; Model name
-  (defun my/unix-cpu-get-name()
-    (interactive)
-    (shell-command "grep \"model name\" /proc/cpuinfo"))
-  (define-key my/cpu-info-map (kbd "n") 'my/unix-cpu-get-name)
-  ;; Core count
-  (defun my/unix-cpu-get-core-count()
-    (interactive)
-    (shell-command "grep \"cores\" /proc/cpuinfo"))
-  (define-key my/cpu-info-map (kbd "c") 'my/unix-cpu-get-core-count)
-  ;; Flags
-  (defun my/unix-cpu-get-flags()
-    (interactive)
-    (shell-command "grep \"flags\" /proc/cpuinfo"))
-  (define-key my/cpu-info-map (kbd "F") 'my/unix-cpu-get-flags)
-  ;; Vendor
-  (defun my/unix-cpu-get-vendor-id()
-    (interactive)
-    (shell-command "grep \"vendor_id\" /proc/cpuinfo"))
-  (define-key my/cpu-info-map (kbd "v") 'my/unix-cpu-get-vendor-id)
-  ;; Bugs (Bugs that has affected CPU model)
-  (defun my/unix-cpu-get-bugs()
-    (interactive)
-    (shell-command "grep \"bugs\" /proc/cpuinfo"))
-  (define-key my/cpu-info-map (kbd "b") 'my/unix-cpu-get-bugs)
-  ;; Cache size
-  (defun my/unix-cpu-get-cache-size()
-    (interactive)
-    (shell-command "grep \"cache size\" /proc/cpuinfo"))
-  (define-key my/cpu-info-map (kbd "C") 'my/unix-cpu-get-cache-size)
+                                        (defun my/unix-cpu-get-clock()
+                                          (interactive)
+                                          (shell-command "grep \"cpu MHz\" /proc/cpuinfo"))
+                                        ;; Clock speed
+                                        (define-key my/cpu-info-map (kbd "f") 'my/unix-cpu-get-clock)
+                                        ;; Model name
+                                        (defun my/unix-cpu-get-name()
+                                          (interactive)
+                                          (shell-command "grep \"model name\" /proc/cpuinfo"))
+                                        (define-key my/cpu-info-map (kbd "n") 'my/unix-cpu-get-name)
+                                        ;; Core count
+                                        (defun my/unix-cpu-get-core-count()
+                                          (interactive)
+                                          (shell-command "grep \"cores\" /proc/cpuinfo"))
+                                        (define-key my/cpu-info-map (kbd "c") 'my/unix-cpu-get-core-count)
+                                        ;; Flags
+                                        (defun my/unix-cpu-get-flags()
+                                          (interactive)
+                                          (shell-command "grep \"flags\" /proc/cpuinfo"))
+                                        (define-key my/cpu-info-map (kbd "F") 'my/unix-cpu-get-flags)
+                                        ;; Vendor
+                                        (defun my/unix-cpu-get-vendor-id()
+                                          (interactive)
+                                          (shell-command "grep \"vendor_id\" /proc/cpuinfo"))
+                                        (define-key my/cpu-info-map (kbd "v") 'my/unix-cpu-get-vendor-id)
+                                        ;; Bugs (Bugs that has affected CPU model)
+                                        (defun my/unix-cpu-get-bugs()
+                                          (interactive)
+                                          (shell-command "grep \"bugs\" /proc/cpuinfo"))
+                                        (define-key my/cpu-info-map (kbd "b") 'my/unix-cpu-get-bugs)
+                                        ;; Cache size
+                                        (defun my/unix-cpu-get-cache-size()
+                                          (interactive)
+                                          (shell-command "grep \"cache size\" /proc/cpuinfo"))
+                                        (define-key my/cpu-info-map (kbd "C") 'my/unix-cpu-get-cache-size))
+    ;; Windows
+    (if (or (eq system-type 'windows-nt) (eq system-type 'cygwin))
+        (let ((number-of-processors (getenv "NUMBER_OF_PROCESSORS")))
+          (when number-of-processors
+            (string-to-number number-of-processors)))))
 #+END_SRC
 
 * Browser
@@ -3051,15 +3317,16 @@ Create =.gnus.el=, which gnus reads from
 * Visuals
 ** Fringe size
 Used by diff-hl and flycheck
+Fringe only on the left side
 #+BEGIN_SRC emacs-lisp
-  (fringe-mode 6)
+  (fringe-mode '(6 . 0))
 #+END_SRC
 
 ** Beacon
 #+BEGIN_SRC emacs-lisp
-  (use-package beacon)
-
-  (beacon-mode 1)
+  ;; (use-package beacon)
+;; 
+  ;; (beacon-mode 1)
 #+END_SRC
   
 ** Rainbow
@@ -3075,7 +3342,7 @@ Changes colors of delimiters eg. {()}
 #+BEGIN_SRC emacs-lisp
   (use-package rainbow-delimiters)
 
-  (add-hook 'prog-mode 'rainbow-delimiters-mode-enable)
+  (add-hook 'prog-mode 'rainbow-delimiters-mode)
 #+END_SRC
 
 ** Minimap
@@ -3242,6 +3509,25 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
 #+END_SRC
 
 *** Mode line modules
+**** CPU heat
+#+BEGIN_SRC emacs-lisp
+  (defvar my/enable-cpu-temp-check t)
+
+  (if (string-match-p "not found"
+                      (shell-command-to-string "sensors"))
+      (setq my/enable-cpu-temp-check nil))
+
+  (defvar my/cpu-temp)
+
+  (defun my/update-cpu-temp ()
+    (interactive)
+    (if my/enable-cpu-temp-check
+        ;; FIXME emacs regexes are wierd, use position of temp in print insead
+        (setq my/cpu-temp (substring (shell-command-to-string "sensors | grep \"Core 0:\"") 16 18))))
+
+  (run-with-timer 0 60 'my/update-cpu-temp)
+#+END_SRC
+
 **** Network traffic
 #+BEGIN_SRC emacs-lisp
   (defun my/convert-byte-to-kilo-byte (byte)
@@ -3430,7 +3716,9 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     "Return a string of `window-width' length containing LEFT-STRING, and RIGHT-STRING aligned respectively."
     (let* ((available-width (- (frame-width) (length left-string) 2)))
       ;; The result of format inside of format could be for example "%s %78s"
-      (format (format "%%s %%%ds" available-width) left-string right-string)))
+      (format  "%s %s %s"  left-string (make-string available-width ? ) right-string)))
+  ;;(make-string (available-width) ?█)
+  ;;(format (format "%%s %%%ds" available-width) left-string right-string)))
   ;;(format "%100s" "test" "t")
   ;;
   ;;(defun my/mode-line-middle-space(left-string)
@@ -3522,12 +3810,17 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                        (:eval (number-to-string gcs-done))
                        ")"
 
-                       " C: "
+                       " | "
+
+                       "C: "
 
                        (:eval (number-to-string my/load-average))
+                       (:eval (if my/enable-cpu-temp-check
+
+                                  (concat " - " my/cpu-temp "C")))
 
                        (:eval (if (not (eq battery-mode-line-string ""))
-                                  (concat " BAT: " battery-mode-line-string "%%%%")))
+                                  (concat " | BAT: " battery-mode-line-string "%%%%")))
 
                        " | "
 
