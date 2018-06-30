@@ -257,17 +257,17 @@ goto-chg (goto last change)
 *** Write .Xdefaults
 emacs. commands to disable scrollbar, etc before launching emacs, improving startup time
 #+BEGIN_SRC emacs-lisp
-    (if(eq fully-compatible-system t)
-        (if(not(file-exists-p "~/.Xdefaults"))
-            (progn
-              (write-region "
+  (if(eq fully-compatible-system t)
+      (if(not(file-exists-p "~/.Xdefaults"))
+          (progn
+            (write-region "
 
-             emacs.toolBar: 0
-             emacs.menuBar: 0
-             emacs.verticalScrollBars: off
+           emacs.toolBar: 0
+           emacs.menuBar: 0
+           emacs.verticalScrollBars: off
 
-             " nil "~/.Xdefaults")
-              (message "~/.Xdefaults created")))
+           " nil "~/.Xdefaults")
+            (message "~/.Xdefaults created"))))
 #+END_SRC
 
 ** Write .xinitrc
