@@ -103,7 +103,7 @@ To use with pulse audio
 *** Gnus
 Spelling =aspell-en= etc
 
-(setq mail-host-address mail@adress.com)
+Set adress in gnus.el
 
 *** Built in webkit browser
 =emacs compiled with "--with-xwidgets"=
@@ -257,17 +257,17 @@ goto-chg (goto last change)
 *** Write .Xdefaults
 emacs. commands to disable scrollbar, etc before launching emacs, improving startup time
 #+BEGIN_SRC emacs-lisp
-  (if(eq fully-compatible-system t)
-      (if(not(file-exists-p "~/.Xdefaults"))
-          (progn
-            (write-region "
+    (if(eq fully-compatible-system t)
+        (if(not(file-exists-p "~/.Xdefaults"))
+            (progn
+              (write-region "
 
              emacs.toolBar: 0
              emacs.menuBar: 0
              emacs.verticalScrollBars: off
 
              " nil "~/.Xdefaults")
-            (message "~/.Xdefaults created"))))
+              (message "~/.Xdefaults created")))
 #+END_SRC
 
 ** Write .xinitrc
@@ -303,9 +303,8 @@ FONT=lat9w-16
 
 ** Redshift 
 #+BEGIN_SRC emacs-lisp
-  (if(eq fully-compatible-system t)
-      (start-process "redshift" nil "redshift")
-    )
+      (if(eq fully-compatible-system t)
+          (start-process "redshift" nil "redshift"))
 #+END_SRC
 
 ** Start work timer
@@ -623,6 +622,14 @@ When changing leader, change =my/leader-map-key= and manually change all general
   (define-key my/leader-map (kbd "u") 'undo-tree-visualize)
 #+END_SRC
 
+* Async
+#+BEGIN_SRC emacs-lisp
+  (use-package async)
+
+  (autoload 'dired-async-mode "dired-async.el" nil t)
+  (dired-async-mode 1)
+#+END_SRC
+
 * Minor
 ** Startup
 Disable startup message
@@ -698,15 +705,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   ;;(add-hook 'org-mode-hook 'pixel-scroll-mode)
 #+END_SRC
 
-** Midnight mode
-#+BEGIN_SRC emacs-lisp
-  (require 'midnight)
-  (midnight-mode)
-
-  ;; Clear hook events
-  (setq midnight-hook nil)
-#+END_SRC
-
 ** Increase and decrease brightness
 #+BEGIN_SRC emacs-lisp
   (defun my/increase-brightness ()
@@ -774,6 +772,12 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (put 'narrow-to-region 'disabled nil)
   (put 'narrow-to-page 'disabled nil)
   (put 'narrow-to-defun 'disabled nil)
+#+END_SRC
+
+** Stop custom from editing init.el
+Don't load it, it is not needed
+#+BEGIN_SRC emacs-lisp
+  (setq custom-file "~/.emacs-custom.el")
 #+END_SRC
 
 * File hotkeys
@@ -1622,7 +1626,9 @@ Make company mode inherit colors from theme, change later maybe
       (setq my/bg (face-attribute 'default :background))
     (setq my/bg "black"))
 
+
   (custom-set-faces
+  ;;(set-face-attribute
    `(company-tooltip ((t (:inherit default :background ,(color-lighten-name my/bg 2)))))
    `(company-scrollbar-bg ((t (:background ,(color-lighten-name my/bg 10)))))
    `(company-scrollbar-fg ((t (:background ,(color-lighten-name my/bg 5)))))
@@ -2275,6 +2281,14 @@ Define main function
   (define-key my/x-map (kbd "l") 'lock-screen)
 #+END_SRC
 
+** Multi-screen
+#+BEGIN_SRC emacs-lisp
+  (require 'exwm-randr)
+
+  (setq exwm-randr-workspace-output-plist '(1 "DVI-D-1" 2 "DP-1" 3 "DVI-I-1"))
+
+  (exwm-randr-enable)
+#+END_SRC
 ** Settings
 #+BEGIN_SRC emacs-lisp
   ;; Garbage collect when entering x window (because x is not in sync with emacs)
@@ -3036,6 +3050,11 @@ Create =.gnus.el=, which gnus reads from
   (define-key my/system-commands-map (kbd "C-h") 'my/systemd-hibernate-PC)
 #+END_SRC
 
+** VFIO
+#+BEGIN_SRC emacs-lisp
+
+#+END_SRC
+
 * Hardware
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/hardware-info-map)
@@ -3517,13 +3536,13 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
                       (shell-command-to-string "sensors"))
       (setq my/enable-cpu-temp-check nil))
 
-  (defvar my/cpu-temp)
+  (defvar my/cpu-temp "")
 
   (defun my/update-cpu-temp ()
     (interactive)
-    (if my/enable-cpu-temp-check
-        ;; FIXME emacs regexes are wierd, use position of temp in print insead
-        (setq my/cpu-temp (substring (shell-command-to-string "sensors | grep \"Core 0:\"") 16 18))))
+     (if my/enable-cpu-temp-check
+         ;; FIXME emacs regexes are wierd, use position of temp in print insead
+         (setq my/cpu-temp (substring (shell-command-to-string "sensors | grep \"Core 0:\"") 16 18))))
 
   (run-with-timer 0 60 'my/update-cpu-temp)
 #+END_SRC
@@ -3566,9 +3585,10 @@ Received
 
   (defun my/linux-update-network-rx-delta ()
     (interactive)
-    (setq my/rx-new (my/linux-get-network-rx))
-    (setq my/rx-delta-formatted (my/convert-to-best-unit (- my/rx-new my/rx)))
-    (setq my/rx my/rx-new))
+     (progn
+       (setq my/rx-new (my/linux-get-network-rx))
+       (setq my/rx-delta-formatted (my/convert-to-best-unit (- my/rx-new my/rx)))
+       (setq my/rx my/rx-new)))
 
   (run-with-timer 0 60 'my/linux-update-network-rx-delta)
 #+END_SRC
@@ -3591,9 +3611,9 @@ Transmitted
 
   (defun my/linux-update-network-tx-delta ()
     (interactive)
-    (setq my/tx-new (my/linux-get-network-tx))
-    (setq my/tx-delta-formatted (my/convert-to-best-unit (- my/tx-new my/tx)))
-    (setq my/tx my/tx-new))
+     (setq my/tx-new (my/linux-get-network-tx))
+     (setq my/tx-delta-formatted (my/convert-to-best-unit (- my/tx-new my/tx)))
+     (setq my/tx my/tx-new))
 
   (run-with-timer 0 60 'my/linux-update-network-tx-delta)
 #+END_SRC
@@ -3603,8 +3623,8 @@ Transmitted
   (defvar my/buffer-total-lines nil)
 
   (defun my/update-total-lines ()
-    (save-excursion
-      (setq my/buffer-total-lines (format-mode-line "%l" (goto-char (point-max))))))
+     (save-excursion
+       (setq my/buffer-total-lines (format-mode-line "%l" (goto-char (point-max))))))
 
   (add-hook 'window-configuration-change-hook 'my/update-total-lines)
   (add-hook 'exwm-workspace-switch-hook 'my/update-total-lines)
@@ -3644,9 +3664,6 @@ Display time and date in good format (also displays CPU load)
 
   ;; Update date now
   (my/update-date)
-
-  ;; Auto update date at midnight
-  (add-hook 'midnight-hook 'my/update-date)
 #+END_SRC
 
 **** Git branch name
@@ -3678,7 +3695,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
 **** Load average
 #+BEGIN_SRC emacs-lisp
-  (defvar my/load-average "")
+  (defvar my/load-average 0)
 
   (defun my/update-load-average ()
     (interactive)
@@ -3795,7 +3812,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                        (:eval (if (boundp 'org-mode-line-string)
                                   (concat "Org:" org-mode-line-string)))
 
-                       " NET: "
+                       " N: "
                        (:eval my/rx-delta-formatted)
                        "↓ "
                        (:eval my/tx-delta-formatted)
