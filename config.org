@@ -100,6 +100,7 @@ To use with pulse audio
 =tree > 1.7.0=
 =GNU getopt=
 =greencode=
+
 *** Gnus
 Spelling =aspell-en= etc
 
@@ -218,11 +219,22 @@ goto-chg (goto last change)
 
 * Fonts
 #+BEGIN_SRC emacs-lisp
-(custom-set-faces
- '(default ((t (:slant normal :weight normal :height 128 :width normal :foundry "PfEd" :family "DejaVuSans")))))
+  (defun my/font-exists (font)
+    (if (member font (font-family-list))
+        t
+      nil))
 
-;; Inconsolata
-;;'(default ((t (:inherit nil :stipple nil :inverse-video nil :box nil :strike-through nil :overline nil :underline nil :slant normal :weight normal :height 150 :width normal :foundry "PfEd" :family "Inconsolata"))))
+  (defvar my/font nil)
+
+  (if (my/font-exists "Open Sans")
+      (setq my/font "opensans")
+    (if (my/font-exists "dejavu sans")
+        (setq my/font "DejaVuSans")))
+
+  (if my/font
+      (set-face-attribute 'default nil
+                          :family my/font
+                          :height 128))
 #+END_SRC
 
 * Generic functions
@@ -309,7 +321,7 @@ FONT=lat9w-16
 
 ** Start work timer
 #+BEGIN_SRC emacs-lisp
-  (if(eq fully-compatible-system t)
+  (if (and (eq fully-compatible-system t) (file-directory-p "~/Pictures/Break"))
       (shell-command "
         while true; 
         do
@@ -388,6 +400,9 @@ https://www.emacswiki.org/emacs/ForceBackups
   (defvar my/per-session-backup-limit 200000)
 
   (defvar my/backup-per-session-directory (concat my/backup-directory "per-session/"))
+
+  (if (not (file-directory-p my/backup-per-session-directory))
+      (make-directory my/backup-per-session-directory))
 
   (defun my/force-backup-of-buffer ()
     (interactive)
@@ -1321,6 +1336,7 @@ Version 2015-07-30"
   (when window-system
     (setq org-ellipsis "↴"))
 
+  ;; The terminal probably doesn't support unicode
   (when (not window-system)
     (setq org-ellipsis "↓"))
 #+END_SRC
@@ -2289,6 +2305,7 @@ Define main function
 
   (exwm-randr-enable)
 #+END_SRC
+
 ** Settings
 #+BEGIN_SRC emacs-lisp
   ;; Garbage collect when entering x window (because x is not in sync with emacs)
@@ -3433,7 +3450,7 @@ Highlight thing under cursor and all other occurrences
   (use-package highlight-thing)
 
   ;; Don't highlight the word true or false
-  (setq highlight-thing-ignore-list '("False" "True"))
+  ;;(setq highlight-thing-ignore-list '("False" "True"))
 
   ;; Don't highlight thing under cursor, only matches
   (setq highlight-thing-exclude-thing-under-point 1)
@@ -3532,8 +3549,13 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
 #+BEGIN_SRC emacs-lisp
   (defvar my/enable-cpu-temp-check t)
 
-  (if (string-match-p "not found"
-                      (shell-command-to-string "sensors"))
+  (if (or
+       ;; If lm_sensors is not installed
+       (string-match-p "not found"
+                       (shell-command-to-string "sensors"))
+       ;; If there aren't any cpu heat sensors (eg. virtual machine)
+       (string-match-p ""
+                       (substring (shell-command-to-string "sensors | grep \"Core 0:\"") 16 18)))
       (setq my/enable-cpu-temp-check nil))
 
   (defvar my/cpu-temp "")
