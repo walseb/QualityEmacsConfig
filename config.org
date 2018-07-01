@@ -238,6 +238,41 @@ goto-chg (goto last change)
 #+END_SRC
 
 * Generic functions
+** File management
+*** Create directory if directory doesn't exist
+#+BEGIN_SRC emacs-lisp
+  (defun my/create-dir-if-not-exist (dir)
+    (if (not (file-directory-p dir))
+        (progn
+          (make-directory dir)
+          (message (concat "dir: " dir " created!")))))
+#+END_SRC
+
+*** Create file if file doesn't exist
+#+BEGIN_SRC emacs-lisp
+  (defun my/create-file-if-not-exist (file)
+    (if (not (file-exists-p file))
+        (progn
+          (write-region "" nil file)
+          (message (concat "file: " file " created!")))))
+#+END_SRC
+
+*** Create file with content if file doesn't exist
+#+BEGIN_SRC emacs-lisp
+  (defun my/create-file-with-content-if-not-exist (file content)
+    (if (not (file-exists-p file))
+        (progn
+          (write-region content nil file)
+          (message (concat "file: " file " created with content: " content)))))
+#+END_SRC
+
+** Is external package installed
+#+BEGIN_SRC emacs-lisp
+  (defun my/run-and-is-external-package-installed (package)
+    (not (string-match-p "not found"
+                       (shell-command-to-string package))))
+#+END_SRC
+
 ** Give buffer unique name
 #+BEGIN_SRC emacs-lisp
   (defun give-buffer-unique-name(base-name)
@@ -380,16 +415,14 @@ Stop emacs from creating backup files on every save
   (setq kept-old-versions 2)
 
   (defvar my/backup-directory (concat user-emacs-directory "backups/"))
-  (defvar my/saves-directory (concat user-emacs-directory "auto-saves/"))
+  (defvar my/auto-saves-directory (concat user-emacs-directory "auto-saves/"))
 
-  (if (not (file-directory-p my/backup-directory))
-      (make-directory my/backup-directory))
+  (my/create-dir-if-not-exist my/backup-directory)
 
-  (if (not (file-directory-p my/saves-directory))
-      (make-directory my/saves-directory))
+  (my/create-dir-if-not-exist my/auto-saves-directory)
 
   (setq backup-directory-alist `(("." . ,my/backup-directory)))
-  (setq auto-save-file-name-transforms `((".*" ,my/saves-directory t)))
+  (setq auto-save-file-name-transforms `((".*" ,my/auto-saves-directory t)))
 #+END_SRC
 
 ** Make backup on every save
@@ -401,8 +434,7 @@ https://www.emacswiki.org/emacs/ForceBackups
 
   (defvar my/backup-per-session-directory (concat my/backup-directory "per-session/"))
 
-  (if (not (file-directory-p my/backup-per-session-directory))
-      (make-directory my/backup-per-session-directory))
+  (my/create-dir-if-not-exist my/backup-per-session-directory)
 
   (defun my/force-backup-of-buffer ()
     (interactive)
@@ -2550,36 +2582,43 @@ emms doesn't automatically connect to mpd when loading playlist, results in empt
 **** Create config
 If config already exists, don't overwrite it
 #+BEGIN_SRC emacs-lisp
-  (if(eq fully-compatible-system t)
-      (if(not(file-exists-p "~/.mpdconf"))
-          (progn
-            (write-region "
+  (defun my/setup-mpd ()
+    (interactive)
+    (setq my/config-directory "~/.config/")
+    (my/create-dir-if-not-exist my/config-directory)
 
-                 music_directory \"~/Music\"
-                 playlist_directory  \"~/.mpd/playlists\"
-                 db_file \"~/.mpd/mpd.db\"
-                 log_file \"~/.mpd/mpd.log\"
-                 bind_to_address \"127.0.0.1\"
-                 port \"6600\"
+    (setq my/mpd-directory (concat my/config-directory "mpd/"))
+    (my/create-dir-if-not-exist my/mpd-directory)
 
-                 # For pulse audio
-                   audio_output {
-                   type \"pulse\"
-                   name \"pulse audio\"
-                   }
+    (setq my/mpd-conf-file (concat my/mpd-directory "mpd.conf"))
+    (my/create-file-with-content-if-not-exist my/mpd-conf-file "
+  music_directory \"~/Music\"
+  playlist_directory  \"~/.config/mpd/playlists\"
+  db_file \"~/.config/mpd/mpd.db\"
+  log_file \"~/.config/mpd/mpd.log\"
+  bind_to_address \"127.0.0.1\"
+  port \"6600\"
 
-                   " nil "~/.mpdconf")
-            (message "~/.mpdconf created"))))
+  # For pulse audio
+  audio_output {
+  type \"pulse\"
+  name \"pulse audio\"
+  }
+                   ")
+
+    (my/create-file-if-not-exist (concat my/mpd-directory "mpd.log"))
+    (my/create-file-if-not-exist (concat my/mpd-directory "mpd.db"))
+    (my/create-file-if-not-exist (concat my/mpd-directory "playlists")))
 #+END_SRC
 
 **** Start MPD
 #+BEGIN_SRC emacs-lisp
- (defun my/start-music-daemon ()
-   "Start MPD, connect to it and sync the metadata cache."
-   (interactive)
-   (start-process "mpd" nil "mpd")
-   (my/sync-mpd-and-emms)
-   (message "MPD started and synced!"))
+  (defun my/start-mpd ()
+    "Start MPD, connect to it and sync the metadata cache."
+    (interactive)
+    (start-process "mpd" nil "mpd")
+    (my/sync-mpd-and-emms)
+    (message "MPD started and synced!"))
 #+END_SRC
 
 **** Kill daemon
@@ -2676,9 +2715,17 @@ If config already exists, don't overwrite it
     (shell-command "mpc seek -60"))
 #+END_SRC
 
+**** Auto-run mpd if installed
+#+BEGIN_SRC emacs-lisp
+  (if (my/run-and-is-external-package-installed "mpd -h")
+      (progn
+        (my/setup-mpd)
+        (my/start-mpd)))
+#+END_SRC
+
 **** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-key my/music-map (kbd "C-s") 'my/start-music-daemon)
+  (define-key my/music-map (kbd "C-s") 'my/start-mpd)
   (define-key my/music-map (kbd "C-k") 'my/kill-music-daemon)
   (define-key my/music-map (kbd "i") 'my/mpd-info)
 
@@ -3049,22 +3096,46 @@ Create =.gnus.el=, which gnus reads from
 * System
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/system-commands-map)
-  (define-key my/leader-map (kbd "~") 'my/system-commands-map)
+  (define-key my/leader-map (kbd "`") 'my/system-commands-map)
+
+  #+END_SRC
+
+** Suspend
+  #+BEGIN_SRC emacs-lisp
+    (define-prefix-command 'my/system-suspend-map)
+    (define-key my/system-commands-map (kbd "s") 'my/system-suspend-map)
+
+
+    (defun my/systemd-suspend-PC()
+      (interactive)
+      (shell-command "systemctl suspend"))
+    (define-key my/system-suspend-map (kbd "C-s") 'my/systemd-suspend-PC)
+
+    (defun my/systemd-hibernate-PC()
+      (interactive)
+      (shell-command "systemctl hibernate"))
+    (define-key my/system-suspend-map (kbd "C-h") 'my/systemd-hibernate-PC)
+#+END_SRC
+
+** Multi-monitor
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/system-monitor-map)
+  (define-key my/system-commands-map (kbd "m") 'my/system-monitor-map)
 
   (defun my/x-suspend-monitor()
     (interactive)
     (shell-command "xset dpms force suspend"))
-  (define-key my/system-commands-map (kbd "s") 'my/x-suspend-monitor)
+  (define-key my/system-monitor-map (kbd "s") 'my/x-suspend-monitor)
 
-  (defun my/systemd-suspend-PC()
+  (defun my/print-monitors ()
     (interactive)
-    (shell-command "systemctl suspend"))
-  (define-key my/system-commands-map (kbd "C-s") 'my/systemd-suspend-PC)
+    (shell-command "xrandr"))
+  (define-key my/system-monitor-map (kbd "p") 'my/print-monitors)
 
-  (defun my/systemd-hibernate-PC()
+  (defun my/monitor-home-setup ()
     (interactive)
-    (shell-command "systemctl hibernate"))
-  (define-key my/system-commands-map (kbd "C-h") 'my/systemd-hibernate-PC)
+    (shell-command "xrandr --output DP-1 --mode 2560x1440 --rate 60 --left-of DVI-I-1 --output DVI-D-1 --mode 1280x800 --left-of DP-1 --output DVI-I-1 --mode 1280x800"))
+  (define-key my/system-monitor-map (kbd "s") 'my/monitor-home-setup)
 #+END_SRC
 
 ** VFIO
@@ -3250,18 +3321,50 @@ Create =.gnus.el=, which gnus reads from
   (use-package hydra)
 #+END_SRC
 
+** Switch buffer hook
+#+BEGIN_SRC emacs-lisp
+  (defvar my/switch-buffer-hook nil
+    "Hook called after use has changed buffer")
+
+  (defun my/evil-window-up ()
+    (interactive)
+    (evil-window-up 1)
+    (run-hooks 'my/switch-buffer-hook))
+
+  (defun my/evil-window-down ()
+    (interactive)
+    (evil-window-down 1)
+    (run-hooks 'my/switch-buffer-hook))
+
+  (defun my/evil-window-left ()
+    (interactive)
+    (evil-window-left 1)
+    (run-hooks 'my/switch-buffer-hook))
+
+  (defun my/evil-window-right ()
+    (interactive)
+    (evil-window-right 1)
+    (run-hooks 'my/switch-buffer-hook))
+
+  (defun my/ivy-switch-buffer ()
+    (interactive)
+    (unwind-protect
+        (ivy-switch-buffer)
+      (run-hooks 'my/switch-buffer-hook)))
+#+END_SRC
+
 **  Window and buffer management
 #+BEGIN_SRC emacs-lisp
   (defhydra my/window-hydra (:color red
-    :pre (setq exwm-input-line-mode-passthrough t)
-    :post (setq exwm-input-line-mode-passthrough nil))
+                                    :pre (setq exwm-input-line-mode-passthrough t)
+                                    :post (setq exwm-input-line-mode-passthrough nil))
     ;;"window"
 
     ;; Move focus
-    ("p" evil-window-up nil)
-    ("n" evil-window-down nil)
-    ("l" evil-window-right nil)
-    ("h" evil-window-left nil)
+    ("p" my/evil-window-up nil)
+    ("n" my/evil-window-down nil)
+    ("l" my/evil-window-right nil)
+    ("h" my/evil-window-left nil)
 
     ;; Move focus to edge window
     ;; Frame border window
@@ -3317,7 +3420,7 @@ Create =.gnus.el=, which gnus reads from
     ("B" previous-buffer nil)
 
     ;; Switch buffer
-    ("a" ivy-switch-buffer nil)
+    ("a" my/ivy-switch-buffer nil)
     ;; Kill buffer
     ("k" (kill-buffer(current-buffer)) nil)
 
@@ -3549,13 +3652,12 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
 #+BEGIN_SRC emacs-lisp
   (defvar my/enable-cpu-temp-check t)
 
-  (if (or
+  (if (and
        ;; If lm_sensors is not installed
-       (string-match-p "not found"
-                       (shell-command-to-string "sensors"))
+       (my/run-and-is-external-package-installed "sensors")
        ;; If there aren't any cpu heat sensors (eg. virtual machine)
        (string-match-p ""
-                       (substring (shell-command-to-string "sensors | grep \"Core 0:\"") 16 18)))
+                       (shell-command-to-string "sensors | grep \"Core 0:\"")))
       (setq my/enable-cpu-temp-check nil))
 
   (defvar my/cpu-temp "")
@@ -3648,7 +3750,7 @@ Transmitted
      (save-excursion
        (setq my/buffer-total-lines (format-mode-line "%l" (goto-char (point-max))))))
 
-  (add-hook 'window-configuration-change-hook 'my/update-total-lines)
+  (add-hook 'my/switch-buffer-hook 'my/update-total-lines)
   (add-hook 'exwm-workspace-switch-hook 'my/update-total-lines)
   ;;(add-hook 'before-save-hook 'my/update-total-lines)
 #+END_SRC
@@ -3699,7 +3801,7 @@ Display time and date in good format (also displays CPU load)
     (setq my/buffer-git-branch (car (vc-git-branches))))
 
   (add-hook 'exwm-workspace-switch-hook 'my/update-buffer-git-branch)
-  (add-hook 'window-configuration-change-hook 'my/update-buffer-git-branch)
+  (add-hook 'my/switch-buffer-hook 'my/update-buffer-git-branch)
 #+END_SRC
 
 **** Git project name
@@ -3712,7 +3814,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     (setq my/projectile-project-name (projectile-project-name)))
 
   (add-hook 'exwm-workspace-switch-hook 'my/update-projectile-project-name)
-  (add-hook 'window-configuration-change-hook 'my/update-projectile-project-name)
+  (add-hook 'my/switch-buffer-hook 'my/update-projectile-project-name)
 #+END_SRC
 
 **** Load average
