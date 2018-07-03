@@ -334,15 +334,19 @@ FONT=lat9w-16
           (progn
             (write-region "
 
-             xset s off
-             xset s noblank
-             xset s off
-             xset s off -dpms
 
-             setxkbmap -layout us -variant altgr-intl
-             # setxkbmap -layout carpalx -variant qgmlwy
+  xset s off
+  xset s noblank
+  xset s off
+  xset s off -dpms
 
-             exec emacs
+  setxkbmap -layout us -variant altgr-intl
+  # setxkbmap -layout carpalx -variant qgmlwy
+
+  # Fix java windows in exwm
+  export _JAVA_AWT_WM_NONREPARENTING=1
+
+  exec emacs
 
              " nil "~/.xinitrc")
             (message "~/.xinitrc created"))))
@@ -350,8 +354,8 @@ FONT=lat9w-16
 
 ** Redshift 
 #+BEGIN_SRC emacs-lisp
-      (if(eq fully-compatible-system t)
-          (start-process "redshift" nil "redshift"))
+  (if(my/run-and-is-external-package-installed "redshift -h")
+      (start-process "redshift" nil "redshift"))
 #+END_SRC
 
 ** Start work timer
@@ -1177,27 +1181,6 @@ g-; and g-,
   (use-package goto-chg)
 #+END_SRC
 
-* Buffer management
-Just unbind C-x b
-#+BEGIN_SRC emacs-lisp
-  (global-set-key (kbd "C-x b") nil)
-#+END_SRC
-
-** Kill all buffers
-#+BEGIN_SRC emacs-lisp
-  (defun my/kill-all-buffers ()
-    (interactive)
-    (mapc 'kill-buffer (buffer-list)))
-  (global-set-key (kbd "C-M-s-k") 'my/kill-all-buffers)
-#+END_SRC
-
-** Unique names for identical buffer names
-#+BEGIN_SRC emacs-lisp
-(require 'uniquify)
-(setq uniquify-buffer-name-style 'nil)
-;;(setq uniquify-buffer-name-style 'post-forward-angle-brackets)
-#+END_SRC
-
 * Window management
 ** Make cursor auto move to new split window
 #+BEGIN_SRC emacs-lisp
@@ -1218,6 +1201,27 @@ Just unbind C-x b
 ** Don't ask for confirmation when killing window
 #+BEGIN_SRC emacs-lisp
   (setq kill-buffer-query-functions (delq 'process-kill-buffer-query-function kill-buffer-query-functions))
+#+END_SRC
+
+* Buffer management
+Just unbind C-x b
+#+BEGIN_SRC emacs-lisp
+  (global-set-key (kbd "C-x b") nil)
+#+END_SRC
+
+** Kill all buffers
+#+BEGIN_SRC emacs-lisp
+  (defun my/kill-all-buffers ()
+    (interactive)
+    (mapc 'kill-buffer (buffer-list)))
+  (global-set-key (kbd "C-M-s-k") 'my/kill-all-buffers)
+#+END_SRC
+
+** Unique names for identical buffer names
+#+BEGIN_SRC emacs-lisp
+(require 'uniquify)
+(setq uniquify-buffer-name-style 'nil)
+;;(setq uniquify-buffer-name-style 'post-forward-angle-brackets)
 #+END_SRC
 
 * Dired
@@ -2271,12 +2275,16 @@ More rebind options and more reliable
 
   ;; necessary to configure exwm manually
   (require 'exwm-config)
+  (exwm-config-ido)
 
   ;; a number between 1 and 9, exwm creates workspaces dynamically
   (setq exwm-workspace-number 9)
 
   ;; Default to release mode
   ;;(add-hook 'exwm-manage-finish-hook 'exwm-input-release-keyboard) ;; Doesn't work???
+
+  ;; Fix magit ediff
+  (setq ediff-window-setup-function 'ediff-setup-windows-plain)
 
   ;; enable exwm
   (exwm-enable)
@@ -2333,7 +2341,7 @@ Define main function
 #+BEGIN_SRC emacs-lisp
   (require 'exwm-randr)
 
-  (setq exwm-randr-workspace-output-plist '(1 "DVI-D-1" 2 "DP-1" 3 "DVI-I-1"))
+  (setq exwm-randr-workspace-output-plist '(0 "DVI-D-1" 1 "DP-1" 2 "DVI-I-1"))
 
   (exwm-randr-enable)
 #+END_SRC
@@ -2552,11 +2560,10 @@ emms doesn't automatically connect to mpd when loading playlist, results in empt
   (defun my/sync-mpd-and-emms ()
     "Updates the MPD and emms database synchronously."
     (interactive)
-    (emms-player-mpd-connect)
     (call-process "mpc" nil nil nil "update")
     (emms-player-mpd-update-all-reset-cache)
     (emms-cache-set-from-mpd-all)
-    (emms-player-mpd-update-all-reset-cache)
+    (emms-player-mpd-connect)
     (message "MPD database and emms updated!"))
 #+END_SRC
 
@@ -2608,7 +2615,7 @@ If config already exists, don't overwrite it
 
     (my/create-file-if-not-exist (concat my/mpd-directory "mpd.log"))
     (my/create-file-if-not-exist (concat my/mpd-directory "mpd.db"))
-    (my/create-file-if-not-exist (concat my/mpd-directory "playlists")))
+    (my/create-dir-if-not-exist (concat my/mpd-directory "playlists/")))
 #+END_SRC
 
 **** Start MPD
@@ -2617,7 +2624,7 @@ If config already exists, don't overwrite it
     "Start MPD, connect to it and sync the metadata cache."
     (interactive)
     (start-process "mpd" nil "mpd")
-    (my/sync-mpd-and-emms)
+    ;;(my/sync-mpd-and-emms)
     (message "MPD started and synced!"))
 #+END_SRC
 
@@ -3134,8 +3141,19 @@ Create =.gnus.el=, which gnus reads from
 
   (defun my/monitor-home-setup ()
     (interactive)
-    (shell-command "xrandr --output DP-1 --mode 2560x1440 --rate 60 --left-of DVI-I-1 --output DVI-D-1 --mode 1280x800 --left-of DP-1 --output DVI-I-1 --mode 1280x800"))
-  (define-key my/system-monitor-map (kbd "s") 'my/monitor-home-setup)
+    (shell-command "xrandr --output DP-1 --mode 2560x1440 --left-of DVI-I-1 --output DVI-D-1 --mode 1280x800 --rate 59.81 --left-of DP-1 --output DVI-I-1 --mode 1280x800 --rate 59.81"))
+  (define-key my/system-monitor-map (kbd "h") 'my/monitor-home-setup)
+
+  (defun my/auto-connect-screen ()
+    (with-temp-buffer
+      (call-process "xrandr" nil t nil)
+      (beginning-of-buffer)
+      (if (search-forward "VGA1 connected" nil 'noerror)
+          (start-process-shell-command
+           "xrandr" nil "xrandr --output VGA1 --primary --auto --output LVDS1 --off")
+        (start-process-shell-command
+         "xrandr" nil "xrandr --output LVDS1 --auto"))))
+  (define-key my/system-monitor-map (kbd "a") 'my/auto-connect-screen)
 #+END_SRC
 
 ** VFIO
@@ -3353,7 +3371,7 @@ Create =.gnus.el=, which gnus reads from
       (run-hooks 'my/switch-buffer-hook)))
 #+END_SRC
 
-**  Window and buffer management
+**  Frame, window and buffer management
 #+BEGIN_SRC emacs-lisp
   (defhydra my/window-hydra (:color red
                                     :pre (setq exwm-input-line-mode-passthrough t)
@@ -3394,7 +3412,6 @@ Create =.gnus.el=, which gnus reads from
     ;; Resize left
     ("C-h" (evil-window-increase-width 10) nil)
 
-    ;; Resize full
     ;; Resize full height
     ("M-p" evil-window-set-height nil)
     ("M-n" evil-window-set-height nil)
@@ -3857,7 +3874,8 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     "Return a string of `window-width' length containing LEFT-STRING, and RIGHT-STRING aligned respectively."
     (let* ((available-width (- (frame-width) (length left-string) 2)))
       ;; The result of format inside of format could be for example "%s %78s"
-      (format  "%s %s %s"  left-string (make-string available-width ? ) right-string)))
+      ;; 1.7 is for compensating for non mono-characters
+      (format  "%s %s %s"  left-string (make-string (floor (* 1.7 available-width)) ? ) right-string)))
   ;;(make-string (available-width) ?█)
   ;;(format (format "%%s %%%ds" available-width) left-string right-string)))
   ;;(format "%100s" "test" "t")
