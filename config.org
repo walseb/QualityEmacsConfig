@@ -217,26 +217,6 @@ goto-chg (goto last change)
 (setq-default mode-line-format nil)
 #+END_SRC
 
-* Fonts
-#+BEGIN_SRC emacs-lisp
-  (defun my/font-exists (font)
-    (if (member font (font-family-list))
-        t
-      nil))
-
-  (defvar my/font nil)
-
-  (if (my/font-exists "Open Sans")
-      (setq my/font "opensans")
-    (if (my/font-exists "dejavu sans")
-        (setq my/font "DejaVuSans")))
-
-  (if my/font
-      (set-face-attribute 'default nil
-                          :family my/font
-                          :height 128))
-#+END_SRC
-
 * Generic functions
 ** File management
 *** Create directory if directory doesn't exist
@@ -277,6 +257,30 @@ goto-chg (goto last change)
 #+BEGIN_SRC emacs-lisp
   (defun give-buffer-unique-name(base-name)
     (rename-buffer base-name t))
+#+END_SRC
+
+** Is font installed
+#+BEGIN_SRC emacs-lisp
+  (defvar my/font-family-list (font-family-list))
+  (defun my/font-installed (font)
+    (if (member font my/font-family-list)
+      t
+      nil))
+#+END_SRC
+
+* Fonts
+#+BEGIN_SRC emacs-lisp
+  (defvar my/font nil)
+
+  (if (my/font-installed "Open Sans")
+      (setq my/font "opensans")
+    (if (my/font-installed "dejavu sans")
+        (setq my/font "DejaVuSans")))
+
+  (if my/font
+      (set-face-attribute 'default nil
+                          :family my/font
+                          :height 128))
 #+END_SRC
 
 * Startup processes 
@@ -323,6 +327,7 @@ setxkbmap to select keyboard layout
 In terminal do: =loadkeys carpalx=
 To make permanent:
 in =/etc/vconsole.conf=
+Example terminal key config
 #+BEGIN_SRC
 KEYMAP=dvorak-uk
 FONT=lat9w-16
@@ -1525,14 +1530,22 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
   (define-key my/org-export-latex-map (kbd "l") 'org-latex-export-to-latex)
 #+END_SRC
 
-** Keys
+** Key
 #+BEGIN_SRC emacs-lisp
   (evil-define-key 'normal org-mode-map (kbd "C-s") 'swiper)
   (define-key my/org-mode-map (kbd "i") 'org-toggle-inline-images)
   (define-key my/org-mode-map (kbd "f") 'org-insert-link)
   (define-key my/org-mode-map (kbd "e") 'org-babel-execute-src-block)
+
+  (define-key my/org-mode-map (kbd "p") 'org-shiftup)
+  (define-key my/org-mode-map (kbd "n") 'org-shiftdown)
   (define-key my/org-mode-map (kbd "l") 'org-shiftright)
   (define-key my/org-mode-map (kbd "h") 'org-shiftleft)
+
+  (define-key my/org-mode-map (kbd "P") 'org-metaup)
+  (define-key my/org-mode-map (kbd "N") 'org-metadown)
+  (define-key my/org-mode-map (kbd "L") 'org-metaright)
+  (define-key my/org-mode-map (kbd "H") 'org-metaleft)
 
   (define-key my/org-mode-map (kbd "|") 'org-table-create-or-convert-from-region)
 #+END_SRC
@@ -1700,6 +1713,11 @@ Make company mode inherit colors from theme, change later maybe
 
   ;; using C-h is better in every way 
   (define-key company-active-map (kbd "<f1>") 'nil)
+
+
+  ;; Show full doc buffer
+  (define-key evil-normal-state-map  (kbd "C-,") 'company-show-doc-buffer)
+  (define-key evil-insert-state-map  (kbd "C-,") 'company-show-doc-buffer)
 
   ;; Force autocomplete
   (define-key evil-normal-state-map  (kbd "C-.") 'company-complete)
@@ -2341,7 +2359,8 @@ Define main function
 #+BEGIN_SRC emacs-lisp
   (require 'exwm-randr)
 
-  (setq exwm-randr-workspace-output-plist '(0 "DVI-D-1" 1 "DP-1" 2 "DVI-I-1"))
+  ;;(setq exwm-randr-workspace-output-plist '(0 "DVI-D-1" 1 "DP-1" 2 "DVI-I-1"))
+  (setq exwm-randr-workspace-output-plist '(0 "DP-1" 1 "DVI-D-1"  2 "DVI-I-1"))
 
   (exwm-randr-enable)
 #+END_SRC
@@ -2523,7 +2542,6 @@ Setup emms
   (require 'emms-setup)
   (require 'emms-player-mpd)
 
-  ;; Essential??
   (emms-all) 
 
   ;; Disable name of playing track in modeline (time is kept though)
@@ -3615,6 +3633,7 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
 #+END_SRC
 
 *** Visuals
+**** Modeline colering
 #+BEGIN_SRC emacs-lisp
   (setq my/mode-line-background (face-attribute 'default :background))
   (setq my/mode-line-foreground (face-attribute 'default :foreground))
@@ -3664,6 +3683,23 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
   (set-face-attribute 'mode-line-inactive nil :weight 'medium)
 #+END_SRC
 
+**** Fonts
+#+BEGIN_SRC emacs-lisp
+  (defvar my/modeline-font nil)
+
+  (if (my/font-installed "Inconsolata")
+      (setq my/modeline-font "Inconsolata")
+    (if (my/font-installed "dejavu sans mono")
+        (setq my/modeline-font "DejaVuSansMono")
+      (if (my/font-installed "Noto Sans Mono")
+          (setq my/modeline-font "NotoSansMono"))))
+
+  (if my/modeline-font
+  (set-face-attribute 'minibuffer-line nil
+                      :family my/modeline-font))
+                      ;;:height 128)
+#+END_SRC
+
 *** Mode line modules
 **** CPU heat
 #+BEGIN_SRC emacs-lisp
@@ -3689,25 +3725,6 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
 #+END_SRC
 
 **** Network traffic
-#+BEGIN_SRC emacs-lisp
-  (defun my/convert-byte-to-kilo-byte (byte)
-    (truncate (/ byte 1024)))
-
-  (defun my/convert-kilo-byte-to-mega-byte (kilo)
-    (truncate (/ kilo 1024)))
-
-    (defun my/convert-to-best-unit (byte)
-      (if (> byte 1024)
-          (progn
-            (setq kilo-byte (my/convert-byte-to-kilo-byte byte))
-            (if (> kilo-byte 1024)
-                (progn
-                  (setq mega-byte (my/convert-kilo-byte-to-mega-byte kilo-byte))
-                  (concat (number-to-string mega-byte) "M"))
-              (concat (number-to-string kilo-byte) "K")))
-        (concat (number-to-string byte) "B")))
-#+END_SRC
-
 ***** Linux
 ****** RX
 Received
@@ -3726,10 +3743,9 @@ Received
 
   (defun my/linux-update-network-rx-delta ()
     (interactive)
-     (progn
-       (setq my/rx-new (my/linux-get-network-rx))
-       (setq my/rx-delta-formatted (my/convert-to-best-unit (- my/rx-new my/rx)))
-       (setq my/rx my/rx-new)))
+      (setq my/rx-new (my/linux-get-network-rx))
+      (setq my/rx-delta-formatted (file-size-human-readable (- my/rx-new my/rx)))
+      (setq my/rx my/rx-new))
 
   (run-with-timer 0 60 'my/linux-update-network-rx-delta)
 #+END_SRC
@@ -3753,7 +3769,7 @@ Transmitted
   (defun my/linux-update-network-tx-delta ()
     (interactive)
      (setq my/tx-new (my/linux-get-network-tx))
-     (setq my/tx-delta-formatted (my/convert-to-best-unit (- my/tx-new my/tx)))
+     (setq my/tx-delta-formatted (file-size-human-readable (- my/tx-new my/tx)))
      (setq my/tx my/tx-new))
 
   (run-with-timer 0 60 'my/linux-update-network-tx-delta)
@@ -3761,14 +3777,14 @@ Transmitted
 
 **** Display total line numbers
 #+BEGIN_SRC emacs-lisp
-  (defvar my/buffer-total-lines nil)
-
-  (defun my/update-total-lines ()
-     (save-excursion
-       (setq my/buffer-total-lines (format-mode-line "%l" (goto-char (point-max))))))
-
-  (add-hook 'my/switch-buffer-hook 'my/update-total-lines)
-  (add-hook 'exwm-workspace-switch-hook 'my/update-total-lines)
+  ;; (defvar my/buffer-total-lines nil)
+;; 
+  ;; (defun my/update-total-lines ()
+     ;; (save-excursion
+       ;; (setq my/buffer-total-lines (format-mode-line "%l" (goto-char (point-max))))))
+;; 
+  ;; (add-hook 'my/switch-buffer-hook 'my/update-total-lines)
+  ;; (add-hook 'exwm-workspace-switch-hook 'my/update-total-lines)
   ;;(add-hook 'before-save-hook 'my/update-total-lines)
 #+END_SRC
 
@@ -3870,23 +3886,10 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
 *** Mode line format
 #+BEGIN_SRC emacs-lisp
-  (defun my/mode-line-align (left-string right-string)
-    "Return a string of `window-width' length containing LEFT-STRING, and RIGHT-STRING aligned respectively."
-    (let* ((available-width (- (frame-width) (length left-string) 2)))
-      ;; The result of format inside of format could be for example "%s %78s"
-      ;; 1.7 is for compensating for non mono-characters
-      (format  "%s %s %s"  left-string (make-string (floor (* 1.7 available-width)) ? ) right-string)))
-  ;;(make-string (available-width) ?█)
-  ;;(format (format "%%s %%%ds" available-width) left-string right-string)))
-  ;;(format "%100s" "test" "t")
-  ;;
-  ;;(defun my/mode-line-middle-space(left-string)
-  ;;
-  ;;(setq left-stuff "ttesdatoaesdatsdoeatoeasdoetoeaatsdoe34")
-  ;;(- (frame-width) (length left-stuff) 2)
-  ;;(format "----")
-  ;; 
-  ;;)
+  (defun my/mode-line-align (left right)
+    "Return a string of `window-width' length containing LEFT, and RIGHT aligned respectively."
+    (let* ((available-width (- (frame-width) (length left) 2)))
+      (format (format "%%s %%%ds" available-width) left right)))
 
   (setq-default minibuffer-line-format
                 '((:eval
@@ -3922,10 +3925,15 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                        " "
 
                        ;; Print current line number
-                       "%l"
-                       "/" 
+                       ;;"%l"
+                       "%p "
+                       ;;"@" 
                        ;; Print total line number
-                       (:eval my/buffer-total-lines)
+                       ;;(:eval my/buffer-total-lines)
+                       "~"
+                       "%I"
+
+                       "%n"
 
                        " | "
 
@@ -3962,7 +3970,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
                        " | "
 
-                       " GC: "
+                       "GC: "
                        (:eval (number-to-string (truncate gc-elapsed)))
 
                        "("
@@ -3991,7 +3999,6 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 #+END_SRC
 
 *** Keep mode line updated
-By default, minibuffer line is updated every 60 seconds, this is good for clocks but not for anything else
 t as last parameter because the mode line should always be updated last, after any changes to its components (such as projectile project name, vc mode, etc)
 #+BEGIN_SRC emacs-lisp
   (add-hook 'post-command-hook 'minibuffer-line--update t)
