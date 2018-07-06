@@ -3097,33 +3097,6 @@ Create =.gnus.el=, which gnus reads from
   (evil-define-key 'normal gnus-group-mode-map (kbd (concat my/leader-map-key "a")) 'my/gnus-message-map)
 #+END_SRC
 
-* Networking
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/net-utils-map)
-  (define-key my/system-commands-map (kbd "n") 'my/net-utils-map)
-#+END_SRC
-
-** Tramp
-#+BEGIN_SRC emacs-lisp
-(setq tramp-default-method "ssh")
-#+END_SRC
-
-** Netstat
-#+BEGIN_SRC emacs-lisp
-  (defun my/net-utils-mode ()
-    (interactive)
-    (visual-line-mode 0))
-
-  (add-hook 'net-utils-mode-hook 'my/net-utils-mode)
-#+END_SRC
-
-** Keys
-#+BEGIN_SRC emacs-lisp
-  (define-key my/net-utils-map (kbd "s") 'netstat)
-  (define-key my/net-utils-map (kbd "p") 'ping)
-  (define-key my/net-utils-map (kbd "i") 'ifconfig)
-#+END_SRC
-
 * System
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/system-commands-map)
@@ -3183,6 +3156,33 @@ Create =.gnus.el=, which gnus reads from
 ** VFIO
 #+BEGIN_SRC emacs-lisp
 
+#+END_SRC
+
+* Networking
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/net-utils-map)
+  (define-key my/system-commands-map (kbd "n") 'my/net-utils-map)
+#+END_SRC
+
+** Tramp
+#+BEGIN_SRC emacs-lisp
+(setq tramp-default-method "ssh")
+#+END_SRC
+
+** Netstat
+#+BEGIN_SRC emacs-lisp
+  (defun my/net-utils-mode ()
+    (interactive)
+    (visual-line-mode 0))
+
+  (add-hook 'net-utils-mode-hook 'my/net-utils-mode)
+#+END_SRC
+
+** Keys
+#+BEGIN_SRC emacs-lisp
+  (define-key my/net-utils-map (kbd "s") 'netstat)
+  (define-key my/net-utils-map (kbd "p") 'ping)
+  (define-key my/net-utils-map (kbd "i") 'ifconfig)
 #+END_SRC
 
 * Hardware
