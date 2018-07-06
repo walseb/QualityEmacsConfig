@@ -1661,7 +1661,7 @@ Company doc mode disables visual line mode for whatever reason, enable it inside
           (let ((win (display-buffer doc-buffer t)))
             (set-window-start win (if start start (point-min))))))))
 
-  (define-key company-active-map (kbd "<f1>") 'my/company-show-doc-buffer)
+  (define-key company-active-map (kbd "C-h") 'my/company-show-doc-buffer)
 #+END_SRC
 
 *** Company-show-numbers but with letters
@@ -1716,8 +1716,8 @@ Make company mode inherit colors from theme, change later maybe
 
 
   ;; Show full doc buffer
-  (define-key evil-normal-state-map  (kbd "C-,") 'company-show-doc-buffer)
-  (define-key evil-insert-state-map  (kbd "C-,") 'company-show-doc-buffer)
+  (define-key evil-normal-state-map  (kbd "C-,") 'my/company-show-doc-buffer)
+  (define-key evil-insert-state-map  (kbd "C-,") 'my/company-show-doc-buffer)
 
   ;; Force autocomplete
   (define-key evil-normal-state-map  (kbd "C-.") 'company-complete)
@@ -2231,13 +2231,14 @@ More rebind options and more reliable
 #+BEGIN_SRC emacs-lisp
   (defvar my/keys-mode-map (make-sparse-keymap))
 
-  (define-minor-mode my/mode
-    ;; init value t to enable it in fundamental mode
-    ;; More info: http://emacs.stackexchange.com/q/16693/115
-    :init-value t
-    :keymap my/keys-mode-map)
-
-  (define-globalized-minor-mode global-my/mode my/keys-mode my/keys-mode)
+  ;; Emacs 27 doesn't support :init-value for example
+  (if (string< emacs-version "27")
+      (define-minor-mode my/mode
+        ;; init value t to enable it in fundamental mode
+        ;; More info: http://emacs.stackexchange.com/q/16693/115
+        :init-value t
+        :keymap my/keys-mode-map)
+    (define-minor-mode my/mode nil t nil my/keys-mode-map))
 
   (add-to-list 'emulation-mode-map-alists `((my/mode . ,my/keys-mode-map)))
 
@@ -2293,7 +2294,7 @@ More rebind options and more reliable
 
   ;; necessary to configure exwm manually
   (require 'exwm-config)
-  (exwm-config-ido)
+  ;;(exwm-config-ido)
 
   ;; a number between 1 and 9, exwm creates workspaces dynamically
   (setq exwm-workspace-number 9)
@@ -3099,7 +3100,12 @@ Create =.gnus.el=, which gnus reads from
 * Networking
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/net-utils-map)
-  (define-key my/leader-map (kbd "C-n") 'my/net-utils-map)
+  (define-key my/system-commands-map (kbd "n") 'my/net-utils-map)
+#+END_SRC
+
+** Tramp
+#+BEGIN_SRC emacs-lisp
+(setq tramp-default-method "ssh")
 #+END_SRC
 
 ** Netstat
@@ -3159,7 +3165,7 @@ Create =.gnus.el=, which gnus reads from
 
   (defun my/monitor-home-setup ()
     (interactive)
-    (shell-command "xrandr --output DP-1 --mode 2560x1440 --left-of DVI-I-1 --output DVI-D-1 --mode 1280x800 --rate 59.81 --left-of DP-1 --output DVI-I-1 --mode 1280x800 --rate 59.81"))
+    (shell-command "xrandr --output DP-1 --mode 2560x1440 --rate 60 --left-of DVI-I-1 --output DVI-D-1 --mode 1280x800 --rate 59.81 --left-of DP-1 --output DVI-I-1 --mode 1280x800 --rate 59.81"))
   (define-key my/system-monitor-map (kbd "h") 'my/monitor-home-setup)
 
   (defun my/auto-connect-screen ()
@@ -3182,7 +3188,7 @@ Create =.gnus.el=, which gnus reads from
 * Hardware
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/hardware-info-map)
-  (define-key my/leader-map (kbd "C-h") 'my/hardware-info-map)
+  (define-key my/system-commands-map (kbd "h") 'my/hardware-info-map)
 
   ;; Memory
   (defun my/unix-get-memory-available()
@@ -3201,7 +3207,7 @@ Create =.gnus.el=, which gnus reads from
     (interactive)
     (shell-command "rfkill list"))
   (define-key my/hardware-info-map (kbd "b") 'my/rfkill-get-blocked-devices)
-  
+
   ;; Get devices
   (defun my/rfkill-get-devices()
     (interactive)
@@ -3211,9 +3217,9 @@ Create =.gnus.el=, which gnus reads from
 
 ** CPU
 #+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/cpu-info-map)
   ;; Linux temps
   (if (file-exists-p "/proc/cpuinfo") (progn
+                                        (define-prefix-command 'my/cpu-info-map)
                                         (define-key my/hardware-info-map (kbd "c") 'my/cpu-info-map)
 
                                         (defun my/unix-cpu-get-clock()
@@ -3952,7 +3958,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                                      "@"
                                      "["
                                      my/projectile-project-name
-                                     "] "))))
+                                     "]"))))
 
                        )))
                     ;; right
@@ -3962,7 +3968,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                        (:eval (if (boundp 'org-mode-line-string)
                                   (concat "Org:" org-mode-line-string)))
 
-                       " N: "
+                       "N: "
                        (:eval my/rx-delta-formatted)
                        "↓ "
                        (:eval my/tx-delta-formatted)
