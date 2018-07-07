@@ -272,15 +272,17 @@ goto-chg (goto last change)
 #+BEGIN_SRC emacs-lisp
   (defvar my/font nil)
 
-  (if (my/font-installed "Open Sans")
-      (setq my/font "opensans")
-    (if (my/font-installed "dejavu sans")
-        (setq my/font "DejaVuSans")))
+  (if (my/font-installed "Perfect DOS VGA 437")
+      (setq my/font "Perfect DOS VGA 437")
+    (if (my/font-installed "Open Sans")
+        (setq my/font "opensans")
+      (if (my/font-installed "dejavu sans")
+          (setq my/font "DejaVuSans"))))
 
-  (if my/font
-      (set-face-attribute 'default nil
-                          :family my/font
-                          :height 128))
+    (if my/font
+        (set-face-attribute 'default nil
+                            :family my/font
+                            :height 120))
 #+END_SRC
 
 * Startup processes 
@@ -3783,15 +3785,15 @@ Transmitted
 
 **** Display total line numbers
 #+BEGIN_SRC emacs-lisp
-  ;; (defvar my/buffer-total-lines nil)
-;; 
-  ;; (defun my/update-total-lines ()
-     ;; (save-excursion
-       ;; (setq my/buffer-total-lines (format-mode-line "%l" (goto-char (point-max))))))
-;; 
-  ;; (add-hook 'my/switch-buffer-hook 'my/update-total-lines)
-  ;; (add-hook 'exwm-workspace-switch-hook 'my/update-total-lines)
-  ;;(add-hook 'before-save-hook 'my/update-total-lines)
+  (defvar my/buffer-total-lines nil)
+
+   (defun my/update-total-lines ()
+      (save-excursion
+        (setq my/buffer-total-lines (format-mode-line "%l" (goto-char (point-max))))))
+
+   (add-hook 'my/switch-buffer-hook 'my/update-total-lines)
+   (add-hook 'exwm-workspace-switch-hook 'my/update-total-lines)
+  (add-hook 'before-save-hook 'my/update-total-lines)
 #+END_SRC
 
 **** Mail
@@ -3933,11 +3935,11 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                        ;; Print current line number
                        ;;"%l"
                        "%p "
+                       "~"
                        ;;"@" 
                        ;; Print total line number
-                       ;;(:eval my/buffer-total-lines)
-                       "~"
-                       "%I"
+                       (:eval my/buffer-total-lines)
+                       ;;"%I"
 
                        "%n"
 
