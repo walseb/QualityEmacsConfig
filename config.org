@@ -791,6 +791,7 @@ setxkbmap to select keyboard layout
 
 #+BEGIN_SRC emacs-lisp
   (defun my/write-xinitrc ()
+    (interactive)
     (if(eq fully-compatible-system t)
         (my/create-file-with-content-if-not-exist "~/.xinitrc" "
   xset s off
@@ -800,7 +801,7 @@ setxkbmap to select keyboard layout
 
   setxkbmap -layout us -variant altgr-intl
   # setxkbmap -layout carpalx -variant qgmlwy
-  
+
   xmodmap ~./xmodmap
 
   # Fix java windows in exwm
@@ -866,6 +867,7 @@ This swaps capslock and ctrl
 ** Write all
 #+BEGIN_SRC emacs-lisp
   (defun my/write-all-config ()
+    (interactive)
     (my/write-xdefaults)
     (my/write-xinitrc)
     (my/write-gnus)
@@ -1168,6 +1170,8 @@ Vim bindings to change fold
   ;; Enable avy movements in ivy buffer
   (define-key ivy-minibuffer-map (kbd "M-p") 'ivy-avy)
   (define-key ivy-minibuffer-map (kbd "M-n") 'ivy-avy)
+
+  (define-key ivy-minibuffer-map (kbd "<escape>") 'minibuffer-keyboard-quit)
 
   (define-key ivy-minibuffer-map (kbd "C-u") 'ivy-scroll-down-command)
   (define-key ivy-minibuffer-map (kbd "C-w") 'ivy-scroll-up-command)
@@ -2581,15 +2585,10 @@ Use C-i instead
 #+BEGIN_SRC emacs-lisp
   (use-package exwm)
 
+  (require 'exwm)
   ;; necessary to configure exwm manually
   (require 'exwm-config)
   ;;(exwm-config-ido)
-
-  ;; a number between 1 and 9, exwm creates workspaces dynamically
-  ;;(setq exwm-workspace-number 9)
-
-  ;; Default to release mode
-  ;;(add-hook 'exwm-manage-finish-hook 'exwm-input-release-keyboard) ;; Doesn't work???
 
   ;; Fix magit ediff
   (setq ediff-window-setup-function 'ediff-setup-windows-plain)
@@ -2647,12 +2646,38 @@ Define main function
 
 ** Multi-screen
 #+BEGIN_SRC emacs-lisp
-  (require 'exwm-randr)
+  (defvar my/monitor-amount 1)
 
-  ;;(setq exwm-randr-workspace-output-plist '(0 "DVI-D-1" 1 "DP-1" 2 "DVI-I-1"))
-  ;;(setq exwm-randr-workspace-output-plist '(0 "DP-1" 1 "DVI-D-1"  2 "DVI-I-1"))
+  (if (file-exists-p (concat user-emacs-directory "randr-home"))
+      (progn
+        ;; We need 3 frames to fill up monitors
+        (setq exwm-workspace-number 3)
+        (setq my/monitor-amount 3)
+        (setq exwm-randr-workspace-output-plist '(1 "DVI-D-1" 0 "DP-1" 2 "DVI-I-1"))))
 
-  (exwm-randr-enable)
+  (if (> my/monitor-amount 1)
+      (progn
+        (require 'exwm-randr)
+        (exwm-randr-enable)))
+#+END_SRC
+
+*** Switch monitor (workspace) functions
+#+BEGIN_SRC emacs-lisp
+  ;;(add-hook 'focus-out-hook 'exwm-layout--refresh)
+  (defun my/switch-monitor-left ()
+    (interactive)
+    (if (>= exwm-workspace-current-index (- my/monitor-amount 1))
+        (exwm-workspace-switch-create 0)
+      (exwm-workspace-switch-create (+ exwm-workspace-current-index 1))))
+
+  (defun my/switch-monitor-right ()
+    (interactive)
+    (if (= exwm-workspace-current-index 0)
+        (exwm-workspace-switch-create (- my/monitor-amount 1))
+      (exwm-workspace-switch-create (- exwm-workspace-current-index 1))))
+
+  (define-key my/leader-map (kbd "M-l") 'my/switch-monitor-right)
+  (define-key my/leader-map (kbd "M-h") 'my/switch-monitor-left)
 #+END_SRC
 
 ** Settings
@@ -2661,7 +2686,10 @@ Define main function
   (add-hook 'exwm-mode-hook 'garbage-collect)
 
   (setq exwm-workspace-show-all-buffers t)
-  (setq exwm-layout-show-all-buffers t)
+
+  (setq exwm-workspace-minibuffer-position 'top)
+
+  (add-hook 'exwm-init-hook (lambda () (interactive) (exwm-workspace-attach-minibuffer)))
 #+END_SRC
 
 ** Keys
@@ -3725,12 +3753,13 @@ Mode for writing mail
   (use-package hydra)
 #+END_SRC
 
-** Frame, window and buffer management
+** Window and buffer management
 #+BEGIN_SRC emacs-lisp
-  (defhydra my/window-hydra (:color red
-                                    :pre (setq exwm-input-line-mode-passthrough t)
-                                    :post (setq exwm-input-line-mode-passthrough nil))
-    ;;"window"
+  (defhydra my/window-hydra (:hint nil
+                                   :color red
+                                   :pre (setq exwm-input-line-mode-passthrough t)
+                                   :post (setq exwm-input-line-mode-passthrough nil))
+    "movement"
 
     ;; Move focus
     ("p" my/evil-window-up nil)
@@ -3752,10 +3781,6 @@ Mode for writing mail
     ;; Move left
     ("H" evil-move-far-left nil)
 
-    ;; Rotate window
-    ;;("r" evil-window-rotate-upwards "Rotate window")
-    ;;("r" evil-window-rotate-downwards "Rotate window")
-
     ;; Resize window
     ;; Resize up
     ("C-p" (evil-window-increase-height 10) nil)
@@ -3766,21 +3791,19 @@ Mode for writing mail
     ;; Resize left
     ("C-h" (evil-window-increase-width 10) nil)
 
-    ;; Resize full height
-    ("M-p" evil-window-set-height nil)
-    ("M-n" evil-window-set-height nil)
-    ("M-l" evil-window-set-width nil)
-    ("M-h" evil-window-set-width nil)
-
     ;; Split
     ("o" split-window-horizontally nil)
     ("v" split-window-vertically nil)
 
     ;; Close window
     ("s" my/delete-window nil)
-
     ;; Focus on window
     ("d" my/delete-other-windows nil)
+
+    ;; minimize window
+    ("S" (lambda () (interactive) (evil-window-increase-height 1000) (evil-window-increase-width 1000)) nil)
+    ;; maximize window
+    ("D" (lambda () (interactive) (evil-window-decrease-height 1000) (evil-window-decrease-width 1000)) nil)
 
     ;; Buffer management
     ;; Find file
@@ -3811,9 +3834,9 @@ Mode for writing mail
 
     ;;  ("SPC" my/leader-map nil)
 
-    ;; "cancel"
-    ("r" nil)
-    ("i" nil))
+    ;; Add this to not auto exit insert mode after closing the hydra
+    ;;("<escape>" nil)
+    )
 #+END_SRC
 
 *** Keys
@@ -4012,24 +4035,36 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
     (if (not (eq my/mode-line-alert-status 'normal))
         (progn
           (setq my/mode-line-alert-status 'normal)
-          (set-face-background 'mode-line-inactive my/mode-line-background)
-          (set-face-foreground 'mode-line-inactive my/mode-line-foreground))))
+          (if window-system
+              (progn
+                (set-face-background 'mode-line-inactive my/mode-line-background)
+                (set-face-foreground 'mode-line-inactive my/mode-line-foreground))
+            (set-face-foreground 'mode-line-inactive my/mode-line-background)
+            (set-face-background 'mode-line-inactive my/mode-line-foreground)))))
 
   (defun my/set-mode-line-warning ()
     (interactive)
     (if (not (eq my/mode-line-alert-status 'warning))
         (progn
           (setq my/mode-line-alert-status 'warning)
-          (set-face-background 'mode-line-inactive my/mode-line-warning-background)
-          (set-face-foreground 'mode-line-inactive my/mode-line-warning-foreground))))
+          (if window-system
+              (progn
+                (set-face-background 'mode-line-inactive my/mode-line-warning-background)
+                (set-face-foreground 'mode-line-inactive my/mode-line-warning-foreground))
+            (set-face-foreground 'mode-line-inactive my/mode-line-warning-background)
+            (set-face-background 'mode-line-inactive my/mode-line-warning-foreground)))))
 
   (defun my/set-mode-line-caution ()
-    (interactive)
-    (if (not (eq my/mode-line-alert-status 'caution))
-        (progn
-          (setq my/mode-line-alert-status 'caution)
-          (set-face-background 'mode-line-inactive my/mode-line-caution-background)
-          (set-face-foreground 'mode-line-inactive my/mode-line-caution-foreground))))
+  (interactive)
+  (if (not (eq my/mode-line-alert-status 'caution))
+      (progn
+        (setq my/mode-line-alert-status 'caution)
+        (if window-system
+            (progn
+              (set-face-background 'mode-line-inactive my/mode-line-caution-background)
+              (set-face-foreground 'mode-line-inactive my/mode-line-caution-foreground))
+          (set-face-foreground 'mode-line-inactive my/mode-line-caution-background)
+          (set-face-background 'mode-line-inactive my/mode-line-caution-foreground)))))
 
   (my/set-mode-line-normal)
 
@@ -4100,12 +4135,12 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
 #+BEGIN_SRC emacs-lisp
   (defvar my/mode-line-enable-cpu-temp t)
 
-  (if (not (and
-          ;; If lm_sensors is not installed
-          (my/run-and-is-external-package-installed "sensors")
-          ;; If there aren't any cpu heat sensors (eg. virtual machine)
-          (= 0 (string-match-p ""
-                               (shell-command-to-string "sensors | grep \"Core 0:\"")))))
+  (if (and
+       ;; If lm_sensors is not installed
+       (my/run-and-is-external-package-installed "sensors")
+       ;; If there aren't any cpu heat sensors (eg. virtual machine)
+       (= 0 (string-match-p ""
+                            (shell-command-to-string "sensors | grep \"Core 0:\""))))
       (setq my/mode-line-enable-cpu-temp nil))
 
   (defvar my/cpu-temp "")
@@ -4118,7 +4153,8 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
     (string-match "\+.*C\s" (shell-command-to-string "sensors | grep \"Core 0:\""))
     (setq my/cpu-temp (substring (match-string 0 (shell-command-to-string "sensors | grep \"Core 0:\"")) 0 -3)))
 
-  (run-with-timer 0 60 'my/update-cpu-temp)
+  (if my/mode-line-enable-cpu-temp
+      (run-with-timer 0 60 'my/update-cpu-temp))
 #+END_SRC
 
 **** Disk space
@@ -4394,8 +4430,8 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
                       (:eval (if my/mode-line-enable-network-traffic
                                  (concat
-                                  (my/rx-delta-formatted) " R "
-                                  (my/tx-delta-formatted) " T")))
+                                  my/rx-delta-formatted " R "
+                                  my/tx-delta-formatted " T")))
 
                       (:eval (if my/mode-line-show-GC-stats
                                  (concat
