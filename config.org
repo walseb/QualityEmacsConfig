@@ -4098,7 +4098,7 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
 
 **** CPU heat
 #+BEGIN_SRC emacs-lisp
-  (defvar my/enable-cpu-temp-check t)
+  (defvar my/mode-line-enable-cpu-temp t)
 
   (if (not (and
           ;; If lm_sensors is not installed
@@ -4106,13 +4106,13 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
           ;; If there aren't any cpu heat sensors (eg. virtual machine)
           (= 0 (string-match-p ""
                                (shell-command-to-string "sensors | grep \"Core 0:\"")))))
-      (setq my/enable-cpu-temp-check nil))
+      (setq my/mode-line-enable-cpu-temp nil))
 
   (defvar my/cpu-temp "")
 
   (defun my/update-cpu-temp ()
     (interactive)
-    ;;(if my/enable-cpu-temp-check))
+    ;;(if my/mode-line-enable-cpu-temp))
 
     ;; FIXME emacs regexes are wierd, use position of temp in print insead
     (string-match "\+.*C\s" (shell-command-to-string "sensors | grep \"Core 0:\""))
@@ -4131,6 +4131,13 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
 
 **** Network traffic
 ***** Linux
+#+BEGIN_SRC emacs-lisp
+  (defvar my/mode-line-enable-network-traffic nil)
+
+  (if (file-exists-p "/proc/net/dev")
+      (setq my/mode-line-enable-network-traffic t))
+#+END_SRC
+
 ****** RX
 Received
 #+BEGIN_SRC emacs-lisp
@@ -4148,11 +4155,12 @@ Received
 
   (defun my/linux-update-network-rx-delta ()
     (interactive)
-      (setq my/rx-new (my/linux-get-network-rx))
-      (setq my/rx-delta-formatted (my/file-size-human-readable (- my/rx-new my/rx)))
-      (setq my/rx my/rx-new))
+    (setq my/rx-new (my/linux-get-network-rx))
+    (setq my/rx-delta-formatted (my/file-size-human-readable (- my/rx-new my/rx)))
+    (setq my/rx my/rx-new))
 
-  (run-with-timer 1 60 'my/linux-update-network-rx-delta)
+  (if my/mode-line-enable-network-traffic
+      (run-with-timer 1 60 'my/linux-update-network-rx-delta))
 #+END_SRC
 
 ****** TX
@@ -4173,11 +4181,12 @@ Transmitted
 
   (defun my/linux-update-network-tx-delta ()
     (interactive)
-     (setq my/tx-new (my/linux-get-network-tx))
-     (setq my/tx-delta-formatted (my/file-size-human-readable (- my/tx-new my/tx)))
-     (setq my/tx my/tx-new))
+    (setq my/tx-new (my/linux-get-network-tx))
+    (setq my/tx-delta-formatted  (my/file-size-human-readable (- my/tx-new my/tx)))
+    (setq my/tx my/tx-new))
 
-  (run-with-timer 2 60 'my/linux-update-network-tx-delta)
+  (if my/mode-line-enable-network-traffic
+      (run-with-timer 2 60 'my/linux-update-network-tx-delta))
 #+END_SRC
 
 **** Display total line numbers
@@ -4266,6 +4275,11 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
 **** Ram usage
 #+BEGIN_SRC emacs-lisp
+  (defvar my/mode-line-enable-available-mem nil)
+
+  (if (file-exists-p "/proc/meminfo")
+      (setq my/mode-line-enable-available-mem t))
+
   (defvar my/available-mem "nil")
 
   (defun my/linux-update-available-mem ()
@@ -4279,7 +4293,13 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
       (setq my/available-mem (my/file-size-human-readable (* 1000 (string-to-number (substring my/mem-string (string-match "[0-9]" my/mem-string) -1))) nil t))))
 
-  (run-with-timer 5 60 'my/linux-update-available-mem)
+  (if my/mode-line-enable-available-mem
+      (run-with-timer 5 60 'my/linux-update-available-mem))
+#+END_SRC
+
+**** Org clock
+#+BEGIN_SRC emacs-lisp
+  ;; (defvar org-mode-line-string "")
 #+END_SRC
 
 *** Set mode line color
@@ -4368,14 +4388,14 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                    (format-mode-line
                     (quote
                      (
+                      ;;(:eval (concat "Org:" org-mode-line-string))
                       (:eval (if (boundp 'org-mode-line-string)
                                  (concat "Org:" org-mode-line-string)))
 
-                      (:eval my/rx-delta-formatted)
-                      "RX "
-
-                      (:eval my/tx-delta-formatted)
-                      "TX"
+                      (:eval (if my/mode-line-enable-network-traffic
+                                 (concat
+                                  (my/rx-delta-formatted) " R "
+                                  (my/tx-delta-formatted) " T")))
 
                       (:eval (if my/mode-line-show-GC-stats
                                  (concat
@@ -4383,16 +4403,17 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                                   "(" (number-to-string gcs-done) ")"
                                   )))
 
-                      " | "
-                      "MEM: "
-                      (:eval my/available-mem)
+                      (:eval (if my/mode-line-enable-available-mem
+                                 (concat " | "
+                                         "MEM: "
+                                         my/available-mem)))
 
                       " | "
 
                       "C: "
 
                       (:eval (number-to-string my/load-average))
-                      (:eval (if my/enable-cpu-temp-check
+                      (:eval (if my/mode-line-enable-cpu-temp
                                  (concat " - " my/cpu-temp)))
 
                       (:eval (if (not (eq battery-mode-line-string ""))
