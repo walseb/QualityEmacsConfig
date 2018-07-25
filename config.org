@@ -73,7 +73,7 @@ Set adress in gnus.el
 
 ** FSharp
 *** File is not part of the loaded projects
-Try having the =fsproj= file open in a split buffer, or changing the path to the files/making sure they are correct
+Try having the =fsproj= file open in a buffer or try moving the project folder directly to the home folder
 
 ** Overtone
 *** How to configure jack2 to work with pulse
@@ -1111,9 +1111,9 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
 ** Origami
 #+BEGIN_SRC emacs-lisp
-  (use-package origami)
-
-  (global-origami-mode)
+   (use-package origami)
+ 
+   (global-origami-mode)
 #+END_SRC
 
 *** Visuals
@@ -1780,6 +1780,15 @@ Make file sizes human readable
   (define-key dired-mode-map "Z" 'dired-atool-do-unpack-with-subdirectory)
 #+END_SRC
 
+** Wdired
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/wdired-mode-map)
+  (evil-define-key 'normal wdired-mode-map (kbd (concat my/leader-map-key " a")) 'my/wdired-mode-map)
+
+  (define-key my/wdired-mode-map (kbd "e") 'wdired-finish-edit)
+  (define-key my/wdired-mode-map (kbd "u") 'wdired-abort-changes)
+#+END_SRC
+
 ** Disable rainbow delimiters
 #+BEGIN_SRC emacs-lisp
   (add-hook 'dired-mode-hook 'rainbow-delimiters-mode-disable)
@@ -1831,6 +1840,7 @@ Version 2015-07-30"
   (evil-define-key 'normal dired-mode-map (kbd (concat my/leader-map-key " a")) 'my/dired-mode-map)
 
   (define-key my/dired-mode-map (kbd "t") 'my/toggle-delete-to-trash)
+  (define-key my/dired-mode-map (kbd "e") 'dired-toggle-read-only)
 
   ;; Make dired work good with evil normal mode
   (evil-define-key 'normal dired-mode-map (kbd "i") 'evil-insert)
@@ -1840,6 +1850,11 @@ Version 2015-07-30"
   (evil-define-key 'normal dired-mode-map (kbd "$") 'evil-end-of-line)
   (evil-define-key 'normal dired-mode-map (kbd "G") 'evil-goto-line)
   (evil-define-key 'normal dired-mode-map (kbd "gg") 'evil-goto-first-line)
+  (evil-define-key 'normal dired-mode-map (kbd "y") 'evil-yank)
+  (evil-define-key 'normal dired-mode-map (kbd "v") 'evil-visual-char)
+  (evil-define-key 'normal dired-mode-map (kbd "V") 'evil-visual-line)
+  (evil-define-key 'normal dired-mode-map (kbd "C-v") 'evil-visual-block)
+  
 
   ;; Bind =Backspace= to go up one directory
   (define-key dired-mode-map [?\d] 'dired-up-directory)
@@ -2676,8 +2691,8 @@ Define main function
         (exwm-workspace-switch-create (- my/monitor-amount 1))
       (exwm-workspace-switch-create (- exwm-workspace-current-index 1))))
 
-  (define-key my/leader-map (kbd "M-l") 'my/switch-monitor-right)
-  (define-key my/leader-map (kbd "M-h") 'my/switch-monitor-left)
+  (define-key my/keys-mode-map (kbd "M-l") 'my/switch-monitor-right)
+  (define-key my/keys-mode-map (kbd "M-h") 'my/switch-monitor-left)
 #+END_SRC
 
 ** Settings
@@ -4385,9 +4400,10 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
                       ;; Print current line number
                       ;;"%l"
-                      "%p"
+                      ;;"%p"
+                      (:eval (format "%d" (/ (window-start) 0.01 (point-max))))
 
-                      " ~"
+                      "~"
                       ;;"@" 
                       ;; Print total line number
                       (:eval my/buffer-total-lines)
