@@ -64,6 +64,10 @@ Set adress in gnus.el
 *** Switch Ctrl and Caps
 =xmodmap= =xsession=
 
+*** PDF tools
+=poppler= =poppler-glib=
+M-x =pdf-tools-install=
+
 *** Misc
 =redshift= 
 
@@ -171,6 +175,9 @@ keycode 29 = Caps_Lock # Makes ctrl act as caps
 ** Interesting stuff
 highlight-changes-mode (built in)
 goto-chg (goto last change)
+
+** Color picking
+Get =gpick=
 
 * Package management
 
@@ -334,7 +341,7 @@ Default file-size-human-readable returns decimal values
 
 ** Fonts
 #+BEGIN_SRC emacs-lisp
-  (defvar my/are-fonts-mono nil)
+  (defvar my/is-font-mono nil)
   (defvar my/font nil)
 
   (if (my/font-installed "Open Sans")
@@ -342,16 +349,27 @@ Default file-size-human-readable returns decimal values
     (if (my/font-installed "dejavu sans")
         (setq my/font "DejaVuSans")))
 
-  ;; (if (my/font-installed "Perfect DOS VGA 437")
-      ;; (progn 
-        ;; (setq my/font "Perfect DOS VGA 437")
-        ;; (setq my/are-fonts-mono t))
-    ;; )
-
   (if my/font
       (set-face-attribute 'default nil
                           :family my/font
                           :height 120))
+#+END_SRC
+
+** Mono font
+#+BEGIN_SRC emacs-lisp
+  (defun my/get-best-mono-font ()
+    (if my/is-font-mono
+        my/font
+      (if (my/font-installed "Inconsolata")
+          "Inconsolata"
+        (if (my/font-installed "dejavu sans mono")
+            "DejaVuSansMono"
+          (if (my/font-installed "Noto Sans Mono")
+              "NotoSansMono"
+            (if (my/font-installed "Perfect DOS VGA 437")
+                "Perfect DOS VGA 437"))))))
+
+  (defvar my/mono-font (my/get-best-mono-font))
 #+END_SRC
 
 ** Make sure mode line is disabled before any windows are created
@@ -383,15 +401,16 @@ Default file-size-human-readable returns decimal values
 #+BEGIN_SRC emacs-lisp
   (setq garbage-collection-messages t)
 
-  ;; IRCC 100mb max garbage
-  ;;(setq gc-cons-threshold 100000000)
+  ;; Get 80% of memory
+  (defvar my/emacs-max-ram-usage (floor (* (* (car (memory-info)) 0.8) 1024))
+    "Max ram emacs can use before having to jump ship
+  Is in bytes")
 
-
-  ;; never collect.
-  (setq gc-cons-threshold 2500000000)
+    (if my/emacs-max-ram-usage
+        (setq gc-cons-threshold my/emacs-max-ram-usage))
 
   (defun garbage-collect (&rest args) 
-    (message "Emacs is trying to garbage collect, it's time to abandon ship"))
+    (message "Emacs is trying to garbage collect, it's time to jump ship"))
 #+END_SRC
 
 ** Disable custom
@@ -816,9 +835,10 @@ This swaps capslock and ctrl
 #+END_SRC
 
 ** Install eclipse java language server
-For use with java-lsp
+For use with lsp-java
 #+BEGIN_SRC emacs-lisp
   (defun my/install-eclipse-java-language-server()
+    (interactive)
     (shell-command "
   rm -rf ~/.emacs.d/eclipse.jdt.ls/server/
   mkdir -p ~/.emacs.d/eclipse.jdt.ls/server/
@@ -826,7 +846,7 @@ For use with java-lsp
   tar xf /tmp/jdt-latest.tar -C ~/.emacs.d/eclipse.jdt.ls/server/
   "))
 
-  (define-key my/software-install-map (kbd "j") 'my/install-eclipse-java-lnguage-server)
+  (define-key my/software-install-map (kbd "j") 'my/install-eclipse-java-language-server)
 #+END_SRC
 
 ** Install pdf tools
@@ -837,6 +857,15 @@ For use with java-lsp
 ** Install omnisharp
 #+BEGIN_SRC emacs-lisp
   (define-key my/software-install-map (kbd "o") 'omnisharp-install-server)
+#+END_SRC
+
+** Compile config
+#+BEGIN_SRC emacs-lisp
+  (defun my/compile-config ()
+    (interactive)
+    (byte-compile-file my/config-exported-location nil))
+
+  (define-key my/software-install-map (kbd "C-c") 'my/compile-config)
 #+END_SRC
 
 * Minor
@@ -1045,9 +1074,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
     ;; Paren highlight
     (set-face-attribute 'show-paren-match nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'show-paren-mismatch nil :background "red")
-  
-    )
+    (set-face-attribute 'show-paren-mismatch nil :background "red"))
 
   ;; (counsel-faces)
 
@@ -1296,8 +1323,8 @@ Vim bindings to change fold
   (use-package swiper)
 
   ;;(define-key evil-normal-state-map (kbd "/") 'swiper)
-  ;;(global-set-key (kbd "C-s") 'counsel-grep-or-swiper)
-  (global-set-key (kbd "C-s") 'counsel-grep)
+  (global-set-key (kbd "C-s") 'counsel-grep-or-swiper)
+  ;;(global-set-key (kbd "C-s") 'counsel-grep)
 #+END_SRC
 
 *** Search for thing-at-point
@@ -1479,6 +1506,14 @@ Doesn't work with my setup right now
   (use-package flycheck)
 
   (global-flycheck-mode)
+#+END_SRC
+
+** Flycheck-package
+#+BEGIN_SRC emacs-lisp
+  (use-package flycheck-package)
+
+  (eval-after-load 'flycheck
+    '(flycheck-package-setup))
 #+END_SRC
 
 ** Which-key
@@ -1919,7 +1954,7 @@ Version 2015-07-30"
   (evil-define-key 'normal dired-mode-map (kbd (concat my/leader-map-key " a")) 'my/dired-mode-map)
 
   (define-key my/dired-mode-map (kbd "t") 'my/toggle-delete-to-trash)
-  (define-key my/dired-mode-map (kbd "e") 'dired-toggle-read-only)
+  (define-key my/dired-mode-map (kbd "w") 'dired-toggle-read-only)
   (defun my/image-dired ()
     (interactive)
     (image-dired default-directory))
@@ -1937,7 +1972,6 @@ Version 2015-07-30"
   (evil-define-key 'normal dired-mode-map (kbd "v") 'evil-visual-char)
   (evil-define-key 'normal dired-mode-map (kbd "V") 'evil-visual-line)
   (evil-define-key 'normal dired-mode-map (kbd "C-v") 'evil-visual-block)
-
 
   ;; Bind =Backspace= to go up one directory
   (define-key dired-mode-map [?\d] 'dired-up-directory)
@@ -2090,7 +2124,7 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 ** Export
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/org-export-map)
-  (define-key my/org-mode-map (kbd "C-e") 'my/org-export-map)
+  (define-key my/org-mode-map (kbd "E") 'my/org-export-map)
 #+END_SRC
 
 *** ASCII
@@ -2273,11 +2307,6 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 ** LSP mode
 #+BEGIN_SRC emacs-lisp
   (use-package lsp-mode)
-
-  ;; Requested by lsp java
-  (setq lsp-inhibit-message t)
-  (setq lsp-eldoc-render-all nil)
-  (setq lsp-highlight-symbol-at-point nil)
 #+END_SRC
 
 *** Company LSP
@@ -2294,13 +2323,6 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 *** LSP-ui
 #+BEGIN_SRC emacs-lisp
   (use-package lsp-ui)
-
-  ;; Requested by lsp java
-  (setq lsp-ui-sideline-enable t)
-  (setq lsp-ui-sideline-show-symbol t)
-  (setq lsp-ui-sideline-show-hover t)
-  (setq lsp-ui-sideline-show-code-actions t)
-  (setq lsp-ui-sideline-update-mode 'point)
 #+END_SRC
 
 ** Common lisp
@@ -2385,11 +2407,25 @@ Shows information in echo area
   (add-hook 'java-mode-hook 'lsp-ui-sideline-mode)
 
   ;; set the projects that are going to be imported into the workspace.
-  (setq lsp-java--workspace-folders (list "~/eclipse-workspace/"
-                                          ""))
+  (setq lsp-java--workspace-folders 
+        (list 
+         "~/eclipse-workspace/"
+         "~/workspace"))
 
   (defun my/java-mode ()
-    (aggressive-indent-mode 0))
+    (aggressive-indent-mode 0)
+
+    ;; TODO right now these are permanently set if you start lsp-java mode
+    ;; Taken from lsp-java readme
+    (setq lsp-inhibit-message t)
+    (setq lsp-eldoc-render-all nil)
+    (setq lsp-highlight-symbol-at-point nil)
+
+    (setq lsp-ui-sideline-enable t)
+    (setq lsp-ui-sideline-show-symbol t)
+    (setq lsp-ui-sideline-show-hover t)
+    (setq lsp-ui-sideline-show-code-actions t)
+    (setq lsp-ui-sideline-update-mode 'point))
 
   (add-hook 'java-mode-hook 'my/java-mode)
 #+END_SRC
@@ -2412,13 +2448,13 @@ Shows information in echo area
   (define-prefix-command 'my/java-refractor-map)
   (define-key my/java-mode-map (kbd "R") 'my/java-refractor-map)
 
-  (define-key my/java-mode-map (kbd "c") 'lsp-java-extract-to-constant)
-  (define-key my/java-mode-map (kbd "u") 'lsp-java-add-unimplemented-methods)
-  (define-key my/java-mode-map (kbd "p") 'lsp-java-create-parameter)
-  (define-key my/java-mode-map (kbd "f") 'lsp-java-create-field)
-  (define-key my/java-mode-map (kbd "l") 'lsp-java-create-local)
-  (define-key my/java-mode-map (kbd "m") 'lsp-java-extract-method)
-  (define-key my/java-mode-map (kbd "i") 'lsp-java-add-import)
+  (define-key my/java-refractor-map (kbd "c") 'lsp-java-extract-to-constant)
+  (define-key my/java-refractor-map (kbd "u") 'lsp-java-add-unimplemented-methods)
+  (define-key my/java-refractor-map (kbd "p") 'lsp-java-create-parameter)
+  (define-key my/java-refractor-map (kbd "f") 'lsp-java-create-field)
+  (define-key my/java-refractor-map (kbd "l") 'lsp-java-create-local)
+  (define-key my/java-refractor-map (kbd "m") 'lsp-java-extract-method)
+  (define-key my/java-refractor-map (kbd "i") 'lsp-java-add-import)
 #+END_SRC
 
 ** Python
@@ -3959,6 +3995,106 @@ Mode for writing mail
   (define-key my/spell-map (kbd "c") 'my/toggle-company-ispell)
 #+END_SRC
 
+* Artist mode
+https://www.emacswiki.org/emacs/FacesPerBuffer
+#+BEGIN_SRC emacs-lisp
+  (defvar my/artist-mode-highlight-thing-restore nil)
+  (defvar my/artist-mode-aggressive-indent-restore nil)
+  (defvar my/artist-mode-highlight-indent-restore nil)
+
+  (defun my/artist-mode ()
+    (if (eq major-mode 'picture-mode)
+        (progn
+          (if highlight-thing-mode
+              (progn
+                (highlight-thing-mode -1)
+                (setq my/artist-mode-highlight-thing-restore t))
+            (setq my/artist-mode-highlight-thing-restore nil))
+
+          (if aggressive-indent-mode
+              (progn
+                (aggressive-indent-mode -1)
+                (setq my/artist-mode-aggressive-indent-restore t))
+            (setq my/artist-mode-aggressive-indent-restore nil))
+
+          (if highlight-indent-guides-mode
+              (progn
+                (highlight-indent-guides-mode -1)
+                (setq my/artist-mode-highlight-indent-restore t))
+            (setq my/artist-mode-highlight-indent-restore nil))
+
+          (evil-emacs-state)
+
+          (if (not my/is-font-mono)
+              (set-face-attribute 'default nil
+                                  :family my/mono-font)))
+
+      ;; Turn everything back on
+      (if my/artist-mode-highlight-thing-restore
+          (progn
+            (setq my/artist-mode-highlight-thing-restore nil)
+            (highlight-thing-mode 1)))
+
+      (if my/artist-mode-aggressive-indent-restore
+          (progn
+            (setq my/artist-mode-aggressive-indent-restore nil)
+            (aggressive-indent-mode 1)))
+
+      (if my/artist-mode-highlight-indent-restore
+          (progn
+            (setq my/artist-mode-highlight-indent-restore nil)
+            (highlight-indent-guides-mode 1)))
+
+      (evil-exit-emacs-state)
+      (if (not my/is-font-mono)
+          (set-face-attribute 'default nil
+                              :family my/font))))
+
+  (add-hook 'artist-mode-hook 'my/artist-mode)
+#+END_SRC
+
+** Completing read
+https://www.emacswiki.org/emacs/ArtistMode
+#+BEGIN_SRC emacs-lisp
+  (defun my/artist-select-operation (type)
+    "Use ido to select a drawing operation in artist-mode"
+    (interactive (list (completing-read "Drawing operation: " 
+                                        (list "Pen" "Pen Line" "line" "straight line" "rectangle" 
+                                              "square" "poly-line" "straight poly-line" "ellipse" 
+                                              "circle" "text see-thru" "text-overwrite" "spray-can" 
+                                              "erase char" "erase rectangle" "vaporize line" "vaporize lines" 
+                                              "cut rectangle" "cut square" "copy rectangle" "copy square" 
+                                              "paste" "flood-fill"))))
+    (artist-select-operation type))
+
+  (defun my/artist-select-settings (type)
+    "Use ido to select a setting to change in artist-mode"
+    (interactive (list (completing-read "Setting: " 
+                                        (list "Set Fill" "Set Line" "Set Erase" "Spray-size" "Spray-chars" 
+                                              "Rubber-banding" "Trimming" "Borders"))))
+    (if (equal type "Spray-size") 
+        (artist-select-operation "spray set size")
+      (call-interactively (artist-fc-get-fn-from-symbol 
+                           (cdr (assoc type '(("Set Fill" . set-fill)
+                                              ("Set Line" . set-line)
+                                              ("Set Erase" . set-erase)
+                                              ("Rubber-banding" . rubber-band)
+                                              ("Trimming" . trimming)
+                                              ("Borders" . borders)
+                                              ("Spray-chars" . spray-chars))))))))
+#+END_SRC
+
+** Keys
+#+BEGIN_SRC emacs-lisp
+  (define-key my/leader-map (kbd "A") 'artist-mode)
+
+  (define-prefix-command 'my/artist-mode-map)
+  (evil-define-key 'normal artist-mode-map (kbd (concat my/leader-map-key " a")) 'my/artist-mode-map)
+
+  (define-key my/artist-mode-map (kbd "o") 'my/artist-select-operation)
+  (define-key my/artist-mode-map (kbd "s") 'my/artist-select-settings)
+#+END_SRC
+
 * Hydra
 #+BEGIN_SRC emacs-lisp
   (use-package hydra)
@@ -4038,8 +4174,8 @@ Mode for writing mail
     ("k" kill-current-buffer nil)
 
     ;; Move around in buffer
-    ("C-u" evil-scroll-up nil)
-    ("C-w" evil-scroll-down nil)
+    ("C-u" View-scroll-half-page-backward nil)
+    ("C-w" View-scroll-half-page-forward nil)
 
     ("f" counsel-M-x nil)
     ("y" counsel-linux-app nil)
@@ -4084,27 +4220,43 @@ Mode for writing mail
   ;; Enable pdf-links
   (add-hook 'pdf-view-mode-hook 'pdf-links-minor-mode)
 
-  (add-hook 'pdf-view-mode-hook  (lambda () (interactive) (my/keys-mode-turn-off)))
-  (evil-define-key 'normal pdf-view-mode-map (kbd "g g") 'pdf-view-first-page)
-  (evil-define-key 'normal pdf-view-mode-map (kbd "G") 'pdf-view-last-page)
-  (evil-define-key 'normal pdf-view-mode-map (kbd "C-u") 'pdf-view-scroll-down-or-previous-page)
-  (evil-define-key 'normal pdf-view-mode-map (kbd "C-w") 'pdf-view-scroll-up-or-next-page)
-  (evil-define-key 'normal pdf-view-mode-map (kbd "C-s") 'isearch-forward)
-  (evil-define-key 'normal pdf-view-mode-map (kbd "M-s") 'isearch-backward)
+  ;; Remove default keys
+  (setq pdf-view-mode-map (make-sparse-keymap))
+#+END_SRC
+
+*** Keys
+#+BEGIN_SRC emacs-lisp
+  ;; Scroll half page
+  (define-key pdf-view-mode-map [remap View-scroll-half-page-backward] 'pdf-view-scroll-down-or-previous-page)
+  (define-key pdf-view-mode-map [remap View-scroll-half-page-forward] 'pdf-view-scroll-up-or-next-page)
+  ;; goto
+  (define-key pdf-view-mode-map [remap evil-goto-first-line] 'pdf-view-first-page)
+  ;; (kbd "G") = (evil-goto-line LAST-LINE)
+  (define-key pdf-view-mode-map [remap evil-goto-line] 'pdf-view-last-page)
+  ;; search
+  (define-key pdf-view-mode-map [remap counsel-grep-or-swiper] 'isearch-forward)
+  (define-key pdf-view-mode-map [remap swiper] 'isearch-forward)
+  (define-key pdf-view-mode-map [remap counsel-grep] 'isearch-forward)
+
+  ;; Movement
+  (define-key pdf-view-mode-map [remap evil-next-line] '(lambda () (interactive) (image-next-line 8)))
+  (define-key pdf-view-mode-map [remap evil-previous-line] '(lambda () (interactive) (image-previous-line 8)))
+
+  (define-key pdf-view-mode-map [remap evil-forward-char] '(lambda () (interactive) (image-forward-hscroll 8)))
+  (define-key pdf-view-mode-map [remap evil-backward-char] '(lambda () (interactive) (image-backward-hscroll 8)))
+
+  ;; Disable other modes
+  (evil-define-key 'normal pdf-view-mode-map (kbd "i") 'nil)
+  (evil-define-key 'normal pdf-view-mode-map (kbd "v") 'nil)
+  (evil-define-key 'normal pdf-view-mode-map (kbd "R") 'nil)
+
+  ;; Zoom
   (evil-define-key 'normal pdf-view-mode-map (kbd "-") 'pdf-view-shrink)
   (evil-define-key 'normal pdf-view-mode-map (kbd "=") 'pdf-view-enlarge)
   (evil-define-key 'normal pdf-view-mode-map (kbd "_") 'pdf-view-scale-reset)
   (evil-define-key 'normal pdf-view-mode-map (kbd "+") 'pdf-view-scale-reset)
-  (evil-define-key 'normal pdf-view-mode-map (kbd "n") '(lambda () (interactive) (image-next-line 8)))
-  (evil-define-key 'normal pdf-view-mode-map (kbd "p") '(lambda () (interactive) (image-previous-line 8)))
-  (evil-define-key 'normal pdf-view-mode-map (kbd "h") '(lambda () (interactive) (image-backward-hscroll 8)))
-  (evil-define-key 'normal pdf-view-mode-map (kbd "l") '(lambda () (interactive) (image-forward-hscroll 8)))
 
-  (evil-define-key 'normal pdf-view-mode-map (kbd "i") 'nil)
-  (evil-define-key 'normal pdf-view-mode-map (kbd "v") 'nil)
-
-  ;;(evil-define-key 'normal pdf-view-mode-map (kbd my/leader-map-key) 'my/leader-map)
-
+  ;; Add to leader map
   (define-prefix-command 'my/pdf-view-mode-map)
   (evil-define-key 'normal pdf-view-mode-map (kbd (concat my/leader-map-key " a")) 'my/pdf-view-mode-map)
 
@@ -4113,9 +4265,6 @@ Mode for writing mail
   (define-key my/pdf-view-mode-map (kbd "n") 'pdf-view-midnight-minor-mode)
   (define-key my/pdf-view-mode-map (kbd "g") 'pdf-view-goto-label)
   (define-key my/pdf-view-mode-map (kbd "i") 'pdf-view-extract-region-image)
-
-  ;; Temp fix
-  ;;(evil-define-key 'normal my/keys-mode-map (kbd my/window-leader-key) 'my/window-hydra/body)
 #+END_SRC
 
 ** Image mode
@@ -4135,7 +4284,6 @@ Mode for writing mail
   (evil-define-key 'normal image-mode-map (kbd "h") '(lambda () (interactive) (image-backward-hscroll 8)))
   (evil-define-key 'normal image-mode-map (kbd "l") '(lambda () (interactive) (image-forward-hscroll 8)))
 #+END_SRC
-
 
 * Visuals
 ** Indicate empty lines
@@ -4420,12 +4568,12 @@ Use lv-line to create a mode line on the top of the screen
 #+BEGIN_SRC emacs-lisp
   (defvar my/mode-line-enable-cpu-temp t)
 
-  (if (not (and
+  (if (and
        ;; If lm_sensors is not installed
        (my/run-and-is-external-package-installed "sensors")
        ;; If there aren't any cpu heat sensors (eg. virtual machine)
        (= 0 (string-match-p ""
-                            (shell-command-to-string "sensors | grep \"Core 0:\"")))))
+                            (shell-command-to-string "sensors | grep \"Core 0:\""))))
       (setq my/mode-line-enable-cpu-temp nil))
 
   (defvar my/cpu-temp "")
@@ -4609,7 +4757,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
   (if (file-exists-p "/proc/meminfo")
       (setq my/mode-line-enable-available-mem t))
 
-  (defvar my/available-mem "nil")
+  (defvar my/available-mem-formatted "nil")
 
   (defun my/linux-update-available-mem ()
     (interactive)
@@ -4620,7 +4768,8 @@ When projectile-mode is on, project name is updated on every keypress, here it i
       (string-match "MemAvailable:.*\s" my/mem-string)
       (setq my/mem-string (match-string 0 my/mem-string))
 
-      (setq my/available-mem (my/file-size-human-readable (* 1000 (string-to-number (substring my/mem-string (string-match "[0-9]" my/mem-string) -1))) nil t))))
+      (let* (( my/available-mem (string-to-number (substring my/mem-string (string-match "[0-9]" my/mem-string) -1))))
+        (setq my/available-mem-formatted (my/file-size-human-readable (* 1000 my/available-mem) nil t)))))
 
   (if my/mode-line-enable-available-mem
       (run-with-timer 5 60 'my/linux-update-available-mem))
@@ -4755,7 +4904,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
   ;; (format (format "%%s %%%ds" available-width) left right)))
 
   ;;mode-line-format
-  (setq-default lv-line-format
+  (setq-default minibuffer-line-format 
                 (quote
                  (
                   ;; Print error if any
@@ -4813,9 +4962,10 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                                 my/projectile-project-name
                                 "]"))))
 
-                  )))
+                  (:eval (if memory-full
+                             "GC FULL! JUMP SHIP!")))))
 
-  (setq-default minibuffer-line-format
+  (setq-default lv-line-format
                 (quote
                  (
                   (:eval my/date)
@@ -4857,7 +5007,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
                   (:eval (if my/mode-line-enable-available-mem
                              (concat "MEM: "
-                                     my/available-mem
+                                     my/available-mem-formatted
                                      " | ")))
 
                   (:eval (if my/mode-line-enable-network-traffic
@@ -4882,23 +5032,32 @@ t as last parameter because the mode line should always be updated last, after a
 
   (add-hook 'exwm-init-hook (lambda () (interactive)
                               (lv-line-create)
-                              (add-hook 'post-command-hook 'lv-line--update t)
-                              (add-hook 'my/switch-buffer-hook 'lv-line--update t)))
+                              (lv-line--update)
+                              (run-with-timer 6 60 'lv-line--update)))
+                              ;; (add-hook 'post-command-hook 'lv-line--update t)
+                              ;; (add-hook 'my/switch-buffer-hook 'lv-line--update t)
+
 
   ;; (lv-line-create)
   ;; (add-hook 'post-command-hook 'lv-line--update t)
   ;; (add-hook 'my/switch-buffer-hook 'lv-line--update t)
   ;; 
-   ;; (add-hook 'exwm-init-hook (lambda () (interactive) (run-with-timer 1 nil (lambda () (interactive)
-                                                                       ;; (lv-line-create)
-                                                                       ;; (add-hook 'post-command-hook 'lv-line--update t)
-                                                                       ;; (add-hook 'my/switch-buffer-hook 'lv-line--update t)))))
+  ;; (add-hook 'exwm-init-hook (lambda () (interactive) (run-with-timer 1 nil (lambda () (interactive)
+  ;; (lv-line-create)
+  ;; (add-hook 'post-command-hook 'lv-line--update t)
+  ;; (add-hook 'my/switch-buffer-hook 'lv-line--update t)))))
 
   ;;(setq minibuffer-line-refresh-interval 1)
-  ;;(run-with-timer 0 1 'minibuffer-line--update)
 #+END_SRC
 
 *** Visuals
+Set mode line font
+#+BEGIN_SRC emacs-lisp
+  ;; (set-face-attribute 'minibuffer-line nil
+                      ;; :background "#000000"
+                      ;; :family my/mono-font))
+#+END_SRC
+
 **** Modeline colering
 #+BEGIN_SRC emacs-lisp
   ;; (defvar my/mode-line-background (face-attribute 'default :background))
@@ -4988,28 +5147,6 @@ t as last parameter because the mode line should always be updated last, after a
   (run-with-timer 1 1 'my/update-mode-line-color)
 #+END_SRC
 
-**** Fonts
-#+BEGIN_SRC emacs-lisp
-  ;; This is really only useful if doing a split mode line, disable this for now
-  (setq my/are-fonts-mono t)
-
-  (defvar my/modeline-font nil)
-  (if my/are-fonts-mono
-      (setq my/modeline-font my/font)
-
-    (if (my/font-installed "Inconsolata")
-        (setq my/modeline-font "Inconsolata")
-      (if (my/font-installed "dejavu sans mono")
-          (setq my/modeline-font "DejaVuSansMono")
-        (if (my/font-installed "Noto Sans Mono")
-            (setq my/modeline-font "NotoSansMono")))))
-
-  (if my/modeline-font
-      (set-face-attribute 'minibuffer-line nil
-                          :background "#000000"
-                          :family my/modeline-font))
-#+END_SRC
-
 * Private config
 ** Function
 #+BEGIN_SRC emacs-lisp
@@ -5023,3 +5160,4 @@ t as last parameter because the mode line should always be updated last, after a
 #+BEGIN_SRC emacs-lisp
 ;;(my/load-if-exists "~/.emacs.d/spotify.el")
 #+END_SRC
+
