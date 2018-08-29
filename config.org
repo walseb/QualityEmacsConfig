@@ -329,30 +329,40 @@ Default file-size-human-readable returns decimal values
               (if (eq flavor 'iec) "iB" ""))))
 #+END_SRC
 
+** Set font
+#+BEGIN_SRC emacs-lisp
+  (defun my/set-font(font)
+    (set-face-attribute 'default nil
+                        :family font
+                        :height 120))
+#+END_SRC
 * Theme
 #+BEGIN_SRC emacs-lisp
-  (when window-system
-    (use-package twilight-anti-bright-theme)
-    (load-theme 'twilight-anti-bright t))
+  ;; (when window-system
+    ;; (use-package twilight-anti-bright-theme)
+    ;; (load-theme 'twilight-anti-bright t))
 
   (when (not window-system)
     (load-theme 'wheatgrass t))
 #+END_SRC
 
 ** Fonts
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC emacs-lisp  
   (defvar my/is-font-mono nil)
   (defvar my/font nil)
+  (defvar my/font-raw nil)
 
   (if (my/font-installed "Open Sans")
-      (setq my/font "opensans")
+      (progn
+        (setq my/font-raw "Open Sans")
+        (setq my/font "opensans"))
     (if (my/font-installed "dejavu sans")
-        (setq my/font "DejaVuSans")))
+        (progn
+          (setq my/font-raw "dejavu sans")
+          (setq my/font "DejaVuSans"))))
 
   (if my/font
-      (set-face-attribute 'default nil
-                          :family my/font
-                          :height 120))
+      (my/set-font my/font))
 #+END_SRC
 
 ** Mono font
@@ -374,8 +384,8 @@ Default file-size-human-readable returns decimal values
 
 ** Make sure mode line is disabled before any windows are created
 #+BEGIN_SRC emacs-lisp
- (setq mode-line-format nil)
- (setq-default mode-line-format nil)
+ (setq mode-line-format "")
+ (setq-default mode-line-format "")
 #+END_SRC
 
 * Startup processes
@@ -477,7 +487,7 @@ https://www.emacswiki.org/emacs/ForceBackups
         (delete-file file))))
 #+END_SRC
 
-*** Delete per-session backups on startup
+** Delete per-session backups on startup
 #+BEGIN_SRC emacs-lisp
   (shell-command (concat "rm " my/backup-per-session-directory "*" ))
 #+END_SRC
@@ -601,7 +611,7 @@ Example
   (cl-loop for (mode . state) in '(
                                    ;; So i C-leader works for exwm windows
                                    (exwm-mode . emacs)
-                                   (eshell-mode . insert)
+                                   ;;(eshell-mode . insert)
                                    (term-mode . insert)
                                    ;;(org-agenda-mode . insert)
                                    (magit-popup-mode . insert)
@@ -624,19 +634,58 @@ Example
 (setq sentence-end-double-space nil)
 #+END_SRC
 
+** Text objects
+*** Evil-indent-plus
+Allows for using indention as text objects
+#+BEGIN_SRC emacs-lisp
+  (use-package evil-indent-plus)
+
+  (define-key evil-inner-text-objects-map "i" 'evil-indent-plus-i-indent)
+  (define-key evil-outer-text-objects-map "i" 'evil-indent-plus-a-indent)
+  (define-key evil-inner-text-objects-map "I" 'evil-indent-plus-i-indent-up)
+  (define-key evil-outer-text-objects-map "I" 'evil-indent-plus-a-indent-up)
+  (define-key evil-inner-text-objects-map "C-i" 'evil-indent-plus-i-indent-up-down)
+  (define-key evil-outer-text-objects-map "C-i" 'evil-indent-plus-a-indent-up-down)
+#+END_SRC
+
+*** Evil textobject block
+#+BEGIN_SRC emacs-lisp
+  (use-package evil-textobj-anyblock)
+
+  (define-key evil-inner-text-objects-map "b" 'evil-textobj-anyblock-inner-block)
+  (define-key evil-outer-text-objects-map "b" 'evil-textobj-anyblock-a-block)
+
+  (define-key evil-motion-state-map "!" 'evil-textobj-anyblock-forward-open-block-start)
+
+  ;; (add-hook 'lisp-mode-hook
+  ;; (lambda ()
+  ;; (setq-local evil-textobj-anyblock-blocks
+  ;; '(("(" . ")")
+  ;; ("{" . "}")
+  ;; ("\\[" . "\\]")
+  ;; ("\"" . "\"")))))
+#+END_SRC
+
+*** Evil-surround
+#+BEGIN_SRC emacs-lisp
+  (use-package evil-surround)
+  (global-evil-surround-mode 1)
+#+END_SRC
+
+*** Evil-args
+#+BEGIN_SRC emacs-lisp
+  (use-package evil-args)
+
+  ;; bind evil-args text objects
+  (define-key evil-inner-text-objects-map "a" 'evil-inner-arg)
+  (define-key evil-outer-text-objects-map "a" 'evil-outer-arg)
+#+END_SRC
+
 ** Evil-lion
 #+BEGIN_SRC emacs-lisp
   ;;(use-package evil-lion)
 
   ;;(evil-lion-mode)
-#+END_SRC
-
-** Evil-indent-plus
-Allows for using indention as text objects
-#+BEGIN_SRC emacs-lisp
-  (use-package evil-indent-plus)
-
-  (evil-indent-plus-default-bindings)
 #+END_SRC
 
 ** Evil-goggles
@@ -656,26 +705,26 @@ Allows for using indention as text objects
   (global-evil-matchit-mode 1)
 #+END_SRC
 
-** Evil-surround
+** Evil-multiple cursors
 #+BEGIN_SRC emacs-lisp
-  (use-package evil-surround)
-  (global-evil-surround-mode 1)
-#+END_SRC
+  (use-package evil-mc)
 
-** Evil-args
-#+BEGIN_SRC emacs-lisp
-  (use-package evil-args)
+  (global-evil-mc-mode 1)
 
-  ;; bind evil-args text objects
-  (define-key evil-inner-text-objects-map "a" 'evil-inner-arg)
-  (define-key evil-outer-text-objects-map "a" 'evil-outer-arg)
-#+END_SRC
+  (define-prefix-command 'my/evil-mc-map)
+  (define-key evil-normal-state-map (kbd "m") 'my/evil-mc-map)
+  (define-key evil-visual-state-map (kbd "m") 'my/evil-mc-map)
 
-** Evil-visual-mark-mode
-Replaced by bookmarks??
-#+BEGIN_SRC emacs-lisp
-  ;; (use-package evil-visual-mark-mode)
-  ;; (evil-visual-mark-mode)
+  (define-key my/evil-mc-map (kbd "d") 'evil-mc-undo-all-cursors)
+  (define-key my/evil-mc-map (kbd "v") 'evil-mc-make-cursor-here)
+  (define-key my/evil-mc-map (kbd "V") 'evil-mc-make-all-cursors)
+  (define-key my/evil-mc-map (kbd "s") 'evil-mc-pause-cursors)
+  (define-key my/evil-mc-map (kbd "S") 'evil-mc-resume-cursors)
+  (define-key my/evil-mc-map (kbd "n") 'evil-mc-make-and-goto-next-cursor)
+  (define-key my/evil-mc-map (kbd "p") 'evil-mc-make-and-goto-prev-cursor)
+
+  (define-key my/evil-mc-map (kbd "g g") 'evil-mc-make-and-goto-first-cursor)
+  (define-key my/evil-mc-map (kbd "G") 'evil-mc-make-and-goto-last-cursor)
 #+END_SRC
 
 * Leader
@@ -694,13 +743,13 @@ When changing leader, change =my/leader-map-key= and manually change all general
 
   (define-key my/leader-map (kbd "u") 'undo-tree-visualize)
 
-  (evil-define-key 'normal my/keys-mode-map (kbd my/leader-map-key) 'my/leader-map)
-  (evil-define-key 'motion my/keys-mode-map (kbd my/leader-map-key) 'my/leader-map)
-  (evil-define-key 'visual my/keys-mode-map (kbd my/leader-map-key) 'my/leader-map)
+   (evil-define-key 'normal my/keys-mode-map (kbd my/leader-map-key) 'my/leader-map)
+   (evil-define-key 'motion my/keys-mode-map (kbd my/leader-map-key) 'my/leader-map)
+   (evil-define-key 'visual my/keys-mode-map (kbd my/leader-map-key) 'my/leader-map)
 
   ;; Enable leader even if my/keys-mode isn't active
-  (define-key evil-motion-state-map (kbd my/leader-map-key) 'my/leader-map)
-  (define-key evil-normal-state-map (kbd my/leader-map-key) 'my/leader-map)
+   (define-key evil-motion-state-map (kbd my/leader-map-key) 'my/leader-map)
+   (define-key evil-normal-state-map (kbd my/leader-map-key) 'my/leader-map)
 #+END_SRC
 
 * Write config map
@@ -901,6 +950,11 @@ Disable startup message
   (global-visual-line-mode t)
 
   (define-key my/leader-map (kbd "C-v") 'visual-line-mode)
+
+#+END_SRC
+*** Fringe indicators of wrapped line
+#+BEGIN_SRC emacs-lisp
+  (setq visual-line-fringe-indicators '(right-triangle nil))
 #+END_SRC
 
 ** Disable useless functionallity
@@ -992,29 +1046,51 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (cl-loop for face in (face-list) do
              (set-face-attribute face nil :foreground nil :background nil))
 
-    (setq my/foreground-color "orange")
-    (setq my/background-color "black")
+
+    ;;(setq my/foreground-color "#8b4513")
+    ;;(setq my/foreground-color "brown")
+    ;;(setq my/background-color "black")
 
     ;; (setq  my/background-color "#2a1f1f")
     ;; (setq my/foreground-color "#d15120")
 
-    ;; (setq my/foreground-color "black")
-    ;; (setq my/background-color "white") 
+    ;; Night theme
+    (setq my/foreground-color "gray")
+    (setq my/background-color "#14191F")
+
+    ;; Day theme
+    (setq my/third-color "orange")
+    (setq my/mark-color "yellow4")
+    ;;(setq my/foreground-color "black")
+    ;;(setq my/background-color "#4682b4") 
+    ;;(setq my/background-color "#87cefa") 
 
     ;;; Emacs
     (set-face-attribute 'default nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'cursor nil :foreground my/background-color :background my/foreground-color)
     (set-face-attribute 'link nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'highlight nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'region nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'highlight nil :foreground my/foreground-color :background my/mark-color)
+    (set-face-attribute 'region nil :foreground my/foreground-color :background my/mark-color)
+    (set-face-attribute 'error nil :foreground "#c6350b" :background)
+    (set-face-attribute 'warning nil :foreground "DarkOrange" :background)
 
+    (set-face-attribute  'font-lock-doc-face nil :foreground my/third-color :background my/foreground-color)
+
+
+    ;; Hl current line
+    ;; Underlines part of current line
+    ;;(set-face-attribute 'hl-line nil :foreground my/foreground-color :background nil :underline t)
+    (set-face-attribute 'hl-line nil :foreground my/foreground-color :background (color-lighten-name my/background-color 10) :underline nil)
+
+    ;;; Dired
+    (set-face-attribute 'dired-directory nil :foreground my/background-color :background my/foreground-color)
 
     ;;; Isearch
     (set-face-attribute 'isearch nil :foreground my/background-color :background my/foreground-color)
     (set-face-attribute 'lazy-highlight nil :foreground my/background-color :background my/foreground-color)
 
     ;;; Highlight thing
-    (set-face-attribute 'highlight-thing nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'highlight-thing nil :foreground my/foreground-color :background my/mark-color)
+
 
     ;;; Company
     (set-face-attribute 'company-scrollbar-bg nil :background my/background-color)
@@ -1074,7 +1150,21 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
     ;; Paren highlight
     (set-face-attribute 'show-paren-match nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'show-paren-mismatch nil :background "red"))
+    (set-face-attribute 'show-paren-mismatch nil :background "red")
+
+    ;; Mode line separator
+    ;; Set mode line height
+    (set-face-attribute 'mode-line nil
+                        :foreground my/foreground-color
+                        :background my/foreground-color
+                        :height  0.1)
+
+    (set-face-attribute 'mode-line-inactive nil
+                        :foreground my/foreground-color
+                        :background my/foreground-color
+                        :height  0.1)
+    )
+
 
   ;; (counsel-faces)
 
@@ -1108,6 +1198,31 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (define-key my/leader-map (kbd "=") '(lambda () (interactive) (text-scale-increase 1)))
 #+END_SRC
 
+** Toggle mono-font
+#+BEGIN_SRC emacs-lisp
+  ;;(font-get "opensans" :spacing)
+  (defun my/toggle-mono-font()
+    (interactive)
+    (if (not my/is-font-mono)
+        (if  (string= (face-attribute 'default :family) my/font-raw)
+            (my/set-font my/mono-font)
+          (my/set-font my/font))))
+
+  (define-key my/leader-map (kbd "C-f") 'my/toggle-mono-font)
+#+END_SRC
+
+*** Toggle local mono font
+#+BEGIN_SRC emacs-lisp
+  (defun my/toggle-local-mono-font()
+    (interactive)
+    (if (not my/is-font-mono)
+        (if  (string= (face-attribute 'default :family) my/font-raw)
+            (face-remap-add-relative 'default :family my/mono-font)
+          (face-remap-add-relative 'default :family my/font-raw))))
+
+  (define-key my/leader-map (kbd "M-f") 'my/toggle-local-mono-font)
+#+END_SRC
+
 * Visit file hotkeys
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/open-map)
@@ -1125,6 +1240,23 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (run-hooks 'my/open-map-hook))
 
   (define-key my/open-map (kbd "s") 'my/switch-to-scratch)
+#+END_SRC
+
+** Backup
+#+BEGIN_SRC emacs-lisp
+  (defun my/backups-visit ()
+    (interactive)
+    (find-file (expand-file-name (concat user-emacs-directory "backups")))
+    (run-hooks 'my/open-map-hook))
+
+  (defun my/backups-per-session-visit ()
+    (interactive)
+    (find-file (expand-file-name (concat user-emacs-directory "backups/per-session")))
+    (run-hooks 'my/open-map-hook))
+
+
+  (define-key my/open-map (kbd "b") 'my/backups-per-session-visit)
+  (define-key my/open-map (kbd "B") 'my/backups-visit)
 #+END_SRC
 
 ** Visit config
@@ -1277,7 +1409,7 @@ Vim bindings to change fold
 
   (global-set-key (kbd "M-k") 'counsel-yank-pop)
 
-  (define-key my/leader-map (kbd "m") 'counsel-mark-ring)
+  (define-key my/leader-map (kbd "C-a") 'counsel-mark-ring)
 
   (define-key my/help-map (kbd "C-c") 'counsel-colors-emacs)
   (define-key my/help-map (kbd "C") 'counsel-colors-web)
@@ -1342,10 +1474,36 @@ Vim bindings to change fold
 ** Ivy rich
 #+BEGIN_SRC emacs-lisp
   (use-package ivy-rich)
+  (ivy-rich-mode 1)
 
-  (ivy-set-display-transformer 'ivy-switch-buffer 'ivy-rich-switch-buffer-transformer)
-  (setq ivy-rich-path-style 'abbrev)
-  ;; TODO 
+  ;;(ivy-set-display-transformer 'ivy-switch-buffer 'ivy-switch-buffer)
+  ;;(setq ivy-rich-path-style 'abbrev)
+  '(ivy-switch-buffer
+  (:columns
+   ((ivy-rich-candidate (:width 30))  ; return the candidate itself
+    (ivy-rich-switch-buffer-size (:width 7))  ; return the buffer size
+    (ivy-rich-switch-buffer-indicators (:width 4 :face error :align right)); return the buffer indicators
+    (ivy-rich-switch-buffer-major-mode (:width 12 :face warning))          ; return the major mode info
+    (ivy-rich-switch-buffer-project (:width 15 :face success))             ; return project name using `projectile'
+    (ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))))))  ; return file path relative to project root or `default-directory' if project is nil
+   :predicate
+   (lambda (cand) (get-buffer cand)))
+  counsel-M-x
+  (:columns
+   ((counsel-M-x-transformer (:width 40))  ; thr original transfomer
+    (ivy-rich-counsel-function-docstring (:face font-lock-doc-face))))  ; return the docstring of the command
+  counsel-describe-function
+  (:columns
+   ((counsel-describe-function-transformer (:width 40))  ; the original transformer
+    (ivy-rich-counsel-function-docstring (:face font-lock-doc-face))))  ; return the docstring of the function
+  counsel-describe-variable
+  (:columns
+   ((counsel-describe-variable-transformer (:width 40))  ; the original transformer
+    (ivy-rich-counsel-variable-docstring (:face font-lock-doc-face))))  ; return the docstring of the variable
+  counsel-recentf
+  (:columns
+   ((ivy-rich-candidate (:width 0.8)) ; return the candidate itself
+    (ivy-rich-file-last-modified-time (:face font-lock-comment-face))))) ; return the last modified time of the file
 #+END_SRC
 
 ** Company
@@ -1655,20 +1813,23 @@ Doesn't work with my setup right now
 
 ** View
 #+BEGIN_SRC emacs-lisp
-(require 'view)
+  (require 'view)
 
-(evil-define-key 'motion my/keys-mode-map (kbd "C-u") 'View-scroll-half-page-backward)
-(evil-define-key 'motion my/keys-mode-map (kbd "C-w") 'View-scroll-half-page-forward)
+  (evil-define-key 'normal my/keys-mode-map (kbd "C-u") 'View-scroll-half-page-backward)
+  (evil-define-key 'normal my/keys-mode-map (kbd "C-w") 'View-scroll-half-page-forward)
 
-(evil-define-key 'insert my/keys-mode-map (kbd "C-u") '(lambda () (interactive) (evil-normal-state) (View-scroll-half-page-backward)))
-(evil-define-key 'insert my/keys-mode-map (kbd "C-w") '(lambda () (interactive) (evil-normal-state) (View-scroll-half-page-forward)))
+  (evil-define-key 'visual my/keys-mode-map (kbd "C-u") 'evil-scroll-up)
+  (evil-define-key 'visual my/keys-mode-map (kbd "C-w") 'evil-scroll-down)
+
+  (evil-define-key 'insert my/keys-mode-map (kbd "C-u") '(lambda () (interactive) (evil-normal-state) (View-scroll-half-page-backward)))
+  (evil-define-key 'insert my/keys-mode-map (kbd "C-w") '(lambda () (interactive) (evil-normal-state) (View-scroll-half-page-forward)))
 #+END_SRC
 
 ** Jammer
 #+BEGIN_SRC emacs-lisp
   (use-package jammer)
 
-  (setq jammer-repeat-delay 1)
+  (setq jammer-repeat-delay 0.5)
   (setq jammer-repeat-window 1)
 
   (setq jammer-type 'repeat)
@@ -1676,14 +1837,18 @@ Doesn't work with my setup right now
   (setq jammer-block-list '(
                             ;; Backward/forward
                             evil-backward-char evil-forward-char evil-previous-line evil-next-line previous-line next-line
-                                               ;; Dired
-                                               dired-next-line dired-previous-line
+                            ;; Dired
+                            dired-next-line dired-previous-line
 
 
 
-                                               ;; WORD movements
-                                               evil-forward-word evil-forward-word-begin evil-forward-word-end
-                                               evil-backward-word-begin evil-backward-word-end))
+                            ;; word movements
+                            evil-forward-word evil-forward-word-begin evil-forward-word-end evil-backward-word-begin
+
+                            ;; WORD movements
+                            evil-forward-WORD evil-forward-WORD-begin evil-forward-WORD-end evil-backward-WORD-begin
+
+                            evil-backward-word-begin evil-backward-word-end))
   (jammer-mode)
 #+END_SRC
 
@@ -1773,40 +1938,12 @@ g-; and g-,
 #+END_SRC
 
 * Window and buffer settings
-** Switch window hook
+** Delete other windows
 #+BEGIN_SRC emacs-lisp
-  (defvar my/switch-window-hook nil
-    "Hook called after user has switched window")
-
-  (defun my/evil-window-up ()
-    (interactive)
-    (evil-window-up 1)
-    (run-hooks 'my/switch-window-hook))
-
-  (defun my/evil-window-down ()
-    (interactive)
-    (evil-window-down 1)
-    (run-hooks 'my/switch-window-hook))
-
-  (defun my/evil-window-left ()
-    (interactive)
-    (evil-window-left 1)
-    (run-hooks 'my/switch-window-hook))
-
-  (defun my/evil-window-right ()
-    (interactive)
-    (evil-window-right 1)
-    (run-hooks 'my/switch-window-hook))
-
-  (defun my/delete-window()
-    (interactive)
-    (delete-window)
-    (run-hooks 'my/switch-window-hook))
-
   (defun my/delete-other-windows()
     (interactive)
     (delete-other-windows)
-    (run-hooks 'my/switch-window-hook))
+    (my/lv-line-create))
 #+END_SRC
 
 ** Switch buffer hook
@@ -1862,6 +1999,12 @@ Just unbind C-x b
 * Dired
 #+BEGIN_SRC emacs-lisp
   (require 'dired)
+
+  (defun my/dired-mode ()
+    (rainbow-delimiters-mode-disable)
+    (dired-hide-details-mode))
+
+  (add-hook 'dired-mode-hook 'my/dired-mode)
 #+END_SRC
 
 ** Human readable file sizes
@@ -1900,11 +2043,6 @@ Make file sizes human readable
 
   (define-key my/wdired-mode-map (kbd "e") 'wdired-finish-edit)
   (define-key my/wdired-mode-map (kbd "u") 'wdired-abort-changes)
-#+END_SRC
-
-** Disable rainbow delimiters
-#+BEGIN_SRC emacs-lisp
-  (add-hook 'dired-mode-hook 'rainbow-delimiters-mode-disable)
 #+END_SRC
 
 ** Sorting
@@ -1959,6 +2097,7 @@ Version 2015-07-30"
     (interactive)
     (image-dired default-directory))
   (define-key my/dired-mode-map (kbd "i") 'my/image-dired)
+  (define-key my/dired-mode-map (kbd "h") 'dired-hide-details-mode)
 
   ;; Make dired work good with evil normal mode
   (evil-define-key 'normal dired-mode-map (kbd "i") 'evil-insert)
@@ -2111,14 +2250,14 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/clock-map)
-  (define-key my/leader-map (kbd "c") 'my/clock-map)
-
-  (define-key my/clock-map (kbd "s") 'org-clock-in)
-  (define-key my/clock-map (kbd "S") 'org-clock-out)
-  (define-key my/clock-map (kbd "C-s") 'org-clock-in-last)
-
-  (define-key my/clock-map (kbd "e") 'org-clock-modify-effort-estimate)
+  ;; (define-prefix-command 'my/clock-map)
+  ;; (define-key my/leader-map (kbd "c") 'my/clock-map)
+;; 
+  ;; (define-key my/clock-map (kbd "s") 'org-clock-in)
+  ;; (define-key my/clock-map (kbd "S") 'org-clock-out)
+  ;; (define-key my/clock-map (kbd "C-s") 'org-clock-in-last)
+;; 
+  ;; (define-key my/clock-map (kbd "e") 'org-clock-modify-effort-estimate)
 #+END_SRC
 
 ** Export
@@ -2207,6 +2346,11 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
   (define-key my/org-mode-map (kbd "|") 'org-table-create-or-convert-from-region)
 
   (define-key my/org-mode-map (kbd "z") 'org-shifttab)
+
+  (define-prefix-command 'my/org-show-mode-map)
+  (define-key my/org-mode-map (kbd "s") 'my/org-show-mode-map)
+
+  (define-key my/org-show-mode-map (kbd "l") 'org-toggle-link-display)
 #+END_SRC
 
 *** Macros
@@ -2290,7 +2434,8 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 
   (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
 
-  (setq highlight-indent-guides-method 'column)
+  ;;(setq highlight-indent-guides-method 'column)
+  (setq highlight-indent-guides-method 'fill)
 
   (setq highlight-indent-guides-responsive 'top)
   (setq highlight-indent-guides-delay 0)
@@ -2460,26 +2605,22 @@ Shows information in echo area
 ** Python
 *** Jedi
 #+BEGIN_SRC emacs-lisp
-  (use-package company-jedi
-    :defer t)
+  (use-package company-jedi)
 
   (add-to-list 'company-backends 'company-jedi)
 #+END_SRC
 
 ** C#
 #+BEGIN_SRC emacs-lisp
-  (use-package csharp-mode
-    :defer t)
-
+  (use-package csharp-mode)
 #+END_SRC
 
 *** Omnisharp-emacs
 #+BEGIN_SRC emacs-lisp
-  (use-package omnisharp
-    :defer t)
+  (use-package omnisharp)
 
   (add-hook 'csharp-mode-hook 'omnisharp-mode)
-  (add-to-list 'company-backends 'company-omnisharp)
+  (add-hook 'csharp-mode-hook (lambda () (push 'company-omnisharp company-backends)))
 #+END_SRC
 
 **** Keys
@@ -2548,11 +2689,10 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 #+BEGIN_SRC emacs-lisp
   (defun my/fsharp-mode()
     ;; Disable not so helpful modes
-    ;; (pretty-mode 0)
+    ;; 
     (aggressive-indent-mode 0)
     ;; Fsharp has built in intellisense highlight thing at point
     (highlight-thing-mode -1)
-    (pretty-mode -1)
     ;; Visual line mode in fsharp mode is broken, makes swiper take years to start, use truncate lines mode instead
     (visual-line-mode 0)
     (toggle-truncate-lines nil))
@@ -2587,19 +2727,19 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 ** Web mode
 TODO: Fix settings, grab them from package site 
 #+BEGIN_SRC emacs-lisp
-  (use-package web-mode
-    :defer t)
+   (use-package web-mode)
 
-  (add-to-list 'auto-mode-alist '("\\.phtml\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.tpl\\.php\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.[agj]sp\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.as[cp]x\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.erb\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.mustache\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.djhtml\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.css?\\'" . web-mode))
-  (add-to-list 'auto-mode-alist '("\\.xml?\\'" . web-mode))
+   (add-to-list 'auto-mode-alist '("\\.phtml\\'" . web-mode))
+   (add-to-list 'auto-mode-alist '("\\.tpl\\.php\\'" . web-mode))
+   (add-to-list 'auto-mode-alist '("\\.[agj]sp\\'" . web-mode))
+   (add-to-list 'auto-mode-alist '("\\.as[cp]x\\'" . web-mode))
+   (add-to-list 'auto-mode-alist '("\\.erb\\'" . web-mode))
+   (add-to-list 'auto-mode-alist '("\\.mustache\\'" . web-mode))
+   (add-to-list 'auto-mode-alist '("\\.djhtml\\'" . web-mode))
+   (add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
+   ;; Messes with .cs files???
+   ;;(add-to-list 'auto-mode-alist '("\\.css?\\'" . web-mode))
+   (add-to-list 'auto-mode-alist '("\\.xml?\\'" . web-mode))
 #+END_SRC
 
 * Pass
@@ -2641,14 +2781,27 @@ Required by ivy-pass
 #+END_SRC
 
 * Shell
+ ;https://github.com/howardabrams/dot-files/blob/master/emacs-eshell.org
 #+BEGIN_SRC emacs-lisp
-  (setq eshell-buffer-name "s")
+  ;; Change to temporary name before renaming
+  (setq eshell-buffer-name "eshell")
+
+  (setq eshell-highlight-prompt t)
+  (setq eshell-hist-ignoredups t)
+  (setq eshell-history-size 1000)
+
+  (setq-default eshell-status-in-mode-line nil)
   (defun my/eshell ()
     (interactive)
     (eshell)
     (my/give-buffer-unique-name "*eshell*"))
 
-  (define-key my/leader-map (kbd "[") 'my/eshell)
+  (defun my/eshell-insert-history ()
+    (interactive)
+    (insert (completing-read "Eshell history: "
+                             (delete-dups
+                              (ring-elements eshell-history-ring)))))
+
 #+END_SRC
 
 ** Term
@@ -2666,6 +2819,16 @@ Disable rainbow delimiters
 #+BEGIN_SRC emacs-lisp
   (require 'em-term)
   (add-to-list 'eshell-visual-commands "vim")
+#+END_SRC
+
+** Keys
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/eshell-mode-map)
+  (evil-define-key 'normal eshell-mode-map (kbd (concat my/leader-map-key " a")) 'my/eshell-mode-map)
+
+  (define-key my/eshell-mode-map (kbd "k") 'my/eshell-insert-history)
+
+  (define-key my/leader-map (kbd "[") 'my/eshell)
 #+END_SRC
 
 * Keys
@@ -2816,6 +2979,7 @@ Use C-i instead
 
   (define-key my/leader-map (kbd "x") 'my/simulate-C-x_C-e)
   (define-key my/leader-map (kbd "X") 'eval-buffer)
+  (define-key my/leader-map (kbd "M-x") 'eval-print-last-sexp)
 #+END_SRC
 
 * exwm
@@ -2825,13 +2989,14 @@ Use C-i instead
   (require 'exwm)
   ;; necessary to configure exwm manually
   (require 'exwm-config)
-  ;;(exwm-config-ido)
 
   ;; Fix magit ediff
   (setq ediff-window-setup-function 'ediff-setup-windows-plain)
 
   ;; enable exwm
   (exwm-enable)
+
+  (add-hook 'exwm-mode-hook 'evil-emacs-state)
 #+END_SRC
 
 ** Name buffers after window name
@@ -2953,9 +3118,9 @@ Define main function
           ([?\C-a] . [return])
 
           ;; tab
-          ;;([?\C-t] . [tab])
-          ;; ([?\t] . [?\C-=])
-          ;; ([tab] . [?\C-=])
+          ([?\C-t] . [tab])
+          ; ([?\t] . [?\C-=])
+           ;;([tab] . [?\C-=])
 
           ;; escape
           ([?\C-e] . [escape])
@@ -2981,8 +3146,9 @@ Define main function
                C-g
                C-h
                C-SPC
-               ;;TAB
-               ;;C-TAB
+               TAB
+               <tab>
+               C-TAB
                ;; Exwm grab and release keyboard
                M-j
                M-k
@@ -2993,14 +3159,17 @@ Define main function
 
   (exwm-input-set-key (kbd my/mod-leader-map-key) 'my/leader-map)
 
-  (exwm-input-set-key (kbd "TAB") 'my/window-hydra/body)
-  (exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
+   ;;(exwm-input-set-key (kbd "TAB") 'my/window-hydra/body)
+   (exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
+
+  (exwm-input-set-key (kbd "C-=") 'my/window-hydra/body)
+
   ;; (exwm-input-set-key (kbd "TAB") 'my/window-hydra/body)
   ;; (exwm-input-set-key (kbd "C-TAB") 'my/window-hydra/body)
   ;; (exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
   ;; (exwm-input-set-key (kbd "C-<tab>") 'my/window-hydra/body)
 
-  (exwm-input-set-key (kbd my/mod-window-leader-key) 'my/window-hydra/body)
+  ;;(exwm-input-set-key (kbd my/mod-window-leader-key) 'my/window-hydra/body)
 
   (exwm-input-set-key (kbd "C-h") help-map)
 
@@ -3099,7 +3268,7 @@ If enabled it auto enables projectile, which has high CPU usage
 ** Music
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/music-map)
-  (define-key my/leader-map (kbd "M") 'my/music-map)
+  (define-key my/leader-map (kbd "m") 'my/music-map)
 #+END_SRC
 
 *** EMMS
@@ -3370,6 +3539,8 @@ emms doesn't automatically connect to mpd when loading playlist, results in empt
 #+BEGIN_SRC emacs-lisp
   (require 'gnus)
   (define-key my/open-map (kbd "g") 'gnus)
+
+  (setq gnus-use-full-window nil)
 #+END_SRC
 
 ** Agent
@@ -3995,16 +4166,30 @@ Mode for writing mail
   (define-key my/spell-map (kbd "c") 'my/toggle-company-ispell)
 #+END_SRC
 
+* Calc
+#+BEGIN_SRC emacs-lisp
+  (define-key my/leader-map (kbd "c") 'calc)
+
+  (defun my/calc-kill-current-line ()
+    (interactive)
+    (calc-kill-region (line-beginning-position) (line-end-position)))
+
+  (evil-define-key 'normal calc-mode-map (kbd "d d") 'my/calc-kill-current-line)
+  (evil-define-key 'visual calc-mode-map (kbd "d") 'calc-kill-region)
+#+END_SRC
+
 * Artist mode
 https://www.emacswiki.org/emacs/FacesPerBuffer
 #+BEGIN_SRC emacs-lisp
   (defvar my/artist-mode-highlight-thing-restore nil)
   (defvar my/artist-mode-aggressive-indent-restore nil)
   (defvar my/artist-mode-highlight-indent-restore nil)
+  (defvar my/artist-mode-restore-buffer nil)
 
   (defun my/artist-mode ()
     (if (eq major-mode 'picture-mode)
         (progn
+          (setq my/artist-mode-restore-buffer (current-buffer))
           (if highlight-thing-mode
               (progn
                 (highlight-thing-mode -1)
@@ -4030,25 +4215,29 @@ https://www.emacswiki.org/emacs/FacesPerBuffer
                                   :family my/mono-font)))
 
       ;; Turn everything back on
-      (if my/artist-mode-highlight-thing-restore
+      (if (eq my/artist-mode-restore-buffer (current-buffer))
           (progn
-            (setq my/artist-mode-highlight-thing-restore nil)
-            (highlight-thing-mode 1)))
+            (if my/artist-mode-highlight-thing-restore
+                (progn
+                  (setq my/artist-mode-highlight-thing-restore nil)
+                  (highlight-thing-mode 1)))
 
-      (if my/artist-mode-aggressive-indent-restore
-          (progn
-            (setq my/artist-mode-aggressive-indent-restore nil)
-            (aggressive-indent-mode 1)))
+            (if my/artist-mode-aggressive-indent-restore
+                (progn
+                  (setq my/artist-mode-aggressive-indent-restore nil)
+                  (aggressive-indent-mode 1)))
 
-      (if my/artist-mode-highlight-indent-restore
-          (progn
-            (setq my/artist-mode-highlight-indent-restore nil)
-            (highlight-indent-guides-mode 1)))
+            (if my/artist-mode-highlight-indent-restore
+                (progn
+                  (setq my/artist-mode-highlight-indent-restore nil)
+                  (highlight-indent-guides-mode 1)))
 
-      (evil-exit-emacs-state)
-      (if (not my/is-font-mono)
-          (set-face-attribute 'default nil
-                              :family my/font))))
+            (evil-exit-emacs-state)
+            (if (not my/is-font-mono)
+                (set-face-attribute 'default nil
+                                    :family my/font)))
+        )
+      (setq my/artist-mode-restore-buffer nil)))
 
   (add-hook 'artist-mode-hook 'my/artist-mode)
 #+END_SRC
@@ -4112,10 +4301,10 @@ https://www.emacswiki.org/emacs/ArtistMode
     "movement" 
 
     ;; Move focus
-    ("p" my/evil-window-up nil)
-    ("n" my/evil-window-down nil)
-    ("l" my/evil-window-right nil)
-    ("h" my/evil-window-left nil)
+    ("p" evil-window-up nil)
+    ("n" evil-window-down nil)
+    ("l" evil-window-right nil)
+    ("h" evil-window-left nil)
 
     ;; Move focus to edge window
     ;; Frame border window
@@ -4151,7 +4340,7 @@ https://www.emacswiki.org/emacs/ArtistMode
     ("v" split-window-vertically nil)
 
     ;; Close window
-    ("s" my/delete-window nil)
+    ("s" delete-window nil)
     ;; Focus on window
     ("d" my/delete-other-windows nil)
 
@@ -4291,6 +4480,15 @@ https://www.emacswiki.org/emacs/ArtistMode
   (setq-default indicate-empty-lines t)
 #+END_SRC
 
+** Center text
+#+BEGIN_SRC emacs-lisp
+  (use-package olivetti)
+
+  (setq-default olivetti-body-width 150)
+
+  (define-key my/leader-map (kbd "V") 'olivetti-mode)
+#+END_SRC
+
 ** Fringe size
 Used by diff-hl and flycheck
 Fringe only on the left side
@@ -4416,110 +4614,161 @@ Highlight thing under cursor and all other occurrences
   (scroll-bar-mode -1)
 #+END_SRC
 
-** Auto dim inactive buffers
+** Faces
 #+BEGIN_SRC emacs-lisp
-  (defun my/highlight-selected-window ()
-    "Highlight selected window with a different background color."
-    (walk-windows (lambda (w)
-                    (unless (eq w (selected-window))
-                      (with-current-buffer (window-buffer w)
-                        (buffer-face-set '(:background "#111"))))))
-    (buffer-face-set 'default))
+  (set-face-attribute 'header-line nil
+                      :foreground (face-attribute 'default :foreground)
+                      :background (face-attribute 'default :background)
+                      :family (face-attribute 'default :family)
+                      :height (face-attribute 'default :height))
 
-  ;; (add-hook 'buffer-list-update-hook 'my/highlight-selected-window)
+  (set-face-attribute 'org-mode-line-clock nil
+                      :foreground (face-attribute 'default :foreground)
+                      :background (face-attribute 'default :background)
+                      :height (face-attribute 'default :height))
+
+  (set-face-attribute 'org-mode-line-clock-overrun nil
+                      :foreground (face-attribute 'default :foreground)
+                      :background "red"
+                      :height (face-attribute 'default :height))
+
+  (set-face-attribute 'org-agenda-filter-effort nil
+                      :foreground (face-attribute 'default :foreground)
+                      :background (face-attribute 'default :background)
+                      :height (face-attribute 'default :height))
+
+  (set-face-attribute 'org-agenda-filter-regexp nil
+                      :foreground (face-attribute 'default :foreground)
+                      :background (face-attribute 'default :background)
+                      :height (face-attribute 'default :height))
+
+  (set-face-attribute 'org-agenda-filter-tags nil
+                      :foreground (face-attribute 'default :foreground)
+                      :background (face-attribute 'default :background)
+                      :height (face-attribute 'default :height))
+
+  (set-face-attribute 'org-agenda-filter-category nil
+                      :foreground (face-attribute 'default :foreground)
+                      :background (face-attribute 'default :background)
+                      :height (face-attribute 'default :height))
 #+END_SRC
 
 ** Modeline
 Make mode line appear in echo area instead of in the mode line area. This saves space and makes it so that the mode line can't be split
+
+*** Mode line
+Set mode line height
 #+BEGIN_SRC emacs-lisp
+
   ;; Disable normal mode line
-  (setq mode-line-format nil)
-  (setq-default mode-line-format nil)
+  ;; (setq mode-line-format nil)
+  ;; (setq-default mode-line-format nil)
+
+  (setq mode-line-format "")
+  (setq-default mode-line-format "")
+
+  ;; Set mode line height
+  (set-face-attribute 'mode-line nil
+                      ;; :foreground (face-attribute 'window-divider :foreground)
+                      ;; :background (face-attribute 'window-divider :background)
+                      :foreground "white" 
+                      :background "white"
+                      :height  0.1
+                      :family my/mono-font)
+
+  (set-face-attribute 'mode-line-inactive nil
+                      :foreground "dark gray"
+                      :background "dark gray"
+                      :height  0.1
+                      :family my/mono-font)
 #+END_SRC
-
-*** Minibuffer-line
-#+BEGIN_SRC emacs-lisp
-  ;; From minibuffer-line package
-  (defconst minibuffer-line--buffer " *Minibuf-0*")
-  (defvar minibuffer-line-format "")
-
-  (defface minibuffer-line
-    '((t :inherit mode-line-inactive))
-    "Face to use for the minibuffer-line.")
-    
-  (defun my/minibuffer-line-mode ()
-    (visual-line-mode 0))
-
-  ;; Disable visual line mode in minibuffer
-  (add-hook 'minibuffer-inactive-mode-hook 'my/minibuffer-line-mode)
-
-    
-  ;; This works by overwriting whatever is at minibuf-0. minibuf-0 is always displayed in echo buffer
-  (defun minibuffer-line--update ()
-    (with-current-buffer minibuffer-line--buffer
-      (erase-buffer)
-      (insert (format-mode-line minibuffer-line-format 'minibuffer-line))))
-#+END_SRC
-
 *** LV-line (top modeline)
 Use lv-line to create a mode line on the top of the screen
 #+BEGIN_SRC emacs-lisp
-  (defvar lv-line-format "")
-  (defconst lv-line--buffer " *LV-line*")
+  (defvar my/lv-line-format "")
+  (defconst my/lv-line--buffer " *LV-line*")
+  (defvar my/lv-line-window nil)
 
-
-  ;; (lv-delete-window)
-  ;; (lv
-  ;; (lv-line-create)
-  ;; (setq testBuffer (get-buffer-create "testBuffer"))
-  ;; (bufferp testBuffer)
+  ;; (defface my/lv-line-face
+    ;; '((t
+       ;; ))
+    ;; "Face to use for lv-line.")
+;; 
+  ;; (set-face-attribute 'my/lv-line-face nil
+                      ;; :family my/mono-font)
 #+END_SRC
 
 **** LV-line update
 #+BEGIN_SRC emacs-lisp
-  (defun lv-line--update ()
-    (if (get-buffer lv-line--buffer)
-        (with-current-buffer lv-line--buffer
-          (erase-buffer)
-          (insert (format-mode-line lv-line-format 'mode-line)))
-      (lv-line-create)))
+  (defun my/lv-line--update ()
+    (let* ((buffer (get-buffer my/lv-line--buffer)))
+      (if (not buffer)
+          (progn
+            (message "LV-line buffer not found - creating new one")
+            (my/lv-line-create)))
+      (with-current-buffer buffer
+        (erase-buffer)
+        (insert (format-mode-line my/lv-line-format)))))
 #+END_SRC
 
 **** Create LV-line at top
 #+BEGIN_SRC emacs-lisp
-  (defun lv-line-create-buffer ()
-    (let* ((buf (get-buffer lv-line--buffer)))
-      (if buf
-          (progn
-            (message "Buffer already exists")
-            (kill-buffer lv-line--buffer)))
-      (switch-to-buffer lv-line--buffer)
-      (set-window-hscroll lv-wnd 0)
-      (setq window-size-fixed t)
-      (setq mode-line-format nil)
-      (setq cursor-type nil)
-      (set-window-dedicated-p lv-wnd t)
-      (set-window-parameter lv-wnd 'no-other-window t)))
+  (defun my/lv-line-set-buffer ()
+    (setq indicate-empty-lines nil)
+    (set-window-hscroll my/lv-line-window 0)
+    (setq window-size-fixed t)
+    (setq mode-line-format nil)
 
-    (defun lv-line-create ()
-      "Ensure that LV window is live and return it."
-      (if (window-live-p lv-wnd)
-          lv-wnd
-        (let ((ori (selected-window))
-              buf)
-          (prog1 (setq lv-wnd
-                       (select-window
-                        (let ((ignore-window-parameters t))
-                          (split-window
-                           ;; This is the only modification, changed 'below to 'above
-                           (frame-root-window) -1 'above))))
-            (lv-line-create-buffer)
-            (select-window ori)))))
-    ;; (lv-delete-window)
-    ;; (lv-line-create)
-    ;; (lv-line-create-buffer)
+    ;; Change to mono face
+    (face-remap-add-relative 'default :family my/mono-font)
 
-    ;;ignore-window-parameters
+    ;; Disable cursor
+    (setq cursor-type nil)
+    (setq cursor-in-non-selected-windows nil)
+
+    (set-window-dedicated-p my/lv-line-window t)
+    (set-window-parameter my/lv-line-window 'no-other-window t))
+
+  (defun my/lv-line-create ()
+    (if (not (get-buffer my/lv-line--buffer))
+        (generate-new-buffer my/lv-line--buffer))
+    (if (not (window-live-p my/lv-line-window))
+        (let* ((original-window (selected-window)))
+          (setq my/lv-line-window
+                (select-window
+                 (let ((ignore-window-parameters t))
+                   (split-window
+                    (frame-root-window) -1 'above)
+                   )))
+          (switch-to-buffer my/lv-line--buffer)
+          (my/lv-line-set-buffer)
+          (select-window original-window))))
+
+    ;; (defun my/lv-line-create ()
+    ;; "Ensure that LV window is live and return it."
+    ;; (if (window-live-p my/lv-line-window)
+    ;; my/lv-line-window
+    ;; (let ((ori (selected-window)) buf)
+    ;; (prog1 (setq my/lv-line-window
+    ;; (select-window
+    ;; (let ((ignore-window-parameters t))
+    ;; (split-window
+    ;; (frame-root-window) -1 'above))))
+    ;; (my/lv-line-create-buffer)
+    ;; (select-window ori)))))
+#+END_SRC
+**** Update it
+#+BEGIN_SRC emacs-lisp
+  (defun my/lv-line-start()
+    (my/lv-line-create)
+    (my/lv-line--update)
+    (add-hook 'post-command-hook 'my/lv-line--update t)
+    (add-hook 'my/switch-buffer-hook 'my/lv-line--update t)
+    (run-with-timer 6 60 'my/lv-line--update))
+
+  (if window-system
+      (add-hook 'exwm-init-hook 'my/lv-line-start)
+    (my/lv-line-start))
 #+END_SRC
 
 *** Keys
@@ -4758,6 +5007,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
       (setq my/mode-line-enable-available-mem t))
 
   (defvar my/available-mem-formatted "nil")
+  (defvar my/available-mem 0)
 
   (defun my/linux-update-available-mem ()
     (interactive)
@@ -4768,8 +5018,9 @@ When projectile-mode is on, project name is updated on every keypress, here it i
       (string-match "MemAvailable:.*\s" my/mem-string)
       (setq my/mem-string (match-string 0 my/mem-string))
 
-      (let* (( my/available-mem (string-to-number (substring my/mem-string (string-match "[0-9]" my/mem-string) -1))))
-        (setq my/available-mem-formatted (my/file-size-human-readable (* 1000 my/available-mem) nil t)))))
+      ;; Default returns kb, *1000 to get it to bytes
+      (setq my/available-mem (* 1000(string-to-number (substring my/mem-string (string-match "[0-9]" my/mem-string) -1))))
+      (setq my/available-mem-formatted (my/file-size-human-readable my/available-mem nil t))))
 
   (if my/mode-line-enable-available-mem
       (run-with-timer 5 60 'my/linux-update-available-mem))
@@ -4890,261 +5141,159 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
 *** Mode line format
 #+BEGIN_SRC emacs-lisp
-  ;; (defvar my/frame-width (frame-width))
-  ;; 
-  ;; (defun my/frame-width-update()
-  ;; (setq my/frame-width (frame-width)))
-  ;; 
-  ;; (add-hook 'exwm-workspace-switch-hook 'my/frame-width-update)
-  ;; (add-hook 'exwm-init-hook 'my/frame-width-update)
-  ;; 
-  ;; (defun my/mode-line-align (left right)
-  ;; "Return a string of `window-width' length containing LEFT, and RIGHT aligned respectively."
-  ;; (let* ((available-width (- my/frame-width (length left) 2)))
-  ;; (format (format "%%s %%%ds" available-width) left right)))
+  (defvar my/work-timer-blink t)
+  (defvar my/frame-width (frame-width))
+
+  (defun my/frame-width-update()
+    (setq my/frame-width (frame-width)))
+
+  (add-hook 'exwm-workspace-switch-hook 'my/frame-width-update)
+  (add-hook 'exwm-init-hook 'my/frame-width-update t)
+
+  (defun my/mode-line-align (left right)
+    "Return a string of `window-width' length containing LEFT, and RIGHT aligned respectively."
+    (let* ((available-width (- my/frame-width (length left) 2)))
+      (format (format "%%s %%%ds" available-width) left right)))
 
   ;;mode-line-format
-  (setq-default minibuffer-line-format 
-                (quote
-                 (
-                  ;; Print error if any
-                  "%e"
+  (setq-default my/lv-line-format
+                '(:eval
+                  (my/mode-line-align
+                   (format-mode-line
+                    (quote
+                     (
 
-                  ;; Print if recursive editing
-                  "%["
+                      ;; Print error if any
+                      "%e"
 
-                  ;; Information bar
-                  mode-line-mule-info
-                  mode-line-client
+                      ;; Print if recursive editing
+                      "%["
 
-                  ;; If buffer is modified
-                  mode-line-modified
+                      ;; Information bar
+                      mode-line-mule-info
+                      mode-line-client
 
-                  ;; Turns into @ when remote
-                  mode-line-remote
+                      ;; If buffer is modified
+                      mode-line-modified
 
-                  " "
+                      ;; Turns into @ when remote
+                      mode-line-remote
 
-                  ;; Print current line number
-                  ;;"%l"
-                  ;;"%p"
-                  (:eval (format "%d" (/ (window-start) 0.01 (point-max))))
+                      " "
 
-                  "~"
-                  ;;"@" 
-                  ;; Print total line number
-                  (:eval my/buffer-total-lines)
-                  ;;"%I"
+                      ;; Print current line number
+                      ;;"%l"
+                      ;;"%p"
+                      (:eval (format "%d" (/ (window-start) 0.01 (point-max))))
 
-                  ;; is narrowed
-                  "%n"
+                      "~"
+                      ;;"@" 
+                      ;; Print total line number
+                      (:eval my/buffer-total-lines)
+                      ;;"%I"
 
-                  " | "
+                      ;; is narrowed
+                      "%n"
 
-                  ;; Print mode
-                  "%m > " 
-                  ;; Print buffer name
+                      " |"
 
-                  ;;(:eval (buffer-name))
+                      evil-mc-mode-line
 
-                  (:eval my/buffer-name)
+                      " | "
 
-                  ;;"%b"
+                      ;; Print mode
+                      "%m > " 
+                      ;; Print buffer name
 
-                  ;; Git branch and project name
-                  (:eval (if (not (string= my/projectile-project-name "-"))
-                             (progn
-                               (concat
-                                " > " 
-                                my/buffer-git-branch
-                                "@"
-                                "["
-                                my/projectile-project-name
-                                "]"))))
+                      ;;(:eval (buffer-name))
 
-                  (:eval (if memory-full
-                             "GC FULL! JUMP SHIP!")))))
+                      (:eval my/buffer-name)
 
-  (setq-default lv-line-format
-                (quote
-                 (
-                  (:eval my/date)
+                      ;;"%b"
 
-                  " - "
-
-                  (:eval my/time)
-
-                  " | "
-
-                  (:eval (concat "Up: " my/uptime-total-time-formated))
-                  (:eval (if (not (= my/eye-timer-que 0))
-                             (propertize (concat " - E: " my/eye-timer-que-formated) 'face '(:foreground "red"))))
+                      ;; Git branch and project name
+                      (:eval (if (not (string= my/projectile-project-name "-"))
+                                 (progn
+                                   (concat
+                                    " > " 
+                                    my/buffer-git-branch
+                                    "@"
+                                    "["
+                                    my/projectile-project-name
+                                    "]"))))
 
 
-                  " | "
+                      ;; If memory is less than 1GB
+                      (:eval (if (< my/available-mem 1000000000)
+                                 "GC FULL! JUMP SHIP!"))
+                      ))
+                    )
 
-                  "W: "
-                  (:eval (if my/work-timer-last-add-to-total-time
-                             ;;(propertize my/work-timer-total-time-formated 'face '(:foreground "green"))
-                             my/work-timer-total-time-formated
-                           (propertize my/work-timer-total-time-formated 'face '(:foreground "red"))))
+                   (format-mode-line
+                    (quote
+                     (
+                      (:eval (if my/mode-line-show-GC-stats
+                                 (concat
+                                  " GC: " (number-to-string (truncate gc-elapsed))
+                                  "(" (number-to-string gcs-done) ")"
+                                  " |"
+                                  )))
 
-                  " | "
+                      (:eval (if my/mode-line-enable-network-traffic
+                                 (concat
+                                  my/rx-delta-formatted " ↑ "
+                                  my/tx-delta-formatted " ↓ |")))
 
-                  "C: "
-                  (:eval (number-to-string my/load-average))
-                  (:eval (if my/mode-line-enable-cpu-temp
-                             (concat " - " my/cpu-temp)))
-                  " | "
+                      (:eval (if my/mode-line-enable-available-mem
+                                 (concat " MEM: "
+                                         my/available-mem-formatted
+                                         " |")))
 
-                  (:eval (if (not (eq battery-mode-line-string ""))
-                             (concat "BAT: " battery-mode-line-string "%%%  | ")))
+                      ;;(:eval (concat "Org:" org-mode-line-string))
+                      (:eval (if (boundp 'org-mode-line-string)
+                                 (concat "Org:" org-mode-line-string " | ")))
+                      (:eval (if (not (eq battery-mode-line-string ""))
+                                 (concat "BAT: " battery-mode-line-string "%%%  | ")))
 
+                      (:eval (if my/mode-line-enable-cpu-temp
+                                 (concat " - " my/cpu-temp)))
 
-                  ;;(:eval (concat "Org:" org-mode-line-string))
-                  (:eval (if (boundp 'org-mode-line-string)
-                             (concat "Org:" org-mode-line-string " | ")))
+                      " C: "
+                      (:eval (number-to-string my/load-average))
 
-                  (:eval (if my/mode-line-enable-available-mem
-                             (concat "MEM: "
-                                     my/available-mem-formatted
-                                     " | ")))
+                      " |"
 
-                  (:eval (if my/mode-line-enable-network-traffic
-                             (concat
-                              my/rx-delta-formatted " rx "
-                              my/tx-delta-formatted " tx | ")))
-
-                  (:eval (if my/mode-line-show-GC-stats
-                             (concat
-                              "GC: " (number-to-string (truncate gc-elapsed))
-                              "(" (number-to-string gcs-done) ")"
-                              " | "
-                              )))
-                  )))
-#+END_SRC
-
-*** Keep mode line updated
-t as last parameter because the mode line should always be updated last, after any changes to its components (such as projectile project name, vc mode, etc)
-#+BEGIN_SRC emacs-lisp
-  (add-hook 'post-command-hook 'minibuffer-line--update t)
-  (add-hook 'my/switch-buffer-hook 'minibuffer-line--update t)
-
-  (add-hook 'exwm-init-hook (lambda () (interactive)
-                              (lv-line-create)
-                              (lv-line--update)
-                              (run-with-timer 6 60 'lv-line--update)))
-                              ;; (add-hook 'post-command-hook 'lv-line--update t)
-                              ;; (add-hook 'my/switch-buffer-hook 'lv-line--update t)
+                      " W: "
+                      (:eval (if my/work-timer-last-add-to-total-time
+                                 ;;(propertize my/work-timer-total-time-formated 'face '(:foreground "green"))
+                                 my/work-timer-total-time-formated
+                               (if my/work-timer-blink
+                                   (progn
+                                     (setq my/work-timer-blink nil)
+                                     (propertize my/work-timer-total-time-formated 'face '(:foreground "red")))
+                                 (setq my/work-timer-blink t)
+                                 (propertize my/work-timer-total-time-formated 'face '(:background "red"))
+                                 )
+                               ))
 
 
-  ;; (lv-line-create)
-  ;; (add-hook 'post-command-hook 'lv-line--update t)
-  ;; (add-hook 'my/switch-buffer-hook 'lv-line--update t)
-  ;; 
-  ;; (add-hook 'exwm-init-hook (lambda () (interactive) (run-with-timer 1 nil (lambda () (interactive)
-  ;; (lv-line-create)
-  ;; (add-hook 'post-command-hook 'lv-line--update t)
-  ;; (add-hook 'my/switch-buffer-hook 'lv-line--update t)))))
+                      " |"
 
-  ;;(setq minibuffer-line-refresh-interval 1)
-#+END_SRC
-
-*** Visuals
-Set mode line font
-#+BEGIN_SRC emacs-lisp
-  ;; (set-face-attribute 'minibuffer-line nil
-                      ;; :background "#000000"
-                      ;; :family my/mono-font))
-#+END_SRC
-
-**** Modeline colering
-#+BEGIN_SRC emacs-lisp
-  ;; (defvar my/mode-line-background (face-attribute 'default :background))
-  ;; (defvar my/mode-line-foreground (face-attribute 'default :foreground))
-  ;; First in list is for GUI, second for CLI
-  (defvar my/mode-line-background (list "#2a1f1f" "#FFFFFF"))
-  (defvar my/mode-line-foreground (list "#d15120" "#000000"))
-
-  (defvar my/mode-line-work-timer-off-background (list "#272122" "#FFFFFF"))
-  (defvar my/mode-line-work-timer-off-foreground (list "#d97a35" "#000000"))
-
-  (defvar my/mode-line-warning-background (list "#555500" "#555500"))
-  (defvar my/mode-line-warning-foreground (list "#D3D3D3" "#000000"))
-
-  (defvar my/mode-line-caution-background (list "#330000" "#330000"))
-  (defvar my/mode-line-caution-foreground (list "#D3D3D3" "#000000"))
-
-  ;;(deftype my/mode-line-alert-states () '(member normal warning caution))
-
-  (defvar my/mode-line-alert-status nil)
-
-  (defun my/set-mode-line-color (foreground background)
-    (if window-system
-        (progn
-          (set-face-background 'minibuffer-line (nth 0 background))
-          (set-face-foreground 'minibuffer-line (nth 0 foreground)))
-      (set-face-background 'minibuffer-line (nth 1 background))
-      (set-face-foreground 'minibuffer-line (nth 1 foreground))))
-
-  ;; (set-face-background 'mode-line nil)
-  ;; (set-face-foreground 'mode-line nil)
-
-  ;; (my/set-mode-line-color nil nil)
-
-   (defun my/set-mode-line-normal ()
-     (interactive)
-     (if (not (eq my/mode-line-alert-status 'normal))
-         (progn
-           (setq my/mode-line-alert-status 'normal)
-           (my/set-mode-line-color my/mode-line-foreground my/mode-line-background))))
-
-  (defun my/set-mode-line-work-off ()
-    (interactive)
-    (if (not (eq my/mode-line-alert-status 'work-off))
-        (progn
-          (setq my/mode-line-alert-status 'work-off)
-          (my/set-mode-line-color my/mode-line-work-timer-off-foreground my/mode-line-work-timer-off-background))))
+                      (:eval (concat " Up: " my/uptime-total-time-formated))
+                      (:eval (if (not (= my/eye-timer-que 0))
+                                 (propertize (concat  " - E: " my/eye-timer-que-formated) 'face '(:foreground "red"))))
 
 
-  (defun my/set-mode-line-warning ()
-    (interactive)
-    (if (not (eq my/mode-line-alert-status 'warning))
-        (progn
-          (setq my/mode-line-alert-status 'warning)
-          (my/set-mode-line-color my/mode-line-warning-foreground my/mode-line-warning-background))))
+                      " | "
 
-  (defun my/set-mode-line-caution ()
-    (interactive)
-    (if (not (eq my/mode-line-alert-status 'caution))
-        (progn
-          (setq my/mode-line-alert-status 'caution)
-          (my/set-mode-line-color my/mode-line-caution-foreground my/mode-line-caution-background))))
+                      (:eval my/time)
 
-  (my/set-mode-line-normal)
+                      " - "
 
-  ;; Disable border
-  (set-face-attribute 'mode-line-highlight nil :box nil)
-  (set-face-attribute 'mode-line-inactive nil :box nil)
+                      (:eval my/date)
 
-  ;; Some themes make the text weight of inactive mode lines light
-  (set-face-attribute 'mode-line-inactive nil :weight 'medium)
-#+END_SRC
-
-***** Update mode line color
-#+BEGIN_SRC emacs-lisp
-  (defun my/update-mode-line-color ()
-    ;; Battery
-    (if (and (not (eq battery-mode-line-string "")) (< (length battery-mode-line-string) 10))
-        (my/set-mode-line-caution)
-      (progn
-        (if (> my/load-average my/high-load-average)
-            (my/set-mode-line-warning)
-          (if (not my/work-timer-last-add-to-total-time)
-              (my/set-mode-line-work-off)
-            (my/set-mode-line-normal))))))
-
-  (run-with-timer 1 1 'my/update-mode-line-color)
+                      ))
+                    ))))
 #+END_SRC
 
 * Private config
