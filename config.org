@@ -76,7 +76,8 @@ M-x =pdf-tools-install=
 Try having the =fsproj= file open in a buffer or try moving the project folder directly to the home folder
 
 ** Overtone
-*** How to configure jack2 to work with pulse
+*** Pulse-jack
+**** How to configure jack2 to work with pulse
 https://wiki.archlinux.org/index.php/PulseAudio/Examples#PulseAudio_through_JACK
 (The KXStudio method)
 
@@ -88,18 +89,27 @@ https://wiki.archlinux.org/index.php/PulseAudio/Examples#PulseAudio_through_JACK
 
 4. Configure -> Alsa -> Good settings
 
+**** Pauvcontrol measures sound but can't hear anything
+Unmute the sound device in pauvcontrol
+
+**** How should jack be started???
+Let overtone (actually it's supercollider, since overtone is just a wrapper for using supercollider in clojure) do it (it does it automatically when inputting =(use 'overtone.live)= in leiningen)
+
+*** Jack only
+1. add =autospawn = no= in =~/.config/pulse/client.conf= 
+2. kill pulseaudio with =pulseaudio -k= 
+3. get =jack2= (NOT jack2-dbus, does't work)
+4. start overtone
+
+**** Still doesn't work
+Get =qjackctl= and start =jack2= from there
+
 *** Sounds only play in one ear??
 https://github.com/overtone/overtone/wiki/Multi-channel-expansion,-stereo-and-panning
 You have to specify sound channel in the code when using certain sounds
 
-*** Pauvcontrol measures sound but can't hear anything
-Unmute the sound device in pauvcontrol
-
 *** Overtone errors out all the time
 Execute script up to down, put =(use 'overtone.live)= on top of file, and in leiningen
-
-*** How should jack be started???
-Let overtone (actually it's supercollider, since overtone is just a wrapper for using supercollider in clojure) do it (it does it automatically when inputting =(use 'overtone.live)= in leiningen)
 
 *** Shit doesn't work
 just fiddle around with cadence (check if bridge type is correct, then force restart until it works)
@@ -253,7 +263,7 @@ Get =gpick=
         (progn
           (write-region content nil file)
           (message (concat "file: " file " with contents")))))
-;;" created with content: " content)))))
+;;" created with content: " content
 #+END_SRC
 
 ** Is external package installed
@@ -331,10 +341,11 @@ Default file-size-human-readable returns decimal values
 
 ** Set font
 #+BEGIN_SRC emacs-lisp
-  (defun my/set-font(font)
-    (set-face-attribute 'default nil
-                        :family font
-                        :height 120))
+  (defun my/set-default-font(font)
+    (if window-system
+        (set-face-attribute 'default nil
+                            :family font
+                            :height 120)))
 #+END_SRC
 * Theme
 #+BEGIN_SRC emacs-lisp
@@ -362,7 +373,7 @@ Default file-size-human-readable returns decimal values
           (setq my/font "DejaVuSans"))))
 
   (if my/font
-      (my/set-font my/font))
+      (my/set-default-font my/font))
 #+END_SRC
 
 ** Mono font
@@ -528,9 +539,9 @@ https://www.emacswiki.org/emacs/ForceBackups
 
 *** File types to not backup
 #+BEGIN_SRC emacs-lisp
-  (setq auto-mode-alist
-        (append '(("\\.gpg$" . my/no-backups-mode))
-                auto-mode-alist))
+  (add-to-list 'auto-mode-alist '("\\.gpg$" . my/no-backups-mode))
+
+  (add-hook 'image-mode-hook 'my/no-backups-mode)
 #+END_SRC
 
 ** Undo tree
@@ -539,14 +550,23 @@ https://www.emacswiki.org/emacs/ForceBackups
 
   (setq global-undo-tree-mode t)
 
-  ;; Might fix undo tree
+  ;; Fixes errors
   (setq undo-tree-enable-undo-in-region nil)
+  (setq-default undo-tree-enable-undo-in-region nil)
 
+  ;; (setq undo-tree-auto-save-history t)
+  ;; (setq-default undo-tree-auto-save-history t)
+
+  (setq undo-tree-visualizer-lazy-drawing nil)
+  (setq-default undo-tree-visualizer-lazy-drawing nil)
+
+  (setq undo-tree-visualizer-timestamps t)
+  (setq undo-tree-visualizer-diff t)
 
   ;;(setq undo-tree-auto-save-history t)
 
   ;;(setq undo-tree-history-directory-alist '(("." . "~/.emacs.d/saves")))
-  ;;(make-directory (concat spacemacs-cache-directory "undo")))
+  ;;(make-directory (concat spacemacs-cache-directory "undo"))
 #+END_SRC
 
 * Evil
@@ -610,7 +630,7 @@ Example
 
   (cl-loop for (mode . state) in '(
                                    ;; So i C-leader works for exwm windows
-                                   (exwm-mode . emacs)
+                                   (exwm-mode . insert)
                                    ;;(eshell-mode . insert)
                                    (term-mode . insert)
                                    ;;(org-agenda-mode . insert)
@@ -725,6 +745,16 @@ Allows for using indention as text objects
 
   (define-key my/evil-mc-map (kbd "g g") 'evil-mc-make-and-goto-first-cursor)
   (define-key my/evil-mc-map (kbd "G") 'evil-mc-make-and-goto-last-cursor)
+#+END_SRC
+
+** Keys
+#+BEGIN_SRC emacs-lisp
+  ;; Unbind unused keys
+  (define-key evil-motion-state-map (kbd "C-w") 'nil)
+  (define-key evil-emacs-state-map (kbd "C-w") 'nil)
+
+  ;; (define-key evil-motion-state-map (kbd "RET") 'nil)
+  ;; (evil-define-key 'normal my/keys-mode-map (kbd "RET") 'evil-ret)
 #+END_SRC
 
 * Leader
@@ -1011,15 +1041,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (global-set-key (kbd "<XF86MonBrightnessDown>") 'my/decrease-brightness)
 #+END_SRC
 
-** Statistics
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/statistics-map)
-  (define-key my/leader-map (kbd "C") 'my/statistics-map)
-
-  (define-key my/statistics-map (kbd "w") 'count-words)
-  (define-key my/statistics-map (kbd "r") 'count-words-region)
-#+END_SRC
-
 ** Update packages
 #+BEGIN_SRC emacs-lisp
   (define-key my/leader-map (kbd "C-u") 'list-packages)
@@ -1046,7 +1067,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (cl-loop for face in (face-list) do
              (set-face-attribute face nil :foreground nil :background nil))
 
-
     ;;(setq my/foreground-color "#8b4513")
     ;;(setq my/foreground-color "brown")
     ;;(setq my/background-color "black")
@@ -1061,8 +1081,9 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     ;; Day theme
     (setq my/third-color "orange")
     (setq my/mark-color "yellow4")
-    ;;(setq my/foreground-color "black")
-    ;;(setq my/background-color "#4682b4") 
+    (setq my/foreground-color "black")
+    ;;(setq my/background-color "white") 
+    (setq my/background-color "#4682b4") 
     ;;(setq my/background-color "#87cefa") 
 
     ;;; Emacs
@@ -1075,6 +1096,17 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
     (set-face-attribute  'font-lock-doc-face nil :foreground my/third-color :background my/foreground-color)
 
+    ;; Line numbers
+    (set-face-attribute 'line-number-current-line nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'line-number nil :foreground my/background-color :background my/foreground-color)
+
+    ;; Evil
+    (setq evil-emacs-state-cursor '("purple" box))
+    (setq evil-normal-state-cursor '("red" box))
+    (setq evil-visual-state-cursor '("yellow" box))
+    (setq evil-insert-state-cursor '("orange" box))
+    (setq evil-replace-state-cursor '("green" box))
+    (setq evil-operator-state-cursor '("white" hollow))
 
     ;; Hl current line
     ;; Underlines part of current line
@@ -1102,7 +1134,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (set-face-attribute 'company-tooltip nil :foreground my/foreground-color :background my/background-color)
     ;; All matching text
     (set-face-attribute 'company-tooltip-common nil :foreground my/background-color :background my/foreground-color)
-
 
     ;;; Ivy
     (set-face-attribute 'ivy-current-match nil :foreground my/background-color :background my/foreground-color)
@@ -1136,7 +1167,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     ;; (set-face-attribute 'evil-goggles-surround-face nil :foreground my/background-color :background my/foreground-color)
     ;; (set-face-attribute 'evil-goggles-yank-face nil :foreground my/background-color :background my/foreground-color)
 
-
     (set-face-attribute 'diff-added nil  :background "#335533")
     (set-face-attribute 'diff-changed nil :background "#aaaa22")
     (set-face-attribute 'diff-removed nil :background "#553333")
@@ -1165,6 +1195,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
                         :height  0.1)
     )
 
+  (add-hook 'exwm-init-hook 'my/paper-mode)
 
   ;; (counsel-faces)
 
@@ -1203,10 +1234,11 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   ;;(font-get "opensans" :spacing)
   (defun my/toggle-mono-font()
     (interactive)
-    (if (not my/is-font-mono)
-        (if  (string= (face-attribute 'default :family) my/font-raw)
-            (my/set-font my/mono-font)
-          (my/set-font my/font))))
+    (if window-system
+      (if (not my/is-font-mono)
+          (if  (string= (face-attribute 'default :family) my/font-raw)
+              (my/set-default-font my/mono-font)
+          (my/set-default-font my/font)))))
 
   (define-key my/leader-map (kbd "C-f") 'my/toggle-mono-font)
 #+END_SRC
@@ -1215,12 +1247,59 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 #+BEGIN_SRC emacs-lisp
   (defun my/toggle-local-mono-font()
     (interactive)
-    (if (not my/is-font-mono)
-        (if  (string= (face-attribute 'default :family) my/font-raw)
-            (face-remap-add-relative 'default :family my/mono-font)
-          (face-remap-add-relative 'default :family my/font-raw))))
+    (if window-system
+      (if (not my/is-font-mono)
+          (if  (string= (face-attribute 'default :family) my/font-raw)
+              (face-remap-add-relative 'default :family my/mono-font)
+          (face-remap-add-relative 'default :family my/font-raw)))))
 
   (define-key my/leader-map (kbd "M-f") 'my/toggle-local-mono-font)
+#+END_SRC
+
+** Exit emacs
+#+BEGIN_SRC emacs-lisp
+  (define-key my/leader-map (kbd "C-z") 'save-buffers-kill-emacs)
+#+END_SRC
+
+** Help mode
+#+BEGIN_SRC emacs-lisp
+  (define-key my/leader-map (kbd "C-h") help-map)
+#+END_SRC
+
+* File options
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/file-options-map)
+  (define-key my/leader-map (kbd "`") 'my/file-options-map)
+#+END_SRC
+
+** Revert
+#+BEGIN_SRC emacs-lisp
+  (define-key my/file-options-map (kbd "r") 'revert-buffer)
+#+END_SRC
+
+** Statistics
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/statistics-map)
+  (define-key my/file-options-map (kbd "s") 'my/statistics-map)
+
+  (define-key my/statistics-map (kbd "w") 'count-words)
+  (define-key my/statistics-map (kbd "r") 'count-words-region)
+#+END_SRC
+
+** Indentation
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/indentation-map)
+  (define-key my/file-options-map (kbd "i") 'my/indentation-map)
+
+  (defun my/change-tab-width ()
+    (interactive)
+    (setq-default tab-width (string-to-number (completing-read "Enter tab width" nil))))
+
+  ;; Applies only to region
+  (define-key my/indentation-map (kbd "t") 'tabify)
+  (define-key my/indentation-map (kbd "SPC") 'untabify)
+
+  (define-key my/indentation-map (kbd "w") 'my/change-tab-width)
 #+END_SRC
 
 * Visit file hotkeys
@@ -1308,11 +1387,20 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
 #+END_SRC
 
+** Open firefox
+#+BEGIN_SRC emacs-lisp
+  (defun my/launch-firefox ()
+    (interactive)
+    (my/start-process "firefox"))
+
+  (define-key my/open-map (kbd "f") 'my/launch-firefox)
+#+END_SRC
+
 * Folding
 ** Narrowing
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/narrow-map)
-  (define-key my/leader-map (kbd "t") 'my/narrow-map)
+  (define-key my/leader-map (kbd "n") 'my/narrow-map)
 
   (define-key my/narrow-map (kbd "w") 'widen)
   (define-key my/narrow-map (kbd "r") 'narrow-to-region)
@@ -1395,7 +1483,8 @@ Vim bindings to change fold
 
   (counsel-mode 1)
 
-  (setq counsel-grep-base-command "rg -i -M 120 --no-heading --line-number --color never '%s' %s")
+  ;;(setq-default counsel-grep-base-command "rg -i -M 120 --no-heading --line-number --color never '%s' %s")
+  (setq counsel-grep-base-command "grep -i -E -n -e %s %s")
 #+END_SRC
 
 *** Keys
@@ -1454,9 +1543,19 @@ Vim bindings to change fold
 #+BEGIN_SRC emacs-lisp
   (use-package swiper)
 
-  ;;(define-key evil-normal-state-map (kbd "/") 'swiper)
-  (global-set-key (kbd "C-s") 'counsel-grep-or-swiper)
-  ;;(global-set-key (kbd "C-s") 'counsel-grep)
+  (defun my/use-swiper-or-grep(&optional input case-sensative)
+    (interactive)
+
+    (if buffer-file-name 
+        (progn
+          (if case-sensative
+                (setq counsel-grep-base-command "grep -E -n -e %s %s")
+            (setq-default counsel-grep-base-command "grep -i -E -n -e %s %s"))
+          (counsel-grep input))
+      (swiper input)))
+
+  (global-set-key (kbd "C-s") 'my/use-swiper-or-grep)
+  (global-set-key (kbd "M-s") (lambda () (interactive) (my/use-swiper-or-grep nil t)))
 #+END_SRC
 
 *** Search for thing-at-point
@@ -1464,11 +1563,11 @@ Vim bindings to change fold
   (defun my/swiper-thing-at-point ()
     "jump to word under cursor"
     (interactive)
-    (counsel-grep-or-swiper (thing-at-point 'word)))
-    
+    (my/use-swiper-or-grep (thing-at-point 'evil-WORD)))
+
   (define-key evil-normal-state-map (kbd "#") 'my/swiper-thing-at-point)
   (define-key evil-normal-state-map (kbd "*") 'my/swiper-thing-at-point)
-  (define-key evil-normal-state-map (kbd "M-s") 'my/swiper-thing-at-point)
+  (define-key evil-normal-state-map (kbd "/") 'my/swiper-thing-at-point)
 #+END_SRC
 
 ** Ivy rich
@@ -1680,7 +1779,35 @@ Doesn't work with my setup right now
 
   (which-key-mode)
 
-  (setq which-key-idle-delay 0.5)
+  (setq which-key-idle-delay 0.2)
+
+  (if window-system
+    (set-face-attribute 'which-key-command-description-face nil
+                        :family my/mono-font)
+
+    (set-face-attribute 'which-key-docstring-face nil
+                        :family my/mono-font)
+
+    (set-face-attribute 'which-key-group-description-face nil
+                        :family my/mono-font)
+
+    (set-face-attribute 'which-key-highlighted-command-face nil
+                        :family my/mono-font)
+
+    (set-face-attribute 'which-key-key-face nil
+                        :family my/mono-font)
+
+    (set-face-attribute 'which-key-local-map-description-face nil
+                        :family my/mono-font)
+
+    (set-face-attribute 'which-key-note-face nil
+                        :family my/mono-font)
+
+    (set-face-attribute 'which-key-separator-face nil
+                        :family my/mono-font)
+
+    (set-face-attribute 'which-key-special-key-face nil
+                        :family my/mono-font))
 #+END_SRC
 
 *** Bind
@@ -1697,7 +1824,6 @@ Doesn't work with my setup right now
   ;;(yas-reload-all)
 
   (add-hook 'prog-mode-hook 'yas-minor-mode-on)
-
 #+END_SRC
 
 *** Keys
@@ -1708,6 +1834,21 @@ Doesn't work with my setup right now
 #+END_SRC
 
 * Movement
+** Relative line numbers
+#+BEGIN_SRC emacs-lisp
+  (when (version<= "26.0.50" emacs-version )
+    (setq display-line-numbers-type 'visual)
+    (setq display-line-numbers-width-start t)
+    (setq display-line-numbers-current-absolute nil)
+
+    (global-display-line-numbers-mode)
+
+    (if window-system
+        (progn
+          (set-face-attribute 'line-number-current-line nil :family my/mono-font)
+          (set-face-attribute 'line-number nil :family my/mono-font))))
+#+END_SRC
+
 ** Avy
 #+BEGIN_SRC emacs-lisp
   (use-package avy)
@@ -1865,8 +2006,8 @@ g-; and g-,
   (define-key my/leader-map (kbd "w") 'my/avy-goto-word-0-in-line)
   (define-key my/leader-map (kbd "g") 'avy-goto-char-2)
 
-  (define-key my/leader-map (kbd "n") 'my/avy-goto-line-below-keep-horizontal-position)
-  (define-key my/leader-map (kbd "p") 'my/avy-goto-line-above-keep-horizontal-position)
+  ;; (define-key my/leader-map (kbd "n") 'my/avy-goto-line-below-keep-horizontal-position)
+  ;; (define-key my/leader-map (kbd "p") 'my/avy-goto-line-above-keep-horizontal-position)
 
   ;;(define-key my/keys-mode-map (kbd "M-l") 'link-hint-open-link)
   (define-key my/leader-map (kbd "l") 'link-hint-open-link)
@@ -1943,7 +2084,12 @@ g-; and g-,
   (defun my/delete-other-windows()
     (interactive)
     (delete-other-windows)
-    (my/lv-line-create))
+    (my/lv-line-create)
+    (run-hooks 'my/switch-buffer-hook))
+#+END_SRC
+
+** Switch window hook
+#+BEGIN_SRC emacs-lisp
 #+END_SRC
 
 ** Switch buffer hook
@@ -1952,6 +2098,12 @@ g-; and g-,
     "Hook called after user has switched buffer")
   (add-hook 'window-configuration-change-hook (lambda () (interactive) (run-hooks 'my/switch-buffer-hook) t))
   (add-hook 'minibuffer-exit-hook (lambda () (interactive) (run-with-timer 0.1 nil (lambda () (interactive) (run-hooks 'my/switch-buffer-hook)))))
+  (add-hook 'my/switch-window-hook (lambda () (interactive) (run-hooks 'my/switch-buffer-hook) t))
+
+  (defadvice evil-window-up (after evil-window-up-after activate) (run-hooks 'my/switch-buffer-hook))
+  (defadvice evil-window-down (after evil-window-up-after activate) (run-hooks 'my/switch-buffer-hook))
+  (defadvice evil-window-left (after evil-window-up-after activate) (run-hooks 'my/switch-buffer-hook))
+  (defadvice evil-window-right (after evil-window-up-after activate) (run-hooks 'my/switch-buffer-hook))
 #+END_SRC
 
 ** Window settings 
@@ -1975,11 +2127,6 @@ g-; and g-,
   (setq kill-buffer-query-functions (delq 'process-kill-buffer-query-function kill-buffer-query-functions))
 #+END_SRC
 
-** Buffer settings
-Just unbind C-x b
-#+BEGIN_SRC emacs-lisp
-  (global-set-key (kbd "C-x b") nil)
-#+END_SRC
 
 *** Kill all buffers
 #+BEGIN_SRC emacs-lisp
@@ -2473,8 +2620,7 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 ** Common lisp
 *** Slime
 #+BEGIN_SRC emacs-lisp
-  (use-package slime
-    :defer t)
+  (use-package slime)
 
   (setq inferior-lisp-program "/usr/bin/sbcl")
   (setq slime-contribs '(slime-fancy))
@@ -2482,8 +2628,7 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 
 **** Slime comany
 #+BEGIN_SRC emacs-lisp
-  (use-package slime-company
-    :defer t)
+  (use-package slime-company)
 
   (slime-setup '(slime-fancy slime-company))
 #+END_SRC
@@ -2517,7 +2662,8 @@ Shows information in echo area
 
 *** Formatting
 #+BEGIN_SRC emacs-lisp
-  (use-package elisp-format)
+  (use-package elisp-format
+    :defer t)
 #+END_SRC
 
 *** Keys
@@ -2544,6 +2690,10 @@ Shows information in echo area
 #+END_SRC
 
 ** Java
+Try
+https://github.com/mopemope/meghanada-emacs
+or
+=ENSIME= 
 #+BEGIN_SRC emacs-lisp
   (use-package lsp-java)
 
@@ -2663,7 +2813,11 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 
 ** F#
 #+BEGIN_SRC emacs-lisp
-  (use-package fsharp-mode)
+  (use-package fsharp-mode
+  :defer t
+  :mode ("\\.fs\\'" . fsharp-mode)
+  :config
+  (my/fsharp-keys-init))
 
   (setq fsharp-doc-idle-delay 0.1)
 
@@ -2673,7 +2827,11 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 *** Keys
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/fsharp-mode-map)
-  (evil-define-key 'normal fsharp-mode-map (kbd (concat my/leader-map-key " a")) 'my/fsharp-mode-map)
+
+  (defun my/fsharp-keys-init()
+    (interactive)
+    (evil-define-key 'normal fsharp-mode-map (kbd (concat my/leader-map-key " a")) 'my/fsharp-mode-map)
+    (define-key fsharp-mode-map (kbd "C-x C-e") 'fsharp-eval-region))
 
   (define-key my/fsharp-mode-map (kbd "d") 'fsharp-ac/gotodefn-at-point)
   (define-key my/fsharp-mode-map (kbd "v") 'fsharp-mark-phrase)
@@ -2682,7 +2840,6 @@ omnisharp.json should be in ~/.omnisharp on all OSs
   (define-key my/fsharp-mode-map (kbd "C-k") 'fsharp-ac/stop-process)
   (define-key my/fsharp-mode-map (kbd "C-s") 'fsharp-ac/start-process)
 
-  (define-key fsharp-mode-map (kbd "C-x C-e") 'fsharp-eval-region)
 #+END_SRC
 
 *** Settings
@@ -2703,31 +2860,34 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 
 ** Clojure
 #+BEGIN_SRC emacs-lisp
-  (use-package clojure-mode
-    :defer t)
+  (use-package clojure-mode)
 #+END_SRC
 
 *** Cider
 #+BEGIN_SRC emacs-lisp
-  (use-package cider
-    :defer t)
+  (use-package cider)
 #+END_SRC
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
-  (evil-define-key 'normal clojure-mode-map (kbd (concat my/leader-map-key " a e")) 'cider-eval-defun-at-point)
+  (define-key clojure-mode-map (kbd "C-x C-e") 'cider-eval-defun-at-point)
+
+  (define-prefix-command 'my/clojure-mode-map)
+  (evil-define-key 'normal clojure-mode-map (kbd (concat my/leader-map-key " a")) 'my/clojure-mode-map)
+
+  (define-key my/clojure-mode-map (kbd "C-s") 'cider-jack-in)
 #+END_SRC
 
 ** Markdown
 #+BEGIN_SRC emacs-lisp
-  (use-package markdown-mode
-    :defer t)
+  (use-package markdown-mode)
 #+END_SRC
 
 ** Web mode
 TODO: Fix settings, grab them from package site 
 #+BEGIN_SRC emacs-lisp
-   (use-package web-mode)
+   (use-package web-mode
+    :defer t)
 
    (add-to-list 'auto-mode-alist '("\\.phtml\\'" . web-mode))
    (add-to-list 'auto-mode-alist '("\\.tpl\\.php\\'" . web-mode))
@@ -2996,7 +3156,12 @@ Use C-i instead
   ;; enable exwm
   (exwm-enable)
 
-  (add-hook 'exwm-mode-hook 'evil-emacs-state)
+  (add-hook 'exwm-manage-finish-hook 'my/exwm-mode)
+  (defun my/exwm-mode ()
+    (interactive)
+    (my/keys-mode-turn-off)
+    (evil-mc-mode -1)
+    (evil-emacs-state))
 #+END_SRC
 
 ** Name buffers after window name
@@ -3024,9 +3189,9 @@ We use class names for all windows expect for Java applications and GIMP (becaus
 *** Define functions
 Define main function
 #+BEGIN_SRC emacs-lisp
-  ;; (defun my/async-run (name)
-    ;; (interactive)
-    ;; (start-process name nil name))
+   (defun my/start-process (name)
+     (interactive)
+     (start-process name nil name))
 #+END_SRC
 
 *** Run programs functions
@@ -3101,32 +3266,25 @@ Define main function
         '(
           ;; movement
           ([?\C-h] . [left])
-          ([?\M-h] . [C-left])
           ([?\C-l] . [right])
-          ([?\M-l] . [C-right])
           ([?\C-p] . [up])
           ([?\C-n] . [down])
 
           ([?\C-u] . [prior])
           ([?\C-w] . [next])
 
+          ([?\C-s] . [?\C-f])
+          ([?\C-a] . [?\C-m])
+
+          ;;([?\C-e] . [?\C-[])
+
+
+
           ;; cut/paste.
           ([?\C-y] . [?\C-c])
-          ([?\C-k] . [?\C-v])
+          ([?\C-k] . [?\C-v])))
 
-          ;; enter
-          ([?\C-a] . [return])
-
-          ;; tab
-          ([?\C-t] . [tab])
-          ; ([?\t] . [?\C-=])
-           ;;([tab] . [?\C-=])
-
-          ;; escape
-          ([?\C-e] . [escape])
-
-          ;; search
-          ([?\C-s] . [?\C-f])))
+  ;;(setq exwm-input-prefix-keys nil)
 
   ;; Exwm don't send back these keys
   (dolist (k '(XF86AudioLowerVolume
@@ -3141,41 +3299,28 @@ Define main function
                XF68Back
                XF86Forward
                Scroll_Lock
-               print
-               C-x
-               C-g
-               C-h
-               C-SPC
-               TAB
-               <tab>
-               C-TAB
-               ;; Exwm grab and release keyboard
-               M-j
-               M-k
-               ))
+               print))
     (cl-pushnew k exwm-input-prefix-keys))
 
   ;; Some keys have to be defined using "exwm-input-set-key" in order to be usable if they are in "exwm-input-prefix-keys"
 
   (exwm-input-set-key (kbd my/mod-leader-map-key) 'my/leader-map)
 
-   ;;(exwm-input-set-key (kbd "TAB") 'my/window-hydra/body)
-   (exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
+  (exwm-input-set-key (kbd "C-z") 'evil-emacs-state)
+
+  (exwm-input-set-key (kbd "C-e") 'evil-force-normal-state)
+
+  (exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
 
   (exwm-input-set-key (kbd "C-=") 'my/window-hydra/body)
 
-  ;; (exwm-input-set-key (kbd "TAB") 'my/window-hydra/body)
-  ;; (exwm-input-set-key (kbd "C-TAB") 'my/window-hydra/body)
-  ;; (exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
-  ;; (exwm-input-set-key (kbd "C-<tab>") 'my/window-hydra/body)
-
-  ;;(exwm-input-set-key (kbd my/mod-window-leader-key) 'my/window-hydra/body)
+  (exwm-input-set-key (kbd "M-x") 'counsel-M-x)
 
   (exwm-input-set-key (kbd "C-h") help-map)
 
   ;; Enter and exit char mode
-  (exwm-input-set-key (kbd "M-a") 'exwm-input-grab-keyboard)
-  (exwm-input-set-key (kbd "M-i") 'exwm-input-release-keyboard)
+  ;; (exwm-input-set-key (kbd "M-a") 'exwm-input-grab-keyboard)
+  ;; (exwm-input-set-key (kbd "M-i") 'exwm-input-release-keyboard)
 #+END_SRC
 
 * Version control
@@ -3860,7 +4005,7 @@ Mode for writing mail
 * System
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/system-commands-map)
-  (define-key my/leader-map (kbd "`") 'my/system-commands-map)
+  (define-key my/leader-map (kbd "~") 'my/system-commands-map)
 #+END_SRC
 
 ** Suspend
@@ -4134,6 +4279,7 @@ Mode for writing mail
   ;; Webjump
   (define-key my/leader-map (kbd "W") 'webjump)
   (define-key my/leader-map (kbd "C-w") (lambda () (interactive) (my/webjump-use-browser "firefox")))
+  (define-key my/leader-map (kbd "M-w") (lambda () (interactive) (my/webjump-use-browser "firefox")))
 #+END_SRC
 
 * Find
@@ -4233,7 +4379,7 @@ https://www.emacswiki.org/emacs/FacesPerBuffer
                   (highlight-indent-guides-mode 1)))
 
             (evil-exit-emacs-state)
-            (if (not my/is-font-mono)
+            (if (and (not my/is-font-mono) window-system)
                 (set-face-attribute 'default nil
                                     :family my/font)))
         )
@@ -4295,9 +4441,9 @@ https://www.emacswiki.org/emacs/ArtistMode
 ** Window and buffer management
 #+BEGIN_SRC emacs-lisp
   (defhydra my/window-hydra (:hint nil
-                                   :color red
-                                   :pre (setq exwm-input-line-mode-passthrough t)
-                                   :post (setq exwm-input-line-mode-passthrough nil))
+                                   :color red)
+                                   ;; :pre (setq exwm-input-line-mode-passthrough t)
+                                   ;; :post (setq exwm-input-line-mode-passthrough nil))
     "movement" 
 
     ;; Move focus
@@ -4401,10 +4547,32 @@ https://www.emacswiki.org/emacs/ArtistMode
 #+END_SRC
 
 * Image modes
+** PDF view
+#+BEGIN_SRC emacs-lisp
+#+END_SRC
+
 ** PDF tools
 #+BEGIN_SRC emacs-lisp
-  (use-package pdf-tools)
-  (pdf-tools-install-noverify)
+  (use-package pdf-tools
+    :defer t)
+
+  (add-to-list 'auto-mode-alist '("\\.[pP][dD][fF]\\'" . my/init-pdf-tools))
+  ;;(add-to-list 'auto-mode-alist '("\\.[pP][dD][fF]\\'" . pdf-view-mode))
+
+  (setq my/pdf-tools-installed nil)
+
+  (defun my/init-pdf-tools ()
+    (interactive)
+    (message "ONETSAONESTEOA")
+    (if (not my/pdf-tools-installed)
+    (progn
+        (require 'pdf-view)
+        (pdf-tools-install)
+        ;; reload buffer with everything set
+        (revert-buffer :ignore-auto :noconfirm)))
+    (setq my/pdf-tools-installed t))
+
+  (add-hook 'pdf-view-mode-hook 'my/init-pdf-tools)
 
   ;; Enable pdf-links
   (add-hook 'pdf-view-mode-hook 'pdf-links-minor-mode)
@@ -4459,7 +4627,27 @@ https://www.emacswiki.org/emacs/ArtistMode
 ** Image mode
 #+BEGIN_SRC emacs-lisp
   (require 'image-mode)
+#+END_SRC
 
+*** Blimp
+#+BEGIN_SRC emacs-lisp
+  (use-package blimp)
+
+  (setq eimp-enable-undo t)
+
+  (add-hook 'image-mode-hook 'blimp-mode)
+#+END_SRC
+
+**** Recolor
+#+BEGIN_SRC emacs-lisp
+  (defun my/blimp-annotate-middle()
+    (interactive)
+    (blimp-add-to-command-stack (list "-gravity" "Center" "-fill" "red" "-pointsize" "25" "-annotate" "0,0" (completing-read "enter text " nil)))
+    (blimp-execute-command-stack))
+#+END_SRC
+
+*** Keys
+#+BEGIN_SRC emacs-lisp
   (evil-define-key 'normal image-mode-map (kbd "-") 'image-decrease-size)
   (evil-define-key 'normal image-mode-map (kbd "=") 'image-increase-size)
   (evil-define-key 'normal image-mode-map (kbd "_") 'image-transform-fit-to-height)
@@ -4472,6 +4660,19 @@ https://www.emacswiki.org/emacs/ArtistMode
   (evil-define-key 'normal image-mode-map (kbd "p") '(lambda () (interactive) (image-previous-line 8)))
   (evil-define-key 'normal image-mode-map (kbd "h") '(lambda () (interactive) (image-backward-hscroll 8)))
   (evil-define-key 'normal image-mode-map (kbd "l") '(lambda () (interactive) (image-forward-hscroll 8)))
+
+  (define-prefix-command 'my/image-mode-map)
+  (evil-define-key 'normal image-mode-map (kbd (concat my/leader-map-key " a")) 'my/image-mode-map)
+
+  (define-key my/image-mode-map (kbd "i") 'blimp-interface)
+  (define-key my/image-mode-map (kbd "I") 'blimp-interface-execute)
+
+  (define-key my/image-mode-map (kbd "r") 'blimp-clear-command-stack)
+  (define-key my/image-mode-map (kbd "e") 'blimp-execute-command-stack)
+  (define-key my/image-mode-map (kbd "p") 'blimp-toggle-prefix)
+  (define-key my/image-mode-map (kbd "p") 'blimp-toggle-prefix)
+
+  (define-key my/image-mode-map (kbd "a") 'my/blimp-annotate-middle)
 #+END_SRC
 
 * Visuals
@@ -4616,11 +4817,12 @@ Highlight thing under cursor and all other occurrences
 
 ** Faces
 #+BEGIN_SRC emacs-lisp
-  (set-face-attribute 'header-line nil
-                      :foreground (face-attribute 'default :foreground)
-                      :background (face-attribute 'default :background)
-                      :family (face-attribute 'default :family)
-                      :height (face-attribute 'default :height))
+(if window-system
+    (set-face-attribute 'header-line nil
+                        :foreground (face-attribute 'default :foreground)
+                        :background (face-attribute 'default :background)
+                        :family (face-attribute 'default :family)
+                        :height (face-attribute 'default :height)))
 
   (set-face-attribute 'org-mode-line-clock nil
                       :foreground (face-attribute 'default :foreground)
@@ -4659,7 +4861,6 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
 *** Mode line
 Set mode line height
 #+BEGIN_SRC emacs-lisp
-
   ;; Disable normal mode line
   ;; (setq mode-line-format nil)
   ;; (setq-default mode-line-format nil)
@@ -4667,20 +4868,21 @@ Set mode line height
   (setq mode-line-format "")
   (setq-default mode-line-format "")
 
-  ;; Set mode line height
-  (set-face-attribute 'mode-line nil
-                      ;; :foreground (face-attribute 'window-divider :foreground)
-                      ;; :background (face-attribute 'window-divider :background)
-                      :foreground "white" 
-                      :background "white"
-                      :height  0.1
-                      :family my/mono-font)
+  (if window-system
+    ;; Set mode line height
+    (set-face-attribute 'mode-line nil
+                        ;; :foreground (face-attribute 'window-divider :foreground)
+                        ;; :background (face-attribute 'window-divider :background)
+                        :foreground "white" 
+                        :background "white"
+                        :height  0.1
+                        :family my/mono-font)
 
-  (set-face-attribute 'mode-line-inactive nil
-                      :foreground "dark gray"
-                      :background "dark gray"
-                      :height  0.1
-                      :family my/mono-font)
+    (set-face-attribute 'mode-line-inactive nil
+                        :foreground "dark gray"
+                        :background "dark gray"
+                        :height  0.1
+                        :family my/mono-font))
 #+END_SRC
 *** LV-line (top modeline)
 Use lv-line to create a mode line on the top of the screen
@@ -4688,14 +4890,6 @@ Use lv-line to create a mode line on the top of the screen
   (defvar my/lv-line-format "")
   (defconst my/lv-line--buffer " *LV-line*")
   (defvar my/lv-line-window nil)
-
-  ;; (defface my/lv-line-face
-    ;; '((t
-       ;; ))
-    ;; "Face to use for lv-line.")
-;; 
-  ;; (set-face-attribute 'my/lv-line-face nil
-                      ;; :family my/mono-font)
 #+END_SRC
 
 **** LV-line update
@@ -4719,8 +4913,9 @@ Use lv-line to create a mode line on the top of the screen
     (setq window-size-fixed t)
     (setq mode-line-format nil)
 
+    (if window-system
     ;; Change to mono face
-    (face-remap-add-relative 'default :family my/mono-font)
+    (face-remap-add-relative 'default :family my/mono-font))
 
     ;; Disable cursor
     (setq cursor-type nil)
@@ -4810,7 +5005,10 @@ Use lv-line to create a mode line on the top of the screen
     ;; If on terminal, just run it now since it's always maximized
     (my/update-max-buffer-name-length))
 
-  (add-hook 'window-configuration-change-hook (lambda () (interactive) (my/update-buffer-name-string (buffer-name)) t))
+  ;;(add-hook 'buffer-list-update-hook (lambda () (interactive) (my/update-buffer-name-string (buffer-name)) t) t)
+  (add-hook 'my/switch-buffer-hook (lambda () (interactive) (my/update-buffer-name-string (buffer-name)) t) t)
+
+  ;;(add-hook 'window-configuration-change-hook (lambda () (interactive) (my/update-buffer-name-string (buffer-name)) t) t)
 #+END_SRC
 
 **** CPU heat
@@ -5134,9 +5332,9 @@ When projectile-mode is on, project name is updated on every keypress, here it i
   (define-key my/leader-map (kbd "b") 'my/timer-map)
 
   (define-key my/timer-map (kbd "s") 'my/start-work-timer)
-  (define-key my/timer-map (kbd "e") 'my/stop-work-timer)
+  (define-key my/timer-map (kbd "S") 'my/stop-work-timer)
 
-  (define-key my/timer-map (kbd "r") 'my/reset-eye-timer)
+  (define-key my/timer-map (kbd "e") 'my/reset-eye-timer)
 #+END_SRC
 
 *** Mode line format
@@ -5310,3 +5508,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 ;;(my/load-if-exists "~/.emacs.d/spotify.el")
 #+END_SRC
 
+* Report start time
+#+BEGIN_SRC emacs-lisp
+(message (concat "Booted in " (number-to-string (- (float-time) my/config-start-time)) " seconds"))
+#+END_SRC
