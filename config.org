@@ -1837,11 +1837,10 @@ Doesn't work with my setup right now
 ** Relative line numbers
 #+BEGIN_SRC emacs-lisp
   (when (version<= "26.0.50" emacs-version )
-    (setq display-line-numbers-type 'visual)
-    (setq display-line-numbers-width-start t)
-    (setq display-line-numbers-current-absolute nil)
-
     (global-display-line-numbers-mode)
+
+    (setq display-line-numbers-type 'relative)
+    (setq display-line-numbers-current-absolute nil)
 
     (if window-system
         (progn
