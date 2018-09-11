@@ -27,11 +27,24 @@
   (interactive)
   (time-less-p (nth 5 (file-attributes isOlder)) (nth 5 (file-attributes isYounger))))
 
-(defun my/load-compiled-or-raw-config ()
+(defun my/compile-and-load-config ()
+  (setq byte-compile-warnings '(not nresolved
+				    free-vars
+				    unresolved
+				    callargs
+				    redefine
+				    noruntime
+				    cl-functions
+				    interactive-only
+				    ))
+  (byte-compile-file my/config-exported-location t)
+  (setq byte-compile-warnings t))
+
+(defun my/load-compiled-or-compile ()
   (interactive)
   (if (and (file-exists-p my/config-compiled-location) (my/compare-last-file-update my/config-location my/config-compiled-location))
       (load-file my/config-compiled-location)
-    (load-file my/config-exported-location)))
+    (my/compile-and-load-config)))
 
 (if (file-exists-p my/config-exported-location)
     (progn
@@ -40,10 +53,10 @@
 	  (progn
 	    (org-babel-tangle-file my/config-location my/config-exported-location "emacs-lisp")
 	    (message "Config.el updated!")
-	    (my/load-compiled-or-raw-config))
+	    (load-file my/config-exported-location))
 	(progn
 	  (message "Config.el matches config.org")
-	  (my/load-compiled-or-raw-config))))
+	  (my/load-compiled-or-compile))))
   (org-babel-tangle-file my/config-location my/config-exported-location "emacs-lisp")
   (message "Config.el created!")
-  (my/load-compiled-or-raw-config))
+  (my/load-compiled-or-compile))

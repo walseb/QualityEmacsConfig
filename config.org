@@ -3284,8 +3284,7 @@ Define main function
           ([?\C-y] . [?\C-c])
           ([?\C-k] . [?\C-v])))
 
-  ;;(setq exwm-input-prefix-keys nil)
-
+  (setq exwm-input-prefix-keys nil)
   ;; Exwm don't send back these keys
   (dolist (k '(XF86AudioLowerVolume
                XF86AudioRaiseVolume
@@ -3303,24 +3302,23 @@ Define main function
     (cl-pushnew k exwm-input-prefix-keys))
 
   ;; Some keys have to be defined using "exwm-input-set-key" in order to be usable if they are in "exwm-input-prefix-keys"
-
   (exwm-input-set-key (kbd my/mod-leader-map-key) 'my/leader-map)
 
-  (exwm-input-set-key (kbd "C-z") 'evil-emacs-state)
+   (exwm-input-set-key (kbd "C-z") 'evil-emacs-state)
 
-  (exwm-input-set-key (kbd "C-e") 'evil-force-normal-state)
+   (exwm-input-set-key (kbd "C-e") 'evil-force-normal-state)
 
-  (exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
+   (exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
 
-  (exwm-input-set-key (kbd "C-=") 'my/window-hydra/body)
+   (exwm-input-set-key (kbd "C-=") 'my/window-hydra/body)
 
-  (exwm-input-set-key (kbd "M-x") 'counsel-M-x)
+   (exwm-input-set-key (kbd "M-x") 'counsel-M-x)
 
-  (exwm-input-set-key (kbd "C-h") help-map)
+   (exwm-input-set-key (kbd "C-h") help-map)
 
-  ;; Enter and exit char mode
-  ;; (exwm-input-set-key (kbd "M-a") 'exwm-input-grab-keyboard)
-  ;; (exwm-input-set-key (kbd "M-i") 'exwm-input-release-keyboard)
+   ;; Enter and exit char mode
+   ;; (exwm-input-set-key (kbd "M-a") 'exwm-input-grab-keyboard)
+   ;; (exwm-input-set-key (kbd "M-i") 'exwm-input-release-keyboard)
 #+END_SRC
 
 * Version control
