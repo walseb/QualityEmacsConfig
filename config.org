@@ -3319,6 +3319,9 @@ We use class names for all windows expect for Java applications and GIMP (becaus
           ([?\C-g] . [escape])
           ;;([?\e] . [escape])
 
+          ;; Firefox hard-coded open url hotkey
+          ([?\C-o] . [?\M-d])
+	
           ;; cut/paste.
           ([?\C-y] . [?\C-c])
           ([?\C-k] . [?\C-v])))
