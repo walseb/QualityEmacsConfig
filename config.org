@@ -749,12 +749,8 @@ Allows for using indention as text objects
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
-  ;; Unbind unused keys
-  (define-key evil-motion-state-map (kbd "C-w") 'nil)
-  (define-key evil-emacs-state-map (kbd "C-w") 'nil)
-
-  ;; (define-key evil-motion-state-map (kbd "RET") 'nil)
-  ;; (evil-define-key 'normal my/keys-mode-map (kbd "RET") 'evil-ret)
+  ;; Prevent emacs state from being exited with esc, fixes exwm since it uses emacs state and to exit hydra you have to do esc
+  (define-key evil-emacs-state-map (kbd "<escape>") 'keyboard-quit)
 #+END_SRC
 
 * Leader
@@ -1302,6 +1298,36 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (define-key my/indentation-map (kbd "w") 'my/change-tab-width)
 #+END_SRC
 
+* Browser
+** Eww
+#+BEGIN_SRC emacs-lisp
+  (require 'eww)
+  (defun my/eww-browse-url (URL &optional NEW-WINDOW)
+    (interactive)
+    (eww-browse-url URL NEW-WINDOW)
+    (my/give-buffer-unique-name "eww"))
+#+END_SRC
+
+*** Keys
+#+BEGIN_SRC emacs-lisp
+  (define-key eww-mode-map [?\d] 'eww-back-url)
+  (evil-define-key 'normal eww-mode-map [?\d] 'eww-back-url)
+  (evil-define-key 'visual eww-mode-map [?\d] 'eww-back-url)
+
+  (define-prefix-command 'my/eww-mode-map)
+  (evil-define-key 'normal eww-mode-map (kbd (concat my/leader-map-key " a")) 'my/eww-mode-map)
+
+  (define-key my/eww-mode-map (kbd "d") 'eww-download)
+  (define-key my/eww-mode-map (kbd "h") 'eww-history-browse)
+  (define-key my/eww-mode-map (kbd "o") 'eww-open-in-new-buffer)
+  (define-key my/eww-mode-map (kbd "l") 'eww-open-file)
+#+END_SRC
+
+** Set default browser
+#+BEGIN_SRC emacs-lisp
+  (setq-default browse-url-browser-function 'my/eww-browse-url)
+#+END_SRC
+
 * Visit file hotkeys
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/open-map)
@@ -1389,11 +1415,43 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
 ** Open firefox
 #+BEGIN_SRC emacs-lisp
+  (defun my/start-process (name)
+    (interactive)
+    (start-process name nil name))
+
   (defun my/launch-firefox ()
     (interactive)
-    (my/start-process "firefox"))
+    (setq my/firefox-title-name (completing-read "set title " '(
+                                                      ("media")
+                                                      ("dev")
+                                                      )))
+    (let* (
+           (bookmarks '(
+                        "youtube.com"
+                        "discordapp.com/channels/@me"
+                        "github.com/"
+                        "steamcommunity.com/chat"
+                        ))
+           (adress-raw (completing-read "url " bookmarks))
+           (adress (if (cl-member adress-raw bookmarks :test #'string=)
+                       adress-raw
+                     (concat "https://www.google.com/search?q=" adress-raw))))
 
-  (define-key my/open-map (kbd "f") 'my/launch-firefox)
+     (start-process "firefox name" nil "firefox" "--new-window" adress)
+     (run-with-timer 0.5 nil
+                     (lambda () (interactive)
+                       (exwm-workspace-rename-buffer (concat my/firefox-title-name " - firefox"))))))
+
+
+    (define-key my/open-map (kbd "f") 'my/launch-firefox)
+#+END_SRC
+** Open eww
+#+BEGIN_SRC emacs-lisp
+  (defun my/launch-eww ()
+    (interactive)
+    (my/eww-browse-url (concat "https://www.google.com/search?q=" (completing-read "url " nil))))
+
+  (define-key my/open-map (kbd "e") 'my/launch-eww)
 #+END_SRC
 
 * Folding
@@ -1556,6 +1614,8 @@ Vim bindings to change fold
 
   (global-set-key (kbd "C-s") 'my/use-swiper-or-grep)
   (global-set-key (kbd "M-s") (lambda () (interactive) (my/use-swiper-or-grep nil t)))
+
+;;  (setq swiper-use-visual-line t)
 #+END_SRC
 
 *** Search for thing-at-point
@@ -2813,10 +2873,8 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 ** F#
 #+BEGIN_SRC emacs-lisp
   (use-package fsharp-mode
-  :defer t
-  :mode ("\\.fs\\'" . fsharp-mode)
-  :config
-  (my/fsharp-keys-init))
+    :defer t
+    :mode ("\\.fs\\'" . fsharp-mode))
 
   (setq fsharp-doc-idle-delay 0.1)
 
@@ -2825,6 +2883,8 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
+  (add-hook 'fsharp-mode-hook 'my/fsharp-keys-init)
+
   (define-prefix-command 'my/fsharp-mode-map)
 
   (defun my/fsharp-keys-init()
@@ -3173,41 +3233,11 @@ We use class names for all windows expect for Java applications and GIMP (becaus
                 (exwm-workspace-rename-buffer exwm-class-name))))
   (add-hook 'exwm-update-title-hook
             (lambda ()
-              (when (or (not exwm-instance-name)
-                       (string-prefix-p "sun-awt-X11-" exwm-instance-name)
-                       (string= "gimp" exwm-instance-name))
+              (when (or
+                     (not exwm-instance-name)
+                     (string-prefix-p "sun-awt-X11-" exwm-instance-name)
+                     (string= "gimp" exwm-instance-name))
                 (exwm-workspace-rename-buffer exwm-title))))
-#+END_SRC
-
-** Launch programs with hotkeys
-#+BEGIN_SRC emacs-lisp
-  ;; (define-prefix-command 'my/x-launch-map)
-  ;; (define-key my/leader-map (kbd "l") 'my/x-launch-map)
-#+END_SRC
-
-*** Define functions
-Define main function
-#+BEGIN_SRC emacs-lisp
-   (defun my/start-process (name)
-     (interactive)
-     (start-process name nil name))
-#+END_SRC
-
-*** Run programs functions
-#+BEGIN_SRC emacs-lisp
-  ;; (defun my/launch-virt-manager ()
-    ;; (interactive)
-    ;; (my/async-run "virt-manager"))
-  ;; 
-  ;; ;;(global-set-key (kbd "s-z") 'my/launch-virt-manager)
-  ;; (define-key my/x-launch-map (kbd "z") 'my/launch-virt-manager)
-  ;; 
-  ;; (defun my/launch-lock-screen ()
-    ;; (interactive)
-    ;; (my/async-run "slock"))
-  ;; 
-  ;; (global-set-key (kbd "<XF86ScreenSaver>") 'my/launch-lock-screen)
-  ;; (define-key my/x-launch-map (kbd "l") 'my/launch-lock-screen)
 #+END_SRC
 
 ** Multi-screen
@@ -3260,6 +3290,8 @@ Define main function
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
+  (define-key evil-emacs-state-map (kbd "TAB") 'nil)
+  (global-unset-key (kbd "TAB"))
   ;; Rebind keys in exwm bufffers
   (setq exwm-input-simulation-keys
         '(
@@ -3273,11 +3305,19 @@ Define main function
           ([?\C-w] . [next])
 
           ([?\C-s] . [?\C-f])
-          ([?\C-a] . [?\C-m])
+
+          ([?\C-a] . [return])
+          ([?\r] . [return])
 
           ;;([?\C-e] . [?\C-[])
+          ;; ([?\C-e] . [escape])
+          ;; ([?\e] . [escape])
 
+          ([?\C-t] . [tab])
+          ([?\t] . [tab])
 
+          ([?\C-g] . [escape])
+          ;;([?\e] . [escape])
 
           ;; cut/paste.
           ([?\C-y] . [?\C-c])
@@ -3285,7 +3325,8 @@ Define main function
 
   (setq exwm-input-prefix-keys nil)
   ;; Exwm don't send back these keys
-  (dolist (k '(XF86AudioLowerVolume
+  (dolist (k '(
+               XF86AudioLowerVolume
                XF86AudioRaiseVolume
                XF86PowerOff
                XF86AudioMute
@@ -3297,27 +3338,29 @@ Define main function
                XF68Back
                XF86Forward
                Scroll_Lock
-               print))
+               print
+               ))
     (cl-pushnew k exwm-input-prefix-keys))
 
   ;; Some keys have to be defined using "exwm-input-set-key" in order to be usable if they are in "exwm-input-prefix-keys"
   (exwm-input-set-key (kbd my/mod-leader-map-key) 'my/leader-map)
 
-   (exwm-input-set-key (kbd "C-z") 'evil-emacs-state)
+  (exwm-input-set-key (kbd "C-e") 'keyboard-quit)
+  (exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
+  (exwm-input-set-key (kbd "C-=") 'my/window-hydra/body)
+  (exwm-input-set-key (kbd "M-x") 'counsel-M-x)
 
-   (exwm-input-set-key (kbd "C-e") 'evil-force-normal-state)
+  ;; Enter and exit char mode
+  ;; (exwm-input-set-key (kbd "M-a") 'exwm-input-grab-keyboard)
+  ;; (exwm-input-set-key (kbd "M-i") 'exwm-input-release-keyboard)
 
-   (exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
-
-   (exwm-input-set-key (kbd "C-=") 'my/window-hydra/body)
-
-   (exwm-input-set-key (kbd "M-x") 'counsel-M-x)
-
-   (exwm-input-set-key (kbd "C-h") help-map)
-
-   ;; Enter and exit char mode
-   ;; (exwm-input-set-key (kbd "M-a") 'exwm-input-grab-keyboard)
-   ;; (exwm-input-set-key (kbd "M-i") 'exwm-input-release-keyboard)
+  ;; Notes
+  ;; (defun my/send-key(event)
+  ;; (interactive "e")
+  ;; (exwm-input--fake-key event))
+  ;; (define-key 'my/leader-map (kbd "C-q") 'my/send-key)
+  ;; 
+  ;; (exwm-input--fake-key (event-basic-type ?\C-a))
 #+END_SRC
 
 * Version control
@@ -4196,89 +4239,6 @@ Mode for writing mail
             (string-to-number number-of-processors)))))
 #+END_SRC
 
-* Browser
-** Webjump
-#+BEGIN_SRC emacs-lisp
-  (require 'webjump)
-  (setq webjump-sites
-        (append '(
-                  (">" .
-                   [simple-query "" "" ""])
-
-                  ("Discord" . "www.discordapp.com/channels/@me")
-                  ("Github" . "www.github.com/")
-                  ("Steam chat" . "www.steamcommunity.com/chat")
-
-                  ("Reddit Search" .
-                   [simple-query "www.reddit.com" "www.reddit.com/search?q=" ""])
-                  ("Reddit Sub" .
-                   [simple-query "www.reddit.com" "www.reddit.com/r/" ""])
-                  ("Wikipedia" .
-                   [simple-query "www.wikipedia.org" "www.wikipedia.org/wiki/" ""])
-                  ("Emacs Wiki" .
-                   [simple-query "www.emacswiki.org" "www.emacswiki.org/cgi-bin/wiki/" ""])
-
-                  ("Youtube" .
-                   [simple-query "www.youtube.com" "www.youtube.com/results?search_query=" ""])
-                  ("-Startpage search" .
-                   [simple-query "www.startpage.com" "www.startpage.com/do/search?q=" ""])
-                  ("Startpage Image" .
-                   [simple-query "www.startpage.com" "www.startpage.com/do/search?q=" "&nj=0&cat=pics"]))))
-#+END_SRC
-
-*** Temporarily switch browser to open webjump result in
-#+BEGIN_SRC emacs-lisp
-  (defun my/webjump-use-browser (browser)
-    (interactive)
-
-    (setq old-browser browse-url-browser-function)
-    (setq browse-url-browser-function 'browse-url-generic
-          browse-url-generic-program browser)
-
-    (unwind-protect
-        (webjump)
-      (setq browse-url-browser-function old-browser)))
-#+END_SRC
-
-** Eww
-#+BEGIN_SRC emacs-lisp
-  (require 'eww)
-  (defun my/eww-browse-url (URL &optional NEW-WINDOW)
-    (interactive)
-    (eww-browse-url URL NEW-WINDOW)
-    (my/give-buffer-unique-name "eww"))
-#+END_SRC
-
-*** Keys
-#+BEGIN_SRC emacs-lisp
-  (define-key eww-mode-map [?\d] 'eww-back-url)
-  (evil-define-key 'normal eww-mode-map [?\d] 'eww-back-url)
-  (evil-define-key 'visual eww-mode-map [?\d] 'eww-back-url)
-
-  (define-prefix-command 'my/eww-mode-map)
-  (evil-define-key 'normal eww-mode-map (kbd (concat my/leader-map-key " a")) 'my/eww-mode-map)
-
-  (define-key my/eww-mode-map (kbd "d") 'eww-download)
-  (define-key my/eww-mode-map (kbd "h") 'eww-history-browse)
-  (define-key my/eww-mode-map (kbd "o") 'eww-open-in-new-buffer)
-  (define-key my/eww-mode-map (kbd "l") 'eww-open-file)
-#+END_SRC
-
-** Set default browser
-#+BEGIN_SRC emacs-lisp
-  ;;  (setq browse-url-browser-function 'browse-url-generic
-  ;;        browse-url-generic-program "firefox")
-  (setq-default browse-url-browser-function 'my/eww-browse-url)
-#+END_SRC
-
-** Keys
-#+BEGIN_SRC emacs-lisp
-  ;; Webjump
-  (define-key my/leader-map (kbd "W") 'webjump)
-  (define-key my/leader-map (kbd "C-w") (lambda () (interactive) (my/webjump-use-browser "firefox")))
-  (define-key my/leader-map (kbd "M-w") (lambda () (interactive) (my/webjump-use-browser "firefox")))
-#+END_SRC
-
 * Find
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/find-map)
@@ -5064,7 +5024,8 @@ Received
       (let ((rx 0))
         (while (search-forward-regexp "^[\s\t]*\\(.*\\):" nil t)
           (unless (string= (match-string 1) "lo")
-            (setq rx (+ rx (read (current-buffer)))))) rx)))
+            (setq rx (+ rx (read (current-buffer)))))) 
+        rx)))
 
   (defun my/linux-update-network-rx-delta ()
     (interactive)
@@ -5092,7 +5053,8 @@ Transmitted
         (while (search-forward-regexp "^[\s\t]*\\(.*\\):" nil t)
           (unless (string= (match-string 1) "lo")
             (forward-word 8)
-            (setq tx (+ tx (read (current-buffer)))))) tx)))
+            (setq tx (+ tx (read (current-buffer))))))
+        tx)))
 
   (defun my/linux-update-network-tx-delta ()
     (interactive)
@@ -5110,11 +5072,11 @@ Transmitted
 #+BEGIN_SRC emacs-lisp
   (defvar my/buffer-total-lines nil)
 
-   (defun my/update-total-lines ()
-      (save-excursion
-        (setq my/buffer-total-lines (format-mode-line "%l" (goto-char (point-max))))))
+  (defun my/update-total-lines ()
+    (save-excursion
+      (setq my/buffer-total-lines (format-mode-line "%l" (goto-char (point-max))))))
 
-   (add-hook 'my/switch-buffer-hook 'my/update-total-lines)
+  (add-hook 'my/switch-buffer-hook 'my/update-total-lines)
   (add-hook 'before-save-hook 'my/update-total-lines)
 #+END_SRC
 
