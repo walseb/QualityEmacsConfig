@@ -68,6 +68,9 @@ Set adress in gnus.el
 =poppler= =poppler-glib=
 M-x =pdf-tools-install=
 
+*** GPG pinentry
+=gpg2= =pinentry=
+
 *** Misc
 =redshift= 
 
@@ -198,7 +201,7 @@ Get =gpick=
 
 * Security
 #+BEGIN_SRC emacs-lisp
-  (setq network-security-level 'paranoid)
+  (setq network-security-level 'high)
 #+END_SRC
 
 ** Make authinfo gpg file
@@ -891,6 +894,20 @@ This swaps capslock and ctrl
   (define-key my/write-config-map (kbd "m") 'my/setup-mpd)
 #+END_SRC
 
+** Write GPG pinentry
+#+BEGIN_SRC emacs-lisp
+  (defun my/setup-gpg-agent ()
+    (interactive)
+    (setq my/gpg-directory "~/.gnupg/")
+    (my/create-dir-if-not-exist my/gpg-directory)
+
+    (setq my/gpg-agent-conf-file (concat my/gpg-directory "gpg-agent.conf"))
+    (my/create-file-with-content-if-not-exist my/gpg-agent-conf-file "allow-emacs-pinentry")
+    (shell-command "gpgconf --reload gpg-agent"))
+
+  (define-key my/write-config-map (kbd "C-g") 'my/setup-gpg-agent)
+#+END_SRC
+
 ** Write all configs
 #+BEGIN_SRC emacs-lisp
   (defun my/write-all-config ()
@@ -1062,7 +1079,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (interactive)
     (cl-loop for face in (face-list) do
              (set-face-attribute face nil :foreground nil :background nil))
-
     ;;(setq my/foreground-color "#8b4513")
     ;;(setq my/foreground-color "brown")
     ;;(setq my/background-color "black")
@@ -1082,6 +1098,11 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (setq my/background-color "#4682b4") 
     ;;(setq my/background-color "#87cefa") 
 
+    ;; Dark theme 2 - spacemacs  - https://github.com/nashamri/spacemacs-theme/blob/master/spacemacs-common.el
+    ;;(setq my/foreground-color "#b2b2b2")
+    ;;(setq my/background-color "#292b2e") 
+
+
     ;;; Emacs
     (set-face-attribute 'default nil :foreground my/foreground-color :background my/background-color)
     (set-face-attribute 'link nil :foreground my/background-color :background my/foreground-color)
@@ -1091,6 +1112,11 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (set-face-attribute 'warning nil :foreground "DarkOrange" :background)
 
     (set-face-attribute  'font-lock-doc-face nil :foreground my/third-color :background my/foreground-color)
+
+    (set-face-attribute  'font-lock-comment-face nil :foreground "dark green" :background my/background-color :underline t)
+    (set-face-attribute 'outline-4 nil :foreground my/foreground-color :background my/background-color)
+
+    (set-face-attribute 'font-lock-string-face nil :foreground my/foreground-color :background (color-lighten-name my/background-color 5))
 
     ;; Line numbers
     (set-face-attribute 'line-number-current-line nil :foreground my/background-color :background my/foreground-color)
@@ -1135,16 +1161,23 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (set-face-attribute 'ivy-current-match nil :foreground my/background-color :background my/foreground-color)
     (set-face-attribute 'ivy-cursor nil :foreground my/background-color :background my/foreground-color)
     (set-face-attribute 'ivy-minibuffer-match-highlight nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'ivy-minibuffer-match-face-2 nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'ivy-minibuffer-match-face-3 nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'ivy-minibuffer-match-face-4 nil :foreground my/background-color :background my/foreground-color)
+
+    (set-face-attribute 'ivy-minibuffer-match-face-1 nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'ivy-minibuffer-match-face-2 nil :foreground my/background-color :background (color-lighten-name my/foreground-color 10))
+    (set-face-attribute 'ivy-minibuffer-match-face-3 nil :foreground my/background-color :background (color-lighten-name my/foreground-color 20))
+    (set-face-attribute 'ivy-minibuffer-match-face-4 nil :foreground my/background-color :background (color-lighten-name my/foreground-color 30))
+
+    ;;; Swiper
+    (set-face-attribute 'swiper-match-face-1 nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'swiper-match-face-2 nil :foreground my/background-color :background (color-lighten-name my/foreground-color 10))
+    (set-face-attribute 'swiper-match-face-3 nil :foreground my/background-color :background (color-lighten-name my/foreground-color 20))
+    (set-face-attribute 'swiper-match-face-4 nil :foreground my/background-color :background (color-lighten-name my/foreground-color 30))
 
     ;;; Avy
     (set-face-attribute 'avy-lead-face nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'avy-lead-face-0 nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'avy-lead-face-1 nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'avy-lead-face-0 nil :foreground my/background-color :background (color-lighten-name my/foreground-color 10))
+    (set-face-attribute 'avy-lead-face-1 nil :foreground my/background-color :background (color-lighten-name my/foreground-color 20))
+    (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background (color-lighten-name my/foreground-color 30))
 
     ;;(defvar my/evil-goggles-highlight-color)
     ;;; Evil-goggles
@@ -1395,12 +1428,22 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
 ** Open agenda
 #+BEGIN_SRC emacs-lisp
-  (defun org/org-agenda-show-agenda-and-todo (&optional arg)
+  (defun my/org-agenda-show-agenda-and-todo (&optional arg)
     (interactive "P")
     (org-agenda arg "a")
     (run-hooks 'my/open-map-hook))
 
-  (define-key my/open-map (kbd "a") 'org/org-agenda-show-agenda-and-todo)
+  (define-key my/open-map (kbd "a") 'my/org-agenda-show-agenda-and-todo)
+#+END_SRC
+
+** Open downloads
+#+BEGIN_SRC emacs-lisp
+  (defun my/open-downloads ()
+    (interactive)
+    (find-file "~/Downloads")
+    (run-hooks 'my/open-map-hook))
+
+  (define-key my/open-map (kbd "d") 'my/open-downloads)
 #+END_SRC
 
 ** Visit agenda file
@@ -1409,41 +1452,38 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (interactive)
     (find-file "~/Notes/Agenda.org")
     (run-hooks 'my/open-map-hook))
-    (define-key my/open-map (kbd "A") 'my/agenda-file-visit)
 
+  (define-key my/open-map (kbd "A") 'my/agenda-file-visit)
 #+END_SRC
 
 ** Open firefox
 #+BEGIN_SRC emacs-lisp
-  (defun my/start-process (name)
-    (interactive)
-    (start-process name nil name))
-
+  (defvar my/temp-firefox-title-name "")
+  (defvar my/browser-bookmarks '(
+                                 "youtube.com"
+                                 "discordapp.com/channels/@me"
+                                 "github.com"
+                                 "steamcommunity.com/chat"
+                                 ))
   (defun my/launch-firefox ()
     (interactive)
-    (setq my/firefox-title-name (completing-read "set title " '(
-                                                      ("media")
-                                                      ("dev")
-                                                      )))
     (let* (
-           (bookmarks '(
-                        "youtube.com"
-                        "discordapp.com/channels/@me"
-                        "github.com/"
-                        "steamcommunity.com/chat"
-                        ))
-           (adress-raw (completing-read "url " bookmarks))
-           (adress (if (cl-member adress-raw bookmarks :test #'string=)
-                       adress-raw
+           (adress-raw (completing-read "url " my/browser-bookmarks))
+           (adress (if (cl-member adress-raw my/browser-bookmarks :test #'string=)
+                       (progn
+                         (setq my/temp-firefox-title-name adress-raw)
+                         adress-raw)
+                     (setq my/temp-firefox-title-name (completing-read "set title " '(
+                                                                                      ("dev")
+                                                                                      ("docs"))))
                      (concat "https://www.google.com/search?q=" adress-raw))))
 
-     (start-process "firefox name" nil "firefox" "--new-window" adress)
-     (run-with-timer 0.5 nil
-                     (lambda () (interactive)
-                       (exwm-workspace-rename-buffer (concat my/firefox-title-name " - firefox"))))))
+      (start-process (concat "firefox" my/temp-firefox-title-name) nil "firefox" "--new-window" adress)
+      (run-with-timer 0.5 nil
+                      (lambda () (interactive)
+                        (exwm-workspace-rename-buffer (concat my/temp-firefox-title-name " - firefox"))))))
 
-
-    (define-key my/open-map (kbd "f") 'my/launch-firefox)
+  (define-key my/leader-map (kbd "C-b") 'my/launch-firefox)
 #+END_SRC
 ** Open eww
 #+BEGIN_SRC emacs-lisp
@@ -1451,7 +1491,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (interactive)
     (my/eww-browse-url (concat "https://www.google.com/search?q=" (completing-read "url " nil))))
 
-  (define-key my/open-map (kbd "e") 'my/launch-eww)
+  (define-key my/leader-map (kbd "M-b") 'my/launch-eww)
 #+END_SRC
 
 * Folding
@@ -1594,7 +1634,7 @@ Vim bindings to change fold
                 :history 'counsel-flycheck-history)))
 
 
-  (define-key my/leader-map (kbd "E") 'counsel-flycheck)
+  (define-key my/leader-map (kbd "X") 'counsel-flycheck)
 #+END_SRC
 
 ** Swiper 
@@ -1603,19 +1643,19 @@ Vim bindings to change fold
 
   (defun my/use-swiper-or-grep(&optional input case-sensative)
     (interactive)
-
     (if buffer-file-name 
         (progn
           (if case-sensative
-                (setq counsel-grep-base-command "grep -E -n -e %s %s")
+              (setq counsel-grep-base-command "grep -E -n -e %s %s")
             (setq-default counsel-grep-base-command "grep -i -E -n -e %s %s"))
           (counsel-grep input))
       (swiper input)))
 
   (global-set-key (kbd "C-s") 'my/use-swiper-or-grep)
-  (global-set-key (kbd "M-s") (lambda () (interactive) (my/use-swiper-or-grep nil t)))
+  (global-set-key (kbd "M-s") 'swiper-all)
+  ;;(global-set-key (kbd "M-s") (lambda () (interactive) (my/use-swiper-or-grep nil t)))
 
-;;  (setq swiper-use-visual-line t)
+  ;;  (setq swiper-use-visual-line t)
 #+END_SRC
 
 *** Search for thing-at-point
@@ -2002,7 +2042,7 @@ Doesn't work with my setup right now
   (use-package avy-flycheck
     :defer t)
 
-  (define-key my/leader-map (kbd "e") 'avy-flycheck-goto-error)
+  (define-key my/leader-map (kbd "x") 'avy-flycheck-goto-error)
 #+END_SRC
 
 ** Link-hint
@@ -2015,8 +2055,8 @@ Doesn't work with my setup right now
 #+BEGIN_SRC emacs-lisp
   (require 'view)
 
-  (evil-define-key 'normal my/keys-mode-map (kbd "C-u") 'View-scroll-half-page-backward)
-  (evil-define-key 'normal my/keys-mode-map (kbd "C-w") 'View-scroll-half-page-forward)
+   (evil-define-key 'normal my/keys-mode-map (kbd "C-u") 'View-scroll-half-page-backward)
+   (evil-define-key 'normal my/keys-mode-map (kbd "C-w") 'View-scroll-half-page-forward)
 
   (evil-define-key 'visual my/keys-mode-map (kbd "C-u") 'evil-scroll-up)
   (evil-define-key 'visual my/keys-mode-map (kbd "C-w") 'evil-scroll-down)
@@ -2889,9 +2929,9 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 
   (defun my/fsharp-keys-init()
     (interactive)
-    (evil-define-key 'normal fsharp-mode-map (kbd (concat my/leader-map-key " a")) 'my/fsharp-mode-map)
-    (define-key fsharp-mode-map (kbd "C-x C-e") 'fsharp-eval-region))
+    (evil-define-key 'normal fsharp-mode-map (kbd (concat my/leader-map-key " a")) 'my/fsharp-mode-map))
 
+  (define-key my/fsharp-mode-map (kbd "e") 'fsharp-eval-region)
   (define-key my/fsharp-mode-map (kbd "d") 'fsharp-ac/gotodefn-at-point)
   (define-key my/fsharp-mode-map (kbd "v") 'fsharp-mark-phrase)
   (define-key my/fsharp-mode-map (kbd "b") 'fsharp-goto-block-up)
@@ -2961,18 +3001,32 @@ TODO: Fix settings, grab them from package site
    (add-to-list 'auto-mode-alist '("\\.xml?\\'" . web-mode))
 #+END_SRC
 
-* Pass
-Required by ivy-pass
+* Encryption
+
+** GPG  
+*** Pinentry
 #+BEGIN_SRC emacs-lisp
-  (use-package password-store)
+  (use-package pinentry)
+
+  ;; Takes 0.000273s, autorun
+  (pinentry-start)
 #+END_SRC
 
-** Ivy pass
+** Passwords
+*** Espy
 #+BEGIN_SRC emacs-lisp
-  (use-package ivy-pass)
+  (use-package espy)
+
+  (setq espy-password-file "~/pass.org.gpg")
+
+  (define-prefix-command 'my/password-map)
+  (define-key my/leader-map (kbd "p") 'my/password-map)
+
+  (define-key my/password-map (kbd "u") 'espy-get-user)
+  (define-key my/password-map (kbd "p") 'espy-get-pass)
 #+END_SRC
 
-** Auto-clean kill ring
+*** Auto-clean kill ring
 #+BEGIN_SRC emacs-lisp
   ;;(defvar my/pass-in-killring nil)
 
@@ -2986,7 +3040,6 @@ Required by ivy-pass
         ;; (progn
           ;; (pop kill-ring)
           ;; (setq my/pass-in-killring nil))))
-
 
   (defun my/pop-killring ()
     (pop kill-ring)
@@ -3149,6 +3202,7 @@ More rebind options and more reliable
     (general-simulate-C-x_C-s))
 
   (define-key my/leader-map (kbd "s") 'my/save-and-backup-session)
+  (define-key my/leader-map (kbd "C-s") 'write-file)
 #+END_SRC
 
 *** Rebind C-d
@@ -3190,15 +3244,9 @@ Use C-i instead
 
 *** Add eval to leader
 #+BEGIN_SRC emacs-lisp
-  (general-simulate-key "C-x C-e")
-
-  (defun my/simulate-C-x_C-e ()
-    (interactive)
-    (general-simulate-C-x_C-e))
-
-  (define-key my/leader-map (kbd "x") 'my/simulate-C-x_C-e)
-  (define-key my/leader-map (kbd "X") 'eval-buffer)
-  (define-key my/leader-map (kbd "M-x") 'eval-print-last-sexp)
+  (define-key my/leader-map (kbd "e") 'eval-last-sexp)
+  (define-key my/leader-map (kbd "E") 'eval-buffer)
+  (define-key my/leader-map (kbd "M-e") 'eval-print-last-sexp)
 #+END_SRC
 
 * exwm
@@ -3223,7 +3271,17 @@ Use C-i instead
     (evil-emacs-state))
 #+END_SRC
 
-** Name buffers after window name
+** Set exwm buffer name 
+*** Manually set buffer name
+#+BEGIN_SRC emacs-lisp
+  (defun my/exwm-set-window-name ()
+    (interactive)
+    (exwm-workspace-rename-buffer (completing-read "set title " nil)))
+
+  (define-key my/file-options-map (kbd "r") 'my/exwm-set-window-name)
+#+END_SRC
+
+*** Auto set buffer name
 We use class names for all windows expect for Java applications and GIMP (because of problems with those).
 #+BEGIN_SRC emacs-lisp
   (add-hook 'exwm-update-class-hook
@@ -3320,8 +3378,8 @@ We use class names for all windows expect for Java applications and GIMP (becaus
           ;;([?\e] . [escape])
 
           ;; Firefox hard-coded open url hotkey
-          ([?\C-o] . [?\M-d])
-	
+          ([?\C-o] . [f6])
+
           ;; cut/paste.
           ([?\C-y] . [?\C-c])
           ([?\C-k] . [?\C-v])))
@@ -3354,8 +3412,8 @@ We use class names for all windows expect for Java applications and GIMP (becaus
   (exwm-input-set-key (kbd "M-x") 'counsel-M-x)
 
   ;; Enter and exit char mode
-  ;; (exwm-input-set-key (kbd "M-a") 'exwm-input-grab-keyboard)
-  ;; (exwm-input-set-key (kbd "M-i") 'exwm-input-release-keyboard)
+   ;; (exwm-input-set-key (kbd "M-a") 'exwm-input-grab-keyboard)
+   ;; (exwm-input-set-key (kbd "M-i") 'exwm-input-release-keyboard)
 
   ;; Notes
   ;; (defun my/send-key(event)
@@ -4213,7 +4271,9 @@ Mode for writing mail
                                         ;; Core count
                                         (defun my/unix-cpu-get-core-count()
                                           (interactive)
+                                          ;; Linux
                                           (shell-command "grep \"cores\" /proc/cpuinfo"))
+
                                         (define-key my/cpu-info-map (kbd "c") 'my/unix-cpu-get-core-count)
                                         ;; Flags
                                         (defun my/unix-cpu-get-flags()
@@ -4234,12 +4294,13 @@ Mode for writing mail
                                         (defun my/unix-cpu-get-cache-size()
                                           (interactive)
                                           (shell-command "grep \"cache size\" /proc/cpuinfo"))
-                                        (define-key my/cpu-info-map (kbd "C") 'my/unix-cpu-get-cache-size))
-    ;; Windows
-    (if (or (eq system-type 'windows-nt) (eq system-type 'cygwin))
-        (let ((number-of-processors (getenv "NUMBER_OF_PROCESSORS")))
-          (when number-of-processors
-            (string-to-number number-of-processors)))))
+                                        (define-key my/cpu-info-map (kbd "C") 'my/unix-cpu-get-cache-size)))
+
+  ;; Windows cpu core count
+  ;; (if (or (eq system-type 'windows-nt) (eq system-type 'cygwin))
+      ;; (let ((number-of-processors (getenv "NUMBER_OF_PROCESSORS")))
+        ;; (if number-of-processors
+            ;; (string-to-number number-of-processors))))
 #+END_SRC
 
 * Find
@@ -4473,7 +4534,7 @@ https://www.emacswiki.org/emacs/ArtistMode
     ("C-w" View-scroll-half-page-forward nil)
 
     ("f" counsel-M-x nil)
-    ("y" counsel-linux-app nil)
+  ;;  ("y" counsel-linux-app nil)
 
     ("u" revert-buffer nil)
 
@@ -4484,13 +4545,12 @@ https://www.emacswiki.org/emacs/ArtistMode
 
     ("b" counsel-bookmark nil)
     ("B" my/add-bookmark nil)
-    ("C-b" my/delete-bookmark nil)
+    ("C-b" my/delete-bookmark nil))
 
     ;;  ("SPC" my/leader-map nil)
 
     ;; Add this to not auto exit insert mode after closing the hydra
-    ;;("<escape>" nil)
-    )
+    ;;("<escape>" nil))
 #+END_SRC
 
 *** Keys
@@ -4509,6 +4569,11 @@ https://www.emacswiki.org/emacs/ArtistMode
 * Image modes
 ** PDF view
 #+BEGIN_SRC emacs-lisp
+  (defun my/pdf-view-mode-map()
+    (interactive)
+    (display-line-numbers-mode -1))
+
+  (add-hook 'pdf-view-mode-hook 'my/pdf-view-mode-map)
 #+END_SRC
 
 ** PDF tools
@@ -4523,13 +4588,12 @@ https://www.emacswiki.org/emacs/ArtistMode
 
   (defun my/init-pdf-tools ()
     (interactive)
-    (message "ONETSAONESTEOA")
     (if (not my/pdf-tools-installed)
-    (progn
-        (require 'pdf-view)
-        (pdf-tools-install)
-        ;; reload buffer with everything set
-        (revert-buffer :ignore-auto :noconfirm)))
+        (progn
+          (require 'pdf-view)
+          (pdf-tools-install)
+          ;; reload buffer with everything set
+          (revert-buffer :ignore-auto :noconfirm)))
     (setq my/pdf-tools-installed t))
 
   (add-hook 'pdf-view-mode-hook 'my/init-pdf-tools)
