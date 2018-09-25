@@ -239,6 +239,34 @@ Get =gpick=
   ;;(add-hook 'messages-buffer-mode-hook 'my/keys-mode-turn-on)
 #+END_SRC
 
+* Global setting
+Define my mode for setting global settings in all buffers
+#+BEGIN_SRC emacs-lisp
+  ;; Disable message
+  (defun my/toggle-truncate-lines (&optional arg)
+    (interactive "P")
+    (setq truncate-lines
+          (if (null arg)
+              (not truncate-lines)
+            (> (prefix-numeric-value arg) 0)))
+    (force-mode-line-update)
+    (unless truncate-lines
+      (let ((buffer (current-buffer)))
+        (walk-windows (lambda (window)
+                        (if (eq buffer (window-buffer window))
+                            (set-window-hscroll window 0)))
+                      nil t))))
+
+  (define-minor-mode my/mode nil t nil nil)
+
+  (define-globalized-minor-mode my/global-mode my/mode
+    (lambda ()
+      (setq my/truncate-lines -1)))
+      ;;(toggle-truncate-lines -1)))
+
+  (my/global-mode 1)
+#+END_SRC
+
 * Generic functions and variables
 ** File management
 *** Create directory if directory doesn't exist
@@ -398,8 +426,12 @@ Default file-size-human-readable returns decimal values
 
 ** Make sure mode line is disabled before any windows are created
 #+BEGIN_SRC emacs-lisp
- (setq mode-line-format "")
- (setq-default mode-line-format "")
+  (if window-system
+      (progn
+        (setq mode-line-format "")
+        (setq-default mode-line-format ""))
+    (setq mode-line-format nil)
+    (setq-default mode-line-format nil))
 #+END_SRC
 
 * Startup processes
@@ -985,12 +1017,14 @@ Disable startup message
 ** Line wrapping
 *** Enable truncate lines mode
 #+BEGIN_SRC emacs-lisp
-  (set-default 'truncate-lines t)
+  (setq-default truncate-lines -1)
+  (setq truncate-lines -1)
+  (toggle-truncate-lines -1)
 #+END_SRC
 
 *** Visual-line mode
 #+BEGIN_SRC emacs-lisp
-  (global-visual-line-mode t)
+  (global-visual-line-mode 0)
 
   (define-key my/leader-map (kbd "C-v") 'visual-line-mode)
 
@@ -1091,7 +1125,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (setq my/background-color "#14191F")
 
     ;; Day theme
-    (setq my/third-color "orange")
     (setq my/mark-color "yellow4")
     (setq my/foreground-color "black")
     ;;(setq my/background-color "white") 
@@ -1103,6 +1136,38 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     ;;(setq my/background-color "#292b2e") 
 
 
+    (setq my/background-color "#f0f0f0")
+    (setq my/foreground-color "#232323") 
+
+    (setq my/background-color "#232323")
+    (setq my/foreground-color "#E6E1DC") 
+
+    (if window-system
+        (progn
+          (setq my/foreground-color-1 (color-darken-name my/foreground-color 5))
+          (setq my/foreground-color-2 (color-darken-name my/foreground-color 10))
+          (setq my/foreground-color-3 (color-darken-name my/foreground-color 15))
+          (setq my/foreground-color-4 (color-darken-name my/foreground-color 20))
+          (setq my/foreground-color-5 (color-darken-name my/foreground-color 25))
+          (setq my/foreground-color-6 (color-darken-name my/foreground-color 30))
+
+          (setq my/background-color-1 (color-lighten-name my/background-color 5))
+          (setq my/background-color-2 (color-lighten-name my/background-color 10))
+          (setq my/background-color-3 (color-lighten-name my/background-color 15))
+          (setq my/background-color-4 (color-lighten-name my/background-color 20)))
+
+      (setq my/foreground-color-1 "brown")
+      (setq my/foreground-color-2 "brown")
+      (setq my/foreground-color-3 "orange")
+      (setq my/foreground-color-4 "orange")
+      (setq my/foreground-color-5 "yellow")
+      (setq my/foreground-color-6 "yellow")
+
+      (setq my/background-color-1 "black")
+      (setq my/background-color-2 "black")
+      (setq my/background-color-3 "gray")
+      (setq my/background-color-4 "gray"))
+
     ;;; Emacs
     (set-face-attribute 'default nil :foreground my/foreground-color :background my/background-color)
     (set-face-attribute 'link nil :foreground my/background-color :background my/foreground-color)
@@ -1111,16 +1176,19 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (set-face-attribute 'error nil :foreground "#c6350b" :background)
     (set-face-attribute 'warning nil :foreground "DarkOrange" :background)
 
-    (set-face-attribute  'font-lock-doc-face nil :foreground my/third-color :background my/foreground-color)
+    ;; Font lock
+    (set-face-attribute  'font-lock-doc-face nil :foreground my/foreground-color :background my/background-color-4)
+    (set-face-attribute  'font-lock-comment-face nil :foreground my/foreground-color :background my/background-color :underline t)
+    (set-face-attribute 'font-lock-string-face nil :foreground my/foreground-color :background my/background-color-1)
+    ;; (set-face-attribute  'font-lock-keyword-face nil :foreground my/foreground-color :background my/background-color-1)
+    ;; (set-face-attribute  'font-lock-function-name-face nil :foreground my/foreground-color :background my/background-color-2)
 
-    (set-face-attribute  'font-lock-comment-face nil :foreground "dark green" :background my/background-color :underline t)
+
     (set-face-attribute 'outline-4 nil :foreground my/foreground-color :background my/background-color)
 
-    (set-face-attribute 'font-lock-string-face nil :foreground my/foreground-color :background (color-lighten-name my/background-color 5))
-
     ;; Line numbers
-    (set-face-attribute 'line-number-current-line nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'line-number nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'line-number-current-line nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'line-number nil :foreground my/foreground-color :background my/background-color)
 
     ;; Evil
     (setq evil-emacs-state-cursor '("purple" box))
@@ -1133,7 +1201,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     ;; Hl current line
     ;; Underlines part of current line
     ;;(set-face-attribute 'hl-line nil :foreground my/foreground-color :background nil :underline t)
-    (set-face-attribute 'hl-line nil :foreground my/foreground-color :background (color-lighten-name my/background-color 10) :underline nil)
+    (set-face-attribute 'hl-line nil :foreground my/foreground-color :background my/background-color-2 :underline nil)
 
     ;;; Dired
     (set-face-attribute 'dired-directory nil :foreground my/background-color :background my/foreground-color)
@@ -1144,7 +1212,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
     ;;; Highlight thing
     (set-face-attribute 'highlight-thing nil :foreground my/foreground-color :background my/mark-color)
-
 
     ;;; Company
     (set-face-attribute 'company-scrollbar-bg nil :background my/background-color)
@@ -1163,21 +1230,21 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (set-face-attribute 'ivy-minibuffer-match-highlight nil :foreground my/background-color :background my/foreground-color)
 
     (set-face-attribute 'ivy-minibuffer-match-face-1 nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'ivy-minibuffer-match-face-2 nil :foreground my/background-color :background (color-lighten-name my/foreground-color 10))
-    (set-face-attribute 'ivy-minibuffer-match-face-3 nil :foreground my/background-color :background (color-lighten-name my/foreground-color 20))
-    (set-face-attribute 'ivy-minibuffer-match-face-4 nil :foreground my/background-color :background (color-lighten-name my/foreground-color 30))
+    (set-face-attribute 'ivy-minibuffer-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
+    (set-face-attribute 'ivy-minibuffer-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
+    (set-face-attribute 'ivy-minibuffer-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
 
     ;;; Swiper
     (set-face-attribute 'swiper-match-face-1 nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'swiper-match-face-2 nil :foreground my/background-color :background (color-lighten-name my/foreground-color 10))
-    (set-face-attribute 'swiper-match-face-3 nil :foreground my/background-color :background (color-lighten-name my/foreground-color 20))
-    (set-face-attribute 'swiper-match-face-4 nil :foreground my/background-color :background (color-lighten-name my/foreground-color 30))
+    (set-face-attribute 'swiper-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
+    (set-face-attribute 'swiper-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
+    (set-face-attribute 'swiper-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
 
     ;;; Avy
     (set-face-attribute 'avy-lead-face nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'avy-lead-face-0 nil :foreground my/background-color :background (color-lighten-name my/foreground-color 10))
-    (set-face-attribute 'avy-lead-face-1 nil :foreground my/background-color :background (color-lighten-name my/foreground-color 20))
-    (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background (color-lighten-name my/foreground-color 30))
+    (set-face-attribute 'avy-lead-face-0 nil :foreground my/background-color :background my/foreground-color-2)
+    (set-face-attribute 'avy-lead-face-1 nil :foreground my/background-color :background my/foreground-color-4)
+    (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background my/foreground-color-6)
 
     ;;(defvar my/evil-goggles-highlight-color)
     ;;; Evil-goggles
@@ -1219,12 +1286,17 @@ In org mode when displaying images pixel scroll mode can be useful maybe
                         :height  0.1)
 
     (set-face-attribute 'mode-line-inactive nil
-                        :foreground my/foreground-color
-                        :background my/foreground-color
+                        :foreground my/background-color
+                        :background my/background-color
                         :height  0.1)
+
+    ;; Highlight faces
+    (highlight-indent-guides-auto-set-faces)
     )
 
-  (add-hook 'exwm-init-hook 'my/paper-mode)
+  (if window-system
+      (add-hook 'exwm-init-hook 'my/paper-mode)
+    (add-hook 'after-init-hook 'my/paper-mode))
 
   ;; (counsel-faces)
 
@@ -1293,6 +1365,11 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 ** Help mode
 #+BEGIN_SRC emacs-lisp
   (define-key my/leader-map (kbd "C-h") help-map)
+#+END_SRC
+
+** Prefer loading newest lisp source file
+#+BEGIN_SRC emacs-lisp
+  (setq load-prefer-newer t)
 #+END_SRC
 
 * File options
@@ -1643,14 +1720,16 @@ Vim bindings to change fold
 
   (defun my/use-swiper-or-grep(&optional input case-sensative)
     (interactive)
-    (if buffer-file-name 
-        (progn
-          (if case-sensative
-              (setq counsel-grep-base-command "grep -E -n -e %s %s")
-            (setq-default counsel-grep-base-command "grep -i -E -n -e %s %s"))
-          (counsel-grep input))
+    (if (and buffer-file-name (not (bound-and-true-p org-src-mode)))
+        (counsel-grep input)
       (swiper input)))
 
+  ;; Checks for if case sensative search
+  ;; (if case-sensative
+  ;; (setq counsel-grep-base-command "grep -E -n -e %s %s")
+  ;; (setq-default counsel-grep-base-command "grep -i -E -n -e %s %s"))
+
+  (global-set-key (kbd "C-s") 'my/use-swiper-or-grep)
   (global-set-key (kbd "C-s") 'my/use-swiper-or-grep)
   (global-set-key (kbd "M-s") 'swiper-all)
   ;;(global-set-key (kbd "M-s") (lambda () (interactive) (my/use-swiper-or-grep nil t)))
@@ -1753,10 +1832,11 @@ Company doc mode disables visual line mode for whatever reason, enable it inside
       (company--electric-do
         (let* ((selected (nth company-selection company-candidates))
                (doc-buffer (or (company-call-backend 'doc-buffer selected)
-                              (user-error "No documentation available")))
+                               (user-error "No documentation available")))
                start)
           (with-current-buffer doc-buffer
-            (visual-line-mode t))
+            (truncate-lines -1))
+          ;;(visual-line-mode t))
           (when (consp doc-buffer)
             (setq start (cdr doc-buffer)
                   doc-buffer (car doc-buffer)))
@@ -1879,7 +1959,7 @@ Doesn't work with my setup right now
 
   (which-key-mode)
 
-  (setq which-key-idle-delay 0.2)
+  (setq which-key-idle-delay 2)
 
   (if window-system
     (set-face-attribute 'which-key-command-description-face nil
@@ -1941,6 +2021,9 @@ Doesn't work with my setup right now
 
     (setq display-line-numbers-type 'relative)
     (setq display-line-numbers-current-absolute nil)
+    
+    ;; Fixes org headings not 
+    (add-hook 'org-mode-hook (lambda ()(interactive) (setq display-line-numbers-type 'visual)))
 
     (if window-system
         (progn
@@ -2067,29 +2150,29 @@ Doesn't work with my setup right now
 
 ** Jammer
 #+BEGIN_SRC emacs-lisp
-  (use-package jammer)
-
-  (setq jammer-repeat-delay 0.5)
-  (setq jammer-repeat-window 1)
-
-  (setq jammer-type 'repeat)
-  (setq jammer-block-type 'blacklist)
-  (setq jammer-block-list '(
-                            ;; Backward/forward
-                            evil-backward-char evil-forward-char evil-previous-line evil-next-line previous-line next-line
-                            ;; Dired
-                            dired-next-line dired-previous-line
-
-
-
-                            ;; word movements
-                            evil-forward-word evil-forward-word-begin evil-forward-word-end evil-backward-word-begin
-
-                            ;; WORD movements
-                            evil-forward-WORD evil-forward-WORD-begin evil-forward-WORD-end evil-backward-WORD-begin
-
-                            evil-backward-word-begin evil-backward-word-end))
-  (jammer-mode)
+  ;; (use-package jammer)
+;; 
+  ;; (setq jammer-repeat-delay 0.5)
+  ;; (setq jammer-repeat-window 1)
+;; 
+  ;; (setq jammer-type 'repeat)
+  ;; (setq jammer-block-type 'blacklist)
+  ;; (setq jammer-block-list '(
+                            ;; ;; Backward/forward
+                            ;; evil-backward-char evil-forward-char evil-previous-line evil-next-line previous-line next-line
+                            ;; ;; Dired
+                            ;; dired-next-line dired-previous-line
+;; 
+;; 
+;; 
+                            ;; ;; word movements
+                            ;; evil-forward-word evil-forward-word-begin evil-forward-word-end evil-backward-word-begin
+;; 
+                            ;; ;; WORD movements
+                            ;; evil-forward-WORD evil-forward-WORD-begin evil-forward-WORD-end evil-backward-WORD-begin
+;; 
+                            ;; evil-backward-word-begin evil-backward-word-end))
+  ;; (jammer-mode)
 #+END_SRC
 
 ** goto change
@@ -3009,10 +3092,15 @@ TODO: Fix settings, grab them from package site
   (use-package pinentry)
 
   ;; Takes 0.000273s, autorun
-  (pinentry-start)
+  (add-hook 'exwm-init-hook 'pinentry-start)
 #+END_SRC
 
 ** Passwords
+Enable org mode for .org.gpg files
+#+BEGIN_SRC emacs-lisp
+   (add-to-list 'auto-mode-alist '("\\.org.gpg\\'" . org-mode))
+#+END_SRC
+
 *** Espy
 #+BEGIN_SRC emacs-lisp
   (use-package espy)
@@ -3031,15 +3119,16 @@ TODO: Fix settings, grab them from package site
   ;;(defvar my/pass-in-killring nil)
 
   ;; (defun my/ivy-pass ()
-    ;; (interactive)
-    ;; (setq my/pass-in-killring t)
-    ;; (ivy-pass))
+  ;; (interactive)
+  ;; (setq my/pass-in-killring t)
+  ;; (ivy-pass))
   ;; 
   ;; (defun my/pass-pop-killring ()
-    ;; (if (eq my/pass-in-killring t)
-        ;; (progn
-          ;; (pop kill-ring)
-          ;; (setq my/pass-in-killring nil))))
+  ;; (if (eq my/pass-in-killring t)
+  ;; (progn
+  ;; (progn (pop kill-ring) 
+  ;; (message "Password removed"))
+  ;; (setq my/pass-in-killring nil))))
 
   (defun my/pop-killring ()
     (pop kill-ring)
@@ -4938,8 +5027,8 @@ Use lv-line to create a mode line on the top of the screen
     (setq mode-line-format nil)
 
     (if window-system
-    ;; Change to mono face
-    (face-remap-add-relative 'default :family my/mono-font))
+        ;; Change to mono face
+        (face-remap-add-relative 'default :family my/mono-font))
 
     ;; Disable cursor
     (setq cursor-type nil)
@@ -4963,18 +5052,18 @@ Use lv-line to create a mode line on the top of the screen
           (my/lv-line-set-buffer)
           (select-window original-window))))
 
-    ;; (defun my/lv-line-create ()
-    ;; "Ensure that LV window is live and return it."
-    ;; (if (window-live-p my/lv-line-window)
-    ;; my/lv-line-window
-    ;; (let ((ori (selected-window)) buf)
-    ;; (prog1 (setq my/lv-line-window
-    ;; (select-window
-    ;; (let ((ignore-window-parameters t))
-    ;; (split-window
-    ;; (frame-root-window) -1 'above))))
-    ;; (my/lv-line-create-buffer)
-    ;; (select-window ori)))))
+  ;; (defun my/lv-line-create ()
+  ;; "Ensure that LV window is live and return it."
+  ;; (if (window-live-p my/lv-line-window)
+  ;; my/lv-line-window
+  ;; (let ((ori (selected-window)) buf)
+  ;; (prog1 (setq my/lv-line-window
+  ;; (select-window
+  ;; (let ((ignore-window-parameters t))
+  ;; (split-window
+  ;; (frame-root-window) -1 'above))))
+  ;; (my/lv-line-create-buffer)
+  ;; (select-window ori)))))
 #+END_SRC
 **** Update it
 #+BEGIN_SRC emacs-lisp
@@ -5494,12 +5583,14 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                                (if my/work-timer-blink
                                    (progn
                                      (setq my/work-timer-blink nil)
-                                     (propertize my/work-timer-total-time-formated 'face '(:foreground "red")))
+                                     ;; (set-face-attribute 'mode-line nil :background "red")
+                                     ;; (propertize my/work-timer-total-time-formated 'face '(:foreground "red"))
+                                     )
                                  (setq my/work-timer-blink t)
-                                 (propertize my/work-timer-total-time-formated 'face '(:background "red"))
+                                 ;; (set-face-attribute 'mode-line nil :background my/background-color )
+                                 ;; (propertize my/work-timer-total-time-formated 'face '(:background "red"))
                                  )
                                ))
-
 
                       " |"
 
