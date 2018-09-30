@@ -1,6 +1,3 @@
-;; Start benchmark
-(defvar my/config-start-time (float-time))
-
 ;; Get use-package
 (require 'package)
 (setq package-enable-at-startup nil)

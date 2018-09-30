@@ -44,13 +44,6 @@ Input =(use 'overtone.live)= into leiningen to install
 **** To use with pulse audio
 =cadence= and =pulseaudio-jack=
 
-*** password-store.el
-=bash=
-=GnuPG2=
-=git=
-=xclip=
-=greencode=
-
 *** Spelling
 =aspell-en= etc
 
@@ -242,29 +235,14 @@ Get =gpick=
 * Global setting
 Define my mode for setting global settings in all buffers
 #+BEGIN_SRC emacs-lisp
-  ;; Disable message
-  (defun my/toggle-truncate-lines (&optional arg)
-    (interactive "P")
-    (setq truncate-lines
-          (if (null arg)
-              (not truncate-lines)
-            (> (prefix-numeric-value arg) 0)))
-    (force-mode-line-update)
-    (unless truncate-lines
-      (let ((buffer (current-buffer)))
-        (walk-windows (lambda (window)
-                        (if (eq buffer (window-buffer window))
-                            (set-window-hscroll window 0)))
-                      nil t))))
-
-  (define-minor-mode my/mode nil t nil nil)
-
-  (define-globalized-minor-mode my/global-mode my/mode
-    (lambda ()
-      (setq my/truncate-lines -1)))
-      ;;(toggle-truncate-lines -1)))
-
-  (my/global-mode 1)
+  ;; (define-minor-mode my/mode nil t nil nil)
+  ;; 
+  ;; (define-globalized-minor-mode my/global-mode my/mode
+    ;; (lambda ()
+      ;; (setq my/truncate-lines nil)))
+      ;; ;;(toggle-truncate-lines -1)))
+  ;; 
+  ;; (my/global-mode 1)
 #+END_SRC
 
 * Generic functions and variables
@@ -284,7 +262,7 @@ Define my mode for setting global settings in all buffers
     (if (not (file-exists-p file))
         (progn
           (write-region "" nil file)
-          (message (concat "file: " file " created!")))))
+          (message (concat "Wrote file: " file " created!")))))
 #+END_SRC
 
 *** Create file with content if file doesn't exist
@@ -293,8 +271,15 @@ Define my mode for setting global settings in all buffers
     (if (not (file-exists-p file))
         (progn
           (write-region content nil file)
-          (message (concat "file: " file " with contents")))))
+          (message (concat "Wrote file: " file " with contents")))))
 ;;" created with content: " content
+#+END_SRC
+
+*** Add to content to file or create file with content if file doesn't exist 
+#+BEGIN_SRC emacs-lisp
+  (defun my/add-to-or-create-file-with-content (file content)
+          (write-region (concat "\n" content) nil file t)
+          (message (concat "Wrote file: " file " with contents")))
 #+END_SRC
 
 ** Is external package installed
@@ -689,6 +674,11 @@ Example
 (setq sentence-end-double-space nil)
 #+END_SRC
 
+*** Make dd and cc act on lines
+#+BEGIN_SRC emacs-lisp
+  (define-key evil-normal-state-map "D" 'evil-delete-whole-line)
+#+END_SRC
+
 ** Text objects
 *** Evil-indent-plus
 Allows for using indention as text objects
@@ -786,6 +776,16 @@ Allows for using indention as text objects
 #+BEGIN_SRC emacs-lisp
   ;; Prevent emacs state from being exited with esc, fixes exwm since it uses emacs state and to exit hydra you have to do esc
   (define-key evil-emacs-state-map (kbd "<escape>") 'keyboard-quit)
+#+END_SRC
+
+*** Don't complete from all buffers
+#+BEGIN_SRC emacs-lisp
+(setq evil-complete-all-buffers nil)
+#+END_SRC
+
+*** Don't add pasted over thing to killring
+#+BEGIN_SRC emacs-lisp
+(setq evil-kill-on-visual-paste nil)
 #+END_SRC
 
 * Leader
@@ -1017,9 +1017,12 @@ Disable startup message
 ** Line wrapping
 *** Enable truncate lines mode
 #+BEGIN_SRC emacs-lisp
-  (setq-default truncate-lines -1)
-  (setq truncate-lines -1)
-  (toggle-truncate-lines -1)
+  (setq-default truncate-lines nil)
+  (setq truncate-lines nil)
+
+  ;; Always truncate lines
+  (setq truncate-partial-width-windows nil)
+  (setq-default truncate-partial-width-windows nil)
 #+END_SRC
 
 *** Visual-line mode
@@ -1372,6 +1375,11 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (setq load-prefer-newer t)
 #+END_SRC
 
+** Revert buffer bind
+#+BEGIN_SRC emacs-lisp
+  (define-key my/leader-map (kbd "r") 'revert-buffer)
+#+END_SRC
+
 * File options
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/file-options-map)
@@ -1489,7 +1497,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (interactive)
     (org-babel-load-file (expand-file-name (concat user-emacs-directory "config.org")))
     (run-hooks 'my/open-map-hook))
-      (define-key my/open-map (kbd "r c") 'my/config-reload)
+      (define-key my/open-map (kbd "C-r") 'my/config-reload)
 
 #+END_SRC
 
@@ -1521,6 +1529,26 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (run-hooks 'my/open-map-hook))
 
   (define-key my/open-map (kbd "d") 'my/open-downloads)
+#+END_SRC
+
+** Open password file
+#+BEGIN_SRC emacs-lisp
+  (defun my/open-passwords ()
+    (interactive)
+    (find-file espy-password-file)
+    (run-hooks 'my/open-map-hook))
+
+  (define-key my/open-map (kbd "p") 'my/open-passwords)
+#+END_SRC
+
+** Open activity reports
+#+BEGIN_SRC emacs-lisp
+  (defun my/open-activity-reports ()
+    (interactive)
+    (find-file (concat user-emacs-directory "ActivityReports.org"))
+    (run-hooks 'my/open-map-hook))
+
+  (define-key my/open-map (kbd "r") 'my/open-activity-reports)
 #+END_SRC
 
 ** Visit agenda file
@@ -1835,7 +1863,10 @@ Company doc mode disables visual line mode for whatever reason, enable it inside
                                (user-error "No documentation available")))
                start)
           (with-current-buffer doc-buffer
-            (truncate-lines -1))
+            (setq truncate-lines nil)
+            ;;(toggle-truncate-lines -1)
+            ;;(my/toggle-truncate-lines -1)
+            )
           ;;(visual-line-mode t))
           (when (consp doc-buffer)
             (setq start (cdr doc-buffer)
@@ -1844,7 +1875,7 @@ Company doc mode disables visual line mode for whatever reason, enable it inside
           (let ((win (display-buffer doc-buffer t)))
             (set-window-start win (if start start (point-min))))))))
 
-  (define-key company-active-map (kbd "C-h") 'my/company-show-doc-buffer)
+    (define-key company-active-map (kbd "C-h") 'my/company-show-doc-buffer)
 #+END_SRC
 
 *** Company-show-numbers but with letters
@@ -2020,7 +2051,9 @@ Doesn't work with my setup right now
     (global-display-line-numbers-mode)
 
     (setq display-line-numbers-type 'relative)
+    (setq-default display-line-numbers-type 'relative)
     (setq display-line-numbers-current-absolute nil)
+    (setq-default display-line-numbers-current-absolute nil)
     
     ;; Fixes org headings not 
     (add-hook 'org-mode-hook (lambda ()(interactive) (setq display-line-numbers-type 'visual)))
@@ -2138,8 +2171,8 @@ Doesn't work with my setup right now
 #+BEGIN_SRC emacs-lisp
   (require 'view)
 
-   (evil-define-key 'normal my/keys-mode-map (kbd "C-u") 'View-scroll-half-page-backward)
-   (evil-define-key 'normal my/keys-mode-map (kbd "C-w") 'View-scroll-half-page-forward)
+  (evil-define-key 'normal my/keys-mode-map (kbd "C-u") 'View-scroll-half-page-backward)
+  (evil-define-key 'normal my/keys-mode-map (kbd "C-w") 'View-scroll-half-page-forward)
 
   (evil-define-key 'visual my/keys-mode-map (kbd "C-u") 'evil-scroll-up)
   (evil-define-key 'visual my/keys-mode-map (kbd "C-w") 'evil-scroll-down)
@@ -2260,6 +2293,20 @@ g-; and g-,
     (setq my/window-configurations (delete (nth (my/get-selected-window-config-position (my/select-window-config "Delete window config ")) my/window-configurations) my/window-configurations)))
 #+END_SRC
 
+** Switch to minibuffer
+#+BEGIN_SRC emacs-lisp
+  (defun my/switch-to-minibuffer ()
+    "Switch to minibuffer window."
+    (interactive)
+    (if (active-minibuffer-window)
+        (select-window (active-minibuffer-window))
+      (error "Minibuffer is not active")))
+
+  (evil-define-key 'normal my/keys-mode-map (kbd "M-TAB") 'my/switch-to-minibuffer)
+  (evil-define-key 'motion my/keys-mode-map (kbd "M-TAB") 'my/switch-to-minibuffer)
+  (evil-define-key 'visual my/keys-mode-map (kbd "M-TAB") 'my/switch-to-minibuffer)
+#+END_SRC
+
 * Window and buffer settings
 ** Delete other windows
 #+BEGIN_SRC emacs-lisp
@@ -2334,6 +2381,26 @@ g-; and g-,
     (dired-hide-details-mode))
 
   (add-hook 'dired-mode-hook 'my/dired-mode)
+#+END_SRC
+
+** Use only one dired buffer
+#+BEGIN_SRC emacs-lisp
+  (defun my/find-file-dired-same-buffer ()
+    (interactive)
+    (my/insert-subdir-or-open-file (read-file-name "Find file: ")))
+
+  (defun my/insert-subdir-or-open-file (&optional file switches no-error-if-not-dir-p)
+    (interactive)
+    (let* ((file-name (or file (dired-get-filename))))
+      (if (file-directory-p file-name)
+          (if (get-buffer "dired")
+              (progn
+                (switch-to-buffer "dired")
+                (dired-maybe-insert-subdir file-name switches no-error-if-not-dir-p))
+            (dired "/")
+            (dired-maybe-insert-subdir file-name switches no-error-if-not-dir-p)
+            (my/give-buffer-unique-name "dired"))
+        (find-file file-name))))
 #+END_SRC
 
 ** Human readable file sizes
@@ -2430,7 +2497,8 @@ Version 2015-07-30"
 
   ;; Make dired work good with evil normal mode
   (evil-define-key 'normal dired-mode-map (kbd "i") 'evil-insert)
-  (evil-define-key 'normal dired-mode-map (kbd "RET") 'dired-find-file)
+  ;;(evil-define-key 'normal dired-mode-map (kbd "RET") 'dired-find-file)
+  (evil-define-key 'normal dired-mode-map (kbd "RET") 'my/insert-subdir-or-open-file)
   (evil-define-key 'normal dired-mode-map (kbd "a") 'evil-append)
   (evil-define-key 'normal dired-mode-map (kbd "0") 'evil-digit-argument-or-evil-beginning-of-line)
   (evil-define-key 'normal dired-mode-map (kbd "$") 'evil-end-of-line)
@@ -2449,7 +2517,7 @@ Version 2015-07-30"
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/org-mode-map)
   (evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a")) 'my/org-mode-map)
-  
+
   (use-package org)
 #+END_SRC
 
@@ -2495,6 +2563,11 @@ Version 2015-07-30"
 *** Ellipsis face
 #+BEGIN_SRC emacs-lisp
   (setq org-ellipsis my/fold-ellipsis)
+#+END_SRC
+
+*** Always truncate lines
+#+BEGIN_SRC emacs-lisp
+  (setq org-startup-truncated nil)
 #+END_SRC
 
 ** Indent mode
@@ -3034,7 +3107,8 @@ omnisharp.json should be in ~/.omnisharp on all OSs
     (highlight-thing-mode -1)
     ;; Visual line mode in fsharp mode is broken, makes swiper take years to start, use truncate lines mode instead
     (visual-line-mode 0)
-    (toggle-truncate-lines nil))
+    ;;(toggle-truncate-lines nil)
+)
 
   ;; Autostart
   (add-hook 'fsharp-mode-hook 'my/fsharp-mode)
@@ -3085,7 +3159,6 @@ TODO: Fix settings, grab them from package site
 #+END_SRC
 
 * Encryption
-
 ** GPG  
 *** Pinentry
 #+BEGIN_SRC emacs-lisp
@@ -3095,6 +3168,12 @@ TODO: Fix settings, grab them from package site
   (add-hook 'exwm-init-hook 'pinentry-start)
 #+END_SRC
 
+*** Reset GPG agent
+#+BEGIN_SRC emacs-lisp
+  (defun my/reset-gpg-agent ()
+    (interactive)
+    (shell-command "gpgconf --kill gpg-agent"))
+#+END_SRC
 ** Passwords
 Enable org mode for .org.gpg files
 #+BEGIN_SRC emacs-lisp
@@ -3110,6 +3189,7 @@ Enable org mode for .org.gpg files
   (define-prefix-command 'my/password-map)
   (define-key my/leader-map (kbd "p") 'my/password-map)
 
+  (define-key my/password-map (kbd "r") 'my/reset-gpg-agent)
   (define-key my/password-map (kbd "u") 'espy-get-user)
   (define-key my/password-map (kbd "p") 'espy-get-pass)
 #+END_SRC
@@ -3494,6 +3574,11 @@ We use class names for all windows expect for Java applications and GIMP (becaus
 
   ;; Some keys have to be defined using "exwm-input-set-key" in order to be usable if they are in "exwm-input-prefix-keys"
   (exwm-input-set-key (kbd my/mod-leader-map-key) 'my/leader-map)
+
+  (exwm-input-set-key (kbd "M-<tab>") 'my/switch-to-minibuffer)
+  ;;(exwm-input-set-key (kbd "C-M-=") 'my/switch-to-minibuffer)
+
+  ;;(exwm-input-set-key (kbd "C-M-i") 'my/switch-to-minibuffer)
 
   (exwm-input-set-key (kbd "C-e") 'keyboard-quit)
   (exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
@@ -4607,7 +4692,7 @@ https://www.emacswiki.org/emacs/ArtistMode
 
     ;; Buffer management
     ;; Find file
-    ("e" counsel-find-file nil)
+    ("e" my/find-file-dired-same-buffer nil)
 
     ;; Switch buffer
     ("A" next-buffer nil)
@@ -5342,59 +5427,6 @@ When projectile-mode is on, project name is updated on every keypress, here it i
   (my/linux-update-available-mem)
 #+END_SRC
 
-**** Work timer
-#+BEGIN_SRC emacs-lisp
-  (defvar my/work-timer-last-add-to-total-time nil)
-  (defvar my/work-timer-total-time 0)
-  (defvar my/work-timer-total-time-formated "0M")
-
-  (defvar my/work-log-name "work-log")
-
-  (defun my/start-work-timer ()
-    (interactive)
-    (setq my/work-timer-last-add-to-total-time (float-time)))
-
-  (defun my/stop-work-timer ()
-    (interactive)
-    (setq my/work-timer-last-add-to-total-time nil))
-
-  (defun my/work-timer-task-done ()
-    (interactive)
-    (with-current-buffer (find-file (expand-file-name (concat user-emacs-directory my/work-log-name)))
-      (end-of-buffer)
-      (newline)
-      (insert  (concat my/date " - " my/time ": "my/work-timer-total-time-formated " - " (completing-read "Work done: " nil))))
-    (setq my/work-timer-last-add-to-total-time nil)
-    (setq my/work-timer-total-time 0)
-    (setq my/work-timer-total-time-formated "0M"))
-
-  (defun my/work-timer-get-formated-time ()
-    (interactive)
-    (if (> my/work-timer-total-time (* 60 60))
-        (concat (format "%0.1f"(/ my/work-timer-total-time 3600.0)) "H")
-      (concat (int-to-string (/ (floor my/work-timer-total-time) 60)) "M")))
-
-  (defun my/update-work-timer ()
-    (interactive)
-    (if my/work-timer-last-add-to-total-time
-        (progn
-          (setq my/work-timer-total-time (+ my/work-timer-total-time (- (float-time) my/work-timer-last-add-to-total-time)))
-          (setq my/work-timer-last-add-to-total-time (float-time))
-          (setq my/work-timer-total-time-formated (my/work-timer-get-formated-time)))))
-
-  (run-with-timer 0 60 'my/update-work-timer)
-#+END_SRC
-
-***** Keys
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/work-timer-map)
-  (define-key my/leader-map (kbd "b") 'my/work-timer-map)
-
-  (define-key my/work-timer-map (kbd "s") 'my/start-work-timer)
-  (define-key my/work-timer-map (kbd "e") 'my/stop-work-timer)
-  (define-key my/work-timer-map (kbd "d") 'my/work-timer-task-done)
-#+END_SRC
-
 **** Uptime
 #+BEGIN_SRC emacs-lisp
   (defvar my/uptime-start-time (float-time))
@@ -5446,15 +5478,11 @@ When projectile-mode is on, project name is updated on every keypress, here it i
   (define-prefix-command 'my/timer-map)
   (define-key my/leader-map (kbd "b") 'my/timer-map)
 
-  (define-key my/timer-map (kbd "s") 'my/start-work-timer)
-  (define-key my/timer-map (kbd "S") 'my/stop-work-timer)
-
   (define-key my/timer-map (kbd "e") 'my/reset-eye-timer)
 #+END_SRC
 
 *** Mode line format
 #+BEGIN_SRC emacs-lisp
-  (defvar my/work-timer-blink t)
   (defvar my/frame-width (frame-width))
 
   (defun my/frame-width-update()
@@ -5576,24 +5604,6 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
                       " |"
 
-                      " W: "
-                      (:eval (if my/work-timer-last-add-to-total-time
-                                 ;;(propertize my/work-timer-total-time-formated 'face '(:foreground "green"))
-                                 my/work-timer-total-time-formated
-                               (if my/work-timer-blink
-                                   (progn
-                                     (setq my/work-timer-blink nil)
-                                     ;; (set-face-attribute 'mode-line nil :background "red")
-                                     ;; (propertize my/work-timer-total-time-formated 'face '(:foreground "red"))
-                                     )
-                                 (setq my/work-timer-blink t)
-                                 ;; (set-face-attribute 'mode-line nil :background my/background-color )
-                                 ;; (propertize my/work-timer-total-time-formated 'face '(:background "red"))
-                                 )
-                               ))
-
-                      " |"
-
                       (:eval (concat " Up: " my/uptime-total-time-formated))
                       (:eval (if (not (= my/eye-timer-que 0))
                                  (propertize (concat  " - E: " my/eye-timer-que-formated) 'face '(:foreground "red"))))
@@ -5609,6 +5619,29 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
                       ))
                     ))))
+#+END_SRC
+
+* Activity report
+#+BEGIN_SRC emacs-lisp
+  (defvar my/current-activity nil)
+
+  (defun my/format-activity-report (activity)
+    (concat "[" my/date " - " my/time "] " "20 min" " - " activity))
+
+
+  (run-with-timer 1200 1200 (lambda () (interactive)
+                              (my/add-to-or-create-file-with-content
+                               (concat user-emacs-directory "ActivityReports.org")
+                               (my/format-activity-report
+                                (unwind-protect
+                                    (progn
+                                      (setq my/current-activity nil)
+                                      (setq my/current-activity (completing-read "Report activity: " '(
+                                                                                                       ("Work")
+                                                                                                       ("None")))))
+                                  (if my/current-activity
+                                      my/current-activity
+                                    (my/add-to-or-create-file-with-content (concat user-emacs-directory "ActivityReports.org") (my/format-activity-report "CANCELLED"))))))))
 #+END_SRC
 
 * Private config
@@ -5627,5 +5660,5 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
 * Report start time
 #+BEGIN_SRC emacs-lisp
-(message (concat "Booted in " (number-to-string (- (float-time) my/config-start-time)) " seconds"))
+  (run-with-timer 4 nil (lambda () (interactive) (message (concat "Booted in " (emacs-init-time) " seconds"))))
 #+END_SRC
