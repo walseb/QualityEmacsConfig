@@ -2054,9 +2054,9 @@ Doesn't work with my setup right now
     (setq-default display-line-numbers-type 'relative)
     (setq display-line-numbers-current-absolute nil)
     (setq-default display-line-numbers-current-absolute nil)
-    
+
     ;; Fixes org headings not 
-    (add-hook 'org-mode-hook (lambda ()(interactive) (setq display-line-numbers-type 'visual)))
+    (add-hook 'org-mode-hook (lambda ()(interactive) (setq-local display-line-numbers-type 'visual)))
 
     (if window-system
         (progn
@@ -4825,6 +4825,8 @@ https://www.emacswiki.org/emacs/ArtistMode
 ** Image mode
 #+BEGIN_SRC emacs-lisp
   (require 'image-mode)
+
+  (add-hook 'image-mode-hook '(lambda () (interactive) (display-line-numbers-mode -1)))
 #+END_SRC
 
 *** Blimp
@@ -4968,6 +4970,7 @@ Changes colors of delimiters eg. {()}
 ** Highlight matching delimiters
 #+BEGIN_SRC emacs-lisp
   (show-paren-mode 1)
+  (setq show-paren-delay 0)
 #+END_SRC
 
 ** Highlight current line
@@ -5628,20 +5631,28 @@ When projectile-mode is on, project name is updated on every keypress, here it i
   (defun my/format-activity-report (activity)
     (concat "[" my/date " - " my/time "] " "20 min" " - " activity))
 
+  (defun my/report-activity ()
+    (my/add-to-or-create-file-with-content
+     (concat user-emacs-directory "ActivityReports.org")
+     (my/format-activity-report
+      (unwind-protect
+          (progn
+            (setq my/current-activity nil)
+            (setq my/current-activity (completing-read "Report activity: " '(
+                                                                             ("Work")
+                                                                             ("None")))))
+        (if my/current-activity
+            my/current-activity
+          (my/add-to-or-create-file-with-content (concat user-emacs-directory "ActivityReports.org") (my/format-activity-report "CANCELLED")))
+        ;; Activate timer again, using the second arg in `run-with-timer' doesn't work if you cancel prompt
+        (run-with-timer 1200 nil 'my/report-activity)))))
 
-  (run-with-timer 1200 1200 (lambda () (interactive)
-                              (my/add-to-or-create-file-with-content
-                               (concat user-emacs-directory "ActivityReports.org")
-                               (my/format-activity-report
-                                (unwind-protect
-                                    (progn
-                                      (setq my/current-activity nil)
-                                      (setq my/current-activity (completing-read "Report activity: " '(
-                                                                                                       ("Work")
-                                                                                                       ("None")))))
-                                  (if my/current-activity
-                                      my/current-activity
-                                    (my/add-to-or-create-file-with-content (concat user-emacs-directory "ActivityReports.org") (my/format-activity-report "CANCELLED"))))))))
+  (defun my/report-close-emacs ()
+    (my/add-to-or-create-file-with-content (concat user-emacs-directory "ActivityReports.org") (my/format-activity-report "EMACS QUIT")))
+
+  (add-hook 'kill-emacs-hook 'my/report-close-emacs)
+
+  (run-with-timer 1200 nil 'my/report-activity)
 #+END_SRC
 
 * Private config
