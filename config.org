@@ -2384,6 +2384,25 @@ g-; and g-,
 #+END_SRC
 
 ** Use only one dired buffer
+Fix this later
+#+BEGIN_SRC emacs-lisp
+  ;; (defun my/find-file-dired-same-buffer ()
+    ;; (interactive)
+    ;; (my/insert-subdir-or-open-file (read-file-name "Find file: ")))
+;; 
+  ;; (defun my/insert-subdir-or-open-file (&optional file switches no-error-if-not-dir-p)
+    ;; (interactive)
+    ;; (let* ((file-name (or file (dired-get-filename))))
+      ;; (if (file-directory-p file-name)
+          ;; (if (get-buffer "dired")
+              ;; (progn
+                ;; (switch-to-buffer "dired")
+                ;; (dired-maybe-insert-subdir file-name switches no-error-if-not-dir-p))
+            ;; (dired "/")
+            ;; (dired-maybe-insert-subdir file-name switches no-error-if-not-dir-p)
+            ;; (my/give-buffer-unique-name "dired"))
+        ;; (find-file file-name))))
+#+END_SRC
 #+BEGIN_SRC emacs-lisp
   (defun my/find-file-dired-same-buffer ()
     (interactive)
@@ -2393,15 +2412,10 @@ g-; and g-,
     (interactive)
     (let* ((file-name (or file (dired-get-filename))))
       (if (file-directory-p file-name)
-          (if (get-buffer "dired")
-              (progn
-                (switch-to-buffer "dired")
-                (dired-maybe-insert-subdir file-name switches no-error-if-not-dir-p))
-            (dired "/")
-            (dired-maybe-insert-subdir file-name switches no-error-if-not-dir-p)
-            (my/give-buffer-unique-name "dired"))
+          (dired-maybe-insert-subdir file-name switches no-error-if-not-dir-p)
         (find-file file-name))))
 #+END_SRC
+
 
 ** Human readable file sizes
 Make file sizes human readable
@@ -2897,6 +2911,16 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 
 #+END_SRC
 
+** Scheme
+#+BEGIN_SRC emacs-lisp
+  (use-package geiser)
+
+  (define-prefix-command 'my/scheme-mode-map)
+  (evil-define-key 'normal scheme-mode-map (kbd (concat my/leader-map-key " a")) 'my/scheme-mode-map)
+
+  (define-key my/scheme-mode-map (kbd "e") 'geiser-eval-last-sexp)
+#+END_SRC
+
 ** Emacs-lisp
 *** Eldoc
 Shows information in echo area
@@ -3126,11 +3150,10 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-key clojure-mode-map (kbd "C-x C-e") 'cider-eval-defun-at-point)
-
   (define-prefix-command 'my/clojure-mode-map)
   (evil-define-key 'normal clojure-mode-map (kbd (concat my/leader-map-key " a")) 'my/clojure-mode-map)
 
+  (define-key my/clojure-mode-map (kbd "e") 'cider-eval-defun-at-point)
   (define-key my/clojure-mode-map (kbd "C-s") 'cider-jack-in)
 #+END_SRC
 
@@ -4637,8 +4660,8 @@ https://www.emacswiki.org/emacs/ArtistMode
 #+BEGIN_SRC emacs-lisp
   (defhydra my/window-hydra (:hint nil
                                    :color red)
-                                   ;; :pre (setq exwm-input-line-mode-passthrough t)
-                                   ;; :post (setq exwm-input-line-mode-passthrough nil))
+    ;; :pre (setq exwm-input-line-mode-passthrough t)
+    ;; :post (setq exwm-input-line-mode-passthrough nil))
     "movement" 
 
     ;; Move focus
@@ -4692,7 +4715,7 @@ https://www.emacswiki.org/emacs/ArtistMode
 
     ;; Buffer management
     ;; Find file
-    ("e" my/find-file-dired-same-buffer nil)
+    ("e" counsel-find-file nil)
 
     ;; Switch buffer
     ("A" next-buffer nil)
@@ -4708,7 +4731,7 @@ https://www.emacswiki.org/emacs/ArtistMode
     ("C-w" View-scroll-half-page-forward nil)
 
     ("f" counsel-M-x nil)
-  ;;  ("y" counsel-linux-app nil)
+    ;;  ("y" counsel-linux-app nil)
 
     ("u" revert-buffer nil)
 
