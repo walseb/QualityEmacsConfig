@@ -379,14 +379,18 @@ Default file-size-human-readable returns decimal values
   (defvar my/font nil)
   (defvar my/font-raw nil)
 
-  (if (my/font-installed "Open Sans")
+  (if (my/font-installed "FreeSans")
       (progn
-        (setq my/font-raw "Open Sans")
-        (setq my/font "opensans"))
-    (if (my/font-installed "dejavu sans")
+        (setq my/font-raw "FreeSans")
+        (setq my/font "FreeSans"))
+    (if (my/font-installed "Open Sans")
         (progn
-          (setq my/font-raw "dejavu sans")
-          (setq my/font "DejaVuSans"))))
+          (setq my/font-raw "Open Sans")
+          (setq my/font "opensans"))
+      (if (my/font-installed "dejavu sans")
+          (progn
+            (setq my/font-raw "dejavu sans")
+            (setq my/font "DejaVuSans")))))
 
   (if my/font
       (my/set-default-font my/font))
@@ -1583,7 +1587,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
                                                                                       ("docs"))))
                      (concat "https://www.google.com/search?q=" adress-raw))))
 
-      (start-process (concat "firefox" my/temp-firefox-title-name) nil "firefox" "--new-window" adress)
+      (start-process (concat "icecat" my/temp-firefox-title-name) nil "icecat" "--new-window" adress)
       (run-with-timer 0.5 nil
                       (lambda () (interactive)
                         (exwm-workspace-rename-buffer (concat my/temp-firefox-title-name " - firefox"))))))
@@ -3131,7 +3135,6 @@ omnisharp.json should be in ~/.omnisharp on all OSs
     (highlight-thing-mode -1)
     ;; Visual line mode in fsharp mode is broken, makes swiper take years to start, use truncate lines mode instead
     (visual-line-mode 0)
-    ;;(toggle-truncate-lines nil)
 )
 
   ;; Autostart
@@ -4155,7 +4158,7 @@ Adds headers to each server, tree view
 Mode for choosing which mail to open
 #+BEGIN_SRC emacs-lisp
   (defun my/gnus-summary-mode ()
-    (visual-line-mode 0))
+    (toggle-truncate-lines 1))
 
    ;; '(gnus-summary-mode-line-format "U%U %S" )
   (setq-default gnus-summary-line-format "%U%R%d %-5,5L %-20,20n %B%-80,80S\n")
@@ -4375,7 +4378,7 @@ Mode for writing mail
 #+BEGIN_SRC emacs-lisp
   (defun my/proced-mode ()
     (interactive)
-    (visual-line-mode 0))
+    (toggle-truncate-lines 1))
 
   ;;(add-hook 'proced-post-display-hook 'my/proced-mode)
   (add-hook 'proced-mode-hook 'my/proced-mode)
@@ -4406,7 +4409,7 @@ Mode for writing mail
 #+BEGIN_SRC emacs-lisp
   (defun my/net-utils-mode ()
     (interactive)
-    (visual-line-mode 0))
+    (toggle-truncate-lines 1))
 
   (add-hook 'net-utils-mode-hook 'my/net-utils-mode)
 #+END_SRC
