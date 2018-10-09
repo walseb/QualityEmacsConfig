@@ -186,7 +186,6 @@ goto-chg (goto last change)
 Get =gpick=
 
 * Package management
-
 ** Local packages
 #+BEGIN_SRC emacs-lisp
   (add-to-list 'load-path (expand-file-name (concat user-emacs-directory "local-packages")))
@@ -2215,6 +2214,16 @@ g-; and g-,
     :defer t)
 #+END_SRC
 
+** My find file
+#+BEGIN_SRC emacs-lisp
+  (defun my/find-file ()
+    (interactive)
+    (find-file (let ((dir (ignore-errors (dired-current-directory))))
+                 (if dir 
+                     (read-file-name "Find file: " dir)
+                   (read-file-name "Find file: " default-directory)))))
+#+END_SRC
+
 ** Keys
 #+BEGIN_SRC emacs-lisp
   (define-key my/leader-map (kbd "f") 'avy-goto-char-in-line)
@@ -2386,23 +2395,32 @@ g-; and g-,
 ** Use only one dired buffer
 Fix this later
 #+BEGIN_SRC emacs-lisp
+
   ;; (defun my/find-file-dired-same-buffer ()
-    ;; (interactive)
-    ;; (my/insert-subdir-or-open-file (read-file-name "Find file: ")))
-;; 
+  ;; (interactive)
+  ;; (my/insert-subdir-or-open-file (read-file-name "Find file: ")))
+  ;; 
   ;; (defun my/insert-subdir-or-open-file (&optional file switches no-error-if-not-dir-p)
-    ;; (interactive)
-    ;; (let* ((file-name (or file (dired-get-filename))))
-      ;; (if (file-directory-p file-name)
-          ;; (if (get-buffer "dired")
-              ;; (progn
-                ;; (switch-to-buffer "dired")
-                ;; (dired-maybe-insert-subdir file-name switches no-error-if-not-dir-p))
-            ;; (dired "/")
-            ;; (dired-maybe-insert-subdir file-name switches no-error-if-not-dir-p)
-            ;; (my/give-buffer-unique-name "dired"))
-        ;; (find-file file-name))))
+  ;; (interactive)
+  ;; (let* ((file-name (or file (dired-get-filename))))
+  ;; (if (file-directory-p file-name)
+  ;; (if (get-buffer "dired")
+  ;; (progn
+  ;; (switch-to-buffer "dired")
+  ;; (dired-maybe-insert-subdir file-name switches no-error-if-not-dir-p))
+  ;; (dired "/")
+  ;; (dired-maybe-insert-subdir file-name switches no-error-if-not-dir-p)
+  ;; (my/give-buffer-unique-name "dired"))
+  ;; (find-file file-name))))
 #+END_SRC
+#+BEGIN_SRC emacs-lisp
+  ;; (defun my/find-file ()
+    ;; (let ((file (ignore-errors (dired-current-directory))))
+      ;; (if file
+          ;; (find-file file)
+    
+#+END_SRC
+
 #+BEGIN_SRC emacs-lisp
   (defun my/find-file-dired-same-buffer ()
     (interactive)
@@ -2415,7 +2433,6 @@ Fix this later
           (dired-maybe-insert-subdir file-name switches no-error-if-not-dir-p)
         (find-file file-name))))
 #+END_SRC
-
 
 ** Human readable file sizes
 Make file sizes human readable
@@ -4715,7 +4732,7 @@ https://www.emacswiki.org/emacs/ArtistMode
 
     ;; Buffer management
     ;; Find file
-    ("e" counsel-find-file nil)
+    ("e" my/find-file nil)
 
     ;; Switch buffer
     ("A" next-buffer nil)
@@ -5620,12 +5637,12 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                       (:eval (if (boundp 'org-mode-line-string)
                                  (concat "Org:" org-mode-line-string " | ")))
                       (:eval (if (not (eq battery-mode-line-string ""))
-                                 (concat "BAT: " battery-mode-line-string "%%%  | ")))
+                                 (concat " BAT: " battery-mode-line-string "%%%   | ")))
 
                       (:eval (if my/mode-line-enable-cpu-temp
                                  (concat " - " my/cpu-temp)))
 
-                      " C: "
+                      "C: "
                       (:eval (number-to-string my/load-average))
 
                       " |"
