@@ -1,8 +1,5 @@
 * Docs
 ** Requirements
-*** Volume control
-=amixer=
-
 *** Music
 =mpd= =mpc= 
 =pulse audio= if alsa, etc, edit "MPD/Create config".
@@ -184,12 +181,6 @@ goto-chg (goto last change)
 
 ** Color picking
 Get =gpick=
-
-* Package management
-** Local packages
-#+BEGIN_SRC emacs-lisp
-  (add-to-list 'load-path (expand-file-name (concat user-emacs-directory "local-packages")))
-#+END_SRC
 
 * Security
 #+BEGIN_SRC emacs-lisp
@@ -814,6 +805,58 @@ When changing leader, change =my/leader-map-key= and manually change all general
   ;; Enable leader even if my/keys-mode isn't active
    (define-key evil-motion-state-map (kbd my/leader-map-key) 'my/leader-map)
    (define-key evil-normal-state-map (kbd my/leader-map-key) 'my/leader-map)
+#+END_SRC
+
+* Package management
+** Guix
+#+BEGIN_SRC emacs-lisp
+  (use-package guix)
+#+END_SRC
+  
+*** Keys
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/guix-map)
+  (define-key my/leader-map (kbd "G") 'my/guix-map)
+
+  (define-key my/guix-map (kbd "v") 'guix)
+  (define-key my/guix-map (kbd "P") 'guix-profiles)
+  (define-key my/guix-map (kbd "g") 'guix-generation)
+  (define-key my/guix-map (kbd "G") 'guix-system-generations)
+  (define-key my/guix-map (kbd "i") 'guix-installed-user-packages)
+  (define-key my/guix-map (kbd "I") 'guix-installed-system-packages)
+
+  (define-prefix-command 'my/guix-services-map)
+  (define-key my/guix-map (kbd "s") 'my/guix-services-map)
+
+  (define-key my/guix-services-map (kbd "a") 'guix-all-services)
+  (define-key my/guix-services-map (kbd "n") 'guix-services-by-name)
+  (define-key my/guix-services-map (kbd "l") 'guix-services-by-location)
+  (define-key my/guix-services-map (kbd "d") 'guix-find-service-definition)
+
+  (define-prefix-command 'my/guix-package-map)
+  (define-key my/guix-map (kbd "p") 'my/guix-package-map)
+
+  (define-key my/guix-package-map (kbd "a") 'guix-all-packages)
+  (define-key my/guix-package-map (kbd "n") 'guix-packages-by-name)
+  (define-key my/guix-package-map (kbd "l") 'guix-packages-by-location)
+  (define-key my/guix-package-map (kbd "c") 'guix-packages-from-system-config-file)
+  (define-key my/guix-package-map (kbd "d") 'guix-find-package-definition)
+
+  (define-prefix-command 'my/guix-store-map)
+  (define-key my/guix-map (kbd "S") 'my/guix-store-map)
+
+  (define-key my/guix-store-map (kbd "l") 'guix-store-live-items)
+  (define-key my/guix-store-map (kbd "d") 'guix-store-dead-items)
+  (define-key my/guix-store-map (kbd "D") 'guix-store-item-derivers)
+  (define-key my/guix-store-map (kbd "f") 'guix-store-failures)
+  (define-key my/guix-store-map (kbd "r") 'guix-store-item-references)
+  (define-key my/guix-store-map (kbd "R") 'guix-store-item-referrers)
+  (define-key my/guix-store-map (kbd "C-r") 'guix-store-item-requisites)
+#+END_SRC
+
+** Local packages
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'load-path (expand-file-name (concat user-emacs-directory "local-packages")))
 #+END_SRC
 
 * Write config map
@@ -2878,6 +2921,37 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
   (setq highlight-indent-guides-delay 0)
 #+END_SRC
 
+*** Auto eval target
+#+BEGIN_SRC emacs-lisp
+  (defun my/auto-eval ()
+    (interactive)
+    (if (not (cond
+              ((string= major-mode "scheme-mode") (geiser-eval-last-sexp nil)) 
+              ((string= major-mode "clojure-mode") (cider-eval-last-sexp)) 
+              ((string= major-mode "fsharp-mode") (fsharp-eval-phrase))))
+        (eval-last-sexp nil)))
+
+  (defun my/auto-eval-buffer ()
+    (interactive)
+    (if (not (cond
+              ((string= major-mode "scheme-mode") (geiser-eval-buffer nil)) 
+              ((string= major-mode "clojure-mode") (cider-eval-buffer)) 
+              ((string= major-mode "fsharp-mode") (fsharp-eval-region (point-min) (point-max)))))
+        (eval-buffer nil)))
+
+  (defun my/auto-eval-print ()
+    (interactive)
+    (if (not (cond
+              ((string= major-mode "scheme-mode") (geiser-eval-last-sexp t)) 
+              ((string= major-mode "clojure-mode") (cider-eval-print-last-sexp))))
+        (eval-print-last-sexp nil)))
+
+
+  (define-key my/leader-map (kbd "e") 'my/auto-eval)
+  (define-key my/leader-map (kbd "E") 'my/auto-eval-buffer)
+  (define-key my/leader-map (kbd "M-e") 'my/auto-eval-print)
+#+END_SRC
+
 ** Documentation
 #+BEGIN_SRC emacs-lisp
   (use-package zeal-at-point
@@ -2938,8 +3012,8 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 
   (define-prefix-command 'my/scheme-mode-map)
   (evil-define-key 'normal scheme-mode-map (kbd (concat my/leader-map-key " a")) 'my/scheme-mode-map)
-
-  (define-key my/scheme-mode-map (kbd "e") 'geiser-eval-last-sexp)
+  
+;; TODO
 #+END_SRC
 
 ** Emacs-lisp
@@ -3132,7 +3206,6 @@ omnisharp.json should be in ~/.omnisharp on all OSs
     (interactive)
     (evil-define-key 'normal fsharp-mode-map (kbd (concat my/leader-map-key " a")) 'my/fsharp-mode-map))
 
-  (define-key my/fsharp-mode-map (kbd "e") 'fsharp-eval-region)
   (define-key my/fsharp-mode-map (kbd "d") 'fsharp-ac/gotodefn-at-point)
   (define-key my/fsharp-mode-map (kbd "v") 'fsharp-mark-phrase)
   (define-key my/fsharp-mode-map (kbd "b") 'fsharp-goto-block-up)
@@ -3173,7 +3246,6 @@ omnisharp.json should be in ~/.omnisharp on all OSs
   (define-prefix-command 'my/clojure-mode-map)
   (evil-define-key 'normal clojure-mode-map (kbd (concat my/leader-map-key " a")) 'my/clojure-mode-map)
 
-  (define-key my/clojure-mode-map (kbd "e") 'cider-eval-defun-at-point)
   (define-key my/clojure-mode-map (kbd "C-s") 'cider-jack-in)
 #+END_SRC
 
@@ -3450,15 +3522,6 @@ Use C-i instead
 #+BEGIN_SRC emacs-lisp
   ;; (define-key key-translation-map (kbd "C-e") (kbd "TAB"))
   ;; (define-key key-translation-map (kbd "M-C-i") (kbd "C-TAB"))
-
-
-#+END_SRC
-
-*** Add eval to leader
-#+BEGIN_SRC emacs-lisp
-  (define-key my/leader-map (kbd "e") 'eval-last-sexp)
-  (define-key my/leader-map (kbd "E") 'eval-buffer)
-  (define-key my/leader-map (kbd "M-e") 'eval-print-last-sexp)
 #+END_SRC
 
 * exwm
@@ -3546,7 +3609,7 @@ We use class names for all windows expect for Java applications and GIMP (becaus
   ;;(define-key my/keys-mode-map (kbd "M-h") 'my/switch-monitor-left)
 #+END_SRC
 
-** Settings
+** Setting
 #+BEGIN_SRC emacs-lisp
   ;; Garbage collect when entering x window (because x is not in sync with emacs)
   ;;(add-hook 'exwm-mode-hook 'garbage-collect)
@@ -3706,26 +3769,31 @@ If enabled it auto enables projectile, which has high CPU usage
 * Media
 ** Volume keys
 #+BEGIN_SRC emacs-lisp
-  (defun my/amixer-mute ()
+  (defun my/pulse-mute-toggle ()
     (interactive)
-    (shell-command "amixer -q -D pulse set Master toggle"))
+    (shell-command "pactl set-sink-mute 0 toggle"))
 
-  (global-set-key (kbd "<XF86AudioMute>") 'my/amixer-mute)
-  (global-set-key (kbd "s-`") 'my/amixer-mute)
+  (global-set-key (kbd "<XF86AudioMute>") 'my/pulse-mute-toggle)
+  (global-set-key (kbd "s-`") 'my/pulse-mute-toggle)
 
-  (defun my/amixer-raise-volume ()
+  (defun my/pulse-raise-volume ()
     (interactive)
-    (shell-command "amixer -q -D pulse set Master 4%+ unmute"))
+    ;; Unmute
+    (shell-command "pactl set-sink-mute 0 0")
+    (shell-command "pactl set-sink-volume 0 +2.5%"))
 
-  (global-set-key (kbd "<XF86AudioRaiseVolume>") 'my/amixer-raise-volume)
-  (global-set-key (kbd "s-=") 'my/amixer-raise-volume)
+  (global-set-key (kbd "<XF86AudioRaiseVolume>") 'my/pulse-raise-volume)
+  (global-set-key (kbd "s-=") 'my/pulse-raise-volume)
 
-  (defun my/amixer-lower-volume ()
+  (defun my/pulse-lower-volume ()
     (interactive)
-    (shell-command "amixer -q -D pulse set Master 4%- unmute"))
+    ;; Unmute
+    (shell-command "pactl set-sink-mute 0 0")
+    (shell-command "pactl set-sink-volume 0 -2.5%"))
 
-  (global-set-key (kbd "<XF86AudioLowerVolume>") 'my/amixer-lower-volume)
-  (global-set-key (kbd "s--") 'my/amixer-lower-volume)
+  (global-set-key (kbd "<XF86AudioLowerVolume>") 'my/pulse-lower-volume)
+
+  (global-set-key (kbd "s--") 'my/pulse-lower-volume)
 #+END_SRC
 
 ** Music
