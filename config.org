@@ -1,5 +1,13 @@
 * Docs
 ** Requirements
+*** All
+=xorg-server xorg-xrandr xorg-xinit xorg-setxkbmap mlocate atool unzip mono pulseaudio pavucontrol icecat/firefox the_silver_searcher imagemagick ttf-inconsolata ttf-opensans ttf-dejavu aspell aspell-en aspell-sv mpd mpc=
+*** All optional
+=msbuild dotnet-sdk godot-mono guile fsharp=
+
+*** UTF-8 support
+=ttf-dejavu= fills in the gaps where opensans doesn't have the character
+
 *** Music
 =mpd= =mpc= 
 =pulse audio= if alsa, etc, edit "MPD/Create config".
@@ -26,10 +34,6 @@ On windows, you may need to manually point to server path, see github
 
 *** Screenshots
 =imagemagick=
-
-*** Dired
-**** Sorting
-=ls=
 
 *** Overtone
 =jack2= =leiningen= =cider=
@@ -1609,6 +1613,11 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
 ** Open firefox
 #+BEGIN_SRC emacs-lisp
+  (defvar my/gui-browser
+    (if (my/run-and-is-external-package-installed "icecat")
+        "icecat"
+      "firefox"))
+
   (defvar my/temp-firefox-title-name "")
   (defvar my/browser-bookmarks '(
                                  "youtube.com"
@@ -1629,7 +1638,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
                                                                                       ("docs"))))
                      (concat "https://www.google.com/search?q=" adress-raw))))
 
-      (start-process (concat "icecat" my/temp-firefox-title-name) nil "icecat" "--new-window" adress)
+      (start-process (concat my/gui-browser my/temp-firefox-title-name) nil my/gui-browser "--new-window" adress)
       (run-with-timer 0.5 nil
                       (lambda () (interactive)
                         (exwm-workspace-rename-buffer (concat my/temp-firefox-title-name " - firefox"))))))
@@ -2634,8 +2643,8 @@ Version 2015-07-30"
 
 ** Bullets
 #+BEGIN_SRC emacs-lisp
+  (use-package org-bullets)
   (when window-system
-    (use-package org-bullets)
 
     (add-hook 'org-mode-hook (lambda () (interactive) (org-bullets-mode))))
 #+END_SRC
@@ -3785,9 +3794,11 @@ If enabled it auto enables projectile, which has high CPU usage
 * Media
 ** Volume keys
 #+BEGIN_SRC emacs-lisp
+  (defvar my/audio-sink (substring  (shell-command-to-string "pacmd list-sinks | grep \"index\"") (string-match "[0-9]" (shell-command-to-string "pacmd list-sinks | grep \"index\"")) -1))
+
   (defun my/pulse-mute-toggle ()
     (interactive)
-    (shell-command "pactl set-sink-mute 0 toggle"))
+    (shell-command (concat "pactl set-sink-mute " my/audio-sink " toggle")))
 
   (global-set-key (kbd "<XF86AudioMute>") 'my/pulse-mute-toggle)
   (global-set-key (kbd "s-`") 'my/pulse-mute-toggle)
@@ -3795,8 +3806,8 @@ If enabled it auto enables projectile, which has high CPU usage
   (defun my/pulse-raise-volume ()
     (interactive)
     ;; Unmute
-    (shell-command "pactl set-sink-mute 0 0")
-    (shell-command "pactl set-sink-volume 0 +2.5%"))
+    (shell-command (concat "pactl set-sink-mute " my/audio-sink " 0"))
+    (shell-command (concat "pactl set-sink-volume " my/audio-sink " +2.5%")))
 
   (global-set-key (kbd "<XF86AudioRaiseVolume>") 'my/pulse-raise-volume)
   (global-set-key (kbd "s-=") 'my/pulse-raise-volume)
@@ -3804,8 +3815,8 @@ If enabled it auto enables projectile, which has high CPU usage
   (defun my/pulse-lower-volume ()
     (interactive)
     ;; Unmute
-    (shell-command "pactl set-sink-mute 0 0")
-    (shell-command "pactl set-sink-volume 0 -2.5%"))
+    (shell-command (concat "pactl set-sink-mute " my/audio-sink " 0"))
+    (shell-command (concat "pactl set-sink-volume " my/audio-sink " -2.5%")))
 
   (global-set-key (kbd "<XF86AudioLowerVolume>") 'my/pulse-lower-volume)
 
