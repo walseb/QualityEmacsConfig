@@ -1909,11 +1909,7 @@ Company doc mode disables visual line mode for whatever reason, enable it inside
                                (user-error "No documentation available")))
                start)
           (with-current-buffer doc-buffer
-            (setq truncate-lines nil)
-            ;;(toggle-truncate-lines -1)
-            ;;(my/toggle-truncate-lines -1)
-            )
-          ;;(visual-line-mode t))
+            (setq truncate-lines nil))
           (when (consp doc-buffer)
             (setq start (cdr doc-buffer)
                   doc-buffer (car doc-buffer)))
@@ -1921,7 +1917,26 @@ Company doc mode disables visual line mode for whatever reason, enable it inside
           (let ((win (display-buffer doc-buffer t)))
             (set-window-start win (if start start (point-min))))))))
 
-    (define-key company-active-map (kbd "C-h") 'my/company-show-doc-buffer)
+  (define-key company-active-map (kbd "C-h") 'my/company-show-doc-buffer)
+
+  (defun my/company-show-doc-buffer-keep-open ()
+    "Temporarily show the documentation buffer for the selection."
+    (interactive)
+    (let (other-window-scroll-buffer)
+      (let* ((selected (nth company-selection company-candidates))
+             (doc-buffer (or (company-call-backend 'doc-buffer selected)
+                             (user-error "No documentation available")))
+             start)
+        (with-current-buffer doc-buffer
+          (setq truncate-lines nil))
+        (when (consp doc-buffer)
+          (setq start (cdr doc-buffer)
+                doc-buffer (car doc-buffer)))
+        (setq other-window-scroll-buffer (get-buffer doc-buffer))
+        (let ((win (display-buffer doc-buffer t)))
+          (set-window-start win (if start start (point-min)))))))
+
+  (define-key company-active-map (kbd "M-h") 'my/company-show-doc-buffer-keep-open)
 #+END_SRC
 
 *** Company-show-numbers but with letters
@@ -3012,8 +3027,9 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 
   (define-prefix-command 'my/scheme-mode-map)
   (evil-define-key 'normal scheme-mode-map (kbd (concat my/leader-map-key " a")) 'my/scheme-mode-map)
-  
-;; TODO
+
+  (define-key my/scheme-mode-map (kbd "s") 'geiser-set-scheme)
+  (define-key my/scheme-mode-map (kbd "C-s") 'run-geiser)
 #+END_SRC
 
 ** Emacs-lisp
