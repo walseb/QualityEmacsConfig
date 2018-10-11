@@ -302,12 +302,10 @@ Define my mode for setting global settings in all buffers
 #+BEGIN_SRC emacs-lisp
   (defvar my/fold-ellipsis)
 
-  (when window-system
-    (setq my/fold-ellipsis "↴"))
-
+  (if window-system
+    (setq my/fold-ellipsis "↴")
   ;; The terminal probably doesn't support unicode
-  (when (not window-system)
-    (setq my/fold-ellipsis "↓"))
+   (setq my/fold-ellipsis "↓"))
 #+END_SRC
 
 ** File size human readable
@@ -3382,7 +3380,6 @@ Enable org mode for .org.gpg files
     (insert (completing-read "Eshell history: "
                              (delete-dups
                               (ring-elements eshell-history-ring)))))
-
 #+END_SRC
 
 ** Term
@@ -3400,6 +3397,27 @@ Disable rainbow delimiters
 #+BEGIN_SRC emacs-lisp
   (require 'em-term)
   (add-to-list 'eshell-visual-commands "vim")
+#+END_SRC
+
+** Remove banner
+#+BEGIN_SRC emacs-lisp
+(setq eshell-banner-message "")
+#+END_SRC
+
+** Custom prompt
+#+BEGIN_SRC emacs-lisp
+(defvar my/eshell-prompt-symbol)
+  (if window-system
+    (setq my/eshell-prompt-symbol "λ")
+   (setq my/eshell-prompt-symbol "$"))
+
+(setq eshell-prompt-function
+             (lambda ()
+     (concat (abbreviate-file-name (eshell/pwd))
+	     (if (= (user-uid) 0) " # " (concat " " my/eshell-prompt-symbol " ")))))
+             
+        (setq eshell-prompt-regexp
+             (concat "^[^#$\n]* [#" my/eshell-prompt-symbol "] "))
 #+END_SRC
 
 ** Keys
