@@ -68,6 +68,40 @@ M-x =pdf-tools-install=
 *** Misc
 =redshift= 
 
+** Firefox vimium
+*** Config
+#+BEGIN_SRC
+# Rebind up/down
+unbind n
+unbind N
+map n scrollDown
+map N previousTab
+unbind p
+unbind P
+map p scrollUp
+map P nextTab
+
+unbind k
+unbind K
+map k openCopiedUrlInCurrentTab
+map K openCopiedUrlInNewTab
+
+# Rebind scroll
+unbind <c-u>
+unbind <c-d>
+map <c-u> scrollPageUp
+map <c-d> scrollPageDown
+
+# Rebind tab close
+unbind s
+map s removeTab
+#+END_SRC
+
+*** Hint characters
+#+BEGIN_SRC
+anetoshdirgmlwyfubxcvkp,.q;j/z
+#+END_SRC
+
 ** FSharp
 *** File is not part of the loaded projects
 Try having the =fsproj= file open in a buffer or try moving the project folder directly to the home folder
@@ -3677,8 +3711,9 @@ We use class names for all windows expect for Java applications and GIMP (becaus
           ([?\C-p] . [up])
           ([?\C-n] . [down])
 
-          ([?\C-u] . [prior])
-          ([?\C-w] . [next])
+          ;; ([?\C-u] . [prior])
+          ;; ([?\C-w] . [next])
+          ([?\C-w] . [?\C-d])
 
           ([?\C-s] . [?\C-f])
 
