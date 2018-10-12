@@ -3698,6 +3698,11 @@ We use class names for all windows expect for Java applications and GIMP (becaus
           ;; Firefox hard-coded open url hotkey
           ([?\C-o] . [f6])
 
+          ;; Redo
+          ([?\C-r] . [?\C-y])
+          ;; Undo
+          ([?\M-u] . [?\C-z])
+
           ;; cut/paste.
           ([?\C-y] . [?\C-c])
           ([?\C-k] . [?\C-v])))
@@ -3748,11 +3753,6 @@ We use class names for all windows expect for Java applications and GIMP (becaus
 #+END_SRC
 
 * Version control
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/vc-map)
-  (define-key my/leader-map (kbd "v") 'my/vc-map)
-#+END_SRC
-
 ** Projectile
 #+BEGIN_SRC emacs-lisp
   (use-package projectile)
@@ -3790,6 +3790,11 @@ If enabled it auto enables projectile, which has high CPU usage
 
 ** Keys 
 #+BEGIN_SRC emacs-lisp
+  (evil-define-key 'insert magit-mode-map (kbd "a") 'evil-append)
+
+  (define-prefix-command 'my/vc-map)
+  (define-key my/leader-map (kbd "v") 'my/vc-map)
+
   (define-key my/vc-map (kbd "o") 'counsel-projectile)
   (define-key my/vc-map (kbd "a") 'counsel-projectile-ag)
   (define-key my/vc-map (kbd "d") 'projectile-dired)
@@ -3812,10 +3817,15 @@ If enabled it auto enables projectile, which has high CPU usage
 * Media
 ** Volume keys
 #+BEGIN_SRC emacs-lisp
-  (defvar my/audio-sink (substring  (shell-command-to-string "pacmd list-sinks | grep \"index\"") (string-match "[0-9]" (shell-command-to-string "pacmd list-sinks | grep \"index\"")) -1))
+  (defvar my/audio-sink nil)
+  ;; Pulse sometimes first starts when a video, etc starts
+  (defun my/pulse-update-audio-sink ()
+    (if (not my/audio-sink)
+        (setq my/audio-sink (substring  (shell-command-to-string "pacmd list-sinks | grep \"index\"") (string-match "[0-9]" (shell-command-to-string "pacmd list-sinks | grep \"index\"")) -1))))
 
   (defun my/pulse-mute-toggle ()
     (interactive)
+    (my/pulse-update-audio-sink)
     (shell-command (concat "pactl set-sink-mute " my/audio-sink " toggle")))
 
   (global-set-key (kbd "<XF86AudioMute>") 'my/pulse-mute-toggle)
@@ -3823,6 +3833,7 @@ If enabled it auto enables projectile, which has high CPU usage
 
   (defun my/pulse-raise-volume ()
     (interactive)
+    (my/pulse-update-audio-sink)
     ;; Unmute
     (shell-command (concat "pactl set-sink-mute " my/audio-sink " 0"))
     (shell-command (concat "pactl set-sink-volume " my/audio-sink " +2.5%")))
@@ -3832,6 +3843,7 @@ If enabled it auto enables projectile, which has high CPU usage
 
   (defun my/pulse-lower-volume ()
     (interactive)
+    (my/pulse-update-audio-sink)
     ;; Unmute
     (shell-command (concat "pactl set-sink-mute " my/audio-sink " 0"))
     (shell-command (concat "pactl set-sink-volume " my/audio-sink " -2.5%")))
@@ -4864,7 +4876,7 @@ https://www.emacswiki.org/emacs/ArtistMode
     ("C-w" View-scroll-half-page-forward nil)
 
     ("f" counsel-M-x nil)
-    ;;  ("y" counsel-linux-app nil)
+    ("y" counsel-linux-app nil)
 
     ("u" revert-buffer nil)
 
