@@ -782,24 +782,24 @@ Allows for using indention as text objects
 
 ** Evil-multiple cursors
 #+BEGIN_SRC emacs-lisp
-  (use-package evil-mc)
-
-  (global-evil-mc-mode 1)
-
-  (define-prefix-command 'my/evil-mc-map)
-  (define-key evil-normal-state-map (kbd "m") 'my/evil-mc-map)
-  (define-key evil-visual-state-map (kbd "m") 'my/evil-mc-map)
-
-  (define-key my/evil-mc-map (kbd "d") 'evil-mc-undo-all-cursors)
-  (define-key my/evil-mc-map (kbd "v") 'evil-mc-make-cursor-here)
-  (define-key my/evil-mc-map (kbd "V") 'evil-mc-make-all-cursors)
-  (define-key my/evil-mc-map (kbd "s") 'evil-mc-pause-cursors)
-  (define-key my/evil-mc-map (kbd "S") 'evil-mc-resume-cursors)
-  (define-key my/evil-mc-map (kbd "n") 'evil-mc-make-and-goto-next-cursor)
-  (define-key my/evil-mc-map (kbd "p") 'evil-mc-make-and-goto-prev-cursor)
-
-  (define-key my/evil-mc-map (kbd "g g") 'evil-mc-make-and-goto-first-cursor)
-  (define-key my/evil-mc-map (kbd "G") 'evil-mc-make-and-goto-last-cursor)
+  ;; (use-package evil-mc)
+;; 
+  ;; (global-evil-mc-mode 1)
+;; 
+  ;; (define-prefix-command 'my/evil-mc-map)
+  ;; (define-key evil-normal-state-map (kbd "m") 'my/evil-mc-map)
+  ;; (define-key evil-visual-state-map (kbd "m") 'my/evil-mc-map)
+;; 
+  ;; (define-key my/evil-mc-map (kbd "d") 'evil-mc-undo-all-cursors)
+  ;; (define-key my/evil-mc-map (kbd "v") 'evil-mc-make-cursor-here)
+  ;; (define-key my/evil-mc-map (kbd "V") 'evil-mc-make-all-cursors)
+  ;; (define-key my/evil-mc-map (kbd "s") 'evil-mc-pause-cursors)
+  ;; (define-key my/evil-mc-map (kbd "S") 'evil-mc-resume-cursors)
+  ;; (define-key my/evil-mc-map (kbd "n") 'evil-mc-make-and-goto-next-cursor)
+  ;; (define-key my/evil-mc-map (kbd "p") 'evil-mc-make-and-goto-prev-cursor)
+;; 
+  ;; (define-key my/evil-mc-map (kbd "g g") 'evil-mc-make-and-goto-first-cursor)
+  ;; (define-key my/evil-mc-map (kbd "G") 'evil-mc-make-and-goto-last-cursor)
 #+END_SRC
 
 ** Keys
@@ -1376,7 +1376,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
                         :height  0.1)
 
     ;; Highlight faces
-    (highlight-indent-guides-auto-set-faces)
+    ;;(highlight-indent-guides-auto-set-faces)
     )
 
   (if window-system
@@ -1646,7 +1646,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 ** Open firefox
 #+BEGIN_SRC emacs-lisp
   (defvar my/gui-browser
-    (if (my/run-and-is-external-package-installed "icecat")
+    (if (my/run-and-is-external-package-installed "icecat -h")
         "icecat"
       "firefox"))
 
@@ -2575,6 +2575,18 @@ Make file sizes human readable
   (define-key my/wdired-mode-map (kbd "u") 'wdired-abort-changes)
 #+END_SRC
 
+** Dired collapse
+#+BEGIN_SRC emacs-lisp
+  ;; (use-package dired-collapse)
+;; 
+  ;; (add-hook 'dired-mode-hook 'dired-collapse-mode)
+#+END_SRC
+
+** Subtree
+#+BEGIN_SRC emacs-lisp
+  ;;(use-package dired-subtree)
+#+END_SRC
+
 ** Sorting
 Sort dired dir listing in different ways. Modified to work with ivy
 URL `http://ergoemacs.org/emacs/dired_sort.html'
@@ -2632,7 +2644,8 @@ Version 2015-07-30"
   ;; Make dired work good with evil normal mode
   (evil-define-key 'normal dired-mode-map (kbd "i") 'evil-insert)
   ;;(evil-define-key 'normal dired-mode-map (kbd "RET") 'dired-find-file)
-  (evil-define-key 'normal dired-mode-map (kbd "RET") 'my/insert-subdir-or-open-file)
+  ;;(evil-define-key 'normal dired-mode-map (kbd "RET") 'my/insert-subdir-or-open-file)
+  ;;(evil-define-key 'normal dired-mode-map (kbd "RET") 'dired-subtree-insert)
   (evil-define-key 'normal dired-mode-map (kbd "a") 'evil-append)
   (evil-define-key 'normal dired-mode-map (kbd "0") 'evil-digit-argument-or-evil-beginning-of-line)
   (evil-define-key 'normal dired-mode-map (kbd "$") 'evil-end-of-line)
@@ -2949,6 +2962,14 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
   ;; (smartparens-global-mode)
 #+END_SRC
     
+*** Eldoc
+Shows information in echo area
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'emacs-lisp-mode-hook 'eldoc-mode)
+  (setq eldoc-echo-area-use-multiline-p 't)
+  (setq-default eldoc-echo-area-use-multiline-p 't)
+#+END_SRC
+
 *** Aggressive indent
 #+BEGIN_SRC emacs-lisp
   (use-package aggressive-indent)
@@ -2966,15 +2987,15 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 
 *** indent guide
 #+BEGIN_SRC emacs-lisp
-  (use-package highlight-indent-guides)
-
-  (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
-
-  ;;(setq highlight-indent-guides-method 'column)
-  (setq highlight-indent-guides-method 'fill)
-
-  (setq highlight-indent-guides-responsive 'top)
-  (setq highlight-indent-guides-delay 0)
+  ;; (use-package highlight-indent-guides)
+;; 
+  ;; (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
+;; 
+  ;; ;;(setq highlight-indent-guides-method 'column)
+  ;; (setq highlight-indent-guides-method 'fill)
+;; 
+  ;; (setq highlight-indent-guides-responsive 'top)
+  ;; (setq highlight-indent-guides-delay 0)
 #+END_SRC
 
 *** Auto eval target
@@ -3074,12 +3095,6 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 #+END_SRC
 
 ** Emacs-lisp
-*** Eldoc
-Shows information in echo area
-#+BEGIN_SRC emacs-lisp
-  (add-hook 'emacs-lisp-mode-hook 'eldoc-mode)
-#+END_SRC
-
 *** Enable debugging on error
 #+BEGIN_SRC emacs-lisp
   (setq debug-on-error nil)
@@ -4727,7 +4742,7 @@ https://www.emacswiki.org/emacs/FacesPerBuffer
 #+BEGIN_SRC emacs-lisp
   (defvar my/artist-mode-highlight-thing-restore nil)
   (defvar my/artist-mode-aggressive-indent-restore nil)
-  (defvar my/artist-mode-highlight-indent-restore nil)
+  ;;(defvar my/artist-mode-highlight-indent-restore nil)
   (defvar my/artist-mode-restore-buffer nil)
 
   (defun my/artist-mode ()
@@ -4746,11 +4761,11 @@ https://www.emacswiki.org/emacs/FacesPerBuffer
                 (setq my/artist-mode-aggressive-indent-restore t))
             (setq my/artist-mode-aggressive-indent-restore nil))
 
-          (if highlight-indent-guides-mode
-              (progn
-                (highlight-indent-guides-mode -1)
-                (setq my/artist-mode-highlight-indent-restore t))
-            (setq my/artist-mode-highlight-indent-restore nil))
+          ;; (if highlight-indent-guides-mode
+              ;; (progn
+                ;; (highlight-indent-guides-mode -1)
+                ;; (setq my/artist-mode-highlight-indent-restore t))
+            ;; (setq my/artist-mode-highlight-indent-restore nil))
 
           (evil-emacs-state)
 
@@ -4771,10 +4786,10 @@ https://www.emacswiki.org/emacs/FacesPerBuffer
                   (setq my/artist-mode-aggressive-indent-restore nil)
                   (aggressive-indent-mode 1)))
 
-            (if my/artist-mode-highlight-indent-restore
-                (progn
-                  (setq my/artist-mode-highlight-indent-restore nil)
-                  (highlight-indent-guides-mode 1)))
+            ;;(if my/artist-mode-highlight-indent-restore
+                ;;(progn
+                  ;;(setq my/artist-mode-highlight-indent-restore nil)
+                  ;;(highlight-indent-guides-mode 1)))
 
             (evil-exit-emacs-state)
             (if (and (not my/is-font-mono) window-system)
@@ -4896,6 +4911,7 @@ https://www.emacswiki.org/emacs/ArtistMode
     ;; Buffer management
     ;; Find file
     ("e" my/find-file nil)
+    ("E" dired-jump nil)
 
     ;; Switch buffer
     ("A" next-buffer nil)
@@ -5063,6 +5079,12 @@ https://www.emacswiki.org/emacs/ArtistMode
   (evil-define-key 'normal image-mode-map (kbd "p") '(lambda () (interactive) (image-previous-line 8)))
   (evil-define-key 'normal image-mode-map (kbd "h") '(lambda () (interactive) (image-backward-hscroll 8)))
   (evil-define-key 'normal image-mode-map (kbd "l") '(lambda () (interactive) (image-forward-hscroll 8)))
+
+  (evil-define-key 'normal image-mode-map (kbd "G") '(lambda () (interactive) (image-next-line 100)))
+  (evil-define-key 'normal image-mode-map (kbd "g g") '(lambda () (interactive) (image-previous-line 100)))
+
+  (evil-define-key 'normal image-mode-map (kbd "$") '(lambda () (interactive) (image-forward-hscroll 100)))
+  (evil-define-key 'normal image-mode-map (kbd "0") '(lambda () (interactive) (image-backward-hscroll 100)))
 
   (define-prefix-command 'my/image-mode-map)
   (evil-define-key 'normal image-mode-map (kbd (concat my/leader-map-key " a")) 'my/image-mode-map)
@@ -5742,9 +5764,9 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                       ;; is narrowed
                       "%n"
 
-                      " |"
+                      ;; " |"
 
-                      evil-mc-mode-line
+                      ;;evil-mc-mode-line
 
                       " | "
 
