@@ -4962,11 +4962,11 @@ https://www.emacswiki.org/emacs/ArtistMode
 * Image modes
 ** PDF view
 #+BEGIN_SRC emacs-lisp
-  (defun my/pdf-view-mode-map()
+  (defun my/pdf-view-mode()
     (interactive)
     (display-line-numbers-mode -1))
 
-  (add-hook 'pdf-view-mode-hook 'my/pdf-view-mode-map)
+  (add-hook 'pdf-view-mode-hook 'my/pdf-view-mode t)
 #+END_SRC
 
 ** PDF tools
@@ -4987,34 +4987,40 @@ https://www.emacswiki.org/emacs/ArtistMode
           (pdf-tools-install)
           ;; reload buffer with everything set
           (revert-buffer :ignore-auto :noconfirm)))
-    (setq my/pdf-tools-installed t))
+    (setq my/pdf-tools-installed t)
+    (pdf-view-mode))
 
-  (add-hook 'pdf-view-mode-hook 'my/init-pdf-tools)
+    ;;(add-hook 'pdf-view-mode-hook 'my/init-pdf-tools)
 
-  ;; Enable pdf-links
-  (add-hook 'pdf-view-mode-hook 'pdf-links-minor-mode)
+    ;; Enable pdf-links
+    (add-hook 'pdf-view-mode-hook 'pdf-links-minor-mode)
 
-  ;; Remove default keys
-  (setq pdf-view-mode-map (make-sparse-keymap))
+    ;; Remove default keys
+    (setq pdf-view-mode-map (make-sparse-keymap))
 #+END_SRC
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
+  ;; Disable insert mode
+  (define-key pdf-view-mode-map [remap evil-insert] 'evil-force-normal-state)
+
   ;; Scroll half page
   (define-key pdf-view-mode-map [remap View-scroll-half-page-backward] 'pdf-view-scroll-down-or-previous-page)
   (define-key pdf-view-mode-map [remap View-scroll-half-page-forward] 'pdf-view-scroll-up-or-next-page)
   ;; goto
   (define-key pdf-view-mode-map [remap evil-goto-first-line] 'pdf-view-first-page)
+
   ;; (kbd "G") = (evil-goto-line LAST-LINE)
   (define-key pdf-view-mode-map [remap evil-goto-line] 'pdf-view-last-page)
   ;; search
   (define-key pdf-view-mode-map [remap counsel-grep-or-swiper] 'isearch-forward)
+  (define-key pdf-view-mode-map [remap my/use-swiper-or-grep] 'isearch-forward)
   (define-key pdf-view-mode-map [remap swiper] 'isearch-forward)
   (define-key pdf-view-mode-map [remap counsel-grep] 'isearch-forward)
 
   ;; Movement
-  (define-key pdf-view-mode-map [remap evil-next-line] '(lambda () (interactive) (image-next-line 8)))
-  (define-key pdf-view-mode-map [remap evil-previous-line] '(lambda () (interactive) (image-previous-line 8)))
+  (define-key pdf-view-mode-map [remap evil-next-line] '(lambda () (interactive) (image-next-line 4)))
+  (define-key pdf-view-mode-map [remap evil-previous-line] '(lambda () (interactive) (image-previous-line 4)))
 
   (define-key pdf-view-mode-map [remap evil-forward-char] '(lambda () (interactive) (image-forward-hscroll 8)))
   (define-key pdf-view-mode-map [remap evil-backward-char] '(lambda () (interactive) (image-backward-hscroll 8)))
@@ -5816,13 +5822,13 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                       (:eval (if my/mode-line-enable-available-mem
                                  (concat " MEM: "
                                          my/available-mem-formatted
-                                         " |")))
+                                         " | ")))
 
                       ;;(:eval (concat "Org:" org-mode-line-string))
                       (:eval (if (boundp 'org-mode-line-string)
                                  (concat "Org:" org-mode-line-string " | ")))
                       (:eval (if (not (eq battery-mode-line-string ""))
-                                 (concat " BAT: " battery-mode-line-string "%%%   | ")))
+                                 (concat "BAT: " battery-mode-line-string "%%%   | ")))
 
                       (:eval (if my/mode-line-enable-cpu-temp
                                  (concat " - " my/cpu-temp)))
