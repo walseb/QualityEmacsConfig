@@ -2571,7 +2571,7 @@ Make file sizes human readable
   (define-prefix-command 'my/wdired-mode-map)
   (evil-define-key 'normal wdired-mode-map (kbd (concat my/leader-map-key " a")) 'my/wdired-mode-map)
 
-  (define-key my/wdired-mode-map (kbd "e") 'wdired-finish-edit)
+  (define-key my/wdired-mode-map (kbd "s") 'wdired-finish-edit)
   (define-key my/wdired-mode-map (kbd "u") 'wdired-abort-changes)
 #+END_SRC
 
