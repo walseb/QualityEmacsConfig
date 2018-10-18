@@ -489,8 +489,8 @@ Default file-size-human-readable returns decimal values
     (if my/emacs-max-ram-usage
         (setq gc-cons-threshold my/emacs-max-ram-usage))
 
-  (defun garbage-collect (&rest args) 
-    (message "Emacs is trying to garbage collect, it's time to jump ship"))
+  ;; (defun garbage-collect (&rest args) 
+    ;; (message "Emacs is trying to garbage collect, it's time to jump ship"))
 #+END_SRC
 
 ** Disable custom
