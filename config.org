@@ -314,9 +314,10 @@ Define my mode for setting global settings in all buffers
 Checks variable =exec-path= for package
 #+BEGIN_SRC emacs-lisp
   (defun my/is-system-package-installed (package)
-    (if (stringp package)
-        (file-exists-p package)
-      (executable-find (symbol-name package))))
+    (if (executable-find (symbol-name package))
+        (symbol-name package)
+      (message (concat "Package: " (symbol-name package) " not installed"))
+      ()))
 #+END_SRC
 
 *** Set exec-path by system
@@ -1657,7 +1658,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 ** Open firefox
 #+BEGIN_SRC emacs-lisp
   (defvar my/gui-browser
-    "String of installed GUI browser"
     (if (my/is-system-package-installed 'icecat)
         "icecat"
       (if (my/is-system-package-installed 'iceweasel)
@@ -2751,6 +2751,11 @@ Version 2015-07-30"
 *** Make c-' open in current window
 #+BEGIN_SRC emacs-lisp
   (setq org-src-window-setup 'current-window)
+#+END_SRC
+
+*** Don't save window layout
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'org-src-mode-hook '(lambda () (interactive) (setq org-src--saved-temp-window-config nil)))
 #+END_SRC
    
 *** SRC region templates
