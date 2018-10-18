@@ -1,7 +1,7 @@
 * Docs
 ** Requirements
 *** All
-=xorg-server xorg-xrandr xorg-xinit xorg-setxkbmap mlocate atool unzip mono pulseaudio pavucontrol icecat/firefox the_silver_searcher imagemagick ttf-inconsolata ttf-opensans ttf-dejavu aspell aspell-en aspell-sv mpd mpc=
+=xorg-server xorg-xrandr xorg-xinit xorg-setxkbmap mlocate atool unzip mono pulseaudio pavucontrol icecat/firefox the_silver_searcher imagemagick ttf-inconsolata ttf-opensans ttf-dejavu aspell aspell-en aspell-sv mpd mpc poppler poppler-glib=
 *** All optional
 =msbuild dotnet-sdk godot-mono guile fsharp=
 
@@ -311,10 +311,18 @@ Define my mode for setting global settings in all buffers
 #+END_SRC
 
 ** Is external package installed
+Checks variable =exec-path= for package
 #+BEGIN_SRC emacs-lisp
-  (defun my/run-and-is-external-package-installed (package)
-    (not (string-match-p "not found"
-                       (shell-command-to-string package))))
+  (defun my/is-system-package-installed (package)
+    (if (stringp package)
+        (file-exists-p package)
+      (executable-find (symbol-name package))))
+#+END_SRC
+
+*** Set exec-path by system
+#+BEGIN_SRC emacs-lisp
+  ;;(if (string-match-p "guixsd" (system-name))
+      ;;(add-to-list 'exec-path "/bin/" ))
 #+END_SRC
 
 ** Give buffer unique name
@@ -464,7 +472,7 @@ Default file-size-human-readable returns decimal values
 
 ** Redshift 
 #+BEGIN_SRC emacs-lisp
-  (if(my/run-and-is-external-package-installed "redshift -h")
+  (if (my/is-system-package-installed 'redshift)
       (start-process "redshift" nil "redshift"))
 #+END_SRC
 
@@ -1220,7 +1228,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     ;;(setq my/foreground-color "#b2b2b2")
     ;;(setq my/background-color "#292b2e") 
 
-
     (setq my/background-color "#f0f0f0")
     (setq my/foreground-color "#232323") 
 
@@ -1282,6 +1289,10 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (setq evil-insert-state-cursor '("orange" box))
     (setq evil-replace-state-cursor '("green" box))
     (setq evil-operator-state-cursor '("white" hollow))
+
+    ;; On-screen
+    ;;(set-face-attribute 'on-screen-shadow nil :foreground nil :background (color-lighten-name my/background-color 2))
+    ;;(set-face-attribute 'on-screen-fringe nil :foreground my/foreground-color :background my/background-color)
 
     ;; Hl current line
     ;; Underlines part of current line
@@ -1646,9 +1657,12 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 ** Open firefox
 #+BEGIN_SRC emacs-lisp
   (defvar my/gui-browser
-    (if (my/run-and-is-external-package-installed "icecat -h")
+    "String of installed GUI browser"
+    (if (my/is-system-package-installed 'icecat)
         "icecat"
-      "firefox"))
+      (if (my/is-system-package-installed 'iceweasel)
+          "iceweasel"
+        "firefox")))
 
   (defvar my/temp-firefox-title-name "")
   (defvar my/browser-bookmarks '(
@@ -1835,7 +1849,7 @@ Vim bindings to change fold
 
   (defun my/use-swiper-or-grep(&optional input case-sensative)
     (interactive)
-    (if (and buffer-file-name (not (bound-and-true-p org-src-mode)))
+    (if (and buffer-file-name (not (bound-and-true-p org-src-mode)) (not (string= "gz" (file-name-extension buffer-file-name))))
         (counsel-grep input)
       (swiper input)))
 
@@ -2012,7 +2026,7 @@ Make company mode inherit colors from theme, change later maybe
         ;; Selected entry
         (set-face-attribute 'company-tooltip-selection nil :background (face-attribute 'font-lock-function-name-face :background) :foreground  (face-attribute 'font-lock-function-name-face :foreground))
         ;; All unmatching text
-        (set-face-attribute 'company-tooltip nil :foreground (face-attribute 'default :foreground) :background (color-lighten-name my/background-color 2))
+        (set-face-attribute 'company-tooltip nil :foreground (face-attribute 'default :foreground) :background (color-lighten-name my/background-color 10))
         ;; All matching text
         (set-face-attribute 'company-tooltip-common nil :foreground (face-attribute 'font-lock-constant-face :foreground) :background (face-attribute 'font-lock-constant-face :background)))
     (set-face-attribute 'company-scrollbar-bg nil :background "black")
@@ -2269,18 +2283,29 @@ Doesn't work with my setup right now
     :defer t)
 #+END_SRC
 
-** View
+** Scroll
 #+BEGIN_SRC emacs-lisp
-  (require 'view)
+  ;;(require 'view)
 
-  (evil-define-key 'normal my/keys-mode-map (kbd "C-u") 'View-scroll-half-page-backward)
-  (evil-define-key 'normal my/keys-mode-map (kbd "C-w") 'View-scroll-half-page-forward)
+  (evil-define-key 'normal my/keys-mode-map (kbd "C-u") 'evil-scroll-up)
+  (evil-define-key 'normal my/keys-mode-map (kbd "C-w") 'evil-scroll-down)
+  ;;(evil-define-key 'normal my/keys-mode-map (kbd "C-u") 'View-scroll-half-page-backward)
+  ;;(evil-define-key 'normal my/keys-mode-map (kbd "C-w") 'View-scroll-half-page-forward)
 
   (evil-define-key 'visual my/keys-mode-map (kbd "C-u") 'evil-scroll-up)
   (evil-define-key 'visual my/keys-mode-map (kbd "C-w") 'evil-scroll-down)
 
-  (evil-define-key 'insert my/keys-mode-map (kbd "C-u") '(lambda () (interactive) (evil-normal-state) (View-scroll-half-page-backward)))
-  (evil-define-key 'insert my/keys-mode-map (kbd "C-w") '(lambda () (interactive) (evil-normal-state) (View-scroll-half-page-forward)))
+  (evil-define-key 'insert my/keys-mode-map (kbd "C-u") 'evil-scroll-up)
+  (evil-define-key 'insert my/keys-mode-map (kbd "C-w") 'evil-scroll-down)
+
+  ;;(evil-define-key 'insert my/keys-mode-map (kbd "C-u") '(lambda () (interactive) (evil-normal-state) (View-scroll-half-page-backward)))
+  ;;(evil-define-key 'insert my/keys-mode-map (kbd "C-w") '(lambda () (interactive) (evil-normal-state) (View-scroll-half-page-forward)))
+#+END_SRC
+*** On-screen
+#+BEGIN_SRC emacs-lisp
+  ;; (use-package on-screen)
+  ;; (on-screen-global-mode)
+  ;; (setq on-screen-highlight-method 'fringe)
 #+END_SRC
 
 ** Jammer
@@ -3813,6 +3838,9 @@ We use class names for all windows expect for Java applications and GIMP (becaus
 
 ** Counsel projectile
 If enabled it auto enables projectile, which has high CPU usage
+#+BEGIN_SRC emacs-lisp
+(use-package counsel-projectile)
+#+END_SRC
 
 ** Magit
 #+BEGIN_SRC emacs-lisp
@@ -3845,11 +3873,11 @@ If enabled it auto enables projectile, which has high CPU usage
   (define-prefix-command 'my/vc-map)
   (define-key my/leader-map (kbd "v") 'my/vc-map)
 
-  (define-key my/vc-map (kbd "o") 'counsel-projectile)
+  (define-key my/vc-map (kbd "o") 'counsel-git-grep)
   (define-key my/vc-map (kbd "a") 'counsel-projectile-ag)
   (define-key my/vc-map (kbd "d") 'projectile-dired)
   (define-key my/vc-map (kbd "D") 'counsel-projectile-find-dir)
-  (define-key my/vc-map (kbd "l") 'counsel-projectile-find-file)
+  (define-key my/vc-map (kbd "f") 'counsel-projectile-find-file)
 
   (define-key my/vc-map (kbd "K") 'projectile-kill-buffers)
   (define-key my/vc-map (kbd "f") 'counsel-projectile-switch-to-buffer)
@@ -4923,8 +4951,8 @@ https://www.emacswiki.org/emacs/ArtistMode
     ("k" kill-current-buffer nil)
 
     ;; Move around in buffer
-    ("C-u" View-scroll-half-page-backward nil)
-    ("C-w" View-scroll-half-page-forward nil)
+    ("C-u" evil-scroll-up nil)
+    ("C-w" evil-scroll-down nil)
 
     ("f" counsel-M-x nil)
     ("y" counsel-linux-app nil)
@@ -5007,6 +5035,10 @@ https://www.emacswiki.org/emacs/ArtistMode
   ;; Scroll half page
   (define-key pdf-view-mode-map [remap View-scroll-half-page-backward] 'pdf-view-scroll-down-or-previous-page)
   (define-key pdf-view-mode-map [remap View-scroll-half-page-forward] 'pdf-view-scroll-up-or-next-page)
+
+  (define-key pdf-view-mode-map [remap evil-scroll-up] 'pdf-view-scroll-down-or-previous-page)
+  (define-key pdf-view-mode-map [remap evil-scroll-down] 'pdf-view-scroll-up-or-next-page)
+  
   ;; goto
   (define-key pdf-view-mode-map [remap evil-goto-first-line] 'pdf-view-first-page)
 
@@ -5068,7 +5100,8 @@ https://www.emacswiki.org/emacs/ArtistMode
   (defun my/blimp-annotate-middle()
     (interactive)
     (blimp-add-to-command-stack (list "-gravity" "Center" "-fill" "red" "-pointsize" "25" "-annotate" "0,0" (completing-read "enter text " nil)))
-    (blimp-execute-command-stack))
+    (blimp-execute-command-stack)
+    (sleep-for 0.2))
 #+END_SRC
 
 *** Keys
@@ -5449,7 +5482,7 @@ Use lv-line to create a mode line on the top of the screen
 
   (if (and
        ;; If lm_sensors is not installed
-       (my/run-and-is-external-package-installed "sensors")
+       (my/is-system-package-installed 'sensors)
        ;; If there aren't any cpu heat sensors (eg. virtual machine)
        (= 0 (string-match-p ""
                             (shell-command-to-string "sensors | grep \"Core 0:\""))))
