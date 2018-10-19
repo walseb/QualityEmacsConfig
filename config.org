@@ -716,6 +716,7 @@ Example
 *** Make dd and cc act on lines
 #+BEGIN_SRC emacs-lisp
   (define-key evil-normal-state-map "D" 'evil-delete-whole-line)
+  (define-key evil-normal-state-map "C" 'evil-change-whole-line)
 #+END_SRC
 
 ** Text objects
@@ -1520,6 +1521,11 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (my/give-buffer-unique-name "eww"))
 #+END_SRC
 
+*** Disable background colors shr
+#+BEGIN_SRC emacs-lisp
+  (advice-add #'shr-colorize-region :around (defun shr-no-colourise-region (&rest ignore)))
+#+END_SRC
+
 *** Keys
 #+BEGIN_SRC emacs-lisp
   (define-key eww-mode-map [?\d] 'eww-back-url)
@@ -1532,7 +1538,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (define-key my/eww-mode-map (kbd "d") 'eww-download)
   (define-key my/eww-mode-map (kbd "h") 'eww-history-browse)
   (define-key my/eww-mode-map (kbd "o") 'eww-open-in-new-buffer)
-  (define-key my/eww-mode-map (kbd "l") 'eww-open-file)
+  (define-key my/eww-mode-map (kbd "f") 'eww-open-file)
 #+END_SRC
 
 ** Set default browser
@@ -1695,9 +1701,9 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 #+BEGIN_SRC emacs-lisp
   (defun my/launch-eww ()
     (interactive)
-    (my/eww-browse-url (concat "https://www.google.com/search?q=" (completing-read "url " nil))))
+    (my/eww-browse-url (concat "https://www.google.com/search?q=" (completing-read "search " nil))))
 
-  (define-key my/leader-map (kbd "M-b") 'my/launch-eww)
+  (define-key my/leader-map (kbd "b") 'my/launch-eww)
 #+END_SRC
 
 * Folding
@@ -1840,7 +1846,7 @@ Vim bindings to change fold
                 :history 'counsel-flycheck-history)))
 
 
-  (define-key my/leader-map (kbd "X") 'counsel-flycheck)
+  (define-key my/leader-map (kbd "J") 'counsel-flycheck)
 #+END_SRC
 
 ** Swiper 
@@ -1875,7 +1881,7 @@ Vim bindings to change fold
 
   (define-key evil-normal-state-map (kbd "#") 'my/swiper-thing-at-point)
   (define-key evil-normal-state-map (kbd "*") 'my/swiper-thing-at-point)
-  (define-key evil-normal-state-map (kbd "/") 'my/swiper-thing-at-point)
+  ;;(define-key evil-normal-state-map (kbd "/") 'my/swiper-thing-at-point)
 #+END_SRC
 
 ** Ivy rich
@@ -1918,7 +1924,7 @@ Vim bindings to change fold
   (use-package company)
 
   (setq company-idle-delay 0)
-  (setq company-echo-delay 0.1)
+  (setq company-echo-delay 0)
 
   ;; Don't downcase result
   (setq company-dabbbrev-downcase nil)
@@ -2089,10 +2095,17 @@ Doesn't work with my setup right now
 #+BEGIN_SRC emacs-lisp
   (use-package flycheck)
 
+  ;; Use new buffer if message is longer than 1 line, can't get it to expand the minibuffer instead
+  (setq max-mini-window-height 1)
+
+  ;; Decrease delay
+  (setq flycheck-display-errors-delay 0.1)
+
   (global-flycheck-mode)
 #+END_SRC
 
 ** Flycheck-package
+Flycheck with extra correction for elisp packages
 #+BEGIN_SRC emacs-lisp
   (use-package flycheck-package)
 
@@ -2106,7 +2119,7 @@ Doesn't work with my setup right now
 
   (which-key-mode)
 
-  (setq which-key-idle-delay 2)
+  (setq which-key-idle-delay 1)
 
   (if window-system
     (set-face-attribute 'which-key-command-description-face nil
@@ -2161,6 +2174,13 @@ Doesn't work with my setup right now
 #+END_SRC
 
 * Movement
+** Marks
+#+BEGIN_SRC emacs-lisp
+  (setq mark-ring-max 40)
+
+  (define-key my/leader-map (kbd "d") 'pop-global-mark)
+#+END_SRC
+
 ** Relative line numbers
 #+BEGIN_SRC emacs-lisp
   (when (version<= "26.0.50" emacs-version )
@@ -2274,7 +2294,7 @@ Doesn't work with my setup right now
   (use-package avy-flycheck
     :defer t)
 
-  (define-key my/leader-map (kbd "x") 'avy-flycheck-goto-error)
+  (define-key my/leader-map (kbd "j") 'avy-flycheck-goto-error)
 #+END_SRC
 
 ** Link-hint
@@ -2985,6 +3005,17 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 
 * Code
 ** Generic
+*** Jump to definition
+#+BEGIN_SRC emacs-lisp
+  (defun my/jump-to-definition ()
+    (interactive
+     (if (string= major-mode "fsharp-mode")
+         (fsharp-ac/gotodefn-at-point)
+       (dumb-jump-go))))
+
+  (define-key my/leader-map (kbd "t") 'my/jump-to-definition)
+#+END_SRC
+
 *** Smartparens
 #+BEGIN_SRC emacs-lisp
   ;; (use-package smartparens)
@@ -2998,6 +3029,7 @@ Shows information in echo area
   (add-hook 'emacs-lisp-mode-hook 'eldoc-mode)
   (setq eldoc-echo-area-use-multiline-p 't)
   (setq-default eldoc-echo-area-use-multiline-p 't)
+  (setq eldoc-idle-delay 0)
 #+END_SRC
 
 *** Aggressive indent
@@ -3061,10 +3093,10 @@ Shows information in echo area
 
 ** Documentation
 #+BEGIN_SRC emacs-lisp
-  (use-package zeal-at-point
-    :defer t)
+  ;; (use-package zeal-at-point
+    ;; :defer t)
 
-  (define-key my/leader-map (kbd "d") 'zeal-at-point)
+  ;;(define-key my/leader-map (kbd "d") 'zeal-at-point)
 #+END_SRC
 
 ** LSP mode
@@ -3293,7 +3325,7 @@ omnisharp.json should be in ~/.omnisharp on all OSs
     :defer t
     :mode ("\\.fs\\'" . fsharp-mode))
 
-  (setq fsharp-doc-idle-delay 0.1)
+  (setq fsharp-doc-idle-delay 0)
 
   ;;(setq-default fsharp-indent-offset 2)
 #+END_SRC
@@ -4625,6 +4657,8 @@ Mode for writing mail
   (define-key my/system-commands-map (kbd "n") 'my/net-utils-map)
 #+END_SRC
 
+TODO counsel-tramp
+
 ** Tramp
 #+BEGIN_SRC emacs-lisp
 (setq tramp-default-method "ssh")
@@ -5747,10 +5781,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
 **** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/timer-map)
-  (define-key my/leader-map (kbd "b") 'my/timer-map)
-
-  (define-key my/timer-map (kbd "e") 'my/reset-eye-timer)
+  (define-key my/system-commands-map (kbd "e") 'my/reset-eye-timer)
 #+END_SRC
 
 *** Mode line format
