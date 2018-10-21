@@ -1519,8 +1519,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (interactive)
     (eww-browse-url URL NEW-WINDOW)
     (my/give-buffer-unique-name "eww"))
-
-  (add-hook 'eww-mode-hook 'my/keys-mode-turn-off)
 #+END_SRC
 
 *** Fix background colors shr
@@ -1817,8 +1815,6 @@ Vim bindings to change fold
   (global-set-key (kbd "<f2> u") 'counsel-unicode-char)
 
   (global-set-key (kbd "M-k") 'counsel-yank-pop)
-
-  (define-key my/leader-map (kbd "C-a") 'counsel-mark-ring)
 
   (define-key my/help-map (kbd "C-c") 'counsel-colors-emacs)
   (define-key my/help-map (kbd "C") 'counsel-colors-web)
@@ -2194,10 +2190,9 @@ Flycheck with extra correction for elisp packages
   (defun my/reset-current-marks-if-mark-ring-change ()
     (if (and my/current-mark-reference (ignore-errors (= my/current-mark-reference (car mark-ring))))
         ()
-      (progn
         ;; Reset all mark counters
         (setq my/current-mark-reference (car mark-ring))
-        (setq my/current-mark 0))))
+        (setq my/current-mark 0)))
 
   (defun my/mark-move (jump-distance)
     "Moves between marks"
@@ -2223,8 +2218,8 @@ Flycheck with extra correction for elisp packages
   (define-key evil-normal-state-map (kbd "H") '(lambda () (interactive) (my/mark-move 1)))
   (define-key evil-normal-state-map (kbd "L") '(lambda () (interactive) (my/mark-move -1)))
 
-  (evil-define-key 'normal my/keys-mode-map (kbd "M-h") 'previous-buffer)
-  (evil-define-key 'normal my/keys-mode-map (kbd "M-l") 'next-buffer)
+  (define-key my/keys-mode-map (kbd "M-h") 'previous-buffer)
+  (define-key my/keys-mode-map (kbd "M-l") 'next-buffer)
 #+END_SRC
 
 ** Relative line numbers
@@ -2505,6 +2500,7 @@ g-; and g-,
         (select-window (active-minibuffer-window))
       (error "Minibuffer is not active")))
 
+  (define-key my/keys-mode-map (kbd "M-TAB") 'my/switch-to-minibuffer)
   (evil-define-key 'normal my/keys-mode-map (kbd "M-TAB") 'my/switch-to-minibuffer)
   (evil-define-key 'motion my/keys-mode-map (kbd "M-TAB") 'my/switch-to-minibuffer)
   (evil-define-key 'visual my/keys-mode-map (kbd "M-TAB") 'my/switch-to-minibuffer)
@@ -5064,15 +5060,8 @@ https://www.emacswiki.org/emacs/ArtistMode
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
-  (evil-define-key 'motion my/keys-mode-map (kbd my/window-leader-key) 'my/window-hydra/body)
-  (evil-define-key 'normal my/keys-mode-map (kbd my/window-leader-key) 'my/window-hydra/body)
-  (evil-define-key 'insert my/keys-mode-map (kbd my/window-leader-key) 'my/window-hydra/body)
-  (define-key my/keys-mode-map (kbd my/window-leader-key) 'my/window-hydra/body)
   (define-key my/keys-mode-map (kbd my/mod-window-leader-key) 'my/window-hydra/body)
-
-  (define-key evil-motion-state-map (kbd my/window-leader-key) 'my/window-hydra/body)
-  (define-key evil-normal-state-map (kbd my/window-leader-key) 'my/window-hydra/body)
-  (define-key evil-insert-state-map (kbd my/window-leader-key) 'my/window-hydra/body)
+  (define-key my/keys-mode-map (kbd my/window-leader-key) 'my/window-hydra/body)
 #+END_SRC
 
 * Image modes
