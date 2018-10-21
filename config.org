@@ -842,15 +842,15 @@ When changing leader, change =my/leader-map-key= and manually change all general
   (define-prefix-command 'my/help-map)
   (define-key my/leader-map (kbd "h") 'my/help-map)
 
-  (define-key my/leader-map (kbd "u") 'undo-tree-visualize)
+  (evil-define-key 'normal my/keys-mode-map (kbd "U") 'undo-tree-visualize)
 
-   (evil-define-key 'normal my/keys-mode-map (kbd my/leader-map-key) 'my/leader-map)
-   (evil-define-key 'motion my/keys-mode-map (kbd my/leader-map-key) 'my/leader-map)
-   (evil-define-key 'visual my/keys-mode-map (kbd my/leader-map-key) 'my/leader-map)
+  (evil-define-key 'normal my/keys-mode-map (kbd my/leader-map-key) 'my/leader-map)
+  (evil-define-key 'motion my/keys-mode-map (kbd my/leader-map-key) 'my/leader-map)
+  (evil-define-key 'visual my/keys-mode-map (kbd my/leader-map-key) 'my/leader-map)
 
   ;; Enable leader even if my/keys-mode isn't active
-   (define-key evil-motion-state-map (kbd my/leader-map-key) 'my/leader-map)
-   (define-key evil-normal-state-map (kbd my/leader-map-key) 'my/leader-map)
+  (define-key evil-motion-state-map (kbd my/leader-map-key) 'my/leader-map)
+  (define-key evil-normal-state-map (kbd my/leader-map-key) 'my/leader-map)
 #+END_SRC
 
 * Package management
@@ -1339,7 +1339,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (set-face-attribute 'swiper-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
 
     ;;; Avy
-    (set-face-attribute 'avy-lead-face nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'avy-lead-face nil :foreground my/background-color :background my/foreground-color-6)
     (set-face-attribute 'avy-lead-face-0 nil :foreground my/background-color :background my/foreground-color-2)
     (set-face-attribute 'avy-lead-face-1 nil :foreground my/background-color :background my/foreground-color-4)
     (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background my/foreground-color-6)
@@ -1519,18 +1519,27 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (interactive)
     (eww-browse-url URL NEW-WINDOW)
     (my/give-buffer-unique-name "eww"))
+
+  (add-hook 'eww-mode-hook 'my/keys-mode-turn-off)
 #+END_SRC
 
-*** Disable background colors shr
+*** Fix background colors shr
 #+BEGIN_SRC emacs-lisp
-  (advice-add #'shr-colorize-region :around (defun shr-no-colourise-region (&rest ignore)))
+  (setq shr-color-visible-luminance-min 80)
+  (setq shr-color-visible-distance-min 5)
+
+  ;; Fully disables colors
+  ;;(advice-add #'shr-colorize-region :around (defun shr-no-colourise-region (&rest ignore)))
 #+END_SRC
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-key eww-mode-map [?\d] 'eww-back-url)
-  (evil-define-key 'normal eww-mode-map [?\d] 'eww-back-url)
-  (evil-define-key 'visual eww-mode-map [?\d] 'eww-back-url)
+  ;; (define-key eww-mode-map [?\d] 'eww-back-url)
+  ;; (evil-define-key 'normal eww-mode-map [?\d] 'eww-back-url)
+  ;; (evil-define-key 'visual eww-mode-map [?\d] 'eww-back-url)
+
+  (evil-define-key 'normal eww-mode-map (kbd "H") 'eww-back-url)
+  (evil-define-key 'normal eww-mode-map (kbd "L") 'eww-forward-url)
 
   (define-prefix-command 'my/eww-mode-map)
   (evil-define-key 'normal eww-mode-map (kbd (concat my/leader-map-key " a")) 'my/eww-mode-map)
@@ -1538,6 +1547,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (define-key my/eww-mode-map (kbd "d") 'eww-download)
   (define-key my/eww-mode-map (kbd "h") 'eww-history-browse)
   (define-key my/eww-mode-map (kbd "o") 'eww-open-in-new-buffer)
+  (define-key my/eww-mode-map (kbd "r") 'eww-reload)
   (define-key my/eww-mode-map (kbd "f") 'eww-open-file)
 #+END_SRC
 
@@ -2176,9 +2186,45 @@ Flycheck with extra correction for elisp packages
 * Movement
 ** Marks
 #+BEGIN_SRC emacs-lisp
-  (setq mark-ring-max 40)
+  (setq mark-ring-max 100)
 
-  (define-key my/leader-map (kbd "d") 'pop-global-mark)
+  (defvar my/current-mark 0)
+  (defvar my/current-mark-reference nil)
+
+  (defun my/reset-current-marks-if-mark-ring-change ()
+    (if (and my/current-mark-reference (ignore-errors (= my/current-mark-reference (car mark-ring))))
+        ()
+      (progn
+        ;; Reset all mark counters
+        (setq my/current-mark-reference (car mark-ring))
+        (setq my/current-mark 0))))
+
+  (defun my/mark-move (jump-distance)
+    "Moves between marks"
+    (interactive)
+    ;; Pop entries which refer to non-existent buffers.
+    (my/reset-current-marks-if-mark-ring-change)
+    (or mark-ring
+        (error "No mark set"))
+    (setq my/current-mark
+          (if (and (>= (+ my/current-mark jump-distance) 0) (< (+ my/current-mark jump-distance) (length mark-ring)))
+              (+ my/current-mark jump-distance)
+            my/current-mark))
+    (let* ((marker (nth my/current-mark mark-ring))
+           (position (marker-position marker)))
+      (message (concat "At mark: " (number-to-string my/current-mark)))
+      (or (and (>= position (point-min))
+               (<= position (point-max)))
+          (if widen-automatically
+              (widen)
+            (error "Global mark position is outside accessible part of buffer")))
+      (goto-char position)))
+
+  (define-key evil-normal-state-map (kbd "H") '(lambda () (interactive) (my/mark-move 1)))
+  (define-key evil-normal-state-map (kbd "L") '(lambda () (interactive) (my/mark-move -1)))
+
+  (evil-define-key 'normal my/keys-mode-map (kbd "M-h") 'previous-buffer)
+  (evil-define-key 'normal my/keys-mode-map (kbd "M-l") 'next-buffer)
 #+END_SRC
 
 ** Relative line numbers
@@ -3851,9 +3897,12 @@ We use class names for all windows expect for Java applications and GIMP (becaus
   (exwm-input-set-key (kbd "C-=") 'my/window-hydra/body)
   (exwm-input-set-key (kbd "M-x") 'counsel-M-x)
 
+  (exwm-input-set-key (kbd "M-h") 'previous-buffer)
+  (exwm-input-set-key (kbd "M-l") 'next-buffer)
+
   ;; Enter and exit char mode
-   ;; (exwm-input-set-key (kbd "M-a") 'exwm-input-grab-keyboard)
-   ;; (exwm-input-set-key (kbd "M-i") 'exwm-input-release-keyboard)
+  ;; (exwm-input-set-key (kbd "M-a") 'exwm-input-grab-keyboard)
+  ;; (exwm-input-set-key (kbd "M-i") 'exwm-input-release-keyboard)
 
   ;; Notes
   ;; (defun my/send-key(event)
