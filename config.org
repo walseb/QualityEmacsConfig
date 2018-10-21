@@ -1344,6 +1344,9 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (set-face-attribute 'avy-lead-face-1 nil :foreground my/background-color :background my/foreground-color-4)
     (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background my/foreground-color-6)
 
+    ;; Eww
+    (set-face-attribute 'my/eww-code-face nil :foreground my/foreground-color :background my/background-color-2 :family my/mono-font)
+
     ;;(defvar my/evil-goggles-highlight-color)
     ;;; Evil-goggles
     ;;; 2 color approach
@@ -1394,7 +1397,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
   (if window-system
       (add-hook 'exwm-init-hook 'my/paper-mode)
-    (add-hook 'after-init-hook 'my/paper-mode))
+  (add-hook 'after-init-hook 'my/paper-mode))
 
   ;; (counsel-faces)
 
@@ -1515,10 +1518,36 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 ** Eww
 #+BEGIN_SRC emacs-lisp
   (require 'eww)
+  (require 'shr)
   (defun my/eww-browse-url (URL &optional NEW-WINDOW)
     (interactive)
     (eww-browse-url URL NEW-WINDOW)
     (my/give-buffer-unique-name "eww"))
+#+END_SRC
+
+*** Highlight code
+#+BEGIN_SRC emacs-lisp
+  (defface my/eww-code-face
+    '((t
+       :family my/mono-font
+       ))
+    "Eww code face"
+    :group 'eww-mode)
+
+  (defun my/eww-tag-code (dom)
+    (let ((start (point))
+          (text (dom-text dom)))
+      (insert text)
+      (message text)
+      (add-face-text-property start (point) 'my/eww-code-face)
+      (insert " ")))
+  (setq shr-external-rendering-functions '((code . my/eww-tag-code)))
+
+  (defun my/eww-toggle-code-highlighting ()
+    (interactive)
+    (if (member '(code . my/eww-tag-code) shr-external-rendering-functions)
+        (setq shr-external-rendering-functions (remove '(code . my/eww-tag-code) shr-external-rendering-functions))
+      (add-to-list 'shr-external-rendering-functions '(code . my/eww-tag-code))))
 #+END_SRC
 
 *** Fix background colors shr
@@ -1547,6 +1576,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (define-key my/eww-mode-map (kbd "o") 'eww-open-in-new-buffer)
   (define-key my/eww-mode-map (kbd "r") 'eww-reload)
   (define-key my/eww-mode-map (kbd "f") 'eww-open-file)
+  (define-key my/eww-mode-map (kbd "C-c") 'my/eww-toggle-code-highlighting)
 #+END_SRC
 
 ** Set default browser
@@ -2189,22 +2219,22 @@ Flycheck with extra correction for elisp packages
 
   (defun my/reset-current-marks-if-mark-ring-change ()
     (if (and my/current-mark-reference (ignore-errors (= my/current-mark-reference (car mark-ring))))
-        ()
-        ;; Reset all mark counters
-        (setq my/current-mark-reference (car mark-ring))
-        (setq my/current-mark 0)))
+        nil
+      ;; Reset all mark counters
+      (setq my/current-mark-reference (car mark-ring))
+      (setq my/current-mark 0)
+      t))
 
   (defun my/mark-move (jump-distance)
     "Moves between marks"
     (interactive)
-    ;; Pop entries which refer to non-existent buffers.
-    (my/reset-current-marks-if-mark-ring-change)
     (or mark-ring
         (error "No mark set"))
-    (setq my/current-mark
-          (if (and (>= (+ my/current-mark jump-distance) 0) (< (+ my/current-mark jump-distance) (length mark-ring)))
-              (+ my/current-mark jump-distance)
-            my/current-mark))
+    (or (my/reset-current-marks-if-mark-ring-change)
+        (setq my/current-mark
+              (if (and (>= (+ my/current-mark jump-distance) 0) (< (+ my/current-mark jump-distance) (length mark-ring)))
+                  (+ my/current-mark jump-distance)
+                my/current-mark)))
     (let* ((marker (nth my/current-mark mark-ring))
            (position (marker-position marker)))
       (message (concat "At mark: " (number-to-string my/current-mark)))
@@ -2501,9 +2531,6 @@ g-; and g-,
       (error "Minibuffer is not active")))
 
   (define-key my/keys-mode-map (kbd "M-TAB") 'my/switch-to-minibuffer)
-  (evil-define-key 'normal my/keys-mode-map (kbd "M-TAB") 'my/switch-to-minibuffer)
-  (evil-define-key 'motion my/keys-mode-map (kbd "M-TAB") 'my/switch-to-minibuffer)
-  (evil-define-key 'visual my/keys-mode-map (kbd "M-TAB") 'my/switch-to-minibuffer)
 #+END_SRC
 
 * Window and buffer settings
@@ -3463,7 +3490,9 @@ TODO: Fix settings, grab them from package site
 #+BEGIN_SRC emacs-lisp
   (defun my/reset-gpg-agent ()
     (interactive)
-    (shell-command "gpgconf --kill gpg-agent"))
+    (shell-command "gpgconf --kill gpg-agent")
+    (pinentry-stop)
+    (pinentry-start))
 #+END_SRC
 ** Passwords
 Enable org mode for .org.gpg files
@@ -3738,7 +3767,6 @@ Use C-i instead
   (defun my/exwm-mode ()
     (interactive)
     (my/keys-mode-turn-off)
-    (evil-mc-mode -1)
     (evil-emacs-state))
 #+END_SRC
 
@@ -5876,10 +5904,6 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
                       ;; is narrowed
                       "%n"
-
-                      ;; " |"
-
-                      ;;evil-mc-mode-line
 
                       " | "
 
