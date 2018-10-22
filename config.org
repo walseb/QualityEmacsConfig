@@ -344,11 +344,15 @@ Checks variable =exec-path= for package
 ** Fold ellipsis 
 #+BEGIN_SRC emacs-lisp
   (defvar my/fold-ellipsis)
+  (defvar my/fold-ellipsis-char)
 
   (if window-system
-    (setq my/fold-ellipsis "↴")
-  ;; The terminal probably doesn't support unicode
-   (setq my/fold-ellipsis "↓"))
+      (progn
+        (setq my/fold-ellipsis "↴")
+        (setq my/fold-ellipsis-char ?↴))
+    ;; The terminal probably doesn't support unicode
+    (setq my/fold-ellipsis "↓")
+    (setq my/fold-ellipsis-char ?↓))
 #+END_SRC
 
 ** File size human readable
@@ -399,6 +403,7 @@ Default file-size-human-readable returns decimal values
                             :family font
                             :height my/default-face-height)))
 #+END_SRC
+
 * Theme
 #+BEGIN_SRC emacs-lisp
   ;; (when window-system
@@ -817,6 +822,27 @@ Allows for using indention as text objects
 #+BEGIN_SRC emacs-lisp
   ;; Prevent emacs state from being exited with esc, fixes exwm since it uses emacs state and to exit hydra you have to do esc
   (define-key evil-emacs-state-map (kbd "<escape>") 'keyboard-quit)
+
+  ;; Couldn't bother to create custom evil-join
+  (define-key evil-normal-state-map (kbd "P") 'delete-indentation)
+#+END_SRC
+
+*** Rebind z to case change
+#+BEGIN_SRC emacs-lisp
+  (define-key evil-normal-state-map (kbd "z") 'evil-downcase)
+  (define-key evil-normal-state-map (kbd "Z") 'evil-upcase)
+#+END_SRC
+
+*** Add perspective movement to g
+#+BEGIN_SRC emacs-lisp
+(define-key evil-normal-state-map "gw" 'evil-scroll-line-to-top)
+(define-key evil-normal-state-map "ge" 'evil-scroll-line-to-center)
+(define-key evil-normal-state-map "gu" 'evil-scroll-line-to-bottom)
+
+;; Disable C-l
+(define-key evil-normal-state-map (kbd "C-l") '(lambda () (interactive) (message "Key disabled")))
+(define-key evil-insert-state-map (kbd "C-l") '(lambda () (interactive) (message "Key disabled")))
+(define-key evil-normal-state-map (kbd "C-l") '(lambda () (interactive) (message "Key disabled")))
 #+END_SRC
 
 *** Don't complete from all buffers
@@ -841,7 +867,7 @@ When changing leader, change =my/leader-map-key= and manually change all general
   (defvar my/mod-window-leader-key "M-C-=")
 
   (define-prefix-command 'my/help-map)
-  (define-key my/leader-map (kbd "h") 'my/help-map)
+  (define-key my/leader-map (kbd "H") 'my/help-map)
 
   (evil-define-key 'normal my/keys-mode-map (kbd "U") 'undo-tree-visualize)
 
@@ -1194,7 +1220,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (use-package sudo-edit
     :defer t)
 
-  (define-key my/leader-map (kbd "'") 'sudo-edit)
+  (define-key my/leader-map (kbd "~") 'sudo-edit)
 #+END_SRC
 
 ** With-editor
@@ -1208,7 +1234,9 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (defun my/paper-mode()
     (interactive)
     (cl-loop for face in (face-list) do
-             (set-face-attribute face nil :foreground nil :background nil))
+            ;; Don't change magit faces
+            (if (not (string-match "magit" (symbol-name face)))
+             (set-face-attribute face nil :foreground nil :background nil)))
     ;;(setq my/foreground-color "#8b4513")
     ;;(setq my/foreground-color "brown")
     ;;(setq my/background-color "black")
@@ -1279,7 +1307,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     ;; (set-face-attribute  'font-lock-keyword-face nil :foreground my/foreground-color :background my/background-color-1)
     ;; (set-face-attribute  'font-lock-function-name-face nil :foreground my/foreground-color :background my/background-color-2)
 
-
+    ;; Required by other face
     (set-face-attribute 'outline-4 nil :foreground my/foreground-color :background my/background-color)
 
     ;; Line numbers
@@ -1852,6 +1880,7 @@ Vim bindings to change fold
   (define-key my/help-map (kbd "C") 'counsel-colors-web)
 
   (define-key my/leader-map (kbd "i") 'counsel-imenu)
+  (define-key my/leader-map (kbd "h") 'counsel-outline)
 #+END_SRC
 
 ** Counsel flycheck
@@ -2995,8 +3024,7 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 
 ** Key
 #+BEGIN_SRC emacs-lisp
-  (evil-define-key 'normal org-mode-map (kbd "TAB") 'org-cycle)
-  (evil-define-key 'normal org-mode-map (kbd "C-TAB") 'org-global-cycle)
+  ;;(evil-define-key 'normal org-mode-map (kbd "TAB") 'org-cycle)
   (evil-define-key 'normal org-mode-map (kbd "C-s") 'swiper)
 
   (define-key my/org-mode-map (kbd "i") 'org-toggle-inline-images)
@@ -3743,7 +3771,6 @@ Use C-i instead
   (define-key key-translation-map (kbd "<tab>") (kbd "C-="))
   (define-key key-translation-map (kbd "C-t") (kbd "TAB"))
   (define-key key-translation-map (kbd "M-C-t") (kbd "C-TAB"))
-  (define-key key-translation-map (kbd "C-T") (kbd "C-TAB"))
 #+END_SRC
 
 *** Rebind backspace
@@ -5247,7 +5274,7 @@ https://www.emacswiki.org/emacs/ArtistMode
   (define-key my/image-mode-map (kbd "a") 'my/blimp-annotate-middle)
 #+END_SRC
 
-* Outshine
+* Outline
 http://www.modernemacs.com/post/outline-ivy/
 #+BEGIN_SRC emacs-lisp
   (use-package outorg)
@@ -5261,6 +5288,8 @@ http://www.modernemacs.com/post/outline-ivy/
 
 ** Visuals
 #+BEGIN_SRC emacs-lisp
+  (setq counsel-outline-face-style nil)
+
   (set-face-attribute 'outshine-level-1 nil :inherit 'outline-1 :height 1.9)
   (set-face-attribute 'outshine-level-2 nil :inherit 'outline-2 :height 1.6)
   (set-face-attribute 'outshine-level-3 nil :inherit 'outline-3 :height 1.4)
@@ -5271,9 +5300,42 @@ http://www.modernemacs.com/post/outline-ivy/
   (set-face-attribute 'outshine-level-8 nil :inherit 'outline-8 :height 1.10)
 #+END_SRC
 
+*** Outline bullets
+http://www.modernemacs.com/post/outline-ivy/
+http://www.modernemacs.com/post/outline-bullets/
+#+BEGIN_SRC emacs-lisp
+  ;; Just replace "^\\*+ "  with custom regex for org-bullets, add hook, done
+#+END_SRC
+
+*** Ellipsis
+#+BEGIN_SRC emacs-lisp
+  (defvar outline-display-table (make-display-table))
+  (set-display-table-slot outline-display-table 'selective-display
+                          (vector (make-glyph-code my/fold-ellipsis-char 'escape-glyph)))
+  (defun set-outline-display-table ()
+    (setf buffer-display-table outline-display-table))
+
+  (add-hook 'outline-mode-hook 'set-outline-display-table)
+  (add-hook 'outline-minor-mode-hook 'set-outline-display-table)
+#+END_SRC
+
 ** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-key outline-mode-map (kbd "C-TAB") 'org-global-cycle)
+  (defun my/outline-hide-all-body ()
+    (interactive)
+    (outline-show-all)
+    (outline-hide-body))
+
+  (define-key evil-normal-state-map (kbd "ga") 'my/outline-hide-all-body)
+  (define-key evil-normal-state-map (kbd "gA") 'outline-show-all)
+
+  (define-key evil-normal-state-map (kbd "go") 'evil-open-fold)
+  (define-key evil-normal-state-map (kbd "gO") 'evil-open-fold-rec)
+
+  (define-key evil-normal-state-map (kbd "gf") 'evil-close-fold)
+  (define-key evil-normal-state-map (kbd "gF") '(lambda () (interactive) (hide-sublevels 1)))
+
+  (define-key evil-normal-state-map (kbd "gh") 'outline-previous-heading)
 #+END_SRC
 
 * Visuals
