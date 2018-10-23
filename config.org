@@ -838,11 +838,6 @@ Allows for using indention as text objects
 (define-key evil-normal-state-map "gw" 'evil-scroll-line-to-top)
 (define-key evil-normal-state-map "ge" 'evil-scroll-line-to-center)
 (define-key evil-normal-state-map "gu" 'evil-scroll-line-to-bottom)
-
-;; Disable C-l
-(define-key evil-normal-state-map (kbd "C-l") '(lambda () (interactive) (message "Key disabled")))
-(define-key evil-insert-state-map (kbd "C-l") '(lambda () (interactive) (message "Key disabled")))
-(define-key evil-normal-state-map (kbd "C-l") '(lambda () (interactive) (message "Key disabled")))
 #+END_SRC
 
 *** Don't complete from all buffers
@@ -2254,6 +2249,7 @@ Flycheck with extra correction for elisp packages
       ;; Reset all mark counters
       (setq my/current-mark-reference (car mark-ring))
       (setq my/current-mark 0)
+      ;;(push-mark)
       t))
 
   (defun my/mark-move (jump-distance)
@@ -2268,6 +2264,9 @@ Flycheck with extra correction for elisp packages
                 my/current-mark)))
     (let* ((marker (nth my/current-mark mark-ring))
            (position (marker-position marker)))
+      ;; (if (and (= my/current-mark 1) (not (= position (point))))
+      ;; (progn (push-mark)
+      ;; (setq my/current-mark-reference (car mark-ring))))
       (message (concat "At mark: " (number-to-string my/current-mark)))
       (or (and (>= position (point-min))
                (<= position (point-max)))
@@ -2276,8 +2275,8 @@ Flycheck with extra correction for elisp packages
             (error "Global mark position is outside accessible part of buffer")))
       (goto-char position)))
 
-  (define-key evil-normal-state-map (kbd "H") '(lambda () (interactive) (my/mark-move 1)))
-  (define-key evil-normal-state-map (kbd "L") '(lambda () (interactive) (my/mark-move -1)))
+  (define-key evil-normal-state-map (kbd "C-b") '(lambda () (interactive) (my/mark-move 1)))
+  (define-key evil-normal-state-map (kbd "C-f") '(lambda () (interactive) (my/mark-move -1)))
 
   (define-key my/keys-mode-map (kbd "M-h") 'previous-buffer)
   (define-key my/keys-mode-map (kbd "M-l") 'next-buffer)
@@ -5283,7 +5282,7 @@ http://www.modernemacs.com/post/outline-ivy/
 
   (add-hook 'prog-mode-hook 'outline-minor-mode)
 
-  (setq outshine-startup-folded-p t)
+  (setq outshine-startup-folded-p nil)
 #+END_SRC
 
 ** Visuals
@@ -6095,7 +6094,6 @@ When projectile-mode is on, project name is updated on every keypress, here it i
           (progn
             (setq my/current-activity nil)
             (setq my/current-activity (completing-read "Report activity: " '(
-                                                                             ("Work")
                                                                              ("None")))))
         (if my/current-activity
             my/current-activity
