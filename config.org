@@ -1215,7 +1215,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (use-package sudo-edit
     :defer t)
 
-  (define-key my/leader-map (kbd "~") 'sudo-edit)
+  (define-key my/leader-map (kbd "M-s") 'sudo-edit)
 #+END_SRC
 
 ** With-editor
@@ -3689,7 +3689,7 @@ More rebind options and more reliable
 (define-key evil-motion-state-map "gp" 'evil-previous-visual-line)
 #+END_SRC
 
-*** n(Move up) <--> j(search-next)
+*** n(search-next) <--> j(Move up)
 **** n
 #+BEGIN_SRC emacs-lisp
   (define-key evil-window-map "n" 'evil-window-down)
@@ -3734,12 +3734,12 @@ More rebind options and more reliable
 #+BEGIN_SRC emacs-lisp
   (general-simulate-key "C-x C-s")
 
-  (defun my/save-and-backup-session()
+  (defun my/save-and-backup-buffer()
     (interactive)
     (my/force-backup-of-buffer)
     (general-simulate-C-x_C-s))
 
-  (define-key my/leader-map (kbd "s") 'my/save-and-backup-session)
+  (define-key my/leader-map (kbd "s") 'my/save-and-backup-buffer)
   (define-key my/leader-map (kbd "C-s") 'write-file)
 #+END_SRC
 
@@ -3757,7 +3757,7 @@ More rebind options and more reliable
 
 *** Rebind enter
 #+BEGIN_SRC emacs-lisp
-  (define-key key-translation-map (kbd "RET") (kbd "C-a"))
+;;  (define-key key-translation-map (kbd "RET") (kbd "C-a"))
   (define-key key-translation-map (kbd "C-a") (kbd "RET"))
 #+END_SRC
 
@@ -4681,7 +4681,8 @@ Mode for writing mail
     (defun my/systemd-hibernate-PC()
       (interactive)
       (shell-command "systemctl hibernate"))
-    (define-key my/system-suspend-map (kbd "C-h") 'my/systemd-hibernate-PC)
+      ;; Never used
+    ;;(define-key my/system-suspend-map (kbd "C-h") 'my/systemd-hibernate-PC)
 #+END_SRC
 
 ** Multi-monitor
@@ -5547,6 +5548,7 @@ Set mode line height
                         :height  0.1
                         :family my/mono-font))
 #+END_SRC
+
 *** LV-line (top modeline)
 Use lv-line to create a mode line on the top of the screen
 #+BEGIN_SRC emacs-lisp
@@ -5831,7 +5833,9 @@ Display time and date in good format (also displays CPU load)
 
   (defun my/update-buffer-git-branch ()
     (interactive)
-    (setq my/buffer-git-branch (car (vc-git-branches))))
+    ;; Fixes tramp
+    (if (not (string= major-mode "minibuffer-inactive-mode"))
+        (setq my/buffer-git-branch (car (vc-git-branches)))))
 
   (add-hook 'my/switch-buffer-hook 'my/update-buffer-git-branch)
 #+END_SRC
