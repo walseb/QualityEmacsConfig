@@ -273,6 +273,50 @@ Define my mode for setting global settings in all buffers
   ;; (my/global-mode 1)
 #+END_SRC
 
+* Alert
+#+BEGIN_SRC emacs-lisp
+  (use-package alert)
+#+END_SRC
+
+** Fix mode line notification face
+#+BEGIN_SRC emacs-lisp
+  (defun alert-mode-line-notify (info)
+    (copy-face 'mode-line 'alert-saved-mode-line-face)
+    (let ((color (cdr (assq (plist-get info :severity)
+                            alert-severity-colors))))
+      (my/alert-blink-mode-line color)))
+
+  (defun my/alert-blink-mode-line (color)
+    ;; Doesn't work if you use color directly??
+    (setq my/alert-blink-color color)
+
+    (run-with-timer 0.25 nil '(lambda () (interactive)
+                                (set-face-attribute 'mode-line nil :foreground my/alert-blink-color :background my/alert-blink-color)))
+
+    (run-with-timer 0.5 nil 'my/alert-mode-line-restore)
+
+    (run-with-timer 0.75 nil '(lambda () (interactive)
+                                (set-face-attribute 'mode-line nil :foreground my/alert-blink-color :background my/alert-blink-color)))
+
+    (run-with-timer 1 nil 'my/alert-mode-line-restore)
+
+    (run-with-timer 1.25 nil '(lambda () (interactive)
+                                (set-face-attribute 'mode-line nil :foreground my/alert-blink-color :background my/alert-blink-color)))
+
+    (run-with-timer 1.5 nil 'my/alert-mode-line-restore))
+
+  (defun my/alert-mode-line-restore ()
+    (set-face-attribute 'mode-line nil :foreground "white" :background "white"))
+
+  ;; Disable auto revert back face
+  (defun alert-mode-line-restore (_info)
+    )
+#+END_SRC
+** Settings
+#+BEGIN_SRC emacs-lisp
+  (setq alert-default-style 'mode-line)
+#+END_SRC
+
 * Generic functions and variables
 ** File management
 *** Create directory if directory doesn't exist
@@ -1229,9 +1273,9 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (defun my/paper-mode()
     (interactive)
     (cl-loop for face in (face-list) do
-            ;; Don't change magit faces
-            (if (not (string-match "magit" (symbol-name face)))
-             (set-face-attribute face nil :foreground nil :background nil)))
+             ;; Don't change magit faces
+             (if (not (string-match "magit" (symbol-name face)))
+                 (set-face-attribute face nil :foreground nil :background nil)))
     ;;(setq my/foreground-color "#8b4513")
     ;;(setq my/foreground-color "brown")
     ;;(setq my/background-color "black")
@@ -1368,6 +1412,10 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (set-face-attribute 'avy-lead-face-0 nil :foreground my/background-color :background my/foreground-color-2)
     (set-face-attribute 'avy-lead-face-1 nil :foreground my/background-color :background my/foreground-color-4)
     (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background my/foreground-color-6)
+
+    ;; Eshell
+    (require 'em-prompt)
+    (set-face-attribute 'eshell-prompt nil :foreground  "purple" :background my/background-color)
 
     ;; Eww
     (set-face-attribute 'my/eww-code-face nil :foreground my/foreground-color :background my/background-color-2 :family my/mono-font)
@@ -3631,6 +3679,12 @@ Disable rainbow delimiters
              (concat "^[^#$\n]* [#" my/eshell-prompt-symbol "] "))
 #+END_SRC
 
+** Alert when task is done
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'eshell-after-prompt-hook '(lambda () (interactive) (if (not (= 1 (line-number-at-pos (point))))
+                                                                    (alert "Eshell command done!" :severity 'moderate))))
+#+END_SRC
+
 ** Keys
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/eshell-mode-map)
@@ -3674,19 +3728,20 @@ More rebind options and more reliable
 
 **** p
 #+BEGIN_SRC emacs-lisp
-(define-key evil-window-map "p" 'evil-window-up)
-(define-key evil-window-map "P" 'evil-window-move-very-top)
+  (define-key evil-window-map "p" 'evil-window-up)
+  (define-key evil-window-map "P" 'evil-window-move-very-top)
 
-(define-key evil-normal-state-map "p" 'evil-previous-line)
-(define-key evil-motion-state-map "p" 'evil-previous-line)
+  (define-key evil-normal-state-map "p" 'evil-previous-line)
+  (define-key evil-motion-state-map "p" 'evil-previous-line)
 
-(define-key evil-normal-state-map "P" 'evil-lookup)
-(define-key evil-motion-state-map "P" 'evil-lookup)
+  ;; Rebind to make consistent with N
+  (define-key evil-normal-state-map "P" 'delete-indentation)
+  (define-key evil-motion-state-map "P" 'delete-indentation)
 
-(define-key evil-window-map (kbd "C-S-p") 'evil-window-move-very-top)
+  (define-key evil-window-map (kbd "C-S-p") 'evil-window-move-very-top)
 
-(define-key evil-normal-state-map "gp" 'evil-previous-visual-line)
-(define-key evil-motion-state-map "gp" 'evil-previous-visual-line)
+  (define-key evil-normal-state-map "gp" 'evil-previous-visual-line)
+  (define-key evil-motion-state-map "gp" 'evil-previous-visual-line)
 #+END_SRC
 
 *** n(search-next) <--> j(Move up)
@@ -5065,8 +5120,8 @@ https://www.emacswiki.org/emacs/ArtistMode
     ("C-h" (evil-window-increase-width 10) nil)
 
     ;; Split
-    ("o" split-window-horizontally nil)
-    ("v" split-window-vertically nil)
+    ("o" split-window-right nil)
+    ("v" split-window-below nil)
 
     ;; Close window
     ("s" delete-window nil)
