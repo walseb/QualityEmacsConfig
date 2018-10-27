@@ -678,6 +678,21 @@ https://www.emacswiki.org/emacs/ForceBackups
   ;;(make-directory (concat spacemacs-cache-directory "undo"))
 #+END_SRC
 
+*** Keys
+#+BEGIN_SRC emacs-lisp
+  (setq undo-tree-visualizer-mode-map (make-sparse-keymap))
+
+  (add-hook 'undo-tree-visualizer-mode-hook '(lambda () (interactive) (run-with-timer 0.1 nil 'evil-force-normal-state)))
+
+  ;; (evil-define-key 'normal undo-tree-visualizer-mode-map (kbd "p") 'evil-previous-line)
+  ;; (evil-define-key 'normal undo-tree-visualizer-mode-map (kbd "n") 'evil-next-line)
+
+  (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "p") 'undo-tree-visualize-undo)
+  (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "n") 'undo-tree-visualize-redo)
+  (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "l") 'undo-tree-visualize-switch-branch-right)
+  (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "h") 'undo-tree-visualize-switch-branch-left)
+#+END_SRC
+
 * Evil
 #+BEGIN_SRC emacs-lisp
   (use-package evil)
@@ -1588,7 +1603,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 #+END_SRC
 
 * Browser
-** Eww
+** Eww/shr
 #+BEGIN_SRC emacs-lisp
   (require 'eww)
   (require 'shr)
@@ -1632,11 +1647,39 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   ;;(advice-add #'shr-colorize-region :around (defun shr-no-colourise-region (&rest ignore)))
 #+END_SRC
 
+*** Auto-open image at point
+Redefine function to attempt to open image if link at point wasn't found
+#+BEGIN_SRC emacs-lisp
+  (defun shr-browse-url (&optional external mouse-event)
+    "Browse the URL at point using `browse-url'.
+  If EXTERNAL is non-nil (interactively, the prefix argument), browse
+  the URL using `shr-external-browser'.
+  If this function is invoked by a mouse click, it will browse the URL
+  at the position of the click.  Optional argument MOUSE-EVENT describes
+  the mouse click event."
+    (interactive (list current-prefix-arg last-nonmenu-event))
+    (mouse-set-point mouse-event)
+    (let ((url (get-text-property (point) 'shr-url)))
+      (cond
+       ((not url)
+       ;; Was unsuccessful in opening link, attempt to open image
+        (shr-browse-image))
+       ((string-match "^mailto:" url)
+        (browse-url-mail url))
+       (t
+        (if external
+            (funcall shr-external-browser url)
+          (browse-url url))))))
+#+END_SRC
+
 *** Keys
 #+BEGIN_SRC emacs-lisp
   ;; (define-key eww-mode-map [?\d] 'eww-back-url)
   ;; (evil-define-key 'normal eww-mode-map [?\d] 'eww-back-url)
   ;; (evil-define-key 'visual eww-mode-map [?\d] 'eww-back-url)
+
+  (evil-define-key 'normal eww-mode-map (kbd "w") 'evil-forward-word-begin)
+  (setq shr-map (make-sparse-keymap))
 
   (evil-define-key 'normal eww-mode-map (kbd "H") 'eww-back-url)
   (evil-define-key 'normal eww-mode-map (kbd "L") 'eww-forward-url)
@@ -1650,6 +1693,16 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (define-key my/eww-mode-map (kbd "r") 'eww-reload)
   (define-key my/eww-mode-map (kbd "f") 'eww-open-file)
   (define-key my/eww-mode-map (kbd "C-c") 'my/eww-toggle-code-highlighting)
+#+END_SRC
+
+** Next browser
+#+BEGIN_SRC emacs-lisp
+  ;; (defun my/write-next-config ()
+    ;; (my/create-dir-if-not-exist "~/.config")
+    ;; (my/create-dir-if-not-exist "~/.config/next")
+    ;; (my/create-file-with-content-if-not-exist "~/.config/next/init.lisp")
+  ;; 
+    ;; )
 #+END_SRC
 
 ** Set default browser
@@ -2232,32 +2285,16 @@ Flycheck with extra correction for elisp packages
   (setq which-key-idle-delay 1)
 
   (if window-system
-    (set-face-attribute 'which-key-command-description-face nil
-                        :family my/mono-font)
-
-    (set-face-attribute 'which-key-docstring-face nil
-                        :family my/mono-font)
-
-    (set-face-attribute 'which-key-group-description-face nil
-                        :family my/mono-font)
-
-    (set-face-attribute 'which-key-highlighted-command-face nil
-                        :family my/mono-font)
-
-    (set-face-attribute 'which-key-key-face nil
-                        :family my/mono-font)
-
-    (set-face-attribute 'which-key-local-map-description-face nil
-                        :family my/mono-font)
-
-    (set-face-attribute 'which-key-note-face nil
-                        :family my/mono-font)
-
-    (set-face-attribute 'which-key-separator-face nil
-                        :family my/mono-font)
-
-    (set-face-attribute 'which-key-special-key-face nil
-                        :family my/mono-font))
+      (progn
+        (set-face-attribute 'which-key-command-description-face nil :family my/mono-font)
+        (set-face-attribute 'which-key-docstring-face nil :family my/mono-font)
+        (set-face-attribute 'which-key-group-description-face nil :family my/mono-font)
+        (set-face-attribute 'which-key-highlighted-command-face nil :family my/mono-font)
+        (set-face-attribute 'which-key-key-face nil :family my/mono-font)
+        (set-face-attribute 'which-key-local-map-description-face nil :family my/mono-font)
+        (set-face-attribute 'which-key-note-face nil :family my/mono-font)
+        (set-face-attribute 'which-key-separator-face nil :family my/mono-font)
+        (set-face-attribute 'which-key-special-key-face nil :family my/mono-font)))
 #+END_SRC
 
 *** Bind
