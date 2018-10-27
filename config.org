@@ -2601,14 +2601,19 @@ g-; and g-,
 
 ** Switch to minibuffer
 #+BEGIN_SRC emacs-lisp
-  (defun my/switch-to-minibuffer ()
+  (defun my/toggle-switch-to-minibuffer ()
     "Switch to minibuffer window."
     (interactive)
     (if (active-minibuffer-window)
-        (select-window (active-minibuffer-window))
+        (progn
+          (if (string= major-mode "minibuffer-inactive-mode")
+              (progn
+                (message "HERE")
+                (select-window (previous-window)))
+            (select-window (active-minibuffer-window))))
       (error "Minibuffer is not active")))
 
-  (define-key my/keys-mode-map (kbd "M-TAB") 'my/switch-to-minibuffer)
+  (define-key my/keys-mode-map (kbd "M-TAB") 'my/toggle-switch-to-minibuffer)
 #+END_SRC
 
 * Window and buffer settings
@@ -3997,10 +4002,10 @@ We use class names for all windows expect for Java applications and GIMP (becaus
   ;; Some keys have to be defined using "exwm-input-set-key" in order to be usable if they are in "exwm-input-prefix-keys"
   (exwm-input-set-key (kbd my/mod-leader-map-key) 'my/leader-map)
 
-  (exwm-input-set-key (kbd "M-<tab>") 'my/switch-to-minibuffer)
-  ;;(exwm-input-set-key (kbd "C-M-=") 'my/switch-to-minibuffer)
+  (exwm-input-set-key (kbd "M-<tab>") 'my/toggle-switch-to-minibuffer)
+  ;;(exwm-input-set-key (kbd "C-M-=") 'my/toggle-switch-to-minibuffer)
 
-  ;;(exwm-input-set-key (kbd "C-M-i") 'my/switch-to-minibuffer)
+  ;;(exwm-input-set-key (kbd "C-M-i") 'my/toggle-switch-to-minibuffer)
 
   (exwm-input-set-key (kbd "C-e") 'keyboard-quit)
   (exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
