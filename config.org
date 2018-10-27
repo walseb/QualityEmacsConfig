@@ -3682,7 +3682,9 @@ Disable rainbow delimiters
 ** Alert when task is done
 #+BEGIN_SRC emacs-lisp
   (add-hook 'eshell-after-prompt-hook '(lambda () (interactive) (if (not (= 1 (line-number-at-pos (point))))
-                                                                    (alert "Eshell command done!" :severity 'moderate))))
+                                                                    (progn
+                                                                      (alert "Eshell command done!" :severity 'high)
+                                                                      (message "Eshell command done!")))))
 #+END_SRC
 
 ** Keys
@@ -5628,6 +5630,7 @@ Use lv-line to create a mode line on the top of the screen
 **** Create LV-line at top
 #+BEGIN_SRC emacs-lisp
   (defun my/lv-line-set-buffer ()
+    (setq truncate-lines nil)
     (setq indicate-empty-lines nil)
     (set-window-hscroll my/lv-line-window 0)
     (setq window-size-fixed t)
