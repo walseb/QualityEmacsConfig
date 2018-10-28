@@ -680,12 +680,7 @@ https://www.emacswiki.org/emacs/ForceBackups
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
-  (setq undo-tree-visualizer-mode-map (make-sparse-keymap))
-
   (add-hook 'undo-tree-visualizer-mode-hook '(lambda () (interactive) (run-with-timer 0.1 nil 'evil-force-normal-state)))
-
-  ;; (evil-define-key 'normal undo-tree-visualizer-mode-map (kbd "p") 'evil-previous-line)
-  ;; (evil-define-key 'normal undo-tree-visualizer-mode-map (kbd "n") 'evil-next-line)
 
   (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "p") 'undo-tree-visualize-undo)
   (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "n") 'undo-tree-visualize-redo)
