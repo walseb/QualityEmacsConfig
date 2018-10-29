@@ -549,145 +549,6 @@ Stop custom from editing init.el
   (setq custom-file (concat user-emacs-directory ".emacs-custom.el"))
 #+END_SRC
 
-* Backups
-Stop emacs from creating backup files on every save
-#+BEGIN_SRC emacs-lisp
-  ;;(setq make-backup-files nil)
-  ;;(setq auto-save-default nil)
-  ;; Make multiple backups
-  (setq version-control t)
-
-  ;; Backup even if file is under version control
-  (setq vc-make-backup-files t)
-
-  (setq backup-by-copying t)      ; don't clobber symlinks
-  (setq delete-old-versions t)
-  (setq kept-new-versions 6)
-  (setq kept-old-versions 2)
-
-  (defvar my/backup-directory (concat user-emacs-directory "backups/"))
-  (defvar my/auto-saves-directory (concat user-emacs-directory "auto-saves/"))
-
-  (my/create-dir-if-not-exist my/backup-directory)
-
-  (my/create-dir-if-not-exist my/auto-saves-directory)
-
-  (setq backup-directory-alist `(("." . ,my/backup-directory)))
-  (setq auto-save-file-name-transforms `((".*" ,my/auto-saves-directory t)))
-#+END_SRC
-
-** Make backup on every save
-https://www.emacswiki.org/emacs/ForceBackups
-#+BEGIN_SRC emacs-lisp
-  (defvar my/create-per-session-backups t)
-  ;; Max amount of characters, 200 000 ~200kb
-  (defvar my/per-session-backup-limit 200000)
-
-  (defvar my/backup-per-session-directory (concat my/backup-directory "per-session/"))
-
-  (my/create-dir-if-not-exist my/backup-per-session-directory)
-
-  (defun my/force-backup-of-buffer ()
-    (interactive)
-    (if (and my/create-per-session-backups (< (point-max) my/per-session-backup-limit) (buffer-modified-p))
-        (save-restriction (widen) (write-region (point-min) (point-max) (concat my/backup-per-session-directory (number-to-string (time-to-seconds)) (buffer-name)) nil nil nil))))
-#+END_SRC
-
-** Delete old backups
-#+BEGIN_SRC emacs-lisp
-  ;; Automatically delete old backup files older than a week
-  (message "Deleting old backup files...")
-  (let ((week (* 60 60 24 7))
-        (current (float-time (current-time))))
-    (dolist (file (directory-files my/backup-directory t))
-      (when (and (backup-file-name-p file)
-               (> (- current (float-time (nth 5 (file-attributes file))))
-                  week))
-        (message "%s" file)
-        (delete-file file))))
-#+END_SRC
-
-** Delete per-session backups on startup
-#+BEGIN_SRC emacs-lisp
-  (shell-command (concat "rm " my/backup-per-session-directory "*" ))
-#+END_SRC
-
-** Disble backups for certain files
-#+BEGIN_SRC emacs-lisp
-  (define-minor-mode my/no-backups-mode
-    "http://anirudhsasikumar.net/blog/2005.01.21.html
-  For sensitive files like password lists.
-  It disables backup creation and auto saving.
-
-  With no argument, this command toggles the mode.
-  Non-null prefix argument turns on the mode.
-  Null prefix argument turns off the mode."
-    ;; The initial value.
-    nil
-    ;; The indicator for the mode line.
-    "no-backups"
-    ;; The minor mode bindings.
-    nil
-    (if (symbol-value my/no-backups-mode)
-        (progn
-          ;; disable backups
-          (set (make-local-variable 'backup-inhibited) t) 
-          ;; disable auto-save
-          (if auto-save-default
-              (progn
-                (setq my/create-per-session-backups nil)
-                (auto-save-mode -1))))
-                                          ;resort to default value of backup-inhibited
-      (kill-local-variable 'backup-inhibited)
-                                          ;resort to default auto save setting
-      (if auto-save-default
-          (progn
-            (setq my/create-per-session-backups t)
-            (auto-save-mode 1)))))
-#+END_SRC
-
-*** File types to not backup
-#+BEGIN_SRC emacs-lisp
-  (add-to-list 'auto-mode-alist '("\\.gpg$" . my/no-backups-mode))
-
-  (add-hook 'image-mode-hook 'my/no-backups-mode)
-#+END_SRC
-
-** Undo tree
-#+BEGIN_SRC emacs-lisp
-  (use-package undo-tree)
-
-  (setq global-undo-tree-mode t)
-
-  ;; Fixes errors
-  (setq undo-tree-enable-undo-in-region nil)
-  (setq-default undo-tree-enable-undo-in-region nil)
-
-  ;; (setq undo-tree-auto-save-history t)
-  ;; (setq-default undo-tree-auto-save-history t)
-
-  (setq undo-tree-visualizer-lazy-drawing nil)
-  (setq-default undo-tree-visualizer-lazy-drawing nil)
-
-  (setq undo-tree-visualizer-timestamps t)
-  (setq undo-tree-visualizer-diff t)
-
-  ;;(setq undo-tree-auto-save-history t)
-
-  ;;(setq undo-tree-history-directory-alist '(("." . "~/.emacs.d/saves")))
-  ;;(make-directory (concat spacemacs-cache-directory "undo"))
-#+END_SRC
-
-*** Keys
-#+BEGIN_SRC emacs-lisp
-  (add-hook 'undo-tree-visualizer-mode-hook '(lambda () (interactive) (run-with-timer 0.1 nil 'evil-force-normal-state)))
-
-  (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "p") 'undo-tree-visualize-undo)
-  (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "n") 'undo-tree-visualize-redo)
-  (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "l") 'undo-tree-visualize-switch-branch-right)
-  (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "h") 'undo-tree-visualize-switch-branch-left)
-#+END_SRC
-
 * Evil
 #+BEGIN_SRC emacs-lisp
   (use-package evil)
@@ -902,6 +763,145 @@ Allows for using indention as text objects
 *** Don't add pasted over thing to killring
 #+BEGIN_SRC emacs-lisp
 (setq evil-kill-on-visual-paste nil)
+#+END_SRC
+
+* Backups
+Stop emacs from creating backup files on every save
+#+BEGIN_SRC emacs-lisp
+  ;;(setq make-backup-files nil)
+  ;;(setq auto-save-default nil)
+  ;; Make multiple backups
+  (setq version-control t)
+
+  ;; Backup even if file is under version control
+  (setq vc-make-backup-files t)
+
+  (setq backup-by-copying t)      ; don't clobber symlinks
+  (setq delete-old-versions t)
+  (setq kept-new-versions 6)
+  (setq kept-old-versions 2)
+
+  (defvar my/backup-directory (concat user-emacs-directory "backups/"))
+  (defvar my/auto-saves-directory (concat user-emacs-directory "auto-saves/"))
+
+  (my/create-dir-if-not-exist my/backup-directory)
+
+  (my/create-dir-if-not-exist my/auto-saves-directory)
+
+  (setq backup-directory-alist `(("." . ,my/backup-directory)))
+  (setq auto-save-file-name-transforms `((".*" ,my/auto-saves-directory t)))
+#+END_SRC
+
+** Make backup on every save
+https://www.emacswiki.org/emacs/ForceBackups
+#+BEGIN_SRC emacs-lisp
+  (defvar my/create-per-session-backups t)
+  ;; Max amount of characters, 200 000 ~200kb
+  (defvar my/per-session-backup-limit 200000)
+
+  (defvar my/backup-per-session-directory (concat my/backup-directory "per-session/"))
+
+  (my/create-dir-if-not-exist my/backup-per-session-directory)
+
+  (defun my/force-backup-of-buffer ()
+    (interactive)
+    (if (and my/create-per-session-backups (< (point-max) my/per-session-backup-limit) (buffer-modified-p))
+        (save-restriction (widen) (write-region (point-min) (point-max) (concat my/backup-per-session-directory (number-to-string (time-to-seconds)) (buffer-name)) nil nil nil))))
+#+END_SRC
+
+** Delete old backups
+#+BEGIN_SRC emacs-lisp
+  ;; Automatically delete old backup files older than a week
+  (message "Deleting old backup files...")
+  (let ((week (* 60 60 24 7))
+        (current (float-time (current-time))))
+    (dolist (file (directory-files my/backup-directory t))
+      (when (and (backup-file-name-p file)
+               (> (- current (float-time (nth 5 (file-attributes file))))
+                  week))
+        (message "%s" file)
+        (delete-file file))))
+#+END_SRC
+
+** Delete per-session backups on startup
+#+BEGIN_SRC emacs-lisp
+  (shell-command (concat "rm " my/backup-per-session-directory "*" ))
+#+END_SRC
+
+** Disble backups for certain files
+#+BEGIN_SRC emacs-lisp
+  (define-minor-mode my/no-backups-mode
+    "http://anirudhsasikumar.net/blog/2005.01.21.html
+  For sensitive files like password lists.
+  It disables backup creation and auto saving.
+
+  With no argument, this command toggles the mode.
+  Non-null prefix argument turns on the mode.
+  Null prefix argument turns off the mode."
+    ;; The initial value.
+    nil
+    ;; The indicator for the mode line.
+    "no-backups"
+    ;; The minor mode bindings.
+    nil
+    (if (symbol-value my/no-backups-mode)
+        (progn
+          ;; disable backups
+          (set (make-local-variable 'backup-inhibited) t) 
+          ;; disable auto-save
+          (if auto-save-default
+              (progn
+                (setq my/create-per-session-backups nil)
+                (auto-save-mode -1))))
+                                          ;resort to default value of backup-inhibited
+      (kill-local-variable 'backup-inhibited)
+                                          ;resort to default auto save setting
+      (if auto-save-default
+          (progn
+            (setq my/create-per-session-backups t)
+            (auto-save-mode 1)))))
+#+END_SRC
+
+*** File types to not backup
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'auto-mode-alist '("\\.gpg$" . my/no-backups-mode))
+
+  (add-hook 'image-mode-hook 'my/no-backups-mode)
+#+END_SRC
+
+** Undo tree
+#+BEGIN_SRC emacs-lisp
+  (use-package undo-tree)
+
+  (setq global-undo-tree-mode t)
+
+  ;; Fixes errors
+  (setq undo-tree-enable-undo-in-region nil)
+  (setq-default undo-tree-enable-undo-in-region nil)
+
+  ;; (setq undo-tree-auto-save-history t)
+  ;; (setq-default undo-tree-auto-save-history t)
+
+  (setq undo-tree-visualizer-lazy-drawing nil)
+  (setq-default undo-tree-visualizer-lazy-drawing nil)
+
+  (setq undo-tree-visualizer-timestamps t)
+  (setq undo-tree-visualizer-diff t)
+
+  ;;(setq undo-tree-auto-save-history t)
+
+  ;;(setq undo-tree-history-directory-alist '(("." . "~/.emacs.d/saves")))
+  ;;(make-directory (concat spacemacs-cache-directory "undo"))
+#+END_SRC
+
+*** Keys
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'undo-tree-visualizer-mode-hook '(lambda () (interactive) (run-with-timer 0.1 nil 'evil-force-normal-state)))
+
+  (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "p") 'undo-tree-visualize-undo)
+  (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "n") 'undo-tree-visualize-redo)
+  (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "l") 'undo-tree-visualize-switch-branch-right)
+  (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "h") 'undo-tree-visualize-switch-branch-left)
 #+END_SRC
 
 * Leader
@@ -5947,6 +5947,29 @@ When projectile-mode is on, project name is updated on every keypress, here it i
   (add-hook 'my/switch-buffer-hook 'my/update-projectile-project-name)
 #+END_SRC
 
+**** Errors
+#+BEGIN_SRC emacs-lisp
+  (defvar my/mode-line-error-list (list))
+  (defvar my/mode-line-error-list-formatted nil)
+
+  (defun my/mode-line-error-list-remove (text)
+    (setq my/mode-line-error-list (remove text my/mode-line-error-list))
+    (my/update-mode-line-error-list))
+
+  (defun my/mode-line-error-list-add (text)
+    (add-to-list 'my/mode-line-error-list text)
+    (my/update-mode-line-error-list))
+
+  (defun my/update-mode-line-error-list ()
+    (setq my/mode-line-error-list-formatted (format "%s" my/mode-line-error-list)))
+#+END_SRC
+
+**** Config error
+#+BEGIN_SRC emacs-lisp
+  (if (my/has-config-error)
+      (my/mode-line-error-list-add "CONFIG ERROR!"))
+#+END_SRC
+
 **** Load average
 #+BEGIN_SRC emacs-lisp
   (defvar my/load-average 0)
@@ -6015,31 +6038,36 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
   (defvar my/eye-timer-que 0)
   (defvar my/eye-timer-que-formated "")
+  (defvar my/eye-timer-mode-line-error "EYE TIMER!")
   ;; In seconds
   (defvar my/eye-timer-break-every (* 21 60))
 
-  (defun my/reset-eye-timer ()
+  (defun my/eye-timer-reset ()
     (interactive)
     (setq my/eye-timer-que 0)
-    (setq my/eye-timer-que-formated (my/eye-timer-get-formated-time)))
+    (setq my/eye-timer-que-formated (my/eye-timer-get-formated-time))
+    (my/mode-line-error-list-remove my/eye-timer-mode-line-error))
 
   (defun my/eye-timer-get-formated-time ()
     (setq my/eye-timer-que-formated (number-to-string my/eye-timer-que)))
 
-  (defun my/update-eye-timer ()
+  (defun my/eye-timer-add ()
+    (setq my/eye-timer-que (+ 1 my/eye-timer-que))
+    (setq my/eye-timer-que-formated (my/eye-timer-get-formated-time))
+    (setq my/eye-timer-last-break (float-time))
+    (my/mode-line-error-list-add my/eye-timer-mode-line-error))
+
+  (defun my/eye-timer-update ()
     (interactive)
     (if (> (- (float-time) my/eye-timer-last-break) my/eye-timer-break-every)
-        (progn
-          (setq my/eye-timer-que (+ 1 my/eye-timer-que))
-          (setq my/eye-timer-que-formated (my/eye-timer-get-formated-time))
-          (setq my/eye-timer-last-break (float-time)))))
+        (my/eye-timer-add)))
 
-  (run-with-timer 0 60 'my/update-eye-timer)
+  (run-with-timer 0 60 'my/eye-timer-update)
 #+END_SRC
 
 **** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-key my/system-commands-map (kbd "e") 'my/reset-eye-timer)
+  (define-key my/system-commands-map (kbd "e") 'my/eye-timer-reset)
 #+END_SRC
 
 *** Mode line format
@@ -6064,9 +6092,6 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                    (format-mode-line
                     (quote
                      (
-
-                      ;; Print error if any
-                      "%e"
 
                       ;; Print if recursive editing
                       "%["
@@ -6098,6 +6123,12 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                       "%n"
 
                       " | "
+
+                      ;; Print error if any
+                      "%e"
+
+                      (:eval (if my/mode-line-error-list
+                                 (concat (propertize my/mode-line-error-list-formatted 'face '(:background "purple")) " | ")))
 
                       ;; Print mode
                       "%m > " 

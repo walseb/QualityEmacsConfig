@@ -21,7 +21,6 @@
 (defvar my/config-location (expand-file-name (concat user-emacs-directory "config.org")))
 (defvar my/config-exported-location (expand-file-name (concat user-emacs-directory "config.el")))
 (defvar my/config-compiled-location (expand-file-name (concat user-emacs-directory "config.elc")))
-(defvar my/config-exported-stable-location (expand-file-name (concat user-emacs-directory "config-stable.el")))
 (defvar my/config-error-marker (expand-file-name (concat user-emacs-directory "config-error")))
 
 (defun my/is-file-more-up-to-date (file1 file2)
@@ -58,8 +57,8 @@
       (progn
 	(load-file my/config-compiled-location)
 	;; Using error doesn't work here, but doing this does
-	MasterConfigBroken-UsingStableConfig!)
-    MasterConfigBroken-NoStableConfigToLoad!!!))
+	(message "Master config broken, using stable config!"))
+    (message "Master config broken, no stable config to load!")))
 
 (defun my/load-compiled-or-compile ()
   (if (and (file-exists-p my/config-compiled-location) (my/is-file-more-up-to-date my/config-compiled-location my/config-location))
