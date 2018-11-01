@@ -230,6 +230,26 @@ Get =gpick=
   (setq netrc-file "~/.authinfo.gpg")
 #+END_SRC
 
+* Private config
+#+BEGIN_SRC emacs-lisp
+(defun my/load-if-exists (f)
+  "load the elisp file only if it exists and is readable"
+  (if (file-readable-p f)
+      (load-file f)))
+#+END_SRC
+
+** Private config
+#+BEGIN_SRC emacs-lisp
+  (my/load-if-exists (concat user-emacs-directory "private.el"))
+#+END_SRC
+
+** Device config
+#+BEGIN_SRC emacs-lisp
+  ;; If a device config is not made, load the default one
+  (if (not (my/load-if-exists (concat user-emacs-directory "device.el")))
+      (load-file (concat user-emacs-directory "device-template.el")))
+#+END_SRC
+
 * Persistent keys
 #+BEGIN_SRC emacs-lisp
   (defvar my/keys-mode-map (make-sparse-keymap))
@@ -1602,10 +1622,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 #+BEGIN_SRC emacs-lisp
   (require 'eww)
   (require 'shr)
-  (defun my/eww-browse-url (URL &optional NEW-WINDOW)
-    (interactive)
-    (eww-browse-url URL NEW-WINDOW)
-    (my/give-buffer-unique-name "eww"))
 #+END_SRC
 
 *** Highlight code
@@ -1633,6 +1649,11 @@ In org mode when displaying images pixel scroll mode can be useful maybe
       (add-to-list 'shr-external-rendering-functions '(code . my/eww-tag-code))))
 #+END_SRC
 
+*** Add URL to buffer name
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'eww-after-render-hook '(lambda () (interactive) (my/give-buffer-unique-name (concat "eww - " (plist-get eww-data :title)))))
+#+END_SRC
+      
 *** Fix background colors shr
 #+BEGIN_SRC emacs-lisp
   (setq shr-color-visible-luminance-min 80)
@@ -1702,7 +1723,7 @@ Redefine function to attempt to open image if link at point wasn't found
 
 ** Set default browser
 #+BEGIN_SRC emacs-lisp
-  (setq-default browse-url-browser-function 'my/eww-browse-url)
+  (setq-default browse-url-browser-function 'eww-browse-url)
 #+END_SRC
 
 * Visit file hotkeys
@@ -1860,7 +1881,7 @@ Redefine function to attempt to open image if link at point wasn't found
 #+BEGIN_SRC emacs-lisp
   (defun my/launch-eww ()
     (interactive)
-    (my/eww-browse-url (concat "https://www.google.com/search?q=" (completing-read "search " nil))))
+    (eww-browse-url (concat "https://www.google.com/search?q=" (completing-read "search: " nil))))
 
   (define-key my/leader-map (kbd "b") 'my/launch-eww)
 #+END_SRC
@@ -2316,6 +2337,15 @@ Flycheck with extra correction for elisp packages
 #+END_SRC
 
 * Movement
+** Goto middle of line
+#+BEGIN_SRC emacs-lisp
+  (defun my/go-to-middle-of-line ()
+    (interactive)
+    (goto-char (/  (+ (line-end-position) (line-beginning-position)) 2)))
+
+  (define-key evil-normal-state-map (kbd "^") 'my/go-to-middle-of-line)
+#+END_SRC
+
 ** Marks
 #+BEGIN_SRC emacs-lisp
   (setq mark-ring-max 100)
@@ -2358,8 +2388,8 @@ Flycheck with extra correction for elisp packages
   (define-key evil-normal-state-map (kbd "C-b") '(lambda () (interactive) (my/mark-move 1)))
   (define-key evil-normal-state-map (kbd "C-f") '(lambda () (interactive) (my/mark-move -1)))
 
-  (define-key my/keys-mode-map (kbd "M-h") 'previous-buffer)
-  (define-key my/keys-mode-map (kbd "M-l") 'next-buffer)
+  ;; (define-key my/keys-mode-map (kbd "M-h") 'previous-buffer)
+  ;; (define-key my/keys-mode-map (kbd "M-l") 'next-buffer)
 #+END_SRC
 
 ** Relative line numbers
@@ -2555,9 +2585,20 @@ g-; and g-,
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
+  (define-key evil-normal-state-map (kbd "M-f") 'avy-goto-char-in-line)
   (define-key my/leader-map (kbd "f") 'avy-goto-char-in-line)
+
+  (define-key evil-normal-state-map (kbd "M-w") 'my/avy-goto-word-0-in-line)
   (define-key my/leader-map (kbd "w") 'my/avy-goto-word-0-in-line)
+
+  (define-key evil-normal-state-map (kbd "M-g") 'avy-goto-char-2)
   (define-key my/leader-map (kbd "g") 'avy-goto-char-2)
+
+  (define-key evil-normal-state-map (kbd "M-g") 'avy-goto-char-2)
+  (define-key my/leader-map (kbd "g") 'avy-goto-char-2)
+
+  (define-key evil-normal-state-map (kbd "M-n") 'avy-goto-word-0-below)
+  (define-key evil-normal-state-map (kbd "M-p") 'avy-goto-word-0-above)
 
   ;; (define-key my/leader-map (kbd "n") 'my/avy-goto-line-below-keep-horizontal-position)
   ;; (define-key my/leader-map (kbd "p") 'my/avy-goto-line-above-keep-horizontal-position)
@@ -3276,10 +3317,10 @@ Shows information in echo area
 
 ** Documentation
 #+BEGIN_SRC emacs-lisp
-  ;; (use-package zeal-at-point
-    ;; :defer t)
+  (use-package zeal-at-point
+    :defer t)
 
-  ;;(define-key my/leader-map (kbd "d") 'zeal-at-point)
+  (define-key my/leader-map (kbd "d") 'zeal-at-point)
 #+END_SRC
 
 ** LSP mode
@@ -3922,16 +3963,13 @@ We use class names for all windows expect for Java applications and GIMP (becaus
 
 ** Multi-screen
 #+BEGIN_SRC emacs-lisp
-  (defvar my/monitor-amount 1)
-
-  (if (file-exists-p (concat user-emacs-directory "randr-home"))
+  (if my/device/monitor-setup
       (progn
         ;; We need 3 frames to fill up monitors
-        (setq exwm-workspace-number 3)
-        (setq my/monitor-amount 3)
-        (setq exwm-randr-workspace-output-plist '(1 "DVI-D-1" 0 "DP-1" 2 "DVI-I-1"))))
+        (setq exwm-workspace-number (/ (length my/device/monitor-setup) 2))
+        (setq exwm-randr-workspace-output-plist my/device/monitor-setup)))
 
-  (if (> my/monitor-amount 1)
+  (if (> exwm-workspace-number 1)
       (progn
         (require 'exwm-randr)
         (exwm-randr-enable)))
@@ -3939,17 +3977,18 @@ We use class names for all windows expect for Java applications and GIMP (becaus
 
 *** Switch monitor (workspace) functions
 #+BEGIN_SRC emacs-lisp
+  ;; `exwm-workspace-number' is equal to monitor count
   ;;(add-hook 'focus-out-hook 'exwm-layout--refresh)
   (defun my/switch-monitor-left ()
     (interactive)
-    (if (>= exwm-workspace-current-index (- my/monitor-amount 1))
+    (if (>= exwm-workspace-current-index (- exwm-workspace-number 1))
         (exwm-workspace-switch-create 0)
       (exwm-workspace-switch-create (+ exwm-workspace-current-index 1))))
 
   (defun my/switch-monitor-right ()
     (interactive)
     (if (= exwm-workspace-current-index 0)
-        (exwm-workspace-switch-create (- my/monitor-amount 1))
+        (exwm-workspace-switch-create (- exwm-workspace-number 1))
       (exwm-workspace-switch-create (- exwm-workspace-current-index 1))))
 
   ;;(define-key my/keys-mode-map (kbd "M-l") 'my/switch-monitor-right)
@@ -4042,7 +4081,7 @@ We use class names for all windows expect for Java applications and GIMP (becaus
   (exwm-input-set-key (kbd "C-e") 'keyboard-quit)
   (exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
   (exwm-input-set-key (kbd "C-=") 'my/window-hydra/body)
-  (exwm-input-set-key (kbd "M-x") 'counsel-M-x)
+  ;;(exwm-input-set-key (kbd "M-x") 'counsel-M-x)
 
   (exwm-input-set-key (kbd "M-h") 'previous-buffer)
   (exwm-input-set-key (kbd "M-l") 'next-buffer)
@@ -4126,6 +4165,52 @@ If enabled it auto enables projectile, which has high CPU usage
 #+END_SRC
 
 * Media
+** Videos
+*** Ivy-youtube
+#+BEGIN_SRC emacs-lisp
+  (use-package ivy-youtube)
+
+  (setq ivy-youtube-play-at "mpv")
+
+  (setq ivy-youtube-max-results 50)
+  (setq ivy-youtube-history-file nil)
+
+  (define-key my/leader-map (kbd "y") 'ivy-youtube)
+#+END_SRC
+
+**** Play video at max audio quality
+#+BEGIN_SRC emacs-lisp
+  (setq mpv-youtube-dl-parameters
+        (concat
+         ;; Video
+         "--ytdl-format="
+         ;; Prefer free format and my resolution
+         "((bestvideo[height<=?" (int-to-string (car (cdr my/device/resolution))) "][vcodec^=vp9]"
+         ;; Then just my resolution
+         "/bestvideo[height<=?" (int-to-string (car (cdr my/device/resolution))) "]"
+         ;; Then just any video
+         "/bestvideo)"
+
+         ;; Audio
+         ;; Prefer free formats
+         "+(bestaudio[acodec=opus]"
+         "/bestaudio[acodec=vorbis]"
+         "/bestaudio[acodec=aac]"
+         ;; Then just any audio format
+         "/bestaudio))"
+         "/best"))
+
+  (defun ivy-youtube-play-on-process (video-url)
+    "Start a process based on ivy-youtube-play-at variable passing VIDEO-URL."
+    (message (format "Starting a process with: [%s %s] with youtube-dl parameters: %s" ivy-youtube-play-at video-url mpv-youtube-dl-parameters))
+    (make-process :name "Ivy Youtube"
+                  :buffer "*Ivy Youtube Output*"
+                  :sentinel (lambda (process event)
+                              (message
+                               (format "Ivy Youtube: Process %s (Check buffer *Ivy Youtube Output*)" event)))
+                  :command `(,ivy-youtube-play-at ,mpv-youtube-dl-parameters ,video-url)))
+#+END_SRC
+
 ** Volume keys
 #+BEGIN_SRC emacs-lisp
   (defvar my/audio-sink nil)
@@ -6237,20 +6322,6 @@ When projectile-mode is on, project name is updated on every keypress, here it i
   (add-hook 'kill-emacs-hook 'my/report-close-emacs)
 
   (run-with-timer 1200 nil 'my/report-activity)
-#+END_SRC
-
-* Private config
-** Function
-#+BEGIN_SRC emacs-lisp
-(defun my/load-if-exists (f)
-  "load the elisp file only if it exists and is readable"
-  (if (file-readable-p f)
-      (load-file f)))
-#+END_SRC
-
-** Load
-#+BEGIN_SRC emacs-lisp
-;;(my/load-if-exists "~/.emacs.d/spotify.el")
 #+END_SRC
 
 * Report start time

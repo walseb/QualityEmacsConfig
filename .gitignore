@@ -6,6 +6,7 @@
 !config.org
 !readme.org
 !snippets
+!device-template.el
 
 !/snippets/
 !/configs/
