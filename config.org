@@ -762,10 +762,10 @@ Allows for using indention as text objects
   (define-key evil-normal-state-map (kbd "P") 'delete-indentation)
 #+END_SRC
 
-*** Rebind z to case change
+*** Rebind evil case change
 #+BEGIN_SRC emacs-lisp
-  (define-key evil-normal-state-map (kbd "z") 'evil-downcase)
-  (define-key evil-normal-state-map (kbd "Z") 'evil-upcase)
+  (define-key evil-normal-state-map (kbd "g b") 'evil-downcase)
+  (define-key evil-normal-state-map (kbd "g B") 'evil-upcase)
 #+END_SRC
 
 *** Add perspective movement to g
@@ -1570,6 +1570,10 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 #+BEGIN_SRC emacs-lisp
   (define-key my/leader-map (kbd "C-h") help-map)
 #+END_SRC
+*** Disable help mode binds
+#+BEGIN_SRC emacs-lisp
+  (setq help-mode-map (make-sparse-keymap))
+#+END_SRC
 
 ** Prefer loading newest lisp source file
 #+BEGIN_SRC emacs-lisp
@@ -1860,20 +1864,9 @@ Redefine function to attempt to open image if link at point wasn't found
   (defun my/launch-firefox ()
     (interactive)
     (let* (
-           (adress-raw (completing-read "url " my/browser-bookmarks))
-           (adress (if (cl-member adress-raw my/browser-bookmarks :test #'string=)
-                       (progn
-                         (setq my/temp-firefox-title-name adress-raw)
-                         adress-raw)
-                     (setq my/temp-firefox-title-name (completing-read "set title " '(
-                                                                                      ("dev")
-                                                                                      ("docs"))))
-                     (concat "https://www.google.com/search?q=" adress-raw))))
-
-      (start-process (concat my/gui-browser my/temp-firefox-title-name) nil my/gui-browser "--new-window" adress)
-      (run-with-timer 0.5 nil
-                      (lambda () (interactive)
-                        (exwm-workspace-rename-buffer (concat my/temp-firefox-title-name " - firefox"))))))
+           (search (completing-read "url " my/browser-bookmarks))
+           (adress (concat "https://www.google.com/search?q=" search)))
+      (start-process (concat my/gui-browser my/temp-firefox-title-name) nil my/gui-browser "--new-window" adress)))
 
   (define-key my/leader-map (kbd "C-b") 'my/launch-firefox)
 #+END_SRC
@@ -2911,23 +2904,180 @@ Version 2015-07-30"
   (define-key my/dired-mode-map (kbd "i") 'my/image-dired)
   (define-key my/dired-mode-map (kbd "h") 'dired-hide-details-mode)
 
-  ;; Make dired work good with evil normal mode
-  (evil-define-key 'normal dired-mode-map (kbd "i") 'evil-insert)
-  ;;(evil-define-key 'normal dired-mode-map (kbd "RET") 'dired-find-file)
-  ;;(evil-define-key 'normal dired-mode-map (kbd "RET") 'my/insert-subdir-or-open-file)
-  ;;(evil-define-key 'normal dired-mode-map (kbd "RET") 'dired-subtree-insert)
-  (evil-define-key 'normal dired-mode-map (kbd "a") 'evil-append)
-  (evil-define-key 'normal dired-mode-map (kbd "0") 'evil-digit-argument-or-evil-beginning-of-line)
-  (evil-define-key 'normal dired-mode-map (kbd "$") 'evil-end-of-line)
-  (evil-define-key 'normal dired-mode-map (kbd "G") 'evil-goto-line)
-  (evil-define-key 'normal dired-mode-map (kbd "gg") 'evil-goto-first-line)
-  (evil-define-key 'normal dired-mode-map (kbd "y") 'evil-yank)
-  (evil-define-key 'normal dired-mode-map (kbd "v") 'evil-visual-char)
-  (evil-define-key 'normal dired-mode-map (kbd "V") 'evil-visual-line)
-  (evil-define-key 'normal dired-mode-map (kbd "C-v") 'evil-visual-block)
-
   ;; Bind =Backspace= to go up one directory
   (define-key dired-mode-map [?\d] 'dired-up-directory)
+#+END_SRC
+
+*** Move dired keys to insert mode
+#+BEGIN_SRC emacs-lisp
+  (require 'dired)
+  ;;(define-key map [follow-link] 'mouse-face)
+
+  (setq dired-mode-map (make-sparse-keymap))
+
+  ;; Upper case keys (except !) for operating on the marked files
+  (evil-define-key 'normal dired-mode-map (kbd "RET") 'dired-find-file)
+  (evil-define-key 'insert dired-mode-map (kbd "RET") 'dired-find-file)
+
+  (evil-define-key 'insert dired-mode-map (kbd "A") 'dired-do-find-regexp)
+  (evil-define-key 'normal dired-mode-map(kbd "C") 'dired-do-copy)
+  (evil-define-key 'insert dired-mode-map  (kbd "C") 'dired-do-copy)
+  (evil-define-key 'insert dired-mode-map  (kbd "B") 'dired-do-byte-compile)
+  (evil-define-key 'normal dired-mode-map (kbd "D") 'dired-do-delete)
+  (evil-define-key 'insert dired-mode-map  (kbd "D") 'dired-do-delete)
+  (evil-define-key 'insert dired-mode-map  (kbd "G") 'dired-do-chgrp)
+  (evil-define-key 'insert dired-mode-map  (kbd "H") 'dired-do-hardlink)
+  (evil-define-key 'insert dired-mode-map  (kbd "L") 'dired-do-load)
+  (evil-define-key 'normal dired-mode-map  (kbd "M") 'dired-do-chmod)
+  (evil-define-key 'insert dired-mode-map  (kbd "M") 'dired-do-chmod)
+  (evil-define-key 'normal dired-mode-map  (kbd "O") 'dired-do-chown)
+  (evil-define-key 'insert dired-mode-map  (kbd "O") 'dired-do-chown)
+  (evil-define-key 'insert dired-mode-map  (kbd "P") 'dired-do-print)
+  (evil-define-key 'insert dired-mode-map  (kbd "Q") 'dired-do-find-regexp-and-replace)
+  (evil-define-key 'normal dired-mode-map  (kbd "R") 'dired-do-rename)
+  (evil-define-key 'insert dired-mode-map  (kbd "R") 'dired-do-rename)
+  (evil-define-key 'normal dired-mode-map  (kbd "S") 'dired-do-symlink)
+  (evil-define-key 'insert dired-mode-map  (kbd "S") 'dired-do-symlink)
+  (evil-define-key 'insert dired-mode-map  (kbd "T") 'dired-do-touch)
+  (evil-define-key 'normal dired-mode-map  (kbd "X") 'dired-do-shell-command)
+  (evil-define-key 'insert dired-mode-map  (kbd "X") 'dired-do-shell-command)
+  (evil-define-key 'normal dired-mode-map  (kbd "Z") 'dired-do-compress)
+  (evil-define-key 'insert dired-mode-map  (kbd "Z") 'dired-do-compress)
+  (evil-define-key 'normal dired-mode-map  (kbd "c") 'dired-do-compress-to)
+  (evil-define-key 'insert dired-mode-map  (kbd "c") 'dired-do-compress-to)
+  (evil-define-key 'normal dired-mode-map  (kbd "!") 'dired-do-shell-command)
+  (evil-define-key 'insert dired-mode-map  (kbd "!") 'dired-do-shell-command)
+  (evil-define-key 'normal dired-mode-map  (kbd "&") 'dired-do-async-shell-command)
+  (evil-define-key 'insert dired-mode-map  (kbd "&") 'dired-do-async-shell-command)
+  ;; Comparison commands
+  (evil-define-key 'normal dired-mode-map (kbd "=") 'dired-diff)
+  (evil-define-key 'insert dired-mode-map (kbd "=") 'dired-diff)
+  ;; Make all regexp commands share a `%' prefix:
+  ;; We used to get to the submap via a symbol dired-regexp-prefix,
+  ;; but that seems to serve little purpose, and copy-keymap
+  ;; does a better job without it.
+  (evil-define-key 'insert dired-mode-map (kbd "%") nil)
+  (evil-define-key 'insert dired-mode-map  (kbd "%u") 'dired-upcase)
+  (evil-define-key 'insert dired-mode-map  (kbd "%l") 'dired-downcase)
+  (evil-define-key 'insert dired-mode-map  (kbd "%d") 'dired-flag-files-regexp)
+  (evil-define-key 'insert dired-mode-map  (kbd "%g") 'dired-mark-files-containing-regexp)
+  (evil-define-key 'insert dired-mode-map  (kbd "%m") 'dired-mark-files-regexp)
+  (evil-define-key 'insert dired-mode-map  (kbd "%r") 'dired-do-rename-regexp)
+  (evil-define-key 'insert dired-mode-map  (kbd "%C") 'dired-do-copy-regexp)
+  (evil-define-key 'insert dired-mode-map  (kbd "%H") 'dired-do-hardlink-regexp)
+  (evil-define-key 'insert dired-mode-map  (kbd "%R") 'dired-do-rename-regexp)
+  (evil-define-key 'insert dired-mode-map  (kbd "%S") 'dired-do-symlink-regexp)
+  (evil-define-key 'insert dired-mode-map  (kbd "%&") 'dired-flag-garbage-files)
+  ;; Commands for marking and unmarking.
+  (evil-define-key 'normal dired-mode-map (kbd "*") nil)
+  (evil-define-key 'insert dired-mode-map (kbd "*") nil)
+  (evil-define-key 'normal dired-mode-map (kbd "**") 'dired-mark-executables)
+  (evil-define-key 'insert dired-mode-map (kbd "**") 'dired-mark-executables)
+  (evil-define-key 'normal dired-mode-map (kbd "*/") 'dired-mark-directories)
+  (evil-define-key 'insert dired-mode-map (kbd "*/") 'dired-mark-directories)
+  (evil-define-key 'normal dired-mode-map (kbd "*@") 'dired-mark-symlinks)
+  (evil-define-key 'insert dired-mode-map (kbd "*@") 'dired-mark-symlinks)
+  (evil-define-key 'normal dired-mode-map (kbd "*%") 'dired-mark-files-regexp)
+  (evil-define-key 'insert dired-mode-map (kbd "*%") 'dired-mark-files-regexp)
+  (evil-define-key 'normal dired-mode-map (kbd "*c") 'dired-change-marks)
+  (evil-define-key 'insert dired-mode-map (kbd "*c") 'dired-change-marks)
+  (evil-define-key 'normal dired-mode-map (kbd "*s") 'dired-mark-subdir-files)
+  (evil-define-key 'insert dired-mode-map (kbd "*s") 'dired-mark-subdir-files)
+  (evil-define-key 'normal dired-mode-map (kbd "*m") 'dired-mark)
+  (evil-define-key 'insert dired-mode-map (kbd "*m") 'dired-mark)
+  (evil-define-key 'normal dired-mode-map (kbd "*u") 'dired-unmark)
+  (evil-define-key 'insert dired-mode-map (kbd "*u") 'dired-unmark)
+  (evil-define-key 'normal dired-mode-map (kbd "*?") 'dired-unmark-all-files)
+  (evil-define-key 'insert dired-mode-map (kbd "*?") 'dired-unmark-all-files)
+  (evil-define-key 'normal dired-mode-map (kbd "*!") 'dired-unmark-all-marks)
+  (evil-define-key 'insert dired-mode-map (kbd "*!") 'dired-unmark-all-marks)
+  (evil-define-key 'normal dired-mode-map (kbd "U") 'dired-unmark-all-marks)
+  (evil-define-key 'insert dired-mode-map (kbd "U") 'dired-unmark-all-marks)
+  (evil-define-key 'normal dired-mode-map (kbd "*\177") 'dired-unmark-backward)
+  (evil-define-key 'insert dired-mode-map (kbd "*\177") 'dired-unmark-backward)
+  (evil-define-key 'normal dired-mode-map (kbd "*\C-n") 'dired-next-marked-file)
+  (evil-define-key 'insert dired-mode-map (kbd "*\C-n") 'dired-next-marked-file)
+  (evil-define-key 'normal dired-mode-map (kbd "*\C-p") 'dired-prev-marked-file)
+  (evil-define-key 'insert dired-mode-map (kbd "*\C-p") 'dired-prev-marked-file)
+  (evil-define-key 'normal dired-mode-map (kbd "*t") 'dired-toggle-marks)
+  (evil-define-key 'insert dired-mode-map (kbd "*t") 'dired-toggle-marks)
+  ;; Lower keys for commands not operating on all the marked files
+  (evil-define-key 'insert dired-mode-map (kbd "a") 'dired-find-alternate-file)
+  (evil-define-key 'normal dired-mode-map (kbd "d") 'dired-flag-file-deletion)
+  (evil-define-key 'insert dired-mode-map (kbd "d") 'dired-flag-file-deletion)
+  (evil-define-key 'insert dired-mode-map (kbd "e") 'dired-find-file)
+  (evil-define-key 'insert dired-mode-map (kbd "f") 'dired-find-file)
+  (evil-define-key 'insert dired-mode-map (kbd "\C-m") 'dired-find-file)
+  ;; (put 'dired-find-file :advertised-binding (kbd "\C-m"))
+  (evil-define-key 'insert dired-mode-map (kbd "g") 'revert-buffer)
+  (evil-define-key 'insert dired-mode-map (kbd "i") 'dired-maybe-insert-subdir)
+  (evil-define-key 'normal dired-mode-map (kbd "j") 'dired-goto-file)
+  (evil-define-key 'insert dired-mode-map (kbd "j") 'dired-goto-file)
+  ;; Maybe bind this??
+  (evil-define-key 'insert dired-mode-map (kbd "k") 'dired-do-kill-lines)
+  (evil-define-key 'insert dired-mode-map (kbd "l") 'dired-do-redisplay)
+  (evil-define-key 'normal dired-mode-map (kbd "m") 'dired-mark)
+  (evil-define-key 'insert dired-mode-map (kbd "m") 'dired-mark)
+  (evil-define-key 'insert dired-mode-map (kbd "n") 'dired-next-line)
+  (evil-define-key 'normal dired-mode-map (kbd "o") 'dired-find-file-other-window)
+  (evil-define-key 'insert dired-mode-map (kbd "o") 'dired-find-file-other-window)
+  (evil-define-key 'insert dired-mode-map (kbd "\C-o") 'dired-display-file)
+  (evil-define-key 'insert dired-mode-map (kbd "p") 'dired-previous-line)
+  (evil-define-key 'normal dired-mode-map (kbd "s") 'my/dired-sort-menu)
+  (evil-define-key 'insert dired-mode-map (kbd "s") 'my/dired-sort-menu)
+  (evil-define-key 'insert dired-mode-map (kbd "t") 'dired-toggle-marks)
+  (evil-define-key 'insert dired-mode-map (kbd "u") 'dired-unmark)
+  (evil-define-key 'insert dired-mode-map (kbd "v") 'dired-view-file)
+  (evil-define-key 'normal dired-mode-map (kbd "y") 'dired-copy-filename-as-kill)
+  (evil-define-key 'insert dired-mode-map (kbd "y") 'dired-copy-filename-as-kill)
+  (evil-define-key 'insert dired-mode-map (kbd "w") 'browse-url-of-dired-file)
+  (evil-define-key 'normal dired-mode-map (kbd "x") 'dired-do-flagged-delete)
+  (evil-define-key 'insert dired-mode-map (kbd "x") 'dired-do-flagged-delete)
+  (evil-define-key 'insert dired-mode-map (kbd "?") 'dired-show-file-type)
+  (evil-define-key 'insert dired-mode-map (kbd "+") 'dired-create-directory)
+  ;; moving
+  (evil-define-key 'normal dired-mode-map (kbd "<") 'dired-prev-dirline)
+  (evil-define-key 'insert dired-mode-map (kbd "<") 'dired-prev-dirline)
+  (evil-define-key 'normal dired-mode-map (kbd ">") 'dired-next-dirline)
+  (evil-define-key 'insert dired-mode-map (kbd ">") 'dired-next-dirline)
+  (evil-define-key 'normal dired-mode-map (kbd "^") 'dired-up-directory)
+  (evil-define-key 'insert dired-mode-map (kbd "^") 'dired-up-directory)
+  ;; folding
+  (evil-define-key 'normal dired-mode-map (kbd "g") nil)
+  (evil-define-key 'normal dired-mode-map (kbd "g a") 'dired-hide-all)
+  (evil-define-key 'normal dired-mode-map (kbd "g A") 'dired-hide-all)
+  (evil-define-key 'normal dired-mode-map (kbd "g f") 'dired-hide-subdir)
+  (evil-define-key 'normal dired-mode-map (kbd "g F") 'dired-hide-subdir)
+  (evil-define-key 'normal dired-mode-map (kbd "g o") 'dired-hide-subdir)
+  (evil-define-key 'normal dired-mode-map (kbd "g O") 'dired-hide-subdir)
+  (define-key dired-mode-map  [remap evil-close-fold] 'dired-hide-subdir)
+  (define-key dired-mode-map  [remap my/outline-hide-all-body] 'dired-hide-all)
+  (define-key dired-mode-map  [remap outline-show-all] 'dired-hide-all)
+  ;; misc
+  ;; (evil-define-key 'insert dired-mode-map [remap read-only-mode] 'dired-toggle-read-only)
+  ;; ;; `toggle-read-only' is an obsolete alias for `read-only-mode'
+  ;; (evil-define-key 'insert dired-mode-map [remap toggle-read-only] 'dired-toggle-read-only)
+  ;; (evil-define-key 'insert dired-mode-map  (kbd "\177") 'dired-unmark-backward)
+  (define-key dired-mode-map  [remap undo] 'dired-undo)
+  (define-key dired-mode-map  [remap undo-tree-undo] 'dired-undo)
+  ;; thumbnail manipulation (image-dired)
+  (evil-define-key 'insert dired-mode-map (kbd "\C-td") 'image-dired-display-thumbs)
+  (evil-define-key 'insert dired-mode-map (kbd "\C-tt") 'image-dired-tag-files)
+  (evil-define-key 'insert dired-mode-map (kbd "\C-tr") 'image-dired-delete-tag)
+  (evil-define-key 'insert dired-mode-map (kbd "\C-tj") 'image-dired-jump-thumbnail-buffer)
+  (evil-define-key 'insert dired-mode-map (kbd "\C-ti") 'image-dired-dired-display-image)
+  (evil-define-key 'insert dired-mode-map (kbd "\C-tx") 'image-dired-dired-display-external)
+  (evil-define-key 'insert dired-mode-map (kbd "\C-ta") 'image-dired-display-thumbs-append)
+  (evil-define-key 'insert dired-mode-map (kbd "\C-t.") 'image-dired-display-thumb)
+  (evil-define-key 'insert dired-mode-map (kbd "\C-tc") 'image-dired-dired-comment-files)
+  (evil-define-key 'insert dired-mode-map (kbd "\C-tf") 'image-dired-mark-tagged-files)
+  (evil-define-key 'insert dired-mode-map (kbd "\C-t\C-t") 'image-dired-dired-toggle-marked-thumbs)
+  (evil-define-key 'insert dired-mode-map (kbd "\C-te") 'image-dired-dired-edit-comment-and-tags)
+  ;; encryption and decryption (epa-dired)
+  ;; (evil-define-key 'insert (kbd ":d") 'epa-dired-do-decrypt)
+  ;; (evil-define-key 'insert  (kbd ":v") 'epa-dired-do-verify)
+  ;; (evil-define-key 'insert  (kbd ":s") 'epa-dired-do-sign)
+  ;; (evil-define-key 'insert  (kbd ":e") 'epa-dired-do-encrypt)
 #+END_SRC
 
 * Org
@@ -3759,7 +3909,7 @@ Disable rainbow delimiters
 
 ** Alert when task is done
 #+BEGIN_SRC emacs-lisp
-  (add-hook 'eshell-after-prompt-hook '(lambda () (interactive) (if (not (= 1 (line-number-at-pos (point))))
+  (add-hook 'eshell-after-prompt-hook (lambda () (interactive) (if (not (= 1 (line-number-at-pos (point))))
                                                                     (progn
                                                                       (alert "Eshell command done!" :severity 'high)
                                                                       (message "Eshell command done!")))))
@@ -6051,8 +6201,9 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
 **** Config error
 #+BEGIN_SRC emacs-lisp
-  (if (my/has-config-error)
-      (my/mode-line-error-list-add "CONFIG ERROR!"))
+  (add-hook 'after-init-hook (lambda () (interactive)
+                                (if (my/has-config-error)
+                                    (my/mode-line-error-list-add "CONFIG ERROR!"))))
 #+END_SRC
 
 **** Load average
@@ -6162,6 +6313,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
   (defun my/frame-width-update()
     (setq my/frame-width (frame-width)))
 
+  ;; Only applicable to X since terminal never stretches, etc
   (add-hook 'exwm-workspace-switch-hook 'my/frame-width-update)
   (add-hook 'exwm-init-hook 'my/frame-width-update t)
 
