@@ -759,6 +759,7 @@ Allows for using indention as text objects
   (define-key evil-emacs-state-map (kbd "<escape>") 'keyboard-quit)
 
   ;; Couldn't bother to create custom evil-join
+  ;; P is normally bound to manual, make this key useful
   (define-key evil-normal-state-map (kbd "P") 'delete-indentation)
 #+END_SRC
 
@@ -1865,7 +1866,10 @@ Redefine function to attempt to open image if link at point wasn't found
     (interactive)
     (let* (
            (search (completing-read "url " my/browser-bookmarks))
-           (adress (concat "https://www.google.com/search?q=" search)))
+           (adress  
+            (if (cl-member search my/browser-bookmarks :test #'string=)
+                search
+              (concat "https://www.google.com/search?q=" search))))
       (start-process (concat my/gui-browser my/temp-firefox-title-name) nil my/gui-browser "--new-window" adress)))
 
   (define-key my/leader-map (kbd "C-b") 'my/launch-firefox)
@@ -2883,6 +2887,9 @@ Version 2015-07-30"
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
+  ;; Reset dired mode map
+  (setq dired-mode-map (make-sparse-keymap))
+
   (defun my/toggle-delete-to-trash ()
     (interactive)
     (if (eq delete-by-moving-to-trash nil)
@@ -2908,13 +2915,8 @@ Version 2015-07-30"
   (define-key dired-mode-map [?\d] 'dired-up-directory)
 #+END_SRC
 
-*** Move dired keys to insert mode
+*** Dired keys
 #+BEGIN_SRC emacs-lisp
-  (require 'dired)
-  ;;(define-key map [follow-link] 'mouse-face)
-
-  (setq dired-mode-map (make-sparse-keymap))
-
   ;; Upper case keys (except !) for operating on the marked files
   (evil-define-key 'normal dired-mode-map (kbd "RET") 'dired-find-file)
   (evil-define-key 'insert dired-mode-map (kbd "RET") 'dired-find-file)
@@ -3033,7 +3035,9 @@ Version 2015-07-30"
   (evil-define-key 'insert dired-mode-map (kbd "w") 'browse-url-of-dired-file)
   (evil-define-key 'normal dired-mode-map (kbd "x") 'dired-do-flagged-delete)
   (evil-define-key 'insert dired-mode-map (kbd "x") 'dired-do-flagged-delete)
+  (evil-define-key 'normal dired-mode-map (kbd "?") 'dired-show-file-type)
   (evil-define-key 'insert dired-mode-map (kbd "?") 'dired-show-file-type)
+  (evil-define-key 'normal dired-mode-map (kbd "+") 'dired-create-directory)
   (evil-define-key 'insert dired-mode-map (kbd "+") 'dired-create-directory)
   ;; moving
   (evil-define-key 'normal dired-mode-map (kbd "<") 'dired-prev-dirline)
@@ -4231,7 +4235,7 @@ We use class names for all windows expect for Java applications and GIMP (becaus
   (exwm-input-set-key (kbd "C-e") 'keyboard-quit)
   (exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
   (exwm-input-set-key (kbd "C-=") 'my/window-hydra/body)
-  ;;(exwm-input-set-key (kbd "M-x") 'counsel-M-x)
+  (exwm-input-set-key (kbd "M-x") 'counsel-M-x)
 
   (exwm-input-set-key (kbd "M-h") 'previous-buffer)
   (exwm-input-set-key (kbd "M-l") 'next-buffer)
@@ -5241,7 +5245,8 @@ https://www.emacswiki.org/emacs/FacesPerBuffer
 #+BEGIN_SRC emacs-lisp
   (defvar my/artist-mode-highlight-thing-restore nil)
   (defvar my/artist-mode-aggressive-indent-restore nil)
-  ;;(defvar my/artist-mode-highlight-indent-restore nil)
+  (defvar my/artist-mode-display-line-numbers-restore nil)
+
   (defvar my/artist-mode-restore-buffer nil)
 
   (defun my/artist-mode ()
@@ -5260,11 +5265,11 @@ https://www.emacswiki.org/emacs/FacesPerBuffer
                 (setq my/artist-mode-aggressive-indent-restore t))
             (setq my/artist-mode-aggressive-indent-restore nil))
 
-          ;; (if highlight-indent-guides-mode
-              ;; (progn
-                ;; (highlight-indent-guides-mode -1)
-                ;; (setq my/artist-mode-highlight-indent-restore t))
-            ;; (setq my/artist-mode-highlight-indent-restore nil))
+          (if display-line-numbers
+              (progn
+                (display-line-numbers-mode -1)
+                (setq my/artist-mode-display-line-numbers-restore t))
+            (setq my/artist-mode-display-line-numbers-restore nil))
 
           (evil-emacs-state)
 
@@ -5285,16 +5290,16 @@ https://www.emacswiki.org/emacs/FacesPerBuffer
                   (setq my/artist-mode-aggressive-indent-restore nil)
                   (aggressive-indent-mode 1)))
 
-            ;;(if my/artist-mode-highlight-indent-restore
-                ;;(progn
-                  ;;(setq my/artist-mode-highlight-indent-restore nil)
-                  ;;(highlight-indent-guides-mode 1)))
+            (if my/artist-mode-display-line-numbers-restore
+                (progn
+                  (setq my/artist-mode-display-line-numbers-restore nil)
+                  (display-line-numbers-mode 1)))
 
             (evil-exit-emacs-state)
+
             (if (and (not my/is-font-mono) window-system)
                 (set-face-attribute 'default nil
-                                    :family my/font)))
-        )
+                                    :family my/font))))
       (setq my/artist-mode-restore-buffer nil)))
 
   (add-hook 'artist-mode-hook 'my/artist-mode)
