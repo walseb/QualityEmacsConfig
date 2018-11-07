@@ -6034,13 +6034,15 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
   ;;;###autoload
   (defun pretty-outlines--bullets-rgx-at-level (level)
     "Calculate regex or outline-bullets at LEVEL."
-    (concat "\\(^\s*"
-            (->> level
-                 1+
-                 outshine-calc-outline-string-at-level
-                 s-trim-right
-                 (s-replace "*" "\\*"))
-            "\\) "))
+    ;; In buffers like org, `outshine-calc-outline-string-at-level 1' always returns "  ", check for this
+    (if (not (string= (s-trim (outshine-calc-outline-string-at-level 1)) ""))
+        (concat "\\(^\s*"
+                (->> level
+                     1+
+                     outshine-calc-outline-string-at-level
+                     s-trim-right
+                     (s-replace "*" "\\*"))
+                "\\) ")))
 
   ;;;###autoload
   (defun pretty-outlines--propertize-bullet (level bullet)
@@ -6072,12 +6074,15 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
   ;;;###autoload
   (defun pretty-outlines-add-bullets ()
     "Use with `add-hook' to enable pretty-outlines-bullets-bullet-list for mode."
-    (->>
-     (pretty-outlines--bullets-cycle)
-     (-map-indexed (-lambda (level bullet)
-                     (list (pretty-outlines--bullets-rgx-at-level level)
-                           (pretty-outlines--format-bullet level bullet))))
-     pretty-outlines--add-font-locks))
+    (interactive)
+    ;; Not sure why, but org mode headers are small otherwise
+    (if (not (string= major-mode "org-mode"))
+        (->>
+         (pretty-outlines--bullets-cycle)
+         (-map-indexed (-lambda (level bullet)
+                         (list (pretty-outlines--bullets-rgx-at-level level)
+                               (pretty-outlines--format-bullet level bullet))))
+         pretty-outlines--add-font-locks)))
 
   (add-hook 'outline-mode-hook 'pretty-outlines-add-bullets t)
   (add-hook 'outline-minor-mode-hook 'pretty-outlines-add-bullets t)
