@@ -571,11 +571,6 @@ Stop custom from editing init.el
 
 * Evil
 #+BEGIN_SRC emacs-lisp
-  (use-package evil)
-
-  ;;(fset 'evil-visual-update-x-selection 'ignore)
-  (evil-mode)
-
   (setq evil-search-module 'evil-search)
   (setq evil-vsplit-window-right t)
   (setq evil-split-window-below t)
@@ -584,6 +579,19 @@ Stop custom from editing init.el
   ;; Makes swiper A LOT faster
   (setq evil-ex-interactive-search-highlight t)
   (setq evil-ex-search-persistent-highlight nil)
+  
+  (use-package evil)
+
+  ;;(fset 'evil-visual-update-x-selection 'ignore)
+  (evil-mode)
+#+END_SRC
+
+** Bind evil key
+#+BEGIN_SRC emacs-lisp
+  (defun my/evil-normal-define-key (key command)
+    (interactive)
+    (define-key evil-normal-state-map (kbd key) command)
+    (define-key evil-motion-state-map (kbd key) command))
 #+END_SRC
 
 ** Settings
@@ -610,11 +618,6 @@ Evil spams message area
   (setq evil-operator-state-cursor '("white" hollow))
 #+END_SRC
 
-*** Exit emacs state with esc
-#+BEGIN_SRC emacs-lisp
-  (define-key evil-emacs-state-map [escape] 'evil-normal-state)
-#+END_SRC
-
 *** Disable emacs mode 
 #+BEGIN_SRC emacs-lisp
   (setq evil-emacs-state-modes nil)
@@ -630,7 +633,7 @@ Example
 
   (cl-loop for (mode . state) in '(
                                    ;; So i C-leader works for exwm windows
-                                   (exwm-mode . insert)
+                                   (exwm-mode . emacs)
                                    ;;(eshell-mode . insert)
                                    (term-mode . insert)
                                    ;;(org-agenda-mode . insert)
@@ -656,8 +659,8 @@ Example
 
 *** Make dd and cc act on lines
 #+BEGIN_SRC emacs-lisp
-  (define-key evil-normal-state-map "D" 'evil-delete-whole-line)
-  (define-key evil-normal-state-map "C" 'evil-change-whole-line)
+  (my/evil-normal-define-key "D" 'evil-delete-whole-line)
+  (my/evil-normal-define-key "C" 'evil-change-whole-line)
 #+END_SRC
 
 ** Text objects
@@ -681,7 +684,7 @@ Allows for using indention as text objects
   (define-key evil-inner-text-objects-map "b" 'evil-textobj-anyblock-inner-block)
   (define-key evil-outer-text-objects-map "b" 'evil-textobj-anyblock-a-block)
 
-  (define-key evil-motion-state-map "!" 'evil-textobj-anyblock-forward-open-block-start)
+  ;;(define-key evil-motion-state-map "!" 'evil-textobj-anyblock-forward-open-block-start)
 
   ;; (add-hook 'lisp-mode-hook
   ;; (lambda ()
@@ -760,20 +763,20 @@ Allows for using indention as text objects
 
   ;; Couldn't bother to create custom evil-join
   ;; P is normally bound to manual, make this key useful
-  (define-key evil-normal-state-map (kbd "P") 'delete-indentation)
+  (my/evil-normal-define-key "P" 'delete-indentation)
 #+END_SRC
 
 *** Rebind evil case change
 #+BEGIN_SRC emacs-lisp
-  (define-key evil-normal-state-map (kbd "g b") 'evil-downcase)
-  (define-key evil-normal-state-map (kbd "g B") 'evil-upcase)
+  (my/evil-normal-define-key "g b" 'evil-downcase)
+  (my/evil-normal-define-key "g B" 'evil-upcase)
 #+END_SRC
 
 *** Add perspective movement to g
 #+BEGIN_SRC emacs-lisp
-(define-key evil-normal-state-map "gw" 'evil-scroll-line-to-top)
-(define-key evil-normal-state-map "ge" 'evil-scroll-line-to-center)
-(define-key evil-normal-state-map "gu" 'evil-scroll-line-to-bottom)
+  (my/evil-normal-define-key "gw" 'evil-scroll-line-to-top)
+  (my/evil-normal-define-key "ge" 'evil-scroll-line-to-center)
+  (my/evil-normal-define-key "gu" 'evil-scroll-line-to-bottom)
 #+END_SRC
 
 *** Don't complete from all buffers
@@ -919,10 +922,13 @@ https://www.emacswiki.org/emacs/ForceBackups
 #+BEGIN_SRC emacs-lisp
   (add-hook 'undo-tree-visualizer-mode-hook '(lambda () (interactive) (run-with-timer 0.1 nil 'evil-force-normal-state)))
 
+  (setq undo-tree-visualizer-mode-map (make-sparse-keymap))
+
   (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "p") 'undo-tree-visualize-undo)
   (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "n") 'undo-tree-visualize-redo)
   (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "l") 'undo-tree-visualize-switch-branch-right)
   (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "h") 'undo-tree-visualize-switch-branch-left)
+  (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "d") 'undo-tree-visualizer-toggle-diff)
 #+END_SRC
 
 * Leader
@@ -946,8 +952,7 @@ When changing leader, change =my/leader-map-key= and manually change all general
   (evil-define-key 'visual my/keys-mode-map (kbd my/leader-map-key) 'my/leader-map)
 
   ;; Enable leader even if my/keys-mode isn't active
-  (define-key evil-motion-state-map (kbd my/leader-map-key) 'my/leader-map)
-  (define-key evil-normal-state-map (kbd my/leader-map-key) 'my/leader-map)
+  (my/evil-normal-define-key my/leader-map-key my/leader-map)
 #+END_SRC
 
 * Package management
@@ -1299,215 +1304,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     :defer t)
 #+END_SRC
 
-** Disable all colors
-#+BEGIN_SRC emacs-lisp
-  (defun my/paper-mode()
-    (interactive)
-    (cl-loop for face in (face-list) do
-             ;; Don't change magit faces
-             (if (not (string-match "magit" (symbol-name face)))
-                 (set-face-attribute face nil :foreground nil :background nil)))
-    ;;(setq my/foreground-color "#8b4513")
-    ;;(setq my/foreground-color "brown")
-    ;;(setq my/background-color "black")
-
-    ;; (setq  my/background-color "#2a1f1f")
-    ;; (setq my/foreground-color "#d15120")
-
-    ;; Night theme
-    (setq my/foreground-color "gray")
-    (setq my/background-color "#14191F")
-
-    ;; Day theme
-    (setq my/mark-color "yellow4")
-    (setq my/foreground-color "black")
-    ;;(setq my/background-color "white") 
-    (setq my/background-color "#4682b4") 
-    ;;(setq my/background-color "#87cefa") 
-
-    ;; Dark theme 2 - spacemacs  - https://github.com/nashamri/spacemacs-theme/blob/master/spacemacs-common.el
-    ;;(setq my/foreground-color "#b2b2b2")
-    ;;(setq my/background-color "#292b2e") 
-
-    (setq my/background-color "#f0f0f0")
-    (setq my/foreground-color "#232323") 
-
-    (setq my/background-color "#232323")
-    (setq my/foreground-color "#E6E1DC") 
-
-    (if window-system
-        (progn
-          (setq my/foreground-color-1 (color-darken-name my/foreground-color 5))
-          (setq my/foreground-color-2 (color-darken-name my/foreground-color 10))
-          (setq my/foreground-color-3 (color-darken-name my/foreground-color 15))
-          (setq my/foreground-color-4 (color-darken-name my/foreground-color 20))
-          (setq my/foreground-color-5 (color-darken-name my/foreground-color 25))
-          (setq my/foreground-color-6 (color-darken-name my/foreground-color 30))
-
-          (setq my/background-color-1 (color-lighten-name my/background-color 5))
-          (setq my/background-color-2 (color-lighten-name my/background-color 10))
-          (setq my/background-color-3 (color-lighten-name my/background-color 15))
-          (setq my/background-color-4 (color-lighten-name my/background-color 20)))
-
-      (setq my/foreground-color-1 "brown")
-      (setq my/foreground-color-2 "brown")
-      (setq my/foreground-color-3 "orange")
-      (setq my/foreground-color-4 "orange")
-      (setq my/foreground-color-5 "yellow")
-      (setq my/foreground-color-6 "yellow")
-
-      (setq my/background-color-1 "black")
-      (setq my/background-color-2 "black")
-      (setq my/background-color-3 "gray")
-      (setq my/background-color-4 "gray"))
-
-    ;;; Emacs
-    (set-face-attribute 'default nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'link nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'highlight nil :foreground my/foreground-color :background my/mark-color)
-    (set-face-attribute 'region nil :foreground my/foreground-color :background my/mark-color)
-    (set-face-attribute 'error nil :foreground "#c6350b" :background)
-    (set-face-attribute 'warning nil :foreground "DarkOrange" :background)
-
-    ;; Font lock
-    (set-face-attribute  'font-lock-doc-face nil :foreground my/foreground-color :background my/background-color-4)
-    (defvar my/comment-face-height (floor (* my/default-face-height 1.15)))
-    (set-face-attribute  'font-lock-comment-face nil :foreground my/foreground-color :background my/background-color-1 :height my/comment-face-height)
-    (set-face-attribute 'font-lock-string-face nil :foreground my/foreground-color :background my/background-color-1)
-    ;; (set-face-attribute  'font-lock-keyword-face nil :foreground my/foreground-color :background my/background-color-1)
-    ;; (set-face-attribute  'font-lock-function-name-face nil :foreground my/foreground-color :background my/background-color-2)
-
-    ;; Required by other face
-    (set-face-attribute 'outline-4 nil :foreground my/foreground-color :background my/background-color)
-
-    ;; Line numbers
-    (set-face-attribute 'line-number-current-line nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'line-number nil :foreground my/foreground-color :background my/background-color)
-
-    ;; Evil
-    (setq evil-emacs-state-cursor '("purple" box))
-    (setq evil-normal-state-cursor '("red" box))
-    (setq evil-visual-state-cursor '("yellow" box))
-    (setq evil-insert-state-cursor '("orange" box))
-    (setq evil-replace-state-cursor '("green" box))
-    (setq evil-operator-state-cursor '("white" hollow))
-
-    ;; On-screen
-    ;;(set-face-attribute 'on-screen-shadow nil :foreground nil :background (color-lighten-name my/background-color 2))
-    ;;(set-face-attribute 'on-screen-fringe nil :foreground my/foreground-color :background my/background-color)
-
-    ;; Hl current line
-    ;; Underlines part of current line
-    ;;(set-face-attribute 'hl-line nil :foreground my/foreground-color :background nil :underline t)
-    (set-face-attribute 'hl-line nil :foreground my/foreground-color :background my/background-color-2 :underline nil)
-
-    ;;; Dired
-    (set-face-attribute 'dired-directory nil :foreground my/background-color :background my/foreground-color)
-
-    ;;; Isearch
-    (set-face-attribute 'isearch nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'lazy-highlight nil :foreground my/background-color :background my/foreground-color)
-
-    ;;; Highlight thing
-    (set-face-attribute 'highlight-thing nil :foreground my/foreground-color :background my/mark-color)
-
-    ;;; Company
-    (set-face-attribute 'company-scrollbar-bg nil :background my/background-color)
-    (set-face-attribute 'company-scrollbar-fg nil :background my/foreground-color)
-
-    ;; Selected entry
-    (set-face-attribute 'company-tooltip-selection nil :background my/foreground-color :foreground my/background-color)
-    ;; All unmatching text
-    (set-face-attribute 'company-tooltip nil :foreground my/foreground-color :background my/background-color)
-    ;; All matching text
-    (set-face-attribute 'company-tooltip-common nil :foreground my/background-color :background my/foreground-color)
-
-    ;;; Ivy
-    (set-face-attribute 'ivy-current-match nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'ivy-cursor nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'ivy-minibuffer-match-highlight nil :foreground my/background-color :background my/foreground-color)
-
-    (set-face-attribute 'ivy-minibuffer-match-face-1 nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'ivy-minibuffer-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
-    (set-face-attribute 'ivy-minibuffer-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
-    (set-face-attribute 'ivy-minibuffer-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
-
-    ;;; Swiper
-    (set-face-attribute 'swiper-match-face-1 nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'swiper-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
-    (set-face-attribute 'swiper-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
-    (set-face-attribute 'swiper-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
-
-    ;;; Avy
-    (set-face-attribute 'avy-lead-face nil :foreground my/background-color :background my/foreground-color-6)
-    (set-face-attribute 'avy-lead-face-0 nil :foreground my/background-color :background my/foreground-color-2)
-    (set-face-attribute 'avy-lead-face-1 nil :foreground my/background-color :background my/foreground-color-4)
-    (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background my/foreground-color-6)
-
-    ;; Eshell
-    (require 'em-prompt)
-    (set-face-attribute 'eshell-prompt nil :foreground  "purple" :background my/background-color)
-
-    ;; Eww
-    (set-face-attribute 'my/eww-code-face nil :foreground my/foreground-color :background my/background-color-2 :family my/mono-font)
-
-    ;;(defvar my/evil-goggles-highlight-color)
-    ;;; Evil-goggles
-    ;;; 2 color approach
-    ;; (set-face-attribute 'evil-goggles-change-face nil :foreground my/background-color :background my/foreground-color)
-    ;; (set-face-attribute 'evil-goggles-commentary-face nil :foreground my/background-color :background my/foreground-color)
-    ;; (set-face-attribute 'evil-goggles-delete-face nil :foreground my/background-color :background my/foreground-color)
-    ;; (set-face-attribute 'evil-goggles-fill-and-move-face nil :foreground my/background-color :background my/foreground-color)
-    ;; (set-face-attribute 'evil-goggles-indent-face nil :foreground my/background-color :background my/foreground-color)
-    ;; (set-face-attribute 'evil-goggles-join-face nil :foreground my/background-color :background my/foreground-color)
-    ;; (set-face-attribute 'evil-goggles-paste-face nil :foreground my/background-color :background my/foreground-color)
-    ;; (set-face-attribute 'evil-goggles-record-macro-face nil :foreground my/background-color :background my/foreground-color)
-    ;; (set-face-attribute 'evil-goggles-replace-with-register-face nil :foreground my/background-color :background my/foreground-color)
-    ;; (set-face-attribute 'evil-goggles-set-marker-face nil :foreground my/background-color :background my/foreground-color)
-    ;; (set-face-attribute 'evil-goggles-shift-face nil :foreground my/background-color :background my/foreground-color)
-    ;; (set-face-attribute 'evil-goggles-surround-face nil :foreground my/background-color :background my/foreground-color)
-    ;; (set-face-attribute 'evil-goggles-yank-face nil :foreground my/background-color :background my/foreground-color)
-
-    (set-face-attribute 'diff-added nil  :background "#335533")
-    (set-face-attribute 'diff-changed nil :background "#aaaa22")
-    (set-face-attribute 'diff-removed nil :background "#553333")
-
-    ;; (set-face-attribute 'diff-added nil  :background "green")
-    ;; (set-face-attribute 'diff-changed nil :background "yellow")
-    ;; (set-face-attribute 'diff-removed nil :background "red")
-
-    ;; Diff-hl 
-    (set-face-attribute 'diff-hl-change nil :background (face-attribute 'diff-changed :background))
-
-    ;; Paren highlight
-    (set-face-attribute 'show-paren-match nil :foreground my/background-color :background my/foreground-color)
-    (set-face-attribute 'show-paren-mismatch nil :background "red")
-
-    ;; Mode line separator
-    ;; Set mode line height
-    (set-face-attribute 'mode-line nil
-                        :foreground my/foreground-color
-                        :background my/foreground-color
-                        :height  0.1)
-
-    (set-face-attribute 'mode-line-inactive nil
-                        :foreground my/background-color
-                        :background my/background-color
-                        :height  0.1)
-
-    ;; Highlight faces
-    ;;(highlight-indent-guides-auto-set-faces)
-    )
-
-  (if window-system
-      (add-hook 'exwm-init-hook 'my/paper-mode)
-    (add-hook 'after-init-hook 'my/paper-mode))
-
-  ;; (counsel-faces)
-
-  (define-key my/leader-map (kbd "M-c") 'my/paper-mode)
-#+END_SRC
-
 ** Enable disabled commands
 #+BEGIN_SRC emacs-lisp
   (put 'narrow-to-region 'disabled nil)
@@ -1571,9 +1367,28 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 #+BEGIN_SRC emacs-lisp
   (define-key my/leader-map (kbd "C-h") help-map)
 #+END_SRC
+
 *** Disable help mode binds
 #+BEGIN_SRC emacs-lisp
   (setq help-mode-map (make-sparse-keymap))
+  (setq-default help-mode-map (make-sparse-keymap))
+
+  ;; (evil-define-key 'normal help-mode-map (kbd "H") 'help-go-back)
+  ;; (evil-define-key 'normal help-mode-map (kbd "L") 'help-go-forward)
+  ;; (evil-define-key 'normal help-mode-map (kbd "<escape>") 'keyboard-quit)
+
+  (setq help-mode-map
+        (let ((map (make-sparse-keymap)))
+          (define-key map "H" 'help-go-back)
+          (define-key map "L" 'help-go-forward)
+          (define-key map (kbd "<escape>") 'keyboard-quit)
+          map))
+#+END_SRC
+
+** Compilation mode
+#+BEGIN_SRC emacs-lisp
+  (setq compilation-mode-map (make-sparse-keymap))
+  (setq-default compilation-mode-map (make-sparse-keymap))
 #+END_SRC
 
 ** Prefer loading newest lisp source file
@@ -1952,8 +1767,6 @@ Vim bindings to change fold
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-key evil-normal-state-map (kbd "C-/") 'ivy-resume)
-
   ;; Enable avy movements in ivy buffer
   (define-key ivy-minibuffer-map (kbd "M-p") 'ivy-avy)
   (define-key ivy-minibuffer-map (kbd "M-n") 'ivy-avy)
@@ -2055,9 +1868,8 @@ Vim bindings to change fold
     (interactive)
     (my/use-swiper-or-grep (thing-at-point 'evil-WORD)))
 
-  (define-key evil-normal-state-map (kbd "#") 'my/swiper-thing-at-point)
-  (define-key evil-normal-state-map (kbd "*") 'my/swiper-thing-at-point)
-  ;;(define-key evil-normal-state-map (kbd "/") 'my/swiper-thing-at-point)
+    (my/evil-normal-define-key "#" 'my/swiper-thing-at-point)
+    (my/evil-normal-define-key "*" 'my/swiper-thing-at-point)
 #+END_SRC
 
 ** Ivy rich
@@ -2235,14 +2047,8 @@ Make company mode inherit colors from theme, change later maybe
   ;; using C-h is better in every way 
   (define-key company-active-map (kbd "<f1>") 'nil)
 
-
-  ;; Show full doc buffer
-  (define-key evil-normal-state-map  (kbd "C-,") 'my/company-show-doc-buffer)
-  (define-key evil-insert-state-map  (kbd "C-,") 'my/company-show-doc-buffer)
-
   ;; Force autocomplete
-  (define-key evil-normal-state-map  (kbd "C-.") 'company-complete)
-  (define-key evil-insert-state-map  (kbd "C-.") 'company-complete)
+  (my/evil-normal-define-key "C-." 'company-complete)
 #+END_SRC
 
 *** Disable persistent binds
@@ -2340,7 +2146,7 @@ Flycheck with extra correction for elisp packages
     (interactive)
     (goto-char (/  (+ (line-end-position) (line-beginning-position)) 2)))
 
-  (define-key evil-normal-state-map (kbd "^") 'my/go-to-middle-of-line)
+(my/evil-normal-define-key "^" 'my/go-to-middle-of-line)
 #+END_SRC
 
 ** Marks
@@ -2382,8 +2188,8 @@ Flycheck with extra correction for elisp packages
             (error "Global mark position is outside accessible part of buffer")))
       (goto-char position)))
 
-  (define-key evil-normal-state-map (kbd "C-b") '(lambda () (interactive) (my/mark-move 1)))
-  (define-key evil-normal-state-map (kbd "C-f") '(lambda () (interactive) (my/mark-move -1)))
+(my/evil-normal-define-key "C-b" '(lambda () (interactive) (my/mark-move 1)))
+(my/evil-normal-define-key "C-f" '(lambda () (interactive) (my/mark-move -1)))
 
   ;; (define-key my/keys-mode-map (kbd "M-h") 'previous-buffer)
   ;; (define-key my/keys-mode-map (kbd "M-l") 'next-buffer)
@@ -2516,9 +2322,13 @@ Flycheck with extra correction for elisp packages
 ** Scroll
 #+BEGIN_SRC emacs-lisp
   ;;(require 'view)
-
   (evil-define-key 'normal my/keys-mode-map (kbd "C-u") 'evil-scroll-up)
   (evil-define-key 'normal my/keys-mode-map (kbd "C-w") 'evil-scroll-down)
+
+(my/evil-normal-define-key "C-w" 'evil-scroll-down)
+
+(my/evil-normal-define-key "C-u" 'evil-scroll-up)
+
   ;;(evil-define-key 'normal my/keys-mode-map (kbd "C-u") 'View-scroll-half-page-backward)
   ;;(evil-define-key 'normal my/keys-mode-map (kbd "C-w") 'View-scroll-half-page-forward)
 
@@ -2585,19 +2395,19 @@ g-; and g-,
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-key evil-normal-state-map (kbd "M-f") 'avy-goto-char-in-line)
+(my/evil-normal-define-key "M-f" 'avy-goto-char-in-line)
   (define-key my/leader-map (kbd "f") 'avy-goto-char-in-line)
 
-  (define-key evil-normal-state-map (kbd "M-w") 'my/avy-goto-word-0-in-line)
+(my/evil-normal-define-key "M-w" 'my/avy-goto-word-0-in-line)
   (define-key my/leader-map (kbd "w") 'my/avy-goto-word-0-in-line)
 
-  (define-key evil-normal-state-map (kbd "M-g") 'avy-goto-char-2)
+(my/evil-normal-define-key "M-g" 'avy-goto-char-2)
   (define-key my/leader-map (kbd "g") 'avy-goto-char-2)
 
-  (define-key evil-normal-state-map (kbd "M-g") 'avy-goto-char-2)
+(my/evil-normal-define-key "M-g" 'avy-goto-char-2)
   (define-key my/leader-map (kbd "g") 'avy-goto-char-2)
 
-  (define-key evil-normal-state-map (kbd "M-n") 'avy-goto-word-0-below)
+(my/evil-normal-define-key "M-n" 'avy-goto-word-0-below)
   (define-key evil-normal-state-map (kbd "M-p") 'avy-goto-word-0-above)
 
   ;; (define-key my/leader-map (kbd "n") 'my/avy-goto-line-below-keep-horizontal-position)
@@ -3958,8 +3768,8 @@ More rebind options and more reliable
 *** k(Move up) <--> p(Paste)
 **** k
 #+BEGIN_SRC emacs-lisp
-   (define-key evil-normal-state-map "k" 'evil-paste-after)
-   (define-key evil-normal-state-map "K" 'evil-paste-before)
+  (my/evil-normal-define-key "k" 'evil-paste-after)
+  (my/evil-normal-define-key "K" 'evil-paste-before)
 
   (define-key evil-visual-state-map "k" 'evil-visual-paste)
 
@@ -3977,17 +3787,14 @@ More rebind options and more reliable
   (define-key evil-window-map "p" 'evil-window-up)
   (define-key evil-window-map "P" 'evil-window-move-very-top)
 
-  (define-key evil-normal-state-map "p" 'evil-previous-line)
-  (define-key evil-motion-state-map "p" 'evil-previous-line)
+(my/evil-normal-define-key "p" 'evil-previous-line)
 
   ;; Rebind to make consistent with N
-  (define-key evil-normal-state-map "P" 'delete-indentation)
-  (define-key evil-motion-state-map "P" 'delete-indentation)
+(my/evil-normal-define-key "P" 'delete-indentation)
 
   (define-key evil-window-map (kbd "C-S-p") 'evil-window-move-very-top)
 
-  (define-key evil-normal-state-map "gp" 'evil-previous-visual-line)
-  (define-key evil-motion-state-map "gp" 'evil-previous-visual-line)
+(my/evil-normal-define-key "gp" 'evil-previous-visual-line)
 #+END_SRC
 
 *** n(search-next) <--> j(Move up)
@@ -3996,39 +3803,35 @@ More rebind options and more reliable
   (define-key evil-window-map "n" 'evil-window-down)
   (define-key evil-window-map "N" 'evil-window-move-very-bottom)
 
-  (define-key evil-normal-state-map "n" 'evil-next-line)
-  (define-key evil-motion-state-map "n" 'evil-next-line)
+(my/evil-normal-define-key "n" 'evil-next-line)
 
-  (define-key evil-normal-state-map "N" 'evil-join)
+(my/evil-normal-define-key "N" 'evil-join)
 
 
   ;; ex
   ;;  (evil-ex-define-cmd "j[oin]" 'evil-ex-join)
   ;;  (evil-ex-define-cmd "ju[mps]" 'evil-show-jumps)
 
-  (define-key evil-normal-state-map "gN" 'evil-join-whitespace)
+(my/evil-normal-define-key "gN" 'evil-join-whitespace)
 
-  (define-key evil-normal-state-map "gn" 'evil-next-visual-line)
-  (define-key evil-motion-state-map "gn" 'evil-next-visual-line)
+(my/evil-normal-define-key "gn" 'evil-next-visual-line)
 
   (define-key evil-window-map (kbd "C-S-n") 'evil-window-move-very-bottom)
 #+END_SRC
 
 **** j 
 #+BEGIN_SRC emacs-lisp
-  (define-key evil-normal-state-map "j" 'evil-search-next)
-  (define-key evil-motion-state-map "j" 'evil-search-next)
+  (my/evil-normal-define-key "j" 'evil-search-next)
 
-  (define-key evil-normal-state-map "J" 'evil-search-previous)
-  (define-key evil-motion-state-map "J" 'evil-search-previous)
+  (my/evil-normal-define-key "J" 'evil-search-previous)
 
   ;; ex
   ;;(evil-ex-define-cmd "new" 'evil-window-new)
   ;;(evil-ex-define-cmd "norm[al]" 'evil-ex-normal)
   ;;(evil-ex-define-cmd "noh[lsearch]" 'evil-ex-nohighlight)
 
-  (define-key evil-motion-state-map "gj" 'evil-next-match)
-  (define-key evil-motion-state-map "gJ" 'evil-previous-match)
+  (my/evil-normal-define-key "gj" 'evil-next-match)
+  (my/evil-normal-define-key "gJ" 'evil-previous-match)
 #+END_SRC
 
 *** Rebind save key
@@ -4046,8 +3849,7 @@ More rebind options and more reliable
 
 *** Rebind C-d
 #+BEGIN_SRC emacs-lisp
-  (define-key evil-normal-state-map (kbd "C-d") nil)
-  (define-key evil-motion-state-map (kbd "C-d") nil)
+  (my/evil-normal-define-key "C-d" nil)
 #+END_SRC
 
 *** Rebind esc
@@ -4097,7 +3899,8 @@ Use C-i instead
   (defun my/exwm-mode ()
     (interactive)
     (my/keys-mode-turn-off)
-    (evil-emacs-state))
+    ;;(evil-emacs-state)
+)
 #+END_SRC
 
 ** Set exwm buffer name 
@@ -4286,6 +4089,12 @@ If enabled it auto enables projectile, which has high CPU usage
     :defer t)
 
   (setq git-commit-summary-max-length 50)
+#+END_SRC
+
+*** Keys
+#+BEGIN_SRC emacs-lisp
+  ;; Magit ignores this bind by default
+;;  (define-key magit-mode-map (kbd "M-<tab>") 'my/toggle-switch-to-minibuffer)
 #+END_SRC
 
 ** diff-hl
@@ -5253,6 +5062,7 @@ TODO counsel-tramp
 #+END_SRC
 
 * Artist mode
+** Disable and restore modes aftere entering and exiting artist mode
 https://www.emacswiki.org/emacs/FacesPerBuffer
 #+BEGIN_SRC emacs-lisp
   (defvar my/artist-mode-highlight-thing-restore nil)
@@ -5317,6 +5127,7 @@ https://www.emacswiki.org/emacs/FacesPerBuffer
   (add-hook 'artist-mode-hook 'my/artist-mode)
 #+END_SRC
 
+
 ** Completing read
 https://www.emacswiki.org/emacs/ArtistMode
 #+BEGIN_SRC emacs-lisp
@@ -5348,6 +5159,12 @@ https://www.emacswiki.org/emacs/ArtistMode
                                               ("Spray-chars" . spray-chars))))))))
 #+END_SRC
 
+** Picture mode keys
+#+BEGIN_SRC emacs-lisp
+  (setq picture-mode-map (make-sparse-keymap))
+  (setq-default picture-mode-map (make-sparse-keymap))
+#+END_SRC
+
 ** Keys
 #+BEGIN_SRC emacs-lisp
   (define-key my/leader-map (kbd "A") 'artist-mode)
@@ -5362,13 +5179,26 @@ https://www.emacswiki.org/emacs/ArtistMode
   ;; (evil-define-key 'insert artist-mode-map (kbd "SPC") '(lambda () (interactive) (insert " ")))
   ;; (evil-define-key 'insert artist-mode-map (kbd "SPC") 'self-insert-command)
 
-  (evil-define-key 'insert artist-mode-map (kbd "DEL") 'picture-backward-clear-column)
-
-  (evil-define-key 'insert artist-mode-map (kbd "RET") 'newline)
+  (setq artist-mode-map (make-sparse-keymap))
+  (setq-default artist-mode-map (make-sparse-keymap))
+  ;; (evil-define-key 'insert artist-mode-map (kbd "DEL") 'picture-backward-clear-column)
+  ;; 
+  ;; (evil-define-key 'insert artist-mode-map (kbd "RET") 'newline)
 
   (evil-define-key 'normal artist-mode-map (kbd "p") 'artist-previous-line)
   (evil-define-key 'normal artist-mode-map (kbd "n") 'artist-next-line)
 
+
+  (evil-define-key 'normal artist-mode-map (kbd "n") 'artist-next-line)
+
+  (evil-define-key 'emacs artist-mode-map [down-mouse-1] 'artist-down-mouse-1)
+  (evil-define-key 'emacs artist-mode-map [S-down-mouse-1] 'artist-down-mouse-1)
+  (evil-define-key 'emacs artist-mode-map [down-mouse-2] 'artist-mouse-choose-operation)
+  (evil-define-key 'emacs artist-mode-map [S-down-mouse-2] 'artist-mouse-choose-operation)
+  (evil-define-key 'emacs artist-mode-map [down-mouse-3] 'artist-down-mouse-3)
+  (evil-define-key 'emacs artist-mode-map [S-down-mouse-3] 'artist-down-mouse-3)
+  (evil-define-key 'emacs artist-mode-map [C-mouse-4] 'artist-select-prev-op-in-list)
+  (evil-define-key 'emacs artist-mode-map [C-mouse-5] 'artist-select-next-op-in-list)
 #+END_SRC
 
 * Hydra
@@ -6013,14 +5843,9 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
     "Return STR propertized with PROPS."
     `(propertize ,STR 'face (list ,@PROPS)))
 
-  ;;; Config
-
   (defvar pretty-outlines-bullets-bullet-list org-bullets-bullet-list
     "An implemention of `org-bullets-bullet-list' for outlines.")
 
-  ;;; Outline-bullets
-
-  ;;;###autoload
   (defun pretty-outlines--add-font-locks (font-lock-alist)
     "Put text property for FONT-LOCK-ALIST for var-width replacements."
     (font-lock-add-keywords
@@ -6031,7 +5856,6 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
                                             'display ,outline-str)))))
            font-lock-alist)))
 
-  ;;;###autoload
   (defun pretty-outlines--bullets-rgx-at-level (level)
     "Calculate regex or outline-bullets at LEVEL."
     ;; In buffers like org, `outshine-calc-outline-string-at-level 1' always returns "  ", check for this
@@ -6044,7 +5868,6 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
                      (s-replace "*" "\\*"))
                 "\\) ")))
 
-  ;;;###autoload
   (defun pretty-outlines--propertize-bullet (level bullet)
     "Add LEVEL-dependent face to BULLET."
     (with-face bullet
@@ -6059,19 +5882,16 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
                  (7 '(:inherit outline-8 :underline nil :background nil :height 1.10))
                  (_ nil))))
 
-  ;;;###autoload
   (defun pretty-outlines--bullets-cycle ()
     "Cycle through `pretty-outlines-bullets-bullet-list'"
     (-let [max-outline-depth 8]
       (->> pretty-outlines-bullets-bullet-list -cycle (-take max-outline-depth))))
 
-  ;;;###autoload
   (defun pretty-outlines--format-bullet (level bullet)
     "Propertize and perform all other styling for BULLET at LEVEL."
     (concat (s-repeat level " ")
             (pretty-outlines--propertize-bullet level bullet)))
 
-  ;;;###autoload
   (defun pretty-outlines-add-bullets ()
     "Use with `add-hook' to enable pretty-outlines-bullets-bullet-list for mode."
     (interactive)
@@ -6107,19 +5927,234 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
     (outline-show-all)
     (outline-hide-body))
 
-  (define-key evil-normal-state-map (kbd "ga") 'my/outline-hide-all-body)
-  (define-key evil-normal-state-map (kbd "gA") 'outline-show-all)
+(my/evil-normal-define-key "ga" 'my/outline-hide-all-body)
+(my/evil-normal-define-key "gA" 'outline-show-all)
 
-  (define-key evil-normal-state-map (kbd "go") 'evil-open-fold)
-  (define-key evil-normal-state-map (kbd "gO") 'evil-open-fold-rec)
+(my/evil-normal-define-key "go" 'evil-open-fold)
+(my/evil-normal-define-key "gO" 'evil-open-fold-rec)
 
-  (define-key evil-normal-state-map (kbd "gf") 'evil-close-fold)
-  (define-key evil-normal-state-map (kbd "gF") '(lambda () (interactive) (hide-sublevels 1)))
+(my/evil-normal-define-key "gf" 'evil-close-fold)
+(my/evil-normal-define-key "gF" '(lambda () (interactive) (hide-sublevels 1)))
 
-  (define-key evil-normal-state-map (kbd "gh") 'outline-previous-heading)
+(my/evil-normal-define-key "gh" 'outline-previous-heading)
 #+END_SRC
 
 * Visuals
+** Theme
+#+BEGIN_SRC emacs-lisp
+  (defun my/paper-mode()
+    (interactive)
+    (cl-loop for face in (face-list) do
+             ;; Don't change magit faces
+             (if (not (string-match "magit" (symbol-name face)))
+                 (set-face-attribute face nil :foreground nil :background nil)))
+    ;;(setq my/foreground-color "#8b4513")
+    ;;(setq my/foreground-color "brown")
+    ;;(setq my/background-color "black")
+
+    ;; (setq  my/background-color "#2a1f1f")
+    ;; (setq my/foreground-color "#d15120")
+
+    ;; Night theme
+    (setq my/foreground-color "gray")
+    (setq my/background-color "#14191F")
+
+    ;; Day theme
+    (setq my/mark-color "yellow4")
+    (setq my/foreground-color "black")
+    ;;(setq my/background-color "white") 
+    (setq my/background-color "#4682b4") 
+    ;;(setq my/background-color "#87cefa") 
+
+    ;; Dark theme 2 - spacemacs  - https://github.com/nashamri/spacemacs-theme/blob/master/spacemacs-common.el
+    ;;(setq my/foreground-color "#b2b2b2")
+    ;;(setq my/background-color "#292b2e") 
+
+    (setq my/background-color "#f0f0f0")
+    (setq my/foreground-color "#232323") 
+
+    (setq my/background-color "#232323")
+    (setq my/foreground-color "#E6E1DC") 
+
+    (if window-system
+        (progn
+          (setq my/foreground-color-1 (color-darken-name my/foreground-color 5))
+          (setq my/foreground-color-2 (color-darken-name my/foreground-color 10))
+          (setq my/foreground-color-3 (color-darken-name my/foreground-color 15))
+          (setq my/foreground-color-4 (color-darken-name my/foreground-color 20))
+          (setq my/foreground-color-5 (color-darken-name my/foreground-color 25))
+          (setq my/foreground-color-6 (color-darken-name my/foreground-color 30))
+
+          (setq my/background-color-1 (color-lighten-name my/background-color 5))
+          (setq my/background-color-2 (color-lighten-name my/background-color 10))
+          (setq my/background-color-3 (color-lighten-name my/background-color 15))
+          (setq my/background-color-4 (color-lighten-name my/background-color 20)))
+
+      (setq my/foreground-color-1 "brown")
+      (setq my/foreground-color-2 "brown")
+      (setq my/foreground-color-3 "orange")
+      (setq my/foreground-color-4 "orange")
+      (setq my/foreground-color-5 "yellow")
+      (setq my/foreground-color-6 "yellow")
+
+      (setq my/background-color-1 "black")
+      (setq my/background-color-2 "black")
+      (setq my/background-color-3 "gray")
+      (setq my/background-color-4 "gray"))
+
+    ;;; Emacs
+    (set-face-attribute 'default nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'link nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'highlight nil :foreground my/foreground-color :background my/mark-color)
+    (set-face-attribute 'region nil :foreground my/foreground-color :background my/mark-color)
+    (set-face-attribute 'error nil :foreground "#c6350b" :background)
+    (set-face-attribute 'warning nil :foreground "DarkOrange" :background)
+
+    ;; Font lock
+    (set-face-attribute  'font-lock-doc-face nil :foreground my/foreground-color :background my/background-color-4)
+    (defvar my/comment-face-height (floor (* my/default-face-height 1.15)))
+    (set-face-attribute  'font-lock-comment-face nil :foreground my/foreground-color :background my/background-color-1 :height my/comment-face-height)
+    (set-face-attribute 'font-lock-string-face nil :foreground my/foreground-color :background my/background-color-1)
+    ;; (set-face-attribute  'font-lock-keyword-face nil :foreground my/foreground-color :background my/background-color-1)
+    ;; (set-face-attribute  'font-lock-function-name-face nil :foreground my/foreground-color :background my/background-color-2)
+
+    ;; Required by other face
+    (set-face-attribute 'outline-4 nil :foreground my/foreground-color :background my/background-color)
+
+    ;; Line numbers
+    (set-face-attribute 'line-number-current-line nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'line-number nil :foreground my/foreground-color :background my/background-color)
+
+    ;; Evil
+    (setq evil-emacs-state-cursor '("purple" box))
+    (setq evil-normal-state-cursor '("red" box))
+    (setq evil-visual-state-cursor '("yellow" box))
+    (setq evil-insert-state-cursor '("orange" box))
+    (setq evil-replace-state-cursor '("green" box))
+    (setq evil-operator-state-cursor '("white" hollow))
+
+    ;; On-screen
+    ;;(set-face-attribute 'on-screen-shadow nil :foreground nil :background (color-lighten-name my/background-color 2))
+    ;;(set-face-attribute 'on-screen-fringe nil :foreground my/foreground-color :background my/background-color)
+
+    ;; Hl current line
+    ;; Underlines part of current line
+    ;;(set-face-attribute 'hl-line nil :foreground my/foreground-color :background nil :underline t)
+    (set-face-attribute 'hl-line nil :foreground my/foreground-color :background my/background-color-2 :underline nil)
+    ;;;  Org
+    ;; =make this bold= 
+    (set-face-attribute 'org-verbatim nil :weight 'bold)
+    ;;(set-face-attribute 'org-code nil )
+    ;;(set-face-attribute 'org-quote nil )
+
+    ;;; Dired
+    (set-face-attribute 'dired-directory nil :foreground my/background-color :background my/foreground-color)
+
+    ;;; Isearch
+    (set-face-attribute 'isearch nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'lazy-highlight nil :foreground my/background-color :background my/foreground-color)
+
+    ;;; Highlight thing
+    (set-face-attribute 'highlight-thing nil :foreground my/foreground-color :background my/mark-color)
+
+    ;;; Company
+    (set-face-attribute 'company-scrollbar-bg nil :background my/background-color)
+    (set-face-attribute 'company-scrollbar-fg nil :background my/foreground-color)
+
+    ;; Selected entry
+    (set-face-attribute 'company-tooltip-selection nil :background my/foreground-color :foreground my/background-color)
+    ;; All unmatching text
+    (set-face-attribute 'company-tooltip nil :foreground my/foreground-color :background my/background-color)
+    ;; All matching text
+    (set-face-attribute 'company-tooltip-common nil :foreground my/background-color :background my/foreground-color)
+
+    ;;; Ivy
+    (set-face-attribute 'ivy-current-match nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'ivy-cursor nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'ivy-minibuffer-match-highlight nil :foreground my/background-color :background my/foreground-color)
+
+    (set-face-attribute 'ivy-minibuffer-match-face-1 nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'ivy-minibuffer-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
+    (set-face-attribute 'ivy-minibuffer-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
+    (set-face-attribute 'ivy-minibuffer-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
+
+    ;;; Swiper
+    (set-face-attribute 'swiper-match-face-1 nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'swiper-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
+    (set-face-attribute 'swiper-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
+    (set-face-attribute 'swiper-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
+
+    ;;; Avy
+    (set-face-attribute 'avy-lead-face nil :foreground my/background-color :background my/foreground-color-6)
+    (set-face-attribute 'avy-lead-face-0 nil :foreground my/background-color :background my/foreground-color-2)
+    (set-face-attribute 'avy-lead-face-1 nil :foreground my/background-color :background my/foreground-color-4)
+    (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background my/foreground-color-6)
+
+    ;; Eshell
+    (require 'em-prompt)
+    (set-face-attribute 'eshell-prompt nil :foreground  "purple" :background my/background-color)
+
+    ;; Eww
+    (set-face-attribute 'my/eww-code-face nil :foreground my/foreground-color :background my/background-color-2 :family my/mono-font)
+
+    ;;(defvar my/evil-goggles-highlight-color)
+    ;;; Evil-goggles
+    ;;; 2 color approach
+    ;; (set-face-attribute 'evil-goggles-change-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-commentary-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-delete-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-fill-and-move-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-indent-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-join-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-paste-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-record-macro-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-replace-with-register-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-set-marker-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-shift-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-surround-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-yank-face nil :foreground my/background-color :background my/foreground-color)
+
+    (set-face-attribute 'diff-added nil  :background "#335533")
+    (set-face-attribute 'diff-changed nil :background "#aaaa22")
+    (set-face-attribute 'diff-removed nil :background "#553333")
+
+    ;; (set-face-attribute 'diff-added nil  :background "green")
+    ;; (set-face-attribute 'diff-changed nil :background "yellow")
+    ;; (set-face-attribute 'diff-removed nil :background "red")
+
+    ;; Diff-hl 
+    (set-face-attribute 'diff-hl-change nil :background (face-attribute 'diff-changed :background))
+
+    ;; Paren highlight
+    (set-face-attribute 'show-paren-match nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'show-paren-mismatch nil :background "red")
+
+    ;; Mode line separator
+    ;; Set mode line height
+    (set-face-attribute 'mode-line nil
+                        :foreground my/foreground-color
+                        :background my/foreground-color
+                        :height  0.1)
+
+    (set-face-attribute 'mode-line-inactive nil
+                        :foreground my/background-color
+                        :background my/background-color
+                        :height  0.1)
+
+    ;; Highlight faces
+    ;;(highlight-indent-guides-auto-set-faces)
+    )
+
+  (if window-system
+      (add-hook 'exwm-init-hook 'my/paper-mode)
+    (add-hook 'after-init-hook 'my/paper-mode))
+
+  ;; (counsel-faces)
+
+  (define-key my/leader-map (kbd "M-c") 'my/paper-mode)
+#+END_SRC
+
+
 ** Indicate empty lines
 #+BEGIN_SRC emacs-lisp
   (setq-default indicate-empty-lines t)
