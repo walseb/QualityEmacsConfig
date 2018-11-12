@@ -768,15 +768,15 @@ Allows for using indention as text objects
 
 *** Rebind evil case change
 #+BEGIN_SRC emacs-lisp
-  (my/evil-normal-define-key "g b" 'evil-downcase)
-  (my/evil-normal-define-key "g B" 'evil-upcase)
+  (my/evil-normal-define-key "g y" 'evil-downcase)
+  (my/evil-normal-define-key "g Y" 'evil-upcase)
 #+END_SRC
 
 *** Add perspective movement to g
 #+BEGIN_SRC emacs-lisp
-  (my/evil-normal-define-key "gw" 'evil-scroll-line-to-top)
+  (my/evil-normal-define-key "gb" 'evil-scroll-line-to-bottom)
+  (my/evil-normal-define-key "gf" 'evil-scroll-line-to-top)
   (my/evil-normal-define-key "ge" 'evil-scroll-line-to-center)
-  (my/evil-normal-define-key "gu" 'evil-scroll-line-to-bottom)
 #+END_SRC
 
 *** Don't complete from all buffers
@@ -4094,7 +4094,8 @@ If enabled it auto enables projectile, which has high CPU usage
 *** Keys
 #+BEGIN_SRC emacs-lisp
   ;; Magit ignores this bind by default
-;;  (define-key magit-mode-map (kbd "M-<tab>") 'my/toggle-switch-to-minibuffer)
+  (require 'magit-mode)
+  (define-key magit-mode-map (kbd "M-<tab>") 'my/toggle-switch-to-minibuffer)
 #+END_SRC
 
 ** diff-hl
@@ -5922,21 +5923,21 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
-  (defun my/outline-hide-all-body ()
-    (interactive)
-    (outline-show-all)
-    (outline-hide-body))
+    (defun my/outline-hide-all-body ()
+      (interactive)
+      (outline-show-all)
+      (outline-hide-body))
 
-(my/evil-normal-define-key "ga" 'my/outline-hide-all-body)
-(my/evil-normal-define-key "gA" 'outline-show-all)
+  (my/evil-normal-define-key "ga" 'my/outline-hide-all-body)
+  (my/evil-normal-define-key "gA" 'outline-show-all)
 
-(my/evil-normal-define-key "go" 'evil-open-fold)
-(my/evil-normal-define-key "gO" 'evil-open-fold-rec)
+  (my/evil-normal-define-key "go" 'evil-open-fold)
+  (my/evil-normal-define-key "gO" 'evil-open-fold-rec)
 
-(my/evil-normal-define-key "gf" 'evil-close-fold)
-(my/evil-normal-define-key "gF" '(lambda () (interactive) (hide-sublevels 1)))
+  (my/evil-normal-define-key "gh" 'evil-close-fold)
+  (my/evil-normal-define-key "gH" '(lambda () (interactive) (hide-sublevels 1)))
 
-(my/evil-normal-define-key "gh" 'outline-previous-heading)
+  (my/evil-normal-define-key "gu" 'outline-previous-heading)
 #+END_SRC
 
 * Visuals
@@ -6064,7 +6065,7 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
     ;; Selected entry
     (set-face-attribute 'company-tooltip-selection nil :background my/foreground-color :foreground my/background-color)
     ;; All unmatching text
-    (set-face-attribute 'company-tooltip nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'company-tooltip nil :foreground my/foreground-color :background my/background-color-1)
     ;; All matching text
     (set-face-attribute 'company-tooltip-common nil :foreground my/background-color :background my/foreground-color)
 
