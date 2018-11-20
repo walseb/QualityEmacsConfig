@@ -213,10 +213,6 @@ keycode 29 = Caps_Lock # Makes ctrl act as caps
 #+END_SRC
 3. Do =sudo loadkeys ~/Keys.map=
 
-** Interesting stuff
-highlight-changes-mode (built in)
-goto-chg (goto last change)
-
 ** Color picking
 Get =gpick=
 
@@ -2594,48 +2590,6 @@ g-; and g-,
   (add-hook 'dired-mode-hook 'my/dired-mode)
 #+END_SRC
 
-** Use only one dired buffer
-Fix this later
-#+BEGIN_SRC emacs-lisp
-
-  ;; (defun my/find-file-dired-same-buffer ()
-  ;; (interactive)
-  ;; (my/insert-subdir-or-open-file (read-file-name "Find file: ")))
-  ;; 
-  ;; (defun my/insert-subdir-or-open-file (&optional file switches no-error-if-not-dir-p)
-  ;; (interactive)
-  ;; (let* ((file-name (or file (dired-get-filename))))
-  ;; (if (file-directory-p file-name)
-  ;; (if (get-buffer "dired")
-  ;; (progn
-  ;; (switch-to-buffer "dired")
-  ;; (dired-maybe-insert-subdir file-name switches no-error-if-not-dir-p))
-  ;; (dired "/")
-  ;; (dired-maybe-insert-subdir file-name switches no-error-if-not-dir-p)
-  ;; (my/give-buffer-unique-name "dired"))
-  ;; (find-file file-name))))
-#+END_SRC
-#+BEGIN_SRC emacs-lisp
-  ;; (defun my/find-file ()
-    ;; (let ((file (ignore-errors (dired-current-directory))))
-      ;; (if file
-          ;; (find-file file)
-    
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-  (defun my/find-file-dired-same-buffer ()
-    (interactive)
-    (my/insert-subdir-or-open-file (read-file-name "Find file: ")))
-
-  (defun my/insert-subdir-or-open-file (&optional file switches no-error-if-not-dir-p)
-    (interactive)
-    (let* ((file-name (or file (dired-get-filename))))
-      (if (file-directory-p file-name)
-          (dired-maybe-insert-subdir file-name switches no-error-if-not-dir-p)
-        (find-file file-name))))
-#+END_SRC
-
 ** Human readable file sizes
 Make file sizes human readable
 #+BEGIN_SRC emacs-lisp
@@ -2704,11 +2658,6 @@ Version 2015-07-30"
       (dired-sort-other $arg )))
 
   (define-key dired-mode-map (kbd "s") 'my/dired-sort-menu)
-
-#+END_SRC
-
-*** Bind
-#+BEGIN_SRC emacs-lisp
 #+END_SRC
 
 ** Recursive folder size
@@ -3007,10 +2956,16 @@ Version 2015-07-30"
                '("el" "#+BEGIN_SRC emacs-lisp\n?\n#+END_SRC"))
 #+END_SRC
 
+**** Plant uml
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'org-structure-template-alist
+               '("uml" "#+BEGIN_SRC plantuml\n?\n#+END_SRC"))
+#+END_SRC
+
 **** R export to image
 #+BEGIN_SRC emacs-lisp
   (add-to-list 'org-structure-template-alist
-               '("ri" "#+BEGIN_SRC R :results output graphics :file test.png\n?\n#+END_SRC"))
+               '("ri" "#+BEGIN_SRC R :results output graphics :file RImage.png\n?\n#+END_SRC"))
 #+END_SRC
 
 ** Export
@@ -3285,17 +3240,29 @@ Shows information in echo area
 #+BEGIN_SRC emacs-lisp
   (defun my/auto-eval ()
     (interactive)
+    (if (eq evil-state 'visual)
+        (my/auto-eval-region)
+      (if (not (cond
+                ((string= major-mode "scheme-mode") (geiser-eval-last-sexp nil)) 
+                ((string= major-mode "clojure-mode") (cider-eval-last-sexp)) 
+                ((string= major-mode "plantuml-mode") (plantuml-preview-region 0 (line-beginning-position) (line-end-position)))
+                ((string= major-mode "fsharp-mode") (fsharp-eval-phrase))))
+          (eval-last-sexp nil))))
+
+  (defun my/auto-eval-region ()
+    (interactive)
     (if (not (cond
-              ((string= major-mode "scheme-mode") (geiser-eval-last-sexp nil)) 
-              ((string= major-mode "clojure-mode") (cider-eval-last-sexp)) 
-              ((string= major-mode "fsharp-mode") (fsharp-eval-phrase))))
-        (eval-last-sexp nil)))
+              ((string= major-mode "clojure-mode") (cider-eval-region (point) (mark t))) 
+              ((string= major-mode "plantuml-mode") (plantuml-preview-region 0 (point) (mark t)))
+              ((string= major-mode "fsharp-mode") (fsharp-eval-region (point) (mark t)))))
+        (eval-region (point) (mark t))))
 
   (defun my/auto-eval-buffer ()
     (interactive)
     (if (not (cond
               ((string= major-mode "scheme-mode") (geiser-eval-buffer nil)) 
               ((string= major-mode "clojure-mode") (cider-eval-buffer)) 
+              ((string= major-mode "plantuml-mode") (plantuml-preview-buffer 0))
               ((string= major-mode "fsharp-mode") (fsharp-eval-region (point-min) (point-max)))))
         (eval-buffer nil)))
 
@@ -3305,7 +3272,6 @@ Shows information in echo area
               ((string= major-mode "scheme-mode") (geiser-eval-last-sexp t)) 
               ((string= major-mode "clojure-mode") (cider-eval-print-last-sexp))))
         (eval-print-last-sexp nil)))
-
 
   (define-key my/leader-map (kbd "e") 'my/auto-eval)
   (define-key my/leader-map (kbd "E") 'my/auto-eval-buffer)
@@ -3318,6 +3284,14 @@ Shows information in echo area
     :defer t)
 
   (define-key my/leader-map (kbd "d") 'zeal-at-point)
+#+END_SRC
+
+** Plantuml
+#+BEGIN_SRC emacs-lisp
+  (use-package plantuml-mode)
+
+  ;; Org src compatibility
+  (add-to-list 'auto-mode-alist '("\\.plantuml\\'" . plantuml-mode))
 #+END_SRC
 
 ** LSP mode
