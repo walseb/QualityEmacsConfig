@@ -264,19 +264,12 @@ Get =gpick=
     (define-minor-mode my/keys-mode nil t nil my/keys-mode-map))
 
   (add-to-list 'emulation-mode-map-alists `((my/keys-mode . ,my/keys-mode-map)))
-
-  ;; Turn off the minor mode in the minibuffer
-  (defun my/keys-mode-turn-off ()
-    (my/keys-mode -1))
-
-  (defun my/keys-mode-turn-on ()
-    (my/keys-mode 1))
 #+END_SRC
 
 ** Mode specific settings
 #+BEGIN_SRC emacs-lisp
   ;; Disable keys in minibuffers such as ivy, etc
-  (add-hook 'minibuffer-setup-hook 'my/keys-mode-turn-off)
+  ;; (add-hook 'minibuffer-setup-hook 'my/keys-mode-turn-off)
   ;;(add-hook 'messages-buffer-mode-hook 'my/keys-mode-turn-on)
 #+END_SRC
 
@@ -592,6 +585,12 @@ Stop custom from editing init.el
     (interactive)
     (define-key evil-normal-state-map (kbd key) command)
     (define-key evil-motion-state-map (kbd key) command))
+
+  (defun my/evil-universal-define-key (key command)
+    (interactive)
+    (my/evil-normal-define-key key command)
+    (define-key evil-insert-state-map (kbd key) command)
+    (define-key evil-visual-state-map (kbd key) command))
 #+END_SRC
 
 ** Settings
@@ -664,6 +663,44 @@ Example
 #+END_SRC
 
 ** Text objects
+*** Evil-entire-buffer
+Modify entire buffer - for example: "d a e"
+https://github.com/supermomonga/evil-textobj-entire
+#+BEGIN_SRC emacs-lisp
+  (evil-define-text-object evil-entire-entire-buffer (count &optional beg end type)
+    "Select entire buffer"
+    (evil-range (point-min) (point-max)))
+
+  (define-key evil-outer-text-objects-map "e" 'evil-entire-entire-buffer)
+  (define-key evil-inner-text-objects-map "e" 'evil-entire-entire-buffer)
+#+END_SRC
+
+*** Evil-line
+https://github.com/syohex/evil-textobj-line
+#+BEGIN_SRC emacs-lisp
+  (defun evil-line-range (count beg end type &optional inclusive)
+    (if inclusive
+        (evil-range (line-beginning-position) (line-end-position))
+      (let ((start (save-excursion
+                     (back-to-indentation)
+                     (point)))
+            (end (save-excursion
+                   (goto-char (line-end-position))
+                   (skip-syntax-backward " " (line-beginning-position))
+                   (point))))
+        (evil-range start end))))
+
+  (evil-define-text-object evil-a-line (count &optional beg end type)
+    "Select range between a character by which the command is followed."
+    (evil-line-range count beg end type t))
+  (evil-define-text-object evil-inner-line (count &optional beg end type)
+    "Select inner range between a character by which the command is followed."
+    (evil-line-range count beg end type))
+
+  (define-key evil-outer-text-objects-map "l" 'evil-a-line)
+  (define-key evil-inner-text-objects-map "l" 'evil-inner-line)
+#+END_SRC
+
 *** Evil-indent-plus
 Allows for using indention as text objects
 #+BEGIN_SRC emacs-lisp
@@ -945,14 +982,10 @@ When changing leader, change =my/leader-map-key= and manually change all general
   (define-prefix-command 'my/help-map)
   (define-key my/leader-map (kbd "H") 'my/help-map)
 
-  (evil-define-key 'normal my/keys-mode-map (kbd "U") 'undo-tree-visualize)
+  (my/evil-normal-define-key "U" 'undo-tree-visualize)
 
-  (evil-define-key 'normal my/keys-mode-map (kbd my/leader-map-key) 'my/leader-map)
-  (evil-define-key 'motion my/keys-mode-map (kbd my/leader-map-key) 'my/leader-map)
-  (evil-define-key 'visual my/keys-mode-map (kbd my/leader-map-key) 'my/leader-map)
-
-  ;; Enable leader even if my/keys-mode isn't active
   (my/evil-normal-define-key my/leader-map-key my/leader-map)
+  (define-key evil-visual-state-map (kbd my/leader-map-key) my/leader-map)
 #+END_SRC
 
 * Package management
@@ -1401,6 +1434,11 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (define-key my/leader-map (kbd "r") 'revert-buffer)
 #+END_SRC
 
+** Hotkey to hide cursor
+#+BEGIN_SRC emacs-lisp
+  (define-key my/leader-map (kbd "M-h") (lambda () (interactive) (setq cursor-type nil)))
+#+END_SRC
+
 * File options
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/file-options-map)
@@ -1844,9 +1882,10 @@ Vim bindings to change fold
 
   (defun my/use-swiper-or-grep(&optional input case-sensative)
     (interactive)
-    (if (and buffer-file-name (not (bound-and-true-p org-src-mode)) (not (string= "gz" (file-name-extension buffer-file-name))))
-        (counsel-grep input)
-      (swiper input)))
+    (swiper input))
+    ;;(if (and buffer-file-name (not (bound-and-true-p org-src-mode)) (not (string= "gz" (file-name-extension buffer-file-name))))
+        ;;(counsel-grep input)
+      ;;(swiper input)))
 
   ;; Checks for if case sensative search
   ;; (if case-sensative
@@ -2051,10 +2090,6 @@ Make company mode inherit colors from theme, change later maybe
   (my/evil-normal-define-key "C-." 'company-complete)
 #+END_SRC
 
-*** Disable persistent binds
-#+BEGIN_SRC emacs-lisp
-  (add-hook 'company-mode-map 'my/keys-mode-turn-off)
-#+END_SRC
 
 ** Company-box
 Company with icons
@@ -2321,25 +2356,8 @@ Flycheck with extra correction for elisp packages
 
 ** Scroll
 #+BEGIN_SRC emacs-lisp
-  ;;(require 'view)
-  (evil-define-key 'normal my/keys-mode-map (kbd "C-u") 'evil-scroll-up)
-  (evil-define-key 'normal my/keys-mode-map (kbd "C-w") 'evil-scroll-down)
-
-(my/evil-normal-define-key "C-w" 'evil-scroll-down)
-
-(my/evil-normal-define-key "C-u" 'evil-scroll-up)
-
-  ;;(evil-define-key 'normal my/keys-mode-map (kbd "C-u") 'View-scroll-half-page-backward)
-  ;;(evil-define-key 'normal my/keys-mode-map (kbd "C-w") 'View-scroll-half-page-forward)
-
-  (evil-define-key 'visual my/keys-mode-map (kbd "C-u") 'evil-scroll-up)
-  (evil-define-key 'visual my/keys-mode-map (kbd "C-w") 'evil-scroll-down)
-
-  (evil-define-key 'insert my/keys-mode-map (kbd "C-u") 'evil-scroll-up)
-  (evil-define-key 'insert my/keys-mode-map (kbd "C-w") 'evil-scroll-down)
-
-  ;;(evil-define-key 'insert my/keys-mode-map (kbd "C-u") '(lambda () (interactive) (evil-normal-state) (View-scroll-half-page-backward)))
-  ;;(evil-define-key 'insert my/keys-mode-map (kbd "C-w") '(lambda () (interactive) (evil-normal-state) (View-scroll-half-page-forward)))
+  (my/evil-universal-define-key "C-u" 'evil-scroll-up)
+  (my/evil-universal-define-key "C-w" 'evil-scroll-down)
 #+END_SRC
 
 *** On-screen
@@ -2395,27 +2413,27 @@ g-; and g-,
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
-(my/evil-normal-define-key "M-f" 'avy-goto-char-in-line)
-  (define-key my/leader-map (kbd "f") 'avy-goto-char-in-line)
+  (my/evil-normal-define-key "M-f" 'avy-goto-char-in-line)
+    (define-key my/leader-map (kbd "f") 'avy-goto-char-in-line)
 
-(my/evil-normal-define-key "M-w" 'my/avy-goto-word-0-in-line)
-  (define-key my/leader-map (kbd "w") 'my/avy-goto-word-0-in-line)
+  (my/evil-normal-define-key "M-w" 'my/avy-goto-word-0-in-line)
+    (define-key my/leader-map (kbd "w") 'my/avy-goto-word-0-in-line)
 
-(my/evil-normal-define-key "M-g" 'avy-goto-char-2)
-  (define-key my/leader-map (kbd "g") 'avy-goto-char-2)
+  (my/evil-normal-define-key "M-g" 'avy-goto-char-2)
+    (define-key my/leader-map (kbd "g") 'avy-goto-char-2)
 
-(my/evil-normal-define-key "M-g" 'avy-goto-char-2)
-  (define-key my/leader-map (kbd "g") 'avy-goto-char-2)
+  (my/evil-normal-define-key "M-g" 'avy-goto-char-2)
+    (define-key my/leader-map (kbd "g") 'avy-goto-char-2)
 
-(my/evil-normal-define-key "M-n" 'avy-goto-word-0-below)
-  (define-key evil-normal-state-map (kbd "M-p") 'avy-goto-word-0-above)
+  (my/evil-normal-define-key "M-n" 'avy-goto-word-0-below)
+    (define-key evil-normal-state-map (kbd "M-p") 'avy-goto-word-0-above)
 
-  ;; (define-key my/leader-map (kbd "n") 'my/avy-goto-line-below-keep-horizontal-position)
-  ;; (define-key my/leader-map (kbd "p") 'my/avy-goto-line-above-keep-horizontal-position)
+    ;; (define-key my/leader-map (kbd "n") 'my/avy-goto-line-below-keep-horizontal-position)
+    ;; (define-key my/leader-map (kbd "p") 'my/avy-goto-line-above-keep-horizontal-position)
 
-  ;;(define-key my/keys-mode-map (kbd "M-l") 'link-hint-open-link)
-  (define-key my/leader-map (kbd "l") 'link-hint-open-link)
-  ;;(define-key my/keys-mode-map (kbd "M-???") 'link-hint-copy-link)
+    ;;(define-key my/keys-mode-map (kbd "M-l") 'link-hint-open-link)
+    (define-key my/leader-map (kbd "l") 'link-hint-open-link)
+    ;;(define-key my/keys-mode-map (kbd "M-???") 'link-hint-copy-link)
 #+END_SRC
 
 * Bookmark management 
@@ -2497,6 +2515,7 @@ g-; and g-,
       (error "Minibuffer is not active")))
 
   (define-key my/keys-mode-map (kbd "M-TAB") 'my/toggle-switch-to-minibuffer)
+  (my/evil-universal-define-key "M-TAB" 'my/toggle-switch-to-minibuffer)
 #+END_SRC
 
 * Window and buffer settings
@@ -2906,10 +2925,10 @@ Version 2015-07-30"
 
 * Org
 #+BEGIN_SRC emacs-lisp
+  (use-package org)
+
   (define-prefix-command 'my/org-mode-map)
   (evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a")) 'my/org-mode-map)
-
-  (use-package org)
 #+END_SRC
 
 ** Babel
@@ -2935,6 +2954,8 @@ Version 2015-07-30"
   (use-package org-bullets)
   (when window-system
 
+    (if (eq system-type 'windows-nt)
+        (setq inhibit-compacting-font-caches t))
     (add-hook 'org-mode-hook (lambda () (interactive) (org-bullets-mode))))
 #+END_SRC
 
@@ -3882,6 +3903,7 @@ Use C-i instead
 #+END_SRC
 
 * exwm
+https://emacs.stackexchange.com/questions/33326/how-do-i-cut-and-paste-effectively-between-applications-while-using-exwm
 #+BEGIN_SRC emacs-lisp
   (use-package exwm)
 
@@ -3898,9 +3920,8 @@ Use C-i instead
   (add-hook 'exwm-manage-finish-hook 'my/exwm-mode)
   (defun my/exwm-mode ()
     (interactive)
-    (my/keys-mode-turn-off)
-    ;;(evil-emacs-state)
-)
+    ()
+    )
 #+END_SRC
 
 ** Set exwm buffer name 
@@ -5308,8 +5329,8 @@ https://www.emacswiki.org/emacs/ArtistMode
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-key my/keys-mode-map (kbd my/mod-window-leader-key) 'my/window-hydra/body)
-  (define-key my/keys-mode-map (kbd my/window-leader-key) 'my/window-hydra/body)
+  (my/evil-universal-define-key my/mod-window-leader-key 'my/window-hydra/body)
+  (my/evil-universal-define-key my/window-leader-key 'my/window-hydra/body)
 #+END_SRC
 
 * Image modes
@@ -6061,6 +6082,10 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
 
     ;;; Dired
     (set-face-attribute 'dired-directory nil :foreground my/background-color :background my/foreground-color)
+
+  ;;; Spray
+    ;;  (set-face-attribute 'spray-accent-face nil :foreground "red" :background my/background-color)
+    (set-face-attribute 'spray-accent-face nil :foreground my/foreground-color :background my/background-color :underline t)
 
     ;;; Isearch
     (set-face-attribute 'isearch nil :foreground my/background-color :background my/foreground-color)
