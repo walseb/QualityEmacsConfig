@@ -568,11 +568,21 @@ Stop custom from editing init.el
   ;; Makes swiper A LOT faster
   (setq evil-ex-interactive-search-highlight t)
   (setq evil-ex-search-persistent-highlight nil)
-  
+
+
   (use-package evil)
 
   ;;(fset 'evil-visual-update-x-selection 'ignore)
   (evil-mode)
+#+END_SRC
+
+** Minibuffer
+#+BEGIN_SRC emacs-lisp
+  ;; Enable evil in minibuffer
+  (setq evil-want-minibuffer t)
+
+  ;; This fixes evil minibuffer binds
+  (add-hook 'minibuffer-setup-hook 'evil-insert-state)
 #+END_SRC
 
 ** Bind evil key
@@ -1471,115 +1481,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (define-key my/indentation-map (kbd "w") 'my/change-tab-width)
 #+END_SRC
 
-* Browser
-** Eww/shr
-#+BEGIN_SRC emacs-lisp
-  (require 'eww)
-  (require 'shr)
-#+END_SRC
-
-*** Highlight code
-#+BEGIN_SRC emacs-lisp
-  (defface my/eww-code-face
-    '((t
-       :family my/mono-font
-       ))
-    "Eww code face"
-    :group 'eww-mode)
-
-  (defun my/eww-tag-code (dom)
-    (let ((start (point))
-          (text (dom-text dom)))
-      (insert text)
-      (message text)
-      (add-face-text-property start (point) 'my/eww-code-face)
-      (insert " ")))
-  (setq shr-external-rendering-functions '((code . my/eww-tag-code)))
-
-  (defun my/eww-toggle-code-highlighting ()
-    (interactive)
-    (if (member '(code . my/eww-tag-code) shr-external-rendering-functions)
-        (setq shr-external-rendering-functions (remove '(code . my/eww-tag-code) shr-external-rendering-functions))
-      (add-to-list 'shr-external-rendering-functions '(code . my/eww-tag-code))))
-#+END_SRC
-
-*** Add URL to buffer name
-#+BEGIN_SRC emacs-lisp
-  (add-hook 'eww-after-render-hook '(lambda () (interactive) (my/give-buffer-unique-name (concat "eww - " (plist-get eww-data :title)))))
-#+END_SRC
-      
-*** Fix background colors shr
-#+BEGIN_SRC emacs-lisp
-  (setq shr-color-visible-luminance-min 80)
-  (setq shr-color-visible-distance-min 5)
-
-  ;; Fully disables colors
-  ;;(advice-add #'shr-colorize-region :around (defun shr-no-colourise-region (&rest ignore)))
-#+END_SRC
-
-*** Auto-open image at point
-Redefine function to attempt to open image if link at point wasn't found
-#+BEGIN_SRC emacs-lisp
-  (defun shr-browse-url (&optional external mouse-event)
-    "Browse the URL at point using `browse-url'.
-  If EXTERNAL is non-nil (interactively, the prefix argument), browse
-  the URL using `shr-external-browser'.
-  If this function is invoked by a mouse click, it will browse the URL
-  at the position of the click.  Optional argument MOUSE-EVENT describes
-  the mouse click event."
-    (interactive (list current-prefix-arg last-nonmenu-event))
-    (mouse-set-point mouse-event)
-    (let ((url (get-text-property (point) 'shr-url)))
-      (cond
-       ((not url)
-       ;; Was unsuccessful in opening link, attempt to open image
-        (shr-browse-image))
-       ((string-match "^mailto:" url)
-        (browse-url-mail url))
-       (t
-        (if external
-            (funcall shr-external-browser url)
-          (browse-url url))))))
-#+END_SRC
-
-*** Keys
-#+BEGIN_SRC emacs-lisp
-  ;; (define-key eww-mode-map [?\d] 'eww-back-url)
-  ;; (evil-define-key 'normal eww-mode-map [?\d] 'eww-back-url)
-  ;; (evil-define-key 'visual eww-mode-map [?\d] 'eww-back-url)
-
-  (evil-define-key 'normal eww-mode-map (kbd "w") 'evil-forward-word-begin)
-  (setq shr-map (make-sparse-keymap))
-
-  (evil-define-key 'normal eww-mode-map (kbd "H") 'eww-back-url)
-  (evil-define-key 'normal eww-mode-map (kbd "L") 'eww-forward-url)
-
-  (define-prefix-command 'my/eww-mode-map)
-  (evil-define-key 'normal eww-mode-map (kbd (concat my/leader-map-key " a")) 'my/eww-mode-map)
-
-  (define-key my/eww-mode-map (kbd "d") 'eww-download)
-  (define-key my/eww-mode-map (kbd "h") 'eww-history-browse)
-  (define-key my/eww-mode-map (kbd "o") 'eww-open-in-new-buffer)
-  (define-key my/eww-mode-map (kbd "r") 'eww-reload)
-  (define-key my/eww-mode-map (kbd "f") 'eww-open-file)
-  (define-key my/eww-mode-map (kbd "C-c") 'my/eww-toggle-code-highlighting)
-#+END_SRC
-
-** Next browser
-#+BEGIN_SRC emacs-lisp
-  ;; (defun my/write-next-config ()
-    ;; (my/create-dir-if-not-exist "~/.config")
-    ;; (my/create-dir-if-not-exist "~/.config/next")
-    ;; (my/create-file-with-content-if-not-exist "~/.config/next/init.lisp")
-  ;; 
-    ;; )
-#+END_SRC
-
-** Set default browser
-#+BEGIN_SRC emacs-lisp
-  (setq-default browse-url-browser-function 'eww-browse-url)
-#+END_SRC
-
 * Visit file hotkeys
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/open-map)
@@ -1770,24 +1671,24 @@ Vim bindings to change fold
 * Completion
 ** Ivy
 #+BEGIN_SRC emacs-lisp
-  (use-package ivy)
+    (use-package ivy)
 
-  (ivy-mode 1)
+    (ivy-mode 1)
 
-  ;; Buffer history
-;;  (setq ivy-use-virtual-buffers t)
-  (setq ivy-use-virtual-buffers nil)
+    ;; Buffer history
+  ;;  (setq ivy-use-virtual-buffers t)
+    (setq ivy-use-virtual-buffers nil)
 
-  ;; Allows calling new minibuffer commands while in the minibuffer. So for example C-s M-x works
-  (setq enable-recursive-minibuffers t)
+    ;; Allows calling new minibuffer commands while in the minibuffer. So for example C-s M-x works
+    (setq enable-recursive-minibuffers t)
 
-  ;; Make user intput selectable
-  (setq ivy-use-selectable-prompt t)
+    ;; Make user intput selectable
+    (setq ivy-use-selectable-prompt t)
 
-  ;;Disable fuzzy search for swiper
-  ;;(setq ivy-re-builders-alist
-  ;;      '((swiper . ivy--regex-plus)
-  ;;       (t      . ivy--regex-fuzzy)))
+    ;;Disable fuzzy search for swiper
+    ;;(setq ivy-re-builders-alist
+    ;;      '((swiper . ivy--regex-plus)
+    ;;       (t      . ivy--regex-fuzzy)))
 #+END_SRC
 
 *** Visuals
@@ -1801,14 +1702,54 @@ Vim bindings to change fold
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
+  (defun my/ivy-top ()
+  (interactive)
+  (ivy-previous-line ivy--length))
+
+  (defun my/ivy-bot ()
+    (interactive)
+    (ivy-next-line ivy--length))
+
+  (setq ivy-minibuffer-map (make-sparse-keymap))
+
   ;; Enable avy movements in ivy buffer
-  (define-key ivy-minibuffer-map (kbd "M-p") 'ivy-avy)
-  (define-key ivy-minibuffer-map (kbd "M-n") 'ivy-avy)
+  (evil-define-key 'normal ivy-minibuffer-map (kbd "M-n") 'ivy-avy)
+  (evil-define-key 'normal ivy-minibuffer-map (kbd "M-p") 'ivy-avy)
 
-  (define-key ivy-minibuffer-map (kbd "<escape>") 'minibuffer-keyboard-quit)
+  (evil-define-key 'normal ivy-minibuffer-map (kbd "G") 'my/ivy-bot)
+  (evil-define-key 'normal ivy-minibuffer-map (kbd "g g") 'my/ivy-top)
 
-  (define-key ivy-minibuffer-map (kbd "C-u") 'ivy-scroll-down-command)
-  (define-key ivy-minibuffer-map (kbd "C-w") 'ivy-scroll-up-command)
+  (evil-define-key 'normal ivy-minibuffer-map (kbd "n") 'ivy-next-line)
+  (evil-define-key 'normal ivy-minibuffer-map (kbd "p") 'ivy-previous-line)
+
+  (define-key ivy-minibuffer-map [remap evil-ret] 'ivy-done)
+  (define-key ivy-minibuffer-map [remap newline] 'ivy-done)
+
+  (evil-define-key 'insert ivy-minibuffer-map (kbd "C-n") 'ivy-next-line)
+  (evil-define-key 'insert ivy-minibuffer-map (kbd "C-p") 'ivy-previous-line)
+
+  (evil-define-key 'normal ivy-minibuffer-map (kbd "C-g") 'minibuffer-keyboard-quit)
+  (evil-define-key 'insert ivy-minibuffer-map (kbd "C-g") 'minibuffer-keyboard-quit)
+
+  (evil-define-key 'normal ivy-minibuffer-map (kbd "C-u") 'ivy-scroll-down-command)
+  (evil-define-key 'normal ivy-minibuffer-map (kbd "C-w") 'ivy-scroll-up-command)
+  (evil-define-key 'insert ivy-minibuffer-map (kbd "C-u") 'ivy-scroll-down-command)
+  (evil-define-key 'insert ivy-minibuffer-map (kbd "C-w") 'ivy-scroll-up-command)
+
+  (evil-define-key 'normal ivy-minibuffer-map (kbd "C-o") 'ivy-occur)
+  (evil-define-key 'insert ivy-minibuffer-map (kbd "C-o") 'ivy-occur)
+
+  (evil-define-key 'normal ivy-minibuffer-map (kbd "C-h") 'ivy-dispatching-done)
+  (evil-define-key 'insert ivy-minibuffer-map (kbd "C-h") 'ivy-dispatching-done)
+
+  (evil-define-key 'normal ivy-minibuffer-map (kbd "C-s") 'ivy-next-line-or-history)
+  (evil-define-key 'insert ivy-minibuffer-map (kbd "C-s") 'ivy-next-line-or-history)
+
+  (evil-define-key 'normal ivy-minibuffer-map (kbd "TAB") 'ivy-partial-or-done)
+  (evil-define-key 'insert ivy-minibuffer-map (kbd "TAB") 'ivy-partial-or-done)
+
+  (evil-define-key 'normal ivy-minibuffer-map (kbd "DEL") 'ivy-backward-delete-char)
+  (evil-define-key 'insert ivy-minibuffer-map (kbd "DEL") 'ivy-backward-delete-char)
 #+END_SRC
 
 ** Counsel
@@ -3292,6 +3233,12 @@ Shows information in echo area
 
   ;; Org src compatibility
   (add-to-list 'auto-mode-alist '("\\.plantuml\\'" . plantuml-mode))
+
+  (defun my/plantuml-mode ()
+    (interactive)
+    (aggressive-indent-mode -1))
+
+  (add-hook 'plantuml-mode-hook 'my/plantuml-mode)
 #+END_SRC
 
 ** LSP mode
@@ -3894,8 +3841,12 @@ https://emacs.stackexchange.com/questions/33326/how-do-i-cut-and-paste-effective
   (add-hook 'exwm-manage-finish-hook 'my/exwm-mode)
   (defun my/exwm-mode ()
     (interactive)
-    ()
-    )
+    ())
+#+END_SRC
+
+** Exwm-edit
+#+BEGIN_SRC emacs-lisp
+  (use-package exwm-edit)
 #+END_SRC
 
 ** Set exwm buffer name 
@@ -4061,6 +4012,171 @@ We use class names for all windows expect for Java applications and GIMP (becaus
   ;; (define-key 'my/leader-map (kbd "C-q") 'my/send-key)
   ;; 
   ;; (exwm-input--fake-key (event-basic-type ?\C-a))
+#+END_SRC
+
+* Browser
+** Eww/shr
+#+BEGIN_SRC emacs-lisp
+  (require 'eww)
+  (require 'shr)
+#+END_SRC
+
+*** Highlight code
+#+BEGIN_SRC emacs-lisp
+  (defface my/eww-code-face
+    '((t
+       :family my/mono-font
+       ))
+    "Eww code face"
+    :group 'eww-mode)
+
+  (defun my/eww-tag-code (dom)
+    (let ((start (point))
+          (text (dom-text dom)))
+      (insert text)
+      (message text)
+      (add-face-text-property start (point) 'my/eww-code-face)
+      (insert " ")))
+  (setq shr-external-rendering-functions '((code . my/eww-tag-code)))
+
+  (defun my/eww-toggle-code-highlighting ()
+    (interactive)
+    (if (member '(code . my/eww-tag-code) shr-external-rendering-functions)
+        (setq shr-external-rendering-functions (remove '(code . my/eww-tag-code) shr-external-rendering-functions))
+      (add-to-list 'shr-external-rendering-functions '(code . my/eww-tag-code))))
+#+END_SRC
+
+*** Add URL to buffer name
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'eww-after-render-hook '(lambda () (interactive) (my/give-buffer-unique-name (concat "eww - " (plist-get eww-data :title)))))
+#+END_SRC
+      
+*** Fix background colors shr
+#+BEGIN_SRC emacs-lisp
+  (setq shr-color-visible-luminance-min 80)
+  (setq shr-color-visible-distance-min 5)
+
+  ;; Fully disables colors
+  ;;(advice-add #'shr-colorize-region :around (defun shr-no-colourise-region (&rest ignore)))
+#+END_SRC
+
+*** Auto-open image at point
+Redefine function to attempt to open image if link at point wasn't found
+#+BEGIN_SRC emacs-lisp
+  (defun shr-browse-url (&optional external mouse-event)
+    "Browse the URL at point using `browse-url'.
+  If EXTERNAL is non-nil (interactively, the prefix argument), browse
+  the URL using `shr-external-browser'.
+  If this function is invoked by a mouse click, it will browse the URL
+  at the position of the click.  Optional argument MOUSE-EVENT describes
+  the mouse click event."
+    (interactive (list current-prefix-arg last-nonmenu-event))
+    (mouse-set-point mouse-event)
+    (let ((url (get-text-property (point) 'shr-url)))
+      (cond
+       ((not url)
+       ;; Was unsuccessful in opening link, attempt to open image
+        (shr-browse-image))
+       ((string-match "^mailto:" url)
+        (browse-url-mail url))
+       (t
+        (if external
+            (funcall shr-external-browser url)
+          (browse-url url))))))
+#+END_SRC
+
+*** Keys
+#+BEGIN_SRC emacs-lisp
+  ;; (define-key eww-mode-map [?\d] 'eww-back-url)
+  ;; (evil-define-key 'normal eww-mode-map [?\d] 'eww-back-url)
+  ;; (evil-define-key 'visual eww-mode-map [?\d] 'eww-back-url)
+
+  (evil-define-key 'normal eww-mode-map (kbd "w") 'evil-forward-word-begin)
+  (setq shr-map (make-sparse-keymap))
+
+  (evil-define-key 'normal eww-mode-map (kbd "H") 'eww-back-url)
+  (evil-define-key 'normal eww-mode-map (kbd "L") 'eww-forward-url)
+
+  (define-prefix-command 'my/eww-mode-map)
+  (evil-define-key 'normal eww-mode-map (kbd (concat my/leader-map-key " a")) 'my/eww-mode-map)
+
+  (define-key my/eww-mode-map (kbd "d") 'eww-download)
+  (define-key my/eww-mode-map (kbd "h") 'eww-history-browse)
+  (define-key my/eww-mode-map (kbd "o") 'eww-open-in-new-buffer)
+  (define-key my/eww-mode-map (kbd "r") 'eww-reload)
+  (define-key my/eww-mode-map (kbd "f") 'eww-open-file)
+  (define-key my/eww-mode-map (kbd "C-c") 'my/eww-toggle-code-highlighting)
+#+END_SRC
+
+** Firefox exwm integration
+#+BEGIN_SRC emacs-lisp
+  (use-package exwm-firefox-core)
+  (use-package exwm-firefox-evil)
+
+  (exwm-firefox-evil-mode-enable)
+
+  ;; By default exwm buffers start in emacs state
+  (defun exwm-firefox-evil-auto-activate ()
+    "Activates exwm-firefox mode when buffer is firefox.
+  Firefox variant can be assigned in 'exwm-firefox-evil-firefox-name`"
+    (if (member exwm-class-name exwm-firefox-evil-firefox-class-name)
+        (progn
+          (exwm-firefox-evil-mode 1)
+          (exwm-firefox-evil-insert))))
+#+END_SRC
+
+*** Keys
+#+BEGIN_SRC emacs-lisp
+  (defun my/exwm-firefox-evil-link-hint ()
+    (interactive)
+    (exwm-input--fake-key ?f)
+    (exwm-input-send-next-key 2))
+
+  ;;; Normal
+  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "f") 'my/exwm-firefox-evil-link-hint)
+
+  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
+  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
+
+  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
+  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
+
+  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
+
+  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "N") 'exwm-firefox-core-tab-next)
+  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "P") 'exwm-firefox-core-tab-previous)
+
+  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "s") 'exwm-firefox-core-tab-close)
+
+  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "j") 'exwm-firefox-core-find-next)
+  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "J") 'exwm-firefox-core-find-previous)
+
+   ;;; Visual
+  (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up-select)
+  (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down-select)
+
+  (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down-select)
+
+  (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "j") 'exwm-firefox-core-find-next)
+  (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "J") 'exwm-firefox-core-find-previous)
+
+   ;;; Insert
+  (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
+#+END_SRC
+
+** Next browser
+#+BEGIN_SRC emacs-lisp
+  ;; (defun my/write-next-config ()
+    ;; (my/create-dir-if-not-exist "~/.config")
+    ;; (my/create-dir-if-not-exist "~/.config/next")
+    ;; (my/create-file-with-content-if-not-exist "~/.config/next/init.lisp")
+  ;; 
+    ;; )
+#+END_SRC
+
+** Set default browser
+#+BEGIN_SRC emacs-lisp
+  (setq-default browse-url-browser-function 'eww-browse-url)
 #+END_SRC
 
 * Version control
@@ -6852,6 +6968,21 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                       ;;"@" 
                       ;; Print total line number
                       (:eval my/buffer-total-lines)
+
+                      " "
+		    
+                      (:eval
+                       (if (eq evil-state 'normal)
+                           "N"
+                         (if (eq evil-state 'insert)
+                             "I"
+                           (if (eq evil-state 'visual)
+                               "V"
+                             (if (eq evil-state 'emacs)
+                                 "E"
+                               (if (eq evil-state 'replace)
+                                   "R"))))))
+
                       ;;"%I"
 
                       ;; is narrowed
