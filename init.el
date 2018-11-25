@@ -1,21 +1,4 @@
-;; Init packages
-(defun my/init-packages ()
-  (require 'package)
-  (setq package-enable-at-startup nil)
-
-  (setq package-archives
-	'(("gnu" . "https://elpa.gnu.org/packages/")
-	  ("melpa" . "https://melpa.org/packages/")))
-  (package-initialize)
-
-  (unless (package-installed-p 'use-package)
-    (package-refresh-contents)
-    (package-install 'use-package))
-  (eval-when-compile
-    (require 'use-package))
-  (setq use-package-always-ensure t))
-
-(my/init-packages)
+(setq debug-on-error t)
 
 ;; Config locations
 (defvar my/config-location (expand-file-name (concat user-emacs-directory "config.org")))
@@ -27,7 +10,16 @@
   (interactive)
   (time-less-p (nth 5 (file-attributes file2)) (nth 5 (file-attributes file1))))
 
-;; Compiled config
+(defun my/mark-config-error ()
+  (write-region nil nil my/config-error-marker))
+
+(defun my/has-config-error ()
+  (file-exists-p my/config-error-marker))
+
+(defun my/load-exported-config ()
+  (my/mark-config-error)
+  (load-file my/config-exported-location))
+
 (defun my/compile-and-load-config ()
   (message "Compiling and loading config")
   (setq byte-compile-warnings '(not
@@ -39,19 +31,12 @@
 				noruntime
 				cl-functions
 				interactive-only))
-  (byte-compile-file my/config-exported-location t)
-  (setq byte-compile-warnings t))
-
-(defun my/mark-config-error ()
-  (write-region nil nil my/config-error-marker))
-
-(defun my/unmark-config-error ()
-  (delete-file my/config-error-marker))
-
-(defun my/has-config-error ()
-  (file-exists-p my/config-error-marker))
+  (my/load-exported-config)
+  (if (not (my/has-config-error))
+      (byte-compile-file my/config-exported-location)))
 
 (defun my/load-stable-config ()
+  (interactive)
   ;; Compiled config doesn't have any errors
   (if (file-exists-p my/config-compiled-location)
       (progn
@@ -67,22 +52,18 @@
 	(load-file my/config-compiled-location))
     (my/compile-and-load-config)))
 
-(defun my/attempt-load-exported-config ()
-  (if (ignore-errors (load-file my/config-exported-location))
-      (my/unmark-config-error)
-    (my/mark-config-error)
-    (my/load-stable-config)))
 
-(require 'ob-tangle)
 (defun my/export-config()
+  (require 'ob-tangle)
   (org-babel-tangle-file my/config-location my/config-exported-location "emacs-lisp")
   (message "Config.el updated!")
-  (my/attempt-load-exported-config))
+  (my/load-exported-config))
 
 (if (not (file-exists-p my/config-exported-location))
     (my/export-config)
   (if (my/is-file-more-up-to-date my/config-location my/config-exported-location)
       (my/export-config)
     (if (my/has-config-error)
-	(my/load-stable-config)
+	;; To display error
+	(my/load-exported-config)
       (my/load-compiled-or-compile))))

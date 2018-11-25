@@ -226,6 +226,23 @@ Get =gpick=
   (setq netrc-file "~/.authinfo.gpg")
 #+END_SRC
 
+* Package management
+Bootstrap straight.el
+#+BEGIN_SRC emacs-lisp
+  (defvar bootstrap-version)
+  (let ((bootstrap-file
+         (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
+        (bootstrap-version 5))
+    (unless (file-exists-p bootstrap-file)
+      (with-current-buffer
+          (url-retrieve-synchronously
+           "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
+           'silent 'inhibit-cookies)
+        (goto-char (point-max))
+        (eval-print-last-sexp)))
+    (load bootstrap-file nil 'nomessage))
+#+END_SRC
+
 * Private config
 #+BEGIN_SRC emacs-lisp
 (defun my/load-if-exists (f)
@@ -284,7 +301,7 @@ Define my mode for setting global settings in all buffers
 
 * Alert
 #+BEGIN_SRC emacs-lisp
-  (use-package alert)
+  (straight-use-package 'alert)
 #+END_SRC
 
 ** Fix mode line notification face
@@ -318,8 +335,7 @@ Define my mode for setting global settings in all buffers
     (set-face-attribute 'mode-line nil :foreground "white" :background "white"))
 
   ;; Disable auto revert back face
-  (defun alert-mode-line-restore (_info)
-    )
+  (defun alert-mode-line-restore (_info))
 #+END_SRC
 ** Settings
 #+BEGIN_SRC emacs-lisp
@@ -460,7 +476,7 @@ Default file-size-human-readable returns decimal values
 * Theme
 #+BEGIN_SRC emacs-lisp
   ;; (when window-system
-    ;; (use-package twilight-anti-bright-theme)
+    ;; (straight-use-package 'twilight-anti-bright-theme)
     ;; (load-theme 'twilight-anti-bright t))
 
   (when (not window-system)
@@ -569,8 +585,8 @@ Stop custom from editing init.el
   (setq evil-ex-interactive-search-highlight t)
   (setq evil-ex-search-persistent-highlight nil)
 
-
-  (use-package evil)
+  (straight-use-package 'evil)
+  (require 'evil)
 
   ;;(fset 'evil-visual-update-x-selection 'ignore)
   (evil-mode)
@@ -710,7 +726,7 @@ https://github.com/syohex/evil-textobj-line
 *** Evil-indent-plus
 Allows for using indention as text objects
 #+BEGIN_SRC emacs-lisp
-  (use-package evil-indent-plus)
+  (straight-use-package 'evil-indent-plus)
 
   (define-key evil-inner-text-objects-map "i" 'evil-indent-plus-i-indent)
   (define-key evil-outer-text-objects-map "i" 'evil-indent-plus-a-indent)
@@ -722,7 +738,7 @@ Allows for using indention as text objects
 
 *** Evil textobject block
 #+BEGIN_SRC emacs-lisp
-  (use-package evil-textobj-anyblock)
+  (straight-use-package 'evil-textobj-anyblock)
 
   (define-key evil-inner-text-objects-map "b" 'evil-textobj-anyblock-inner-block)
   (define-key evil-outer-text-objects-map "b" 'evil-textobj-anyblock-a-block)
@@ -740,13 +756,13 @@ Allows for using indention as text objects
 
 *** Evil-surround
 #+BEGIN_SRC emacs-lisp
-  (use-package evil-surround)
+  (straight-use-package 'evil-surround)
   (global-evil-surround-mode 1)
 #+END_SRC
 
 *** Evil-args
 #+BEGIN_SRC emacs-lisp
-  (use-package evil-args)
+  (straight-use-package 'evil-args)
 
   ;; bind evil-args text objects
   (define-key evil-inner-text-objects-map "a" 'evil-inner-arg)
@@ -755,14 +771,14 @@ Allows for using indention as text objects
 
 ** Evil-lion
 #+BEGIN_SRC emacs-lisp
-  ;;(use-package evil-lion)
+  ;;(straight-use-package 'evil-lion)
 
   ;;(evil-lion-mode)
 #+END_SRC
 
 ** Evil-goggles
 #+BEGIN_SRC emacs-lisp
-  (use-package evil-goggles)
+  (straight-use-package 'evil-goggles)
   (evil-goggles-mode)
   ;; Disable pulse which both fixes so that you can set foreground color on the pulse font and saves on performance
   (setq evil-goggles-pulse nil)
@@ -773,13 +789,13 @@ Allows for using indention as text objects
 
 ** Evil-matchit
 #+BEGIN_SRC emacs-lisp
-  (use-package evil-matchit)
+  (straight-use-package 'evil-matchit)
   (global-evil-matchit-mode 1)
 #+END_SRC
 
 ** Evil-multiple cursors
 #+BEGIN_SRC emacs-lisp
-  ;; (use-package evil-mc)
+  ;; (straight-use-package 'evil-mc)
 ;; 
   ;; (global-evil-mc-mode 1)
 ;; 
@@ -938,7 +954,7 @@ https://www.emacswiki.org/emacs/ForceBackups
 
 ** Undo tree
 #+BEGIN_SRC emacs-lisp
-  (use-package undo-tree)
+  (straight-use-package 'undo-tree)
 
   (setq global-undo-tree-mode t)
 
@@ -997,7 +1013,7 @@ When changing leader, change =my/leader-map-key= and manually change all general
 * Package management
 ** Guix
 #+BEGIN_SRC emacs-lisp
-  (use-package guix)
+  (straight-use-package 'guix)
 #+END_SRC
   
 *** Keys
@@ -1331,16 +1347,14 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
 ** Sudo edit
 #+BEGIN_SRC emacs-lisp
-  (use-package sudo-edit
-    :defer t)
+  (straight-use-package 'sudo-edit)
 
   (define-key my/leader-map (kbd "M-s") 'sudo-edit)
 #+END_SRC
 
 ** With-editor
 #+BEGIN_SRC emacs-lisp
-  (use-package with-editor
-    :defer t)
+  (straight-use-package 'with-editor)
 #+END_SRC
 
 ** Enable disabled commands
@@ -1352,8 +1366,10 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
 ** Async
 #+BEGIN_SRC emacs-lisp
-  (use-package async)
+  (straight-use-package 'async)
 
+  (require 'async)
+  (require 'dired-async)
   (autoload 'dired-async-mode "dired-async.el" nil t)
   (dired-async-mode 1)
 #+END_SRC
@@ -1648,7 +1664,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
 ** Origami
 #+BEGIN_SRC emacs-lisp
-   ;;(use-package origami)
+   ;;(straight-use-package 'origami)
 ;; 
    ;;(global-origami-mode)
 #+END_SRC
@@ -1671,7 +1687,7 @@ Vim bindings to change fold
 * Completion
 ** Ivy
 #+BEGIN_SRC emacs-lisp
-    (use-package ivy)
+    (straight-use-package 'ivy)
 
     (ivy-mode 1)
 
@@ -1754,7 +1770,7 @@ Vim bindings to change fold
 
 ** Counsel
 #+BEGIN_SRC emacs-lisp
-  (use-package counsel)
+  (straight-use-package 'counsel)
 
   (counsel-mode 1)
 
@@ -1815,7 +1831,7 @@ Vim bindings to change fold
 
 ** Swiper 
 #+BEGIN_SRC emacs-lisp
-  (use-package swiper)
+  (straight-use-package 'swiper)
 
   (defun my/use-swiper-or-grep(&optional input case-sensative)
     (interactive)
@@ -1850,7 +1866,8 @@ Vim bindings to change fold
 
 ** Ivy rich
 #+BEGIN_SRC emacs-lisp
-  (use-package ivy-rich)
+  (straight-use-package 'ivy-rich)
+  (require 'ivy-rich)
   (ivy-rich-mode 1)
 
   ;;(ivy-set-display-transformer 'ivy-switch-buffer 'ivy-switch-buffer)
@@ -1885,7 +1902,8 @@ Vim bindings to change fold
 
 ** Company
 #+BEGIN_SRC emacs-lisp
-  (use-package company)
+  (straight-use-package 'company)
+  (require 'company)
 
   (setq company-idle-delay 0)
   (setq company-echo-delay 0)
@@ -2033,7 +2051,7 @@ Company with icons
 Doesn't work with my setup right now
 #+BEGIN_SRC emacs-lisp
 ;;(when window-system
-;;  (use-package company-box)
+;;  (straight-use-package 'company-box)
 ;;
 ;;  (add-hook 'company-mode-hook 'company-box-mode)
 ;;
@@ -2047,7 +2065,7 @@ Doesn't work with my setup right now
 
 ** Flycheck
 #+BEGIN_SRC emacs-lisp
-  (use-package flycheck)
+  (straight-use-package 'flycheck)
 
   ;; Use new buffer if message is longer than 1 line, can't get it to expand the minibuffer instead
   (setq max-mini-window-height 1)
@@ -2061,7 +2079,7 @@ Doesn't work with my setup right now
 ** Flycheck-package
 Flycheck with extra correction for elisp packages
 #+BEGIN_SRC emacs-lisp
-  (use-package flycheck-package)
+  (straight-use-package 'flycheck-package)
 
   (eval-after-load 'flycheck
     '(flycheck-package-setup))
@@ -2069,7 +2087,7 @@ Flycheck with extra correction for elisp packages
 
 ** Which-key
 #+BEGIN_SRC emacs-lisp
-  (use-package which-key)
+  (straight-use-package 'which-key)
 
   (which-key-mode)
 
@@ -2095,9 +2113,10 @@ Flycheck with extra correction for elisp packages
 
 ** Yasnippet
 #+BEGIN_SRC emacs-lisp
-  (use-package yasnippet)
+  (straight-use-package 'yasnippet)
+  (require 'yasnippet)
 
-  (use-package yasnippet-snippets)
+  (straight-use-package 'yasnippet-snippets)
 
   ;;(yas-reload-all)
 
@@ -2190,7 +2209,8 @@ Flycheck with extra correction for elisp packages
 
 ** Avy
 #+BEGIN_SRC emacs-lisp
-  (use-package avy)
+  (straight-use-package 'avy)
+  (require 'avy)
 
   (setq avy-keys '(
                    ;; Easy
@@ -2279,16 +2299,14 @@ Flycheck with extra correction for elisp packages
 
 ** Avy flycheck
 #+BEGIN_SRC emacs-lisp
-  (use-package avy-flycheck
-    :defer t)
+  (straight-use-package 'avy-flycheck)
 
   (define-key my/leader-map (kbd "j") 'avy-flycheck-goto-error)
 #+END_SRC
 
 ** Link-hint
 #+BEGIN_SRC emacs-lisp
-  (use-package link-hint
-    :defer t)
+  (straight-use-package 'link-hint)
 #+END_SRC
 
 ** Scroll
@@ -2299,14 +2317,14 @@ Flycheck with extra correction for elisp packages
 
 *** On-screen
 #+BEGIN_SRC emacs-lisp
-  ;; (use-package on-screen)
+  ;; (straight-use-package 'on-screen)
   ;; (on-screen-global-mode)
   ;; (setq on-screen-highlight-method 'fringe)
 #+END_SRC
 
 ** Jammer
 #+BEGIN_SRC emacs-lisp
-  ;; (use-package jammer)
+  ;; (straight-use-package 'jammer)
 ;; 
   ;; (setq jammer-repeat-delay 0.5)
   ;; (setq jammer-repeat-window 1)
@@ -2334,8 +2352,7 @@ Flycheck with extra correction for elisp packages
 ** goto change
 g-; and g-,
 #+BEGIN_SRC emacs-lisp
-  (use-package goto-chg
-    :defer t)
+  (straight-use-package 'goto-chg)
 #+END_SRC
 
 ** My find file
@@ -2552,7 +2569,7 @@ Make file sizes human readable
 
 ** Dired atool
 #+BEGIN_SRC emacs-lisp
-  (use-package dired-atool)
+  (straight-use-package 'dired-atool)
 
   (dired-atool-setup)
 
@@ -2571,14 +2588,14 @@ Make file sizes human readable
 
 ** Dired collapse
 #+BEGIN_SRC emacs-lisp
-  ;; (use-package dired-collapse)
+  ;; (straight-use-package 'dired-collapse)
 ;; 
   ;; (add-hook 'dired-mode-hook 'dired-collapse-mode)
 #+END_SRC
 
 ** Subtree
 #+BEGIN_SRC emacs-lisp
-  ;;(use-package dired-subtree)
+  ;;(straight-use-package 'dired-subtree)
 #+END_SRC
 
 ** Sorting
@@ -2603,8 +2620,7 @@ Version 2015-07-30"
 
 ** Recursive folder size
 #+BEGIN_SRC emacs-lisp
-  (use-package dired-du
-    :defer t)
+  (straight-use-package 'dired-du)
 #+END_SRC
 
 ** Keys
@@ -2815,7 +2831,9 @@ Version 2015-07-30"
 
 * Org
 #+BEGIN_SRC emacs-lisp
-  (use-package org)
+  (straight-use-package 'org)
+  (require 'org)
+  (require 'org-agenda)
 
   (define-prefix-command 'my/org-mode-map)
   (evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a")) 'my/org-mode-map)
@@ -2841,9 +2859,10 @@ Version 2015-07-30"
 
 ** Bullets
 #+BEGIN_SRC emacs-lisp
-  (use-package org-bullets)
-  (when window-system
+  (straight-use-package 'org-bullets)
+  (require 'org-bullets)
 
+  (when window-system
     (if (eq system-type 'windows-nt)
         (setq inhibit-compacting-font-caches t))
     (add-hook 'org-mode-hook (lambda () (interactive) (org-bullets-mode))))
@@ -2915,14 +2934,12 @@ ox-html5slide
 org-html-themes
 *** Syntax highlighting for HTML export
 #+BEGIN_SRC emacs-lisp
-  (use-package htmlize
-    :defer t)
+  (straight-use-package 'htmlize)
 #+END_SRC
 
 *** Twitter bootstrap
 #+BEGIN_SRC emacs-lisp
-  (use-package ox-twbs
-    :defer t)
+  (straight-use-package 'ox-twbs)
 #+END_SRC
 
 ** Agenda
@@ -2939,7 +2956,7 @@ Give agenda file to use
 *** Display at startup
 Spawn agenda buffer
 #+BEGIN_SRC emacs-lisp
-  (org-agenda-list)
+  ;;(org-agenda-list)
 #+END_SRC
 
 **** Declare switch function
@@ -3135,7 +3152,7 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 
 *** Smartparens
 #+BEGIN_SRC emacs-lisp
-  ;; (use-package smartparens)
+  ;; (straight-use-package 'smartparens)
 ;; 
   ;; (smartparens-global-mode)
 #+END_SRC
@@ -3151,7 +3168,7 @@ Shows information in echo area
 
 *** Aggressive indent
 #+BEGIN_SRC emacs-lisp
-  (use-package aggressive-indent)
+  (straight-use-package 'aggressive-indent)
 
   (global-aggressive-indent-mode)
   ;;(add-hook 'prog-mode-hook 'aggressive-indent-mode)
@@ -3159,14 +3176,14 @@ Shows information in echo area
     
 *** Whitespace cleanup
 #+BEGIN_SRC emacs-lisp
-  (use-package whitespace-cleanup-mode)
+  (straight-use-package 'whitespace-cleanup-mode)
 
   (global-whitespace-cleanup-mode)
 #+END_SRC
 
 *** indent guide
 #+BEGIN_SRC emacs-lisp
-  ;; (use-package highlight-indent-guides)
+  ;; (straight-use-package 'highlight-indent-guides)
 ;; 
   ;; (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
 ;; 
@@ -3221,15 +3238,14 @@ Shows information in echo area
 
 ** Documentation
 #+BEGIN_SRC emacs-lisp
-  (use-package zeal-at-point
-    :defer t)
+  (straight-use-package 'zeal-at-point)
 
   (define-key my/leader-map (kbd "d") 'zeal-at-point)
 #+END_SRC
 
 ** Plantuml
 #+BEGIN_SRC emacs-lisp
-  (use-package plantuml-mode)
+  (straight-use-package 'plantuml-mode)
 
   ;; Org src compatibility
   (add-to-list 'auto-mode-alist '("\\.plantuml\\'" . plantuml-mode))
@@ -3243,12 +3259,12 @@ Shows information in echo area
 
 ** LSP mode
 #+BEGIN_SRC emacs-lisp
-  (use-package lsp-mode)
+  (straight-use-package 'lsp-mode)
 #+END_SRC
 
 *** Company LSP
 #+BEGIN_SRC emacs-lisp
-  (use-package company-lsp)
+  (straight-use-package 'company-lsp)
 
   ;; Requested by lsp java
   (setq company-lsp-enable-snippe t)
@@ -3259,13 +3275,13 @@ Shows information in echo area
 
 *** LSP-ui
 #+BEGIN_SRC emacs-lisp
-  (use-package lsp-ui)
+  (straight-use-package 'lsp-ui)
 #+END_SRC
 
 ** Common lisp
 *** Slime
 #+BEGIN_SRC emacs-lisp
-  (use-package slime)
+  (straight-use-package 'slime)
 
   (setq inferior-lisp-program "/usr/bin/sbcl")
   (setq slime-contribs '(slime-fancy))
@@ -3273,7 +3289,7 @@ Shows information in echo area
 
 **** Slime comany
 #+BEGIN_SRC emacs-lisp
-  (use-package slime-company)
+  (straight-use-package 'slime-company)
 
   (slime-setup '(slime-fancy slime-company))
 #+END_SRC
@@ -3289,7 +3305,7 @@ Shows information in echo area
 
 ** Scheme
 #+BEGIN_SRC emacs-lisp
-  (use-package geiser)
+  (straight-use-package 'geiser)
 
   (define-prefix-command 'my/scheme-mode-map)
   (evil-define-key 'normal scheme-mode-map (kbd (concat my/leader-map-key " a")) 'my/scheme-mode-map)
@@ -3306,14 +3322,13 @@ Shows information in echo area
 
 *** Suggest
 #+BEGIN_SRC emacs-lisp
-  (use-package suggest)
+  (straight-use-package 'suggest)
 #+END_SRC
 
 
 *** Formatting
 #+BEGIN_SRC emacs-lisp
-  (use-package elisp-format
-    :defer t)
+  (straight-use-package 'elisp-format)
 #+END_SRC
 
 *** Keys
@@ -3345,7 +3360,7 @@ https://github.com/mopemope/meghanada-emacs
 or
 =ENSIME= 
 #+BEGIN_SRC emacs-lisp
-  (use-package lsp-java)
+  (straight-use-package 'lsp-java)
 
   (add-hook 'java-mode-hook 'lsp-java-enable)
   (add-hook 'java-mode-hook (lambda () (lsp-ui-flycheck-enable t)))
@@ -3405,19 +3420,19 @@ or
 ** Python
 *** Jedi
 #+BEGIN_SRC emacs-lisp
-  (use-package company-jedi)
+  (straight-use-package 'company-jedi)
 
   (add-to-list 'company-backends 'company-jedi)
 #+END_SRC
 
 ** C#
 #+BEGIN_SRC emacs-lisp
-  (use-package csharp-mode)
+  (straight-use-package 'csharp-mode)
 #+END_SRC
 
 *** Omnisharp-emacs
 #+BEGIN_SRC emacs-lisp
-  (use-package omnisharp)
+  (straight-use-package 'omnisharp)
 
   (add-hook 'csharp-mode-hook 'omnisharp-mode)
   (add-hook 'csharp-mode-hook (lambda () (push 'company-omnisharp company-backends)))
@@ -3463,10 +3478,9 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 
 ** F#
 #+BEGIN_SRC emacs-lisp
-  (use-package fsharp-mode
-    :defer t
-    :mode ("\\.fs\\'" . fsharp-mode))
+  (straight-use-package 'fsharp-mode)
 
+  ;;:mode ("\\.fs\\'" . fsharp-mode)
   (setq fsharp-doc-idle-delay 0)
 
   ;;(setq-default fsharp-indent-offset 2)
@@ -3509,12 +3523,12 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 
 ** Clojure
 #+BEGIN_SRC emacs-lisp
-  (use-package clojure-mode)
+  (straight-use-package 'clojure-mode)
 #+END_SRC
 
 *** Cider
 #+BEGIN_SRC emacs-lisp
-  (use-package cider)
+  (straight-use-package 'cider)
 #+END_SRC
 
 *** Keys
@@ -3527,14 +3541,13 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 
 ** Markdown
 #+BEGIN_SRC emacs-lisp
-  (use-package markdown-mode)
+  (straight-use-package 'markdown-mode)
 #+END_SRC
 
 ** Web mode
 TODO: Fix settings, grab them from package site 
 #+BEGIN_SRC emacs-lisp
-   (use-package web-mode
-    :defer t)
+   (straight-use-package 'web-mode)
 
    (add-to-list 'auto-mode-alist '("\\.phtml\\'" . web-mode))
    (add-to-list 'auto-mode-alist '("\\.tpl\\.php\\'" . web-mode))
@@ -3553,7 +3566,7 @@ TODO: Fix settings, grab them from package site
 ** GPG  
 *** Pinentry
 #+BEGIN_SRC emacs-lisp
-  (use-package pinentry)
+  (straight-use-package 'pinentry)
 
   ;; Takes 0.000273s, autorun
   (add-hook 'exwm-init-hook 'pinentry-start)
@@ -3575,7 +3588,7 @@ Enable org mode for .org.gpg files
 
 *** Espy
 #+BEGIN_SRC emacs-lisp
-  (use-package espy)
+  (straight-use-package 'espy)
 
   (setq espy-password-file "~/pass.org.gpg")
 
@@ -3637,6 +3650,12 @@ Enable org mode for .org.gpg files
                               (ring-elements eshell-history-ring)))))
 #+END_SRC
 
+** Aliases
+#+BEGIN_SRC emacs-lisp
+  (defun eshell/f (file)
+    (find-file file))
+#+END_SRC
+
 ** Term
 #+BEGIN_SRC emacs-lisp
   (define-key my/leader-map (kbd "{") 'ansi-term)
@@ -3685,12 +3704,20 @@ Disable rainbow delimiters
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/eshell-mode-map)
-  (evil-define-key 'normal eshell-mode-map (kbd (concat my/leader-map-key " a")) 'my/eshell-mode-map)
-
-  (define-key my/eshell-mode-map (kbd "k") 'my/eshell-insert-history)
-
   (define-key my/leader-map (kbd "[") 'my/eshell)
+
+  ;; Eshell keys are buffer local... Bind them on startup
+  (defun my/bind-eshell-keys ()
+    (define-prefix-command 'my/eshell-mode-map)
+    (evil-define-key 'normal eshell-mode-map (kbd (concat my/leader-map-key " a")) 'my/eshell-mode-map)
+
+    (evil-define-key 'normal eshell-mode-map (kbd "RET") 'eshell-send-input)
+    (define-key eshell-mode-map [remap evil-ret] 'eshell-send-input)
+
+    (define-key my/eshell-mode-map (kbd "k") 'my/eshell-insert-history)
+    )
+
+  (add-hook 'eshell-mode-hook 'my/bind-eshell-keys)
 #+END_SRC
 
 * Keys
@@ -3702,7 +3729,7 @@ Disable rainbow delimiters
 *** General
 More rebind options and more reliable
 #+BEGIN_SRC emacs-lisp
-  (use-package general)
+  (straight-use-package 'general)
 
   (general-evil-setup)
 #+END_SRC
@@ -3826,11 +3853,10 @@ Use C-i instead
 * exwm
 https://emacs.stackexchange.com/questions/33326/how-do-i-cut-and-paste-effectively-between-applications-while-using-exwm
 #+BEGIN_SRC emacs-lisp
-  (use-package exwm)
+  (straight-use-package 'exwm)
 
   (require 'exwm)
-  ;; necessary to configure exwm manually
-  (require 'exwm-config)
+  ;;(require 'exwm-config)
 
   ;; Fix magit ediff
   (setq ediff-window-setup-function 'ediff-setup-windows-plain)
@@ -3846,7 +3872,7 @@ https://emacs.stackexchange.com/questions/33326/how-do-i-cut-and-paste-effective
 
 ** Exwm-edit
 #+BEGIN_SRC emacs-lisp
-  (use-package exwm-edit)
+  (straight-use-package 'exwm-edit)
 #+END_SRC
 
 ** Set exwm buffer name 
@@ -3877,16 +3903,39 @@ We use class names for all windows expect for Java applications and GIMP (becaus
 #+END_SRC
 
 ** Multi-screen
-#+BEGIN_SRC emacs-lisp
-  (if my/device/monitor-setup
-      (progn
-        ;; We need 3 frames to fill up monitors
-        (setq exwm-workspace-number (/ (length my/device/monitor-setup) 2))
-        (setq exwm-randr-workspace-output-plist my/device/monitor-setup)))
 
+#+BEGIN_SRC emacs-lisp
+  (require 'exwm-randr)
+#+END_SRC
+
+*** Get monitor setup
+#+BEGIN_SRC emacs-lisp
+  (exwm-randr-enable)
+
+  (defun my/exwm-randr-auto-get-monitor ()
+    (let* ((result)
+           (monitors (nth 1 (exwm-randr--get-monitors))))
+      (dotimes (i (/ (length monitors) 2))
+        (push (nth (* i 2) monitors) result)
+        (push i result))
+      result))
+
+  ;; Get monitor setup
+  (if my/device/monitor-setup 
+      (progn
+        (setq exwm-workspace-number (/ (length my/device/monitor-setup) 2))
+        (setq exwm-randr-workspace-monitor-plist my/device/monitor-setup)))
+  ;;(let ((monitor-setup (my/exwm-randr-auto-get-monitor)))
+  ;;(setq exwm-workspace-number (/ (length monitor-setup) 2))
+  ;;(setq exwm-randr-workspace-monitor-plist monitor-setup)))
+
+  ;; (exwm-randr-refresh)
+#+END_SRC
+
+*** Enable
+#+BEGIN_SRC emacs-lisp
   (if (> exwm-workspace-number 1)
       (progn
-        (require 'exwm-randr)
         (exwm-randr-enable)))
 #+END_SRC
 
@@ -4110,8 +4159,9 @@ Redefine function to attempt to open image if link at point wasn't found
 
 ** Firefox exwm integration
 #+BEGIN_SRC emacs-lisp
-  (use-package exwm-firefox-core)
-  (use-package exwm-firefox-evil)
+  (straight-use-package '(exwm-firefox-core :type git :host github :repo "walseb/exwm-firefox-core"))
+  (straight-use-package '(exwm-firefox-evil :type git :host github :repo "walseb/exwm-firefox-evil"))
+  (require 'exwm-firefox-evil)
 
   (exwm-firefox-evil-mode-enable)
 
@@ -4182,7 +4232,7 @@ Redefine function to attempt to open image if link at point wasn't found
 * Version control
 ** Projectile
 #+BEGIN_SRC emacs-lisp
-  (use-package projectile)
+  (straight-use-package 'projectile)
 
   ;; Disable projectile mode so that CPU isn't taken by projectile wating to refresh git project directory all the time
   (projectile-mode 0)
@@ -4191,13 +4241,12 @@ Redefine function to attempt to open image if link at point wasn't found
 ** Counsel projectile
 If enabled it auto enables projectile, which has high CPU usage
 #+BEGIN_SRC emacs-lisp
-(use-package counsel-projectile)
+(straight-use-package 'counsel-projectile)
 #+END_SRC
 
 ** Magit
 #+BEGIN_SRC emacs-lisp
-  (use-package magit
-    :defer t)
+  (straight-use-package 'magit)
 
   (setq git-commit-summary-max-length 50)
 #+END_SRC
@@ -4211,7 +4260,7 @@ If enabled it auto enables projectile, which has high CPU usage
 
 ** diff-hl
 #+BEGIN_SRC emacs-lisp
-  (use-package diff-hl)
+  (straight-use-package 'diff-hl)
 
   (global-diff-hl-mode)
 
@@ -4255,7 +4304,7 @@ If enabled it auto enables projectile, which has high CPU usage
 ** Videos
 *** Ivy-youtube
 #+BEGIN_SRC emacs-lisp
-  (use-package ivy-youtube)
+  (straight-use-package 'ivy-youtube)
 
   (setq ivy-youtube-play-at "mpv")
 
@@ -4350,7 +4399,7 @@ Setup emms
   (defvar my/emms-init-hook nil
     "Hook called when emms has to init fully")
 
-  (use-package emms)
+  (straight-use-package 'emms)
 
 
   (add-hook 'my/emms-init-hook (lambda () (interactive)
@@ -4968,7 +5017,7 @@ Mode for writing mail
 
   (defun my/monitor-home-setup ()
     (interactive)
-    (shell-command "xrandr --output DP-1 --mode 2560x1440 --rate 60 --left-of DVI-I-1 --output DVI-D-1 --mode 1280x800 --rate 59.81 --left-of DP-1 --output DVI-I-1 --mode 1280x800 --rate 59.81"))
+    (shell-command "xrandr --output DP-1 --mode 2560x1440 --rate 60 --left-of DVI-D-1 --output DVI-D-1 --mode 1280x800 --rate 59.81"))
   (define-key my/system-monitor-map (kbd "h") 'my/monitor-home-setup)
 
   (defun my/auto-connect-screen ()
@@ -5315,7 +5364,7 @@ https://www.emacswiki.org/emacs/ArtistMode
 
 * Hydra
 #+BEGIN_SRC emacs-lisp
-  (use-package hydra)
+  (straight-use-package 'hydra)
 
   ;; Hydra lv generates a lot of garbage, disable it
   (setq hydra-lv nil)
@@ -5435,8 +5484,7 @@ https://www.emacswiki.org/emacs/ArtistMode
 
 ** PDF tools
 #+BEGIN_SRC emacs-lisp
-  (use-package pdf-tools
-    :defer t)
+  (straight-use-package 'pdf-tools)
 
   (add-to-list 'auto-mode-alist '("\\.[pP][dD][fF]\\'" . my/init-pdf-tools))
   ;;(add-to-list 'auto-mode-alist '("\\.[pP][dD][fF]\\'" . pdf-view-mode))
@@ -5524,7 +5572,7 @@ https://www.emacswiki.org/emacs/ArtistMode
 
 *** Blimp
 #+BEGIN_SRC emacs-lisp
-  (use-package blimp)
+  (straight-use-package 'blimp)
 
   (setq eimp-enable-undo t)
 
@@ -5578,14 +5626,13 @@ https://www.emacswiki.org/emacs/ArtistMode
 * Outline
 http://www.modernemacs.com/post/outline-ivy/
 #+BEGIN_SRC emacs-lisp
-  (use-package outorg)
-  (use-package outshine)
-  (require 'outline)
+  (straight-use-package 'outorg)
+  (straight-use-package 'outshine)
+  (require 'outshine)
 
   (add-hook 'outline-minor-mode-hook 'outshine-hook-function)
 
   (add-hook 'prog-mode-hook 'outline-minor-mode)
-
   (setq outshine-startup-folded-p nil)
 #+END_SRC
 
@@ -5783,7 +5830,6 @@ use "^\s*" instead of "^"
           (list (list nil (concat "^\s*\\(?:" outline-regexp "\\).*$") 0)))
     (add-hook 'change-major-mode-hook 'outline-show-all nil t))
 
-
   (defun outline-next-heading ()
     "Move to the next (possibly invisible) heading line."
     (interactive)
@@ -5969,6 +6015,7 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
                                             'display ,outline-str)))))
            font-lock-alist)))
 
+  (require 's)
   (defun pretty-outlines--bullets-rgx-at-level (level)
     "Calculate regex or outline-bullets at LEVEL."
     ;; In buffers like org, `outshine-calc-outline-string-at-level 1' always returns "  ", check for this
@@ -6052,7 +6099,8 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
 
 * Spray
 #+BEGIN_SRC emacs-lisp
-  (use-package spray)
+  (straight-use-package 'spray)
+  (require 'spray)
 
   (setq spray-wpm 500)
 
@@ -6289,7 +6337,7 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
 
 ** Center text
 #+BEGIN_SRC emacs-lisp
-  (use-package olivetti)
+  (straight-use-package 'olivetti)
 
   (setq-default olivetti-body-width 150)
 
@@ -6305,7 +6353,7 @@ Fringe only on the left side
 
 ** Beacon
 #+BEGIN_SRC emacs-lisp
-  ;; (use-package beacon)
+  ;; (straight-use-package 'beacon)
 ;; 
   ;; (beacon-mode 1)
 #+END_SRC
@@ -6313,7 +6361,7 @@ Fringe only on the left side
 ** Rainbow
 Changes background of eg. #FF00FF to represent color
 #+BEGIN_SRC emacs-lisp
-  (use-package rainbow-mode)
+  (straight-use-package 'rainbow-mode)
 
   (define-key my/help-map (kbd "c") 'rainbow-mode)
 #+END_SRC
@@ -6321,7 +6369,7 @@ Changes background of eg. #FF00FF to represent color
 ** Rainbow delimiters
 Changes colors of delimiters eg. {()}
 #+BEGIN_SRC emacs-lisp
-  (use-package rainbow-delimiters)
+  (straight-use-package 'rainbow-delimiters)
 
   (define-key my/help-map (kbd "d") 'rainbow-delimiters-mode)
   ;;(add-hook 'prog-mode 'rainbow-delimiters-mode)
@@ -6329,7 +6377,7 @@ Changes colors of delimiters eg. {()}
 
 ** Minimap
 #+BEGIN_SRC emacs-lisp
-  (use-package minimap)
+  (straight-use-package 'minimap)
 
   (define-key my/leader-map (kbd "]") 'my/toggle-window-config-minimap)
 
@@ -6391,14 +6439,14 @@ Only enable when using GUI. Transforms ASCII to symbols depending on mode
   ;; When the function (global-pretty-mode t) is run, it generates a TON of garbage since it searches the newly created swiper buffer
   ;; Look at turn-on-pretty-if-desired
   ;; (when window-system
-  ;; (use-package pretty-mode)
+  ;; (straight-use-package 'pretty-mode)
   ;; (global-pretty-mode t))
 #+END_SRC
 
 ** Highlight thing
 Highlight thing under cursor and all other occurrences
 #+BEGIN_SRC emacs-lisp
-  (use-package highlight-thing)
+  (straight-use-package 'highlight-thing)
 
   ;; Don't highlight the word true or false
   ;;(setq highlight-thing-ignore-list '("False" "True"))
@@ -6929,7 +6977,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
   ;; Only applicable to X since terminal never stretches, etc
   (add-hook 'exwm-workspace-switch-hook 'my/frame-width-update)
-  (add-hook 'exwm-init-hook 'my/frame-width-update t)
+  (add-hook 'exwm-init-hook '(lambda () (interactive) (run-with-timer 0.2 nil '(lambda () (interactive) (my/frame-width-update) (my/lv-line--update)))) t)
 
   (defun my/mode-line-align (left right)
     "Return a string of `window-width' length containing LEFT, and RIGHT aligned respectively."
@@ -6970,7 +7018,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                       (:eval my/buffer-total-lines)
 
                       " "
-		    
+
                       (:eval
                        (if (eq evil-state 'normal)
                            "N"
@@ -7110,3 +7158,9 @@ When projectile-mode is on, project name is updated on every keypress, here it i
   (run-with-timer 4 nil (lambda () (interactive) (message (concat "Booted in " (emacs-init-time) " seconds"))))
 #+END_SRC
 
+* Confirm config works
+#+BEGIN_SRC emacs-lisp
+  (defun my/unmark-config-error ()
+    (delete-file my/config-error-marker))
+  (my/unmark-config-error)
+#+END_SRC
