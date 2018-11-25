@@ -6005,15 +6005,21 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
   (defvar pretty-outlines-bullets-bullet-list org-bullets-bullet-list
     "An implemention of `org-bullets-bullet-list' for outlines.")
 
+  (defvar-local pretty-outlines-buffer-font-lock-keyword nil)
+
   (defun pretty-outlines--add-font-locks (font-lock-alist)
     "Put text property for FONT-LOCK-ALIST for var-width replacements."
-    (font-lock-add-keywords
-     nil
-     (-map (-lambda ((rgx outline-str))
-             `(,rgx (0 (prog1 nil
-                         (put-text-property (match-beginning 1) (match-end 1)
-                                            'display ,outline-str)))))
-           font-lock-alist)))
+    (setq pretty-outlines-buffer-font-lock-keyword
+          (-map (-lambda ((rgx outline-str))
+                  `(,rgx (0 (prog1 nil
+                              (put-text-property (match-beginning 1) (match-end 1)
+                                                 'display ,outline-str)))))
+                font-lock-alist))
+    (font-lock-add-keywords nil pretty-outlines-buffer-font-lock-keyword))
+
+  (defun pretty-outlines-remove-font-locks ()
+    (interactive)
+    (font-lock-remove-keywords nil pretty-outlines-buffer-font-lock-keyword))
 
   (require 's)
   (defun pretty-outlines--bullets-rgx-at-level (level)
@@ -6095,6 +6101,23 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
 
   (my/evil-normal-define-key "gh" 'evil-close-fold)
   (my/evil-normal-define-key "gH" '(lambda () (interactive) (hide-sublevels 1)))
+
+  (defvar-local buffer-has-outline-bullets t)
+  (defun my/toggle-outline-bullets ()
+    (interactive)
+    (if (not (string= major-mode "org-mode"))
+        (progn
+          (if buffer-has-outline-bullets
+              (progn
+                (setq buffer-has-outline-bullets nil)
+                (pretty-outlines-remove-font-locks))
+            (setq buffer-has-outline-bullets t)
+            (pretty-outlines-add-bullets))
+
+          ;; Completely refresh font-lock
+          (set-text-properties (point-min) (point-max) nil))))
+
+  (define-key my/leader-map (kbd "C-h") 'my/toggle-outline-bullets)
 #+END_SRC
 
 * Spray
