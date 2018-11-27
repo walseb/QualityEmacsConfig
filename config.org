@@ -216,6 +216,9 @@ keycode 29 = Caps_Lock # Makes ctrl act as caps
 ** Color picking
 Get =gpick=
 
+** Todo
+https://potassco.org/doc/start/
+
 * Security
 #+BEGIN_SRC emacs-lisp
   (setq network-security-level 'high)
@@ -1213,6 +1216,7 @@ For use with lsp-java
   (defun my/install-eclipse-java-language-server()
     (interactive)
     (shell-command "
+  cd ~
   rm -rf ~/.emacs.d/eclipse.jdt.ls/server/
   mkdir -p ~/.emacs.d/eclipse.jdt.ls/server/
   wget http://download.eclipse.org/jdtls/snapshots/jdt-language-server-latest.tar.gz -O /tmp/jdt-latest.tar
@@ -1230,6 +1234,20 @@ For use with lsp-java
 ** Install omnisharp
 #+BEGIN_SRC emacs-lisp
   (define-key my/software-install-map (kbd "o") 'omnisharp-install-server)
+#+END_SRC
+
+** Install rtags
+You need llvm
+#+BEGIN_SRC emacs-lisp
+  ;; (defun my/install-rtags ()
+    ;; (interactive)
+    ;; (async-shell-command " cd ~
+  ;; git clone --recursive https://github.com/Andersbakken/rtags.git
+  ;; cd rtags
+  ;; cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 .
+  ;; make"))
+;; 
+  ;; (define-key my/software-install-map (kbd "r") 'my/install-rtags)
 #+END_SRC
 
 ** Compile config
@@ -2042,7 +2060,7 @@ Make company mode inherit colors from theme, change later maybe
   (define-key company-active-map (kbd "<f1>") 'nil)
 
   ;; Force autocomplete
-  (my/evil-normal-define-key "C-." 'company-complete)
+  (my/evil-universal-define-key "C-." 'company-complete)
 #+END_SRC
 
 
@@ -3141,13 +3159,17 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 ** Generic
 *** Jump to definition
 #+BEGIN_SRC emacs-lisp
+  (straight-use-package 'dumb-jump)
+
   (defun my/jump-to-definition ()
-    (interactive
-     (if (string= major-mode "fsharp-mode")
-         (fsharp-ac/gotodefn-at-point)
-       (dumb-jump-go))))
+    (interactive)
+    (pcase major-mode
+      ('fsharp-mode (fsharp-ac/gotodefn-at-point))
+      (_ (dumb-jump-go))))
 
   (define-key my/leader-map (kbd "t") 'my/jump-to-definition)
+
+  (setq dumb-jump-selector 'ivy)
 #+END_SRC
 
 *** Smartparens
@@ -3200,36 +3222,42 @@ Shows information in echo area
     (interactive)
     (if (eq evil-state 'visual)
         (my/auto-eval-region)
-      (if (not (cond
-                ((string= major-mode "scheme-mode") (geiser-eval-last-sexp nil)) 
-                ((string= major-mode "clojure-mode") (cider-eval-last-sexp)) 
-                ((string= major-mode "plantuml-mode") (plantuml-preview-region 0 (line-beginning-position) (line-end-position)))
-                ((string= major-mode "fsharp-mode") (fsharp-eval-phrase))))
-          (eval-last-sexp nil))))
+      (pcase major-mode
+        ('scheme-mode (geiser-eval-last-sexp nil))
+        ('clojure-mode (cider-eval-last-sexp))
+        ('plantuml-mode (plantuml-preview-region 0 (line-beginning-position) (line-end-position)))
+        ('fsharp-mode (fsharp-eval-phrase))
+        ('c-mode (cling-send-region (line-beginning-position) (line-end-position)))
+        ('c++-mode (cling-send-region (line-beginning-position) (line-end-position)))
+        (_ (eval-last-sexp nil)))))
 
   (defun my/auto-eval-region ()
     (interactive)
-    (if (not (cond
-              ((string= major-mode "clojure-mode") (cider-eval-region (point) (mark t))) 
-              ((string= major-mode "plantuml-mode") (plantuml-preview-region 0 (point) (mark t)))
-              ((string= major-mode "fsharp-mode") (fsharp-eval-region (point) (mark t)))))
-        (eval-region (point) (mark t))))
+    (pcase major-mode
+      ('clojure-mode (cider-eval-region (point) (mark t)))
+      ('plantuml-mode (plantuml-preview-region 0 (point) (mark t)))
+      ('fsharp-mode (fsharp-eval-region (point) (mark t)))
+      ('c-mode (cling-send-region (point) (mark t)))
+      ('c++-mode (cling-send-region (point) (mark t)))
+      (_ (eval-last-sexp nil))))
 
   (defun my/auto-eval-buffer ()
     (interactive)
-    (if (not (cond
-              ((string= major-mode "scheme-mode") (geiser-eval-buffer nil)) 
-              ((string= major-mode "clojure-mode") (cider-eval-buffer)) 
-              ((string= major-mode "plantuml-mode") (plantuml-preview-buffer 0))
-              ((string= major-mode "fsharp-mode") (fsharp-eval-region (point-min) (point-max)))))
-        (eval-buffer nil)))
+    (pcase major-mode
+      ('scheme-mode (geiser-eval-buffer nil))
+      ('clojure-mode (cider-eval-buffer))
+      ('plantuml-mode (plantuml-preview-buffer 0))
+      ('fsharp-mode (fsharp-eval-region (point-min) (point-max)))
+      ('c-mode (cling-send-buffer))
+      ('c++-mode (cling-send-buffer))
+      (_ (eval-buffer nil))))
 
   (defun my/auto-eval-print ()
     (interactive)
-    (if (not (cond
-              ((string= major-mode "scheme-mode") (geiser-eval-last-sexp t)) 
-              ((string= major-mode "clojure-mode") (cider-eval-print-last-sexp))))
-        (eval-print-last-sexp nil)))
+    (pcase major-mode
+      ('scheme-mode (geiser-eval-last-sexp t))
+      ('clojure-mode (cider-eval-print-last-sexp))
+      (_ eval-print-last-sexp nil)))
 
   (define-key my/leader-map (kbd "e") 'my/auto-eval)
   (define-key my/leader-map (kbd "E") 'my/auto-eval-buffer)
@@ -3423,6 +3451,136 @@ or
   (straight-use-package 'company-jedi)
 
   (add-to-list 'company-backends 'company-jedi)
+#+END_SRC
+
+** C/CPP
+*** Irony
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'irony)
+
+  (add-hook 'c++-mode-hook 'irony-mode)
+  (add-hook 'c-mode-hook 'irony-mode)
+  (add-hook 'objc-mode-hook 'irony-mode)
+
+  (add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)
+#+END_SRC
+
+**** Windows tweaks
+Windows performance tweaks
+#+BEGIN_SRC emacs-lisp
+  (when (boundp 'w32-pipe-read-delay)
+    (setq w32-pipe-read-delay 0))
+  ;; Set the buffer size to 64K on Windows (from the original 4K)
+  (when (boundp 'w32-pipe-buffer-size)
+    (setq irony-server-w32-pipe-buffer-size (* 64 1024)))
+#+END_SRC
+
+**** Flycheck-irony
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'flycheck-irony)
+
+  (eval-after-load 'flycheck
+    '(add-hook 'flycheck-mode-hook #'flycheck-irony-setup))
+#+END_SRC
+
+**** Company-irony
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'company-irony)
+
+  (eval-after-load 'company
+    '(add-to-list 'company-backends 'company-irony))
+#+END_SRC
+
+**** Eldoc-irony
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'irony-eldoc)
+
+  (add-hook 'irony-mode-hook #'irony-eldoc)
+#+END_SRC
+
+*** Cling
+https://github.com/brianqq/inferior-cling
+#+BEGIN_SRC emacs-lisp
+  (defun cling (&optional flags)
+    "Move to the buffer containing Cling, or create one if it does not exist. Defaults to C++11"
+    (interactive)
+    (let ((flags (or flags "-std=c++11"))) 
+      (make-comint "inferior-cling" "cling" nil flags)
+      (switch-to-buffer "*inferior-cling*")))
+
+  (defun cling-send-string (string &optional process)
+    "Send a string terminated with a newline to the inferior-cling buffer. Has the effect of executing a command"
+    (let ((process (or process (get-process "inferior-cling"))))
+      (comint-send-string process string)
+      (comint-send-string process "\n")))
+
+  (defun cling-send-region (start end)
+    "Sends the region in the current buffer between `start` and `end` to the inferior-cling buffer. Sends the currently selected region when called interactively."
+    (interactive "r")
+    (cling-send-string (buffer-substring start end)))
+
+  (defun cling-send-buffer ()
+    "Sends the current buffer to the inferior-cling buffer."
+    (interactive)
+    (cling-send-region (point-min) (point-max))) ;;do i want to wrap-raw this? 
+
+  (defun cling-wrap-raw (string)
+    "Wraps `string` in \".rawInput\", which tells Cling to accept function definitions"
+    (format ".rawInput\n%s\n.rawInput" string))
+
+  (defun cling-wrap-region-and-send (start end)
+    "Sends the region between start and end (currently selected when called interactively) to cling in raw input mode "
+    (interactive "r")
+    (cling-send-string (cling-wrap-raw (buffer-substring start end))))
+
+  (defun flatten-function-def ()
+    "Flattens a function definition into a single line. This makes it easier to send to the inferior-cling buffer"
+    (interactive)
+    (replace-regexp "
+  " "" nil (mark) (point))) ;;;Why did I do this again? 
+
+  (defun select-defun ()
+    "Selects the defun containing the point. Currently only works when point is on the line where the function's name is declared."
+    (interactive)
+    (move-beginning-of-line nil)
+    (push-mark (point))
+    (re-search-forward "{")
+    (save-excursion
+     (flatten-function-def))
+    (backward-char)
+    (forward-sexp))
+
+  (defun cling-wrap-defun-and-send ()
+    "Sends the current defun to cling in raw input mode. Currently only works when point is on the first line of function definition."
+    (interactive)
+    (save-excursion
+      (select-defun)
+      (cling-wrap-region-and-send (mark) (point))
+      (undo)
+      (undo)));;;this is a rather leaky way of doing temporary changes. there should be some way to save buffer contents or something
+  ;;;probably uses with-temp-buffer
+
+  (defvar inferior-cling-keymap
+    (let ((map (current-global-map)))
+      (define-key map (kbd "C-c r") 'cling-send-region)
+      (define-key map (kbd "C-c d") 'cling-wrap-defun-and-send)
+      map))
+
+  (define-minor-mode inferior-cling-mode
+    "Toggle inferior-cling-mode. Interactively w/o arguments, this command toggles the mode. A positive prefix argument enables it, and any other prefix argument disables it. 
+  When inferior-cling-mode is enabled, we rebind keys to facilitate working with cling."
+    :keymap inferior-cling-keymap)
+#+END_SRC
+
+*** Etags
+#+BEGIN_SRC emacs-lisp
+  ;;(straight-use-package 'etags)
+  ;;(straight-use-package 'counsel-etags)
+#+END_SRC
+
+*** Rtags
+#+BEGIN_SRC emacs-lisp
+
 #+END_SRC
 
 ** C#
@@ -4159,59 +4317,59 @@ Redefine function to attempt to open image if link at point wasn't found
 
 ** Firefox exwm integration
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package '(exwm-firefox-core :type git :host github :repo "walseb/exwm-firefox-core"))
-  (straight-use-package '(exwm-firefox-evil :type git :host github :repo "walseb/exwm-firefox-evil"))
-  (require 'exwm-firefox-evil)
+  (eval-after-load 'exwm
+    (progn
+      (straight-use-package '(exwm-firefox-core :type git :host github :repo "walseb/exwm-firefox-core"))
+      (straight-use-package '(exwm-firefox-evil :type git :host github :repo "walseb/exwm-firefox-evil"))
+      (require 'exwm-firefox-evil)
 
-  (exwm-firefox-evil-mode-enable)
+      ;; Auto enable exwm-firefox-evil-mode on all firefox buffers
+      (add-hook 'exwm-manage-finish-hook 'exwm-firefox-evil-activate-if-firefox)
 
-  ;; By default exwm buffers start in emacs state
-  (defun exwm-firefox-evil-auto-activate ()
-    "Activates exwm-firefox mode when buffer is firefox.
-  Firefox variant can be assigned in 'exwm-firefox-evil-firefox-name`"
-    (if (member exwm-class-name exwm-firefox-evil-firefox-class-name)
-        (progn
-          (exwm-firefox-evil-mode 1)
-          (exwm-firefox-evil-insert))))
+      (add-hook 'exwm-firefox-evil-mode-hook 'exwm-firefox-evil-normal)))
 #+END_SRC
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
-  (defun my/exwm-firefox-evil-link-hint ()
-    (interactive)
-    (exwm-input--fake-key ?f)
-    (exwm-input-send-next-key 2))
-
-  ;;; Normal
-  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "f") 'my/exwm-firefox-evil-link-hint)
-
-  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
-  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
-
-  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
-  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
-
-  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
-
-  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "N") 'exwm-firefox-core-tab-next)
-  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "P") 'exwm-firefox-core-tab-previous)
-
-  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "s") 'exwm-firefox-core-tab-close)
-
-  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "j") 'exwm-firefox-core-find-next)
-  (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "J") 'exwm-firefox-core-find-previous)
-
-   ;;; Visual
-  (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up-select)
-  (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down-select)
-
-  (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down-select)
-
-  (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "j") 'exwm-firefox-core-find-next)
-  (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "J") 'exwm-firefox-core-find-previous)
-
-   ;;; Insert
-  (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
+  ;; (eval-after-load 'exwm
+    ;; (progn
+      ;; (defun my/exwm-firefox-evil-link-hint ()
+        ;; (interactive)
+        ;; (exwm-input--fake-key ?f)
+        ;; (exwm-input-send-next-key 2))
+  ;; 
+  ;; ;;; Normal
+      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "f") 'my/exwm-firefox-evil-link-hint)
+  ;; 
+      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
+      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
+  ;; 
+      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
+      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
+  ;; 
+      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
+  ;; 
+      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "N") 'exwm-firefox-core-tab-next)
+      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "P") 'exwm-firefox-core-tab-previous)
+  ;; 
+      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "s") 'exwm-firefox-core-tab-close)
+  ;; 
+      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "j") 'exwm-firefox-core-find-next)
+      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "J") 'exwm-firefox-core-find-previous)
+  ;; 
+      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-s") 'exwm-firefox-core-quick-find)
+  ;; 
+   ;; ;;; Visual
+      ;; (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up-select)
+      ;; (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down-select)
+  ;; 
+      ;; (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down-select)
+  ;; 
+      ;; (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "j") 'exwm-firefox-core-find-next)
+      ;; (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "J") 'exwm-firefox-core-find-previous)
+  ;; 
+   ;; ;;; Insert
+      ;; (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)))
 #+END_SRC
 
 ** Next browser
@@ -6266,6 +6424,13 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
     ;; All matching text
     (set-face-attribute 'company-tooltip-common nil :foreground my/background-color :background my/foreground-color)
 
+    ;;; Popup menu
+    ;; Selected entry
+    (require 'popup)
+    (set-face-attribute 'popup-menu-selection-face nil :foreground my/background-color :background my/foreground-color)
+    ;; All unmatching text
+    (set-face-attribute 'popup-menu-face nil :foreground my/foreground-color :background my/background-color-1)
+
     ;;; Ivy
     (set-face-attribute 'ivy-current-match nil :foreground my/background-color :background my/foreground-color)
     (set-face-attribute 'ivy-cursor nil :foreground my/background-color :background my/foreground-color)
@@ -6691,6 +6856,42 @@ Use lv-line to create a mode line on the top of the screen
   ;;(add-hook 'window-configuration-change-hook (lambda () (interactive) (my/update-buffer-name-string (buffer-name)) t) t)
 #+END_SRC
 
+**** Which function
+#+BEGIN_SRC emacs-lisp
+  (require 'which-func)
+
+  (setq which-func-unknown "")
+
+  (setq which-func-current
+        '(:eval
+          (let ((result (gethash (selected-window) which-func-table)))
+            (if result
+                (concat
+                 " | < "
+                 (replace-regexp-in-string "%" "%%" result)
+                 " >"
+                 )))))
+
+  (which-function-mode 1)
+
+  ;;(remove-hook 'my/switch-buffer-hook 'which-func-update)
+
+  ;;(replace-regexp-in-string "%" "%%"
+  ;;(or
+  ;;(gethash
+  ;;(selected-window)
+  ;;which-func-table)
+  ;;which-func-unknown)))
+  ;; Could be used if doing func mode manually
+  ;; (setq my/which-function-modes '(c-mode emacs-lisp-mode))
+  ;; 
+  ;; (defun my/enable-which-function ()
+  ;; (if (member major-mode my/which-function-modes)
+  ;; (which-function-mode 1)))
+  ;; 
+  ;; (add-hook 'prog-mode-hook 'my/enable-which-function)
+#+END_SRC
+
 **** CPU heat
 #+BEGIN_SRC emacs-lisp
   (defvar my/mode-line-enable-cpu-temp t)
@@ -7043,16 +7244,12 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                       " "
 
                       (:eval
-                       (if (eq evil-state 'normal)
-                           "N"
-                         (if (eq evil-state 'insert)
-                             "I"
-                           (if (eq evil-state 'visual)
-                               "V"
-                             (if (eq evil-state 'emacs)
-                                 "E"
-                               (if (eq evil-state 'replace)
-                                   "R"))))))
+                       (pcase evil-state
+                         ('normal "N")
+                         ('insert "I")
+                         ('visual "V")
+                         ('emacs "E")
+                         ('replace "R")))
 
                       ;;"%I"
 
@@ -7088,6 +7285,15 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                                     my/projectile-project-name
                                     "]"))))
 
+
+                      which-func-current
+
+                      ;; (:eval
+                      ;; (let ((which-func (which-function)))
+                      ;; (if which-func
+                      ;; (concat
+                      ;; " "
+                      ;; which-func))))
 
                       ;; If memory is less than 1GB
                       (:eval (if (< my/available-mem 1000000000)
@@ -7187,3 +7393,4 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     (delete-file my/config-error-marker))
   (my/unmark-config-error)
 #+END_SRC
+
