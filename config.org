@@ -219,6 +219,11 @@ Get =gpick=
 ** Todo
 https://potassco.org/doc/start/
 
+** C libraries not imported
+Add compile libraries to =irony--compile-options=. For gtk set =irony--compile-options= like this
+#+BEGIN_SRC emacs-lisp
+#+END_SRC
+ 
 * Security
 #+BEGIN_SRC emacs-lisp
   (setq network-security-level 'high)
@@ -411,6 +416,21 @@ Checks variable =exec-path= for package
     (if (member font my/font-family-list)
       t
       nil))
+#+END_SRC
+
+** Fake key
+#+BEGIN_SRC emacs-lisp
+  (defun my/fake-key (key key-symbol)
+    (interactive)
+    (let ((command (key-binding key)))
+      (setq last-command-event key-symbol)
+      (setq this-command command)
+      (call-interactively command)))
+
+  (defun my/fake-open-keymap (key)
+    (setq unread-command-events
+          (mapcar (lambda (e) `(t . ,e))
+                  (listify-key-sequence (kbd key)))))
 #+END_SRC
 
 ** Fold ellipsis 
@@ -994,7 +1014,7 @@ https://www.emacswiki.org/emacs/ForceBackups
 #+END_SRC
 
 * Leader
-When changing leader, change =my/leader-map-key= and manually change all general simulate key rebinds
+When changing leader, change =my/leader-map-key=
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/leader-map)
 
@@ -2666,8 +2686,6 @@ Version 2015-07-30"
     (image-dired default-directory))
   (define-key my/dired-mode-map (kbd "i") 'my/image-dired)
   (define-key my/dired-mode-map (kbd "h") 'dired-hide-details-mode)
-
-
 #+END_SRC
 
 *** Dired keys
@@ -3506,7 +3524,7 @@ https://github.com/brianqq/inferior-cling
     (interactive)
     (let ((flags (or flags "-std=c++11"))) 
       (make-comint "inferior-cling" "cling" nil flags)
-      (switch-to-buffer "*inferior-cling*")))
+      (switch-to-buffer-other-window "*inferior-cling*")))
 
   (defun cling-send-string (string &optional process)
     "Send a string terminated with a newline to the inferior-cling buffer. Has the effect of executing a command"
@@ -3559,17 +3577,6 @@ https://github.com/brianqq/inferior-cling
       (undo)
       (undo)));;;this is a rather leaky way of doing temporary changes. there should be some way to save buffer contents or something
   ;;;probably uses with-temp-buffer
-
-  (defvar inferior-cling-keymap
-    (let ((map (current-global-map)))
-      (define-key map (kbd "C-c r") 'cling-send-region)
-      (define-key map (kbd "C-c d") 'cling-wrap-defun-and-send)
-      map))
-
-  (define-minor-mode inferior-cling-mode
-    "Toggle inferior-cling-mode. Interactively w/o arguments, this command toggles the mode. A positive prefix argument enables it, and any other prefix argument disables it. 
-  When inferior-cling-mode is enabled, we rebind keys to facilitate working with cling."
-    :keymap inferior-cling-keymap)
 #+END_SRC
 
 *** Etags
@@ -3581,6 +3588,17 @@ https://github.com/brianqq/inferior-cling
 *** Rtags
 #+BEGIN_SRC emacs-lisp
 
+#+END_SRC
+
+*** Keys
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/c-mode-map)
+
+  (evil-define-key 'normal c-mode-map (kbd (concat my/leader-map-key " a")) 'my/c-mode-map)
+  (evil-define-key 'normal c++-mode-map (kbd (concat my/leader-map-key " a")) 'my/c-mode-map)
+
+  (define-key my/c-mode-map (kbd "e") 'cling)
+  (define-key my/c-mode-map (kbd "c") 'recompile)
 #+END_SRC
 
 ** C#
@@ -3660,7 +3678,6 @@ omnisharp.json should be in ~/.omnisharp on all OSs
   (define-key my/fsharp-mode-map (kbd "C-r") 'fsharp-ac-status)
   (define-key my/fsharp-mode-map (kbd "C-k") 'fsharp-ac/stop-process)
   (define-key my/fsharp-mode-map (kbd "C-s") 'fsharp-ac/start-process)
-
 #+END_SRC
 
 *** Settings
@@ -3672,11 +3689,10 @@ omnisharp.json should be in ~/.omnisharp on all OSs
     ;; Fsharp has built in intellisense highlight thing at point
     (highlight-thing-mode -1)
     ;; Visual line mode in fsharp mode is broken, makes swiper take years to start, use truncate lines mode instead
-    (visual-line-mode 0)
-)
+    (visual-line-mode 0))
 
-  ;; Autostart
-  (add-hook 'fsharp-mode-hook 'my/fsharp-mode)
+    ;; Autostart
+    (add-hook 'fsharp-mode-hook 'my/fsharp-mode)
 #+END_SRC
 
 ** Clojure
@@ -3785,9 +3801,10 @@ Enable org mode for .org.gpg files
   ;;(advice-add 'evil-paste-before :after (lambda (&rest r) (interactive) (my/pass-pop-killring)))
 #+END_SRC
 
-* Shell
+* Eshell
  ;https://github.com/howardabrams/dot-files/blob/master/emacs-eshell.org
 #+BEGIN_SRC emacs-lisp
+  (require 'eshell)
   ;; Change to temporary name before renaming
   (setq eshell-buffer-name "eshell")
 
@@ -3812,6 +3829,16 @@ Enable org mode for .org.gpg files
 #+BEGIN_SRC emacs-lisp
   (defun eshell/f (file)
     (find-file file))
+#+END_SRC
+
+** Clear
+Default eshell/clear only spams newlines
+#+BEGIN_SRC emacs-lisp
+  (defun eshell/clear ()
+    "Clear the eshell buffer."
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      (eshell-send-input)))
 #+END_SRC
 
 ** Term
@@ -3873,6 +3900,11 @@ Disable rainbow delimiters
     (define-key eshell-mode-map [remap evil-ret] 'eshell-send-input)
 
     (define-key my/eshell-mode-map (kbd "k") 'my/eshell-insert-history)
+
+    (evil-define-key 'normal eshell-mode-map (kbd "C-p") 'eshell-previous-matching-input-from-input)
+    (evil-define-key 'normal eshell-mode-map (kbd "C-n") 'eshell-next-matching-input-from-input)
+    (evil-define-key 'insert eshell-mode-map (kbd "C-p") 'eshell-previous-matching-input-from-input)
+    (evil-define-key 'insert eshell-mode-map (kbd "C-n") 'eshell-next-matching-input-from-input)
     )
 
   (add-hook 'eshell-mode-hook 'my/bind-eshell-keys)
@@ -3885,13 +3917,22 @@ Disable rainbow delimiters
 #+END_SRC
 
 *** General
-More rebind options and more reliable
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'general)
 
   (general-evil-setup)
 #+END_SRC
 
+*** Language specific symbols
+#+BEGIN_SRC emacs-lisp
+  (define-key evil-insert-state-map (kbd "M-w") '(lambda () (interactive) (my/fake-key "å" ?\å)))
+  (define-key evil-insert-state-map (kbd "M-r") '(lambda () (interactive) (my/fake-key "ä" ?\ä)))
+  (define-key evil-insert-state-map (kbd "M-j") '(lambda () (interactive) (my/fake-key "ö" ?\ö)))
+
+  (define-key evil-replace-state-map (kbd "M-w") '(lambda () (interactive) (my/fake-key "å" ?\å)))
+  (define-key evil-replace-state-map (kbd "M-r") '(lambda () (interactive) (my/fake-key "ä" ?\ä)))
+  (define-key evil-replace-state-map (kbd "M-j") '(lambda () (interactive) (my/fake-key "ö" ?\ö)))
+#+END_SRC
 *** k(Move up) <--> p(Paste)
 **** k
 #+BEGIN_SRC emacs-lisp
@@ -3963,6 +4004,14 @@ More rebind options and more reliable
 
 *** Rebind save key
 #+BEGIN_SRC emacs-lisp
+  ;;(defun my/save-and-backup-buffer()
+      ;;(interactive)
+      ;;(my/force-backup-of-buffer)
+      ;;(my/fake-open-keymap "C-x")
+      ;;(my/fake-key (kbd "C-s") ?\C-s)
+      ;;)
+
+
   (general-simulate-key "C-x C-s")
 
   (defun my/save-and-backup-buffer()
@@ -4171,7 +4220,11 @@ We use class names for all windows expect for Java applications and GIMP (becaus
 
           ;; cut/paste.
           ([?\C-y] . [?\C-c])
-          ([?\C-k] . [?\C-v])))
+          ([?\C-k] . [?\C-v])
+
+          ([?\M-w] . [?\C-å])
+          ([?\M-r] . [?\C-ä])
+          ([?\M-j] . [?\C-ö])))
 
   (setq exwm-input-prefix-keys nil)
   ;; Exwm don't send back these keys
@@ -4326,50 +4379,64 @@ Redefine function to attempt to open image if link at point wasn't found
       ;; Auto enable exwm-firefox-evil-mode on all firefox buffers
       (add-hook 'exwm-manage-finish-hook 'exwm-firefox-evil-activate-if-firefox)
 
+      ;; Run firefox buffers in normal mode
       (add-hook 'exwm-firefox-evil-mode-hook 'exwm-firefox-evil-normal)))
 #+END_SRC
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
-  ;; (eval-after-load 'exwm
-    ;; (progn
-      ;; (defun my/exwm-firefox-evil-link-hint ()
-        ;; (interactive)
-        ;; (exwm-input--fake-key ?f)
-        ;; (exwm-input-send-next-key 2))
-  ;; 
-  ;; ;;; Normal
-      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "f") 'my/exwm-firefox-evil-link-hint)
-  ;; 
-      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
-      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
-  ;; 
-      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
-      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
-  ;; 
-      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
-  ;; 
-      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "N") 'exwm-firefox-core-tab-next)
-      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "P") 'exwm-firefox-core-tab-previous)
-  ;; 
-      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "s") 'exwm-firefox-core-tab-close)
-  ;; 
-      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "j") 'exwm-firefox-core-find-next)
-      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "J") 'exwm-firefox-core-find-previous)
-  ;; 
-      ;; (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-s") 'exwm-firefox-core-quick-find)
-  ;; 
-   ;; ;;; Visual
-      ;; (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up-select)
-      ;; (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down-select)
-  ;; 
-      ;; (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down-select)
-  ;; 
-      ;; (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "j") 'exwm-firefox-core-find-next)
-      ;; (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "J") 'exwm-firefox-core-find-previous)
-  ;; 
-   ;; ;;; Insert
-      ;; (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)))
+  (eval-after-load 'exwm
+    (progn
+      (defun my/exwm-firefox-evil-link-hint ()
+        (interactive)
+        (exwm-input--fake-key ?f)
+        (exwm-input-send-next-key 2))
+
+   ;;; Normal
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "f") 'my/exwm-firefox-evil-link-hint)
+
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up)
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down)
+
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
+
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up)
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down)
+
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
+
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
+
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "N") 'exwm-firefox-core-tab-next)
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "P") 'exwm-firefox-core-tab-previous)
+
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "s") 'exwm-firefox-core-tab-close)
+
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "j") 'exwm-firefox-core-find-next)
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "J") 'exwm-firefox-core-find-previous)
+
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-s") 'exwm-firefox-core-quick-find)
+
+   ;;; Visual
+      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up-select)
+      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down-select)
+
+      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down-select)
+
+      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "j") 'exwm-firefox-core-find-next)
+      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "J") 'exwm-firefox-core-find-previous)
+
+   ;;; Insert
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up-select)
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down-select)
+
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-w") '(lambda () (interactive) (exwm-input--fake-key ?\å)))
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-r") '(lambda () (interactive) (exwm-input--fake-key ?\ä)))
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-j") '(lambda () (interactive) (exwm-input--fake-key ?\ö)))
+
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)))
 #+END_SRC
 
 ** Next browser
@@ -6362,11 +6429,13 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
     (set-face-attribute 'error nil :foreground "#c6350b" :background)
     (set-face-attribute 'warning nil :foreground "DarkOrange" :background)
 
-    ;; Font lock
+    ;; Syntax
     (set-face-attribute  'font-lock-doc-face nil :foreground my/foreground-color :background my/background-color-4)
     (defvar my/comment-face-height (floor (* my/default-face-height 1.15)))
     (set-face-attribute  'font-lock-comment-face nil :foreground my/foreground-color :background my/background-color-1 :height my/comment-face-height)
     (set-face-attribute 'font-lock-string-face nil :foreground my/foreground-color :background my/background-color-1)
+    (set-face-attribute 'font-lock-function-name-face nil :weight 'bold)
+
     ;; (set-face-attribute  'font-lock-keyword-face nil :foreground my/foreground-color :background my/background-color-1)
     ;; (set-face-attribute  'font-lock-function-name-face nil :foreground my/foreground-color :background my/background-color-2)
 
