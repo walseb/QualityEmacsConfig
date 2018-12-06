@@ -4038,7 +4038,6 @@ Disable rainbow delimiters
   (define-key evil-replace-state-map (kbd "M-r") '(lambda () (interactive) (my/fake-key "ä" ?\ä)))
   (define-key evil-replace-state-map (kbd "M-j") '(lambda () (interactive) (my/fake-key "ö" ?\ö)))
 #+END_SRC
-<<<<<<< HEAD
 
 *** Backspace/delete C-h, C-l
 #+BEGIN_SRC emacs-lisp
