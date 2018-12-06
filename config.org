@@ -224,6 +224,9 @@ Add compile libraries to =irony--compile-options=. For gtk set =irony--compile-o
 #+BEGIN_SRC emacs-lisp
 #+END_SRC
  
+** GDB doesn't work properly
+make sure you compiled with the =-g= flag
+
 * Security
 #+BEGIN_SRC emacs-lisp
   (setq network-security-level 'high)
@@ -1535,7 +1538,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (define-key my/indentation-map (kbd "w") 'my/change-tab-width)
 #+END_SRC
 
-* Visit file hotkeys
+* Open
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/open-map)
   (define-key my/leader-map (kbd "o") 'my/open-map)
@@ -1678,6 +1681,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
   (define-key my/leader-map (kbd "C-b") 'my/launch-firefox)
 #+END_SRC
+
 ** Open eww
 #+BEGIN_SRC emacs-lisp
   (defun my/launch-eww ()
@@ -1685,6 +1689,11 @@ In org mode when displaying images pixel scroll mode can be useful maybe
     (eww-browse-url (concat "https://www.google.com/search?q=" (completing-read "search: " nil))))
 
   (define-key my/leader-map (kbd "b") 'my/launch-eww)
+#+END_SRC
+
+** Suggest
+#+BEGIN_SRC emacs-lisp
+  (define-key my/leader-map (kbd "s") 'suggest)
 #+END_SRC
 
 * Folding
@@ -3173,6 +3182,13 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
   (define-key my/org-html-macros-map (kbd "RET") (lambda () (interactive) (insert "#+HTML: <br><br />")))
 #+END_SRC
 
+* Gud
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'realgud)
+  (setq gdb-many-windows 'nil)
+  ;;(require 'realgud)
+#+END_SRC
+
 * Code
 ** Generic
 *** Jump to definition
@@ -3234,7 +3250,7 @@ Shows information in echo area
   ;; (setq highlight-indent-guides-delay 0)
 #+END_SRC
 
-*** Auto eval target
+*** Auto eval
 #+BEGIN_SRC emacs-lisp
   (defun my/auto-eval ()
     (interactive)
@@ -3282,11 +3298,57 @@ Shows information in echo area
   (define-key my/leader-map (kbd "M-e") 'my/auto-eval-print)
 #+END_SRC
 
+*** Auto debug
+#+BEGIN_SRC emacs-lisp
+  (defun my/auto-debug ()
+    (interactive)
+    ;;(load-library "realgud")
+    (if (eq evil-state 'visual)
+        (my/auto-debug-region)
+      (pcase major-mode
+        ('emacs-lisp-mode (call-interactively #'edebug-set-breakpoint))
+        ('c-mode (call-interactively #'gud-break))
+        ('c++-mode (call-interactively #'gud-break))
+        (_ (eval-last-sexp nil)))))
+
+  (defun my/auto-remove-debug ()
+    (interactive)
+    ;;(load-library "realgud")
+    (if (eq evil-state 'visual)
+        (my/auto-debug-region)
+      (pcase major-mode
+        ('emacs-lisp-mode (call-interactively #'edebug-unset-breakpoint))
+        ('c-mode (call-interactively #'gud-remove))
+        ('c++-mode (call-interactively #'gud-remove))
+        (_ (eval-last-sexp nil)))))
+
+  ;;(defun my/auto-debug-region ()
+    ;;(interactive)
+    ;;)
+
+  (defun my/start-gdb()
+    (split-window-below)
+    (call-interactively #'gdb))
+
+  (defun my/auto-start-debugger ()
+    (interactive)
+    ;;(load-library "realgud")
+    (pcase major-mode
+      ('c-mode (my/start-gdb))
+      ('c++-mode (my/start-gdb))
+      (_ (eval-last-sexp nil))))
+
+  (define-key my/leader-map (kbd "d") 'my/auto-debug)
+  (define-key my/leader-map (kbd "C-d") 'my/auto-remove-debug)
+  (define-key my/leader-map (kbd "D") 'my/auto-debug-buffer)
+  (define-key my/leader-map (kbd "M-d") 'my/auto-start-debugger)
+#+END_SRC
+
 ** Documentation
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'zeal-at-point)
 
-  (define-key my/leader-map (kbd "d") 'zeal-at-point)
+  (define-key my/leader-map (kbd "T") 'zeal-at-point)
 #+END_SRC
 
 ** Plantuml
@@ -3366,6 +3428,10 @@ Shows information in echo area
   (setq debug-on-error nil)
 #+END_SRC
 
+*** Debugging
+#+BEGIN_SRC emacs-lisp
+#+END_SRC
+
 *** Suggest
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'suggest)
@@ -3398,6 +3464,21 @@ Shows information in echo area
   (define-key my/emacs-lisp-formatting-map (kbd "C-d") 'elisp-format-directory)
   ;; Format marked files in dired
   ;;elisp-format-dired-mark-files
+
+
+  ;; control
+  (define-key my/emacs-lisp-mode-map "n" 'edebug-step-mode)
+  ;;(define-key my/emacs-lisp-mode-map "n" 'edebug-next-mode)
+
+  (define-key my/emacs-lisp-mode-map (kbd "s") 'edebug-go-mode)
+  (define-key my/emacs-lisp-mode-map "S" 'edebug-Go-nonstop-mode)
+  (define-key my/emacs-lisp-mode-map "t" 'edebug-trace-mode)
+  (define-key my/emacs-lisp-mode-map "T" 'edebug-Trace-fast-mode)
+
+  (define-key my/emacs-lisp-mode-map "g" 'edebug-goto-here)
+
+  (define-key my/emacs-lisp-mode-map "i" 'edebug-step-in)
+  (define-key my/emacs-lisp-mode-map "o" 'edebug-step-out)
 #+END_SRC
 
 ** Java
@@ -3590,6 +3671,11 @@ https://github.com/brianqq/inferior-cling
 
 #+END_SRC
 
+*** Debugging
+#+BEGIN_SRC emacs-lisp
+  ;;(require 'gdb-mi)
+#+END_SRC
+
 *** Keys
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/c-mode-map)
@@ -3599,6 +3685,25 @@ https://github.com/brianqq/inferior-cling
 
   (define-key my/c-mode-map (kbd "e") 'cling)
   (define-key my/c-mode-map (kbd "c") 'recompile)
+
+  (define-key my/c-mode-map (kbd "n") 'gud-step)
+  (define-key my/c-mode-map (kbd "N") 'gud-next)
+
+  (define-key my/c-mode-map (kbd "p") 'gud-print)
+  (define-key my/c-mode-map (kbd "P") 'gud-pstar)
+
+  (define-key my/c-mode-map (kbd "s") 'gud-go)
+
+  ;; Run to selected line
+  (define-key my/c-mode-map (kbd "g") 'gud-until)
+
+  ;; Run out of function
+  (define-key my/c-mode-map (kbd "f") 'gud-finish)
+
+  (define-key my/c-mode-map (kbd "v") 'gdb-display-locals-buffer)
+  (define-key my/c-mode-map (kbd "V") 'gdb-display-locals-for-thread)
+
+  (define-key my/c-mode-map (kbd "b") 'gdb-display-breakpoints-buffer)
 #+END_SRC
 
 ** C#
@@ -3933,6 +4038,16 @@ Disable rainbow delimiters
   (define-key evil-replace-state-map (kbd "M-r") '(lambda () (interactive) (my/fake-key "ä" ?\ä)))
   (define-key evil-replace-state-map (kbd "M-j") '(lambda () (interactive) (my/fake-key "ö" ?\ö)))
 #+END_SRC
+
+*** Backspace/delete C-h, C-l
+#+BEGIN_SRC emacs-lisp
+  (define-key evil-insert-state-map (kbd "C-h") 'backward-delete-char-untabify)
+  (define-key evil-insert-state-map (kbd "C-l") 'delete-char)
+
+  (define-key evil-replace-state-map (kbd "C-h") 'backward-delete-char-untabify)
+  (define-key evil-replace-state-map (kbd "C-l") 'delete-char)
+#+END_SRC
+
 *** k(Move up) <--> p(Paste)
 **** k
 #+BEGIN_SRC emacs-lisp
@@ -4080,6 +4195,7 @@ https://emacs.stackexchange.com/questions/33326/how-do-i-cut-and-paste-effective
 ** Exwm-edit
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'exwm-edit)
+  (require 'exwm-edit)
 #+END_SRC
 
 ** Set exwm buffer name 
@@ -4185,9 +4301,10 @@ We use class names for all windows expect for Java applications and GIMP (becaus
   ;; Rebind keys in exwm bufffers
   (setq exwm-input-simulation-keys
         '(
+          ;; Delete char
+          ([?\C-h] . [delete])
+          ([?\C-l] . [backspace])
           ;; movement
-          ([?\C-h] . [left])
-          ([?\C-l] . [right])
           ([?\C-p] . [up])
           ([?\C-n] . [down])
 
@@ -4401,11 +4518,23 @@ Redefine function to attempt to open image if link at point wasn't found
       (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
       (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
 
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up)
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down)
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-l") 'exwm-firefox-core-right)
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-h") 'exwm-firefox-core-left)
+
+      (evil-define-key 'motion exwm-firefox-evil-mode-map (kbd "C-l") 'exwm-firefox-core-right)
+      (evil-define-key 'motion exwm-firefox-evil-mode-map (kbd "C-h") 'exwm-firefox-core-left)
+
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-l") '(lambda () (interactive) (exwm-input--fake-key 'delete)))
+      (evil-define-key 'insert  exwm-firefox-evil-mode-map (kbd "C-h") '(lambda () (interactive) (exwm-input--fake-key 'backspace)))
 
       (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
       (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
+
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up)
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down)
+
+      (evil-define-key 'motion exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up)
+      (evil-define-key 'motion exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down)
 
       (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
 
