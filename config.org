@@ -4038,6 +4038,7 @@ Disable rainbow delimiters
   (define-key evil-replace-state-map (kbd "M-r") '(lambda () (interactive) (my/fake-key "ä" ?\ä)))
   (define-key evil-replace-state-map (kbd "M-j") '(lambda () (interactive) (my/fake-key "ö" ?\ö)))
 #+END_SRC
+<<<<<<< HEAD
 
 *** Backspace/delete C-h, C-l
 #+BEGIN_SRC emacs-lisp
@@ -5008,7 +5009,26 @@ emms doesn't automatically connect to mpd when loading playlist, results in empt
   ;;  (define-key my/leader-map (kbd "p w") 'my/take-screenshot)
 #+END_SRC
 
-* Gnus
+* Mail
+** Mu4e
+#+BEGIN_SRC emacs-lisp
+  ;; (straight-use-package '(mu4e :type git :host github :repo "djcb/mu"
+                               ;; :files ("mu4e/mu4e-view.el")))
+  ;; (straight-use-package '(mu :type git :host github :repo "djcb/mu"
+                             ;; :files((:exclude"mu4e/*"))))
+  ;; (setq mu4e-mu-binary
+        ;; ;; "el-get-dir/mu4e/mu/mu"
+        ;; (expand-file-name
+         ;; (concat
+          ;; user-emacs-directory
+          ;; "straight/build/mu4e")))
+;; 
+  ;; (defun my/install-mu4e ()
+  ;; (interactive)
+  ;; (shell-command (concat "cd " user-emacs-directory "straight/repos/mu4e; ./autogen.sh; make")))
+#+END_SRC
+
+** Gnus
 .gnus.el is written in =write config map=
 #+BEGIN_SRC emacs-lisp
   (require 'gnus)
@@ -5017,7 +5037,7 @@ emms doesn't automatically connect to mpd when loading playlist, results in empt
   (setq gnus-use-full-window nil)
 #+END_SRC
 
-** Agent
+*** Agent
 #+BEGIN_SRC emacs-lisp
   (setq gnus-agent-cache t)
 
@@ -5040,13 +5060,13 @@ emms doesn't automatically connect to mpd when loading playlist, results in empt
   (add-to-list 'gnus-category-alist '(gmail (agent-predicate . short)))
 #+END_SRC
 
-** Global
+*** Global
 #+BEGIN_SRC emacs-lisp
   ;;Fix bug in gnus, Replace [ and ] with _ in ADAPT file names
   (setq nnheader-file-name-translation-alist '((?[ . ?_) (?] . ?_)) )
 #+END_SRC
 
-** Minor settings
+*** Minor settings
 #+BEGIN_SRC emacs-lisp
 
   ;; Maybe disable later
@@ -5082,7 +5102,7 @@ emms doesn't automatically connect to mpd when loading playlist, results in empt
   ;; '(gnus-article-date-lapsed-new-header t)
 #+END_SRC
 
-** Group mode
+*** Group mode
 Mode for choosing server
 #+BEGIN_SRC emacs-lisp
 (defun my/gnus-group-mode ()
@@ -5102,7 +5122,7 @@ Mode for choosing server
  (setq gnus-check-new-newsgroups 'ask-server)
 #+END_SRC
 
-*** Methods
+**** Methods
 #+BEGIN_SRC emacs-lisp
 (setq gnus-select-method '(nntp "news.gmane.org"))
 
@@ -5121,7 +5141,7 @@ Mode for choosing server
       gnus-ignored-newsgroups "^to\\.\\|^[0-9. ]+\\( \\|$\\)\\|^[\"]\"[#'()]")
 #+END_SRC
 
-*** Topic mode
+**** Topic mode
 Adds headers to each server, tree view
 #+BEGIN_SRC emacs-lisp
       (defun my/gnus-topic-mode ()
@@ -5166,7 +5186,7 @@ Adds headers to each server, tree view
 
 #+END_SRC
 
-*** Keys
+**** Keys
 #+BEGIN_SRC emacs-lisp
   (evil-define-key 'normal gnus-group-mode-map (kbd "i") 'nil)
   (evil-define-key 'normal gnus-group-mode-map (kbd "RET") 'gnus-topic-select-group)
@@ -5182,7 +5202,7 @@ Adds headers to each server, tree view
   (define-key 'my/gnus-group-map (kbd "a") 'my/gnus-group-list-all-subscribed-groups)
 #+END_SRC
 
-** Summary mode
+*** Summary mode
 Mode for choosing which mail to open
 #+BEGIN_SRC emacs-lisp
   (defun my/gnus-summary-mode ()
@@ -5211,7 +5231,7 @@ Mode for choosing which mail to open
    ;; '(gnus-ancient-mark 32)
 #+END_SRC
 
-*** Thread sorting
+**** Thread sorting
 #+BEGIN_SRC emacs-lisp
 ;; Sort by date
 (setq gnus-thread-sort-functions
@@ -5219,7 +5239,7 @@ Mode for choosing which mail to open
         (not gnus-thread-sort-by-number)))
 #+END_SRC
 
-*** Visuals
+**** Visuals
 #+BEGIN_SRC emacs-lisp
  ;; '(gnus-summary-high-unread ((t (:foreground "green"))))
  ;; '(gnus-summary-low-read ((t (:foreground "magenta"))))
@@ -5228,7 +5248,7 @@ Mode for choosing which mail to open
  ;; '(gnus-summary-normal-unread ((t (:foreground "white"))))
 #+END_SRC
 
-*** Scoring
+**** Scoring
 #+BEGIN_SRC emacs-lisp
 (setq gnus-parameters
       '(("nnimap.*"
@@ -5236,7 +5256,7 @@ Mode for choosing which mail to open
         ))
 #+END_SRC
 
-*** Keys
+**** Keys
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/gnus-summary-map)
   (evil-define-key 'normal gnus-summary-mode-map (kbd (concat my/leader-map-key "a")) 'my/gnus-summary-map)
@@ -5252,7 +5272,7 @@ Mode for choosing which mail to open
   (define-key 'my/gnus-summary-map (kbd "a") 'my/gnus-summary-show-all-mail)
 #+END_SRC
 
-** Article mode
+*** Article mode
 Mode for reading contents of mail
 #+BEGIN_SRC emacs-lisp
 (defun my/gnus-article-mode ()
@@ -5277,7 +5297,7 @@ Mode for reading contents of mail
  ;; '(gnus-article-mode-line-format "U%U %S" )
 #+END_SRC
 
-*** Date headers
+**** Date headers
 Make date headers better with timezone calculation and time passed
 #+BEGIN_SRC emacs-lisp
 
@@ -5294,7 +5314,7 @@ Make date headers better with timezone calculation and time passed
           (concat local lapsed))))
 #+END_SRC
 
-*** Mail renderers, etc
+**** Mail renderers, etc
 #+BEGIN_SRC emacs-lisp
 ;; html renderer
 (setq mm-text-html-renderer 'shr)
@@ -5304,23 +5324,23 @@ Make date headers better with timezone calculation and time passed
 (setq mm-discouraged-alternatives '("text/html" "text/richtext"))
 #+END_SRC
 
-*** Keys
+**** Keys
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/gnus-article-map)
   (evil-define-key 'normal gnus-article-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-article-map)
 #+END_SRC
 
-** Message mode
+*** Message mode
 Mode for writing mail
 
-*** Keys
+**** Keys
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/gnus-message-map)
   (evil-define-key 'normal gnus-group-mode-map (kbd (concat my/leader-map-key "a")) 'my/gnus-message-map)
 #+END_SRC
 
-** Misc
-*** Random color gnus logo
+*** Misc
+**** Random color gnus logo
 #+BEGIN_SRC emacs-lisp
 (random t) ; Randomize sequence of random numbers
 (defun my/random-hex (&optional num)
