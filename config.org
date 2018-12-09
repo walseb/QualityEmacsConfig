@@ -327,17 +327,17 @@ Define my mode for setting global settings in all buffers
     ;; Doesn't work if you use color directly??
     (setq my/alert-blink-color color)
 
-    (run-with-timer 0.25 nil '(lambda () (interactive)
+    (run-with-timer 0.25 nil (lambda () (interactive)
                                 (set-face-attribute 'mode-line nil :foreground my/alert-blink-color :background my/alert-blink-color)))
 
     (run-with-timer 0.5 nil 'my/alert-mode-line-restore)
 
-    (run-with-timer 0.75 nil '(lambda () (interactive)
+    (run-with-timer 0.75 nil (lambda () (interactive)
                                 (set-face-attribute 'mode-line nil :foreground my/alert-blink-color :background my/alert-blink-color)))
 
     (run-with-timer 1 nil 'my/alert-mode-line-restore)
 
-    (run-with-timer 1.25 nil '(lambda () (interactive)
+    (run-with-timer 1.25 nil (lambda () (interactive)
                                 (set-face-attribute 'mode-line nil :foreground my/alert-blink-color :background my/alert-blink-color)))
 
     (run-with-timer 1.5 nil 'my/alert-mode-line-restore))
@@ -1212,7 +1212,79 @@ This swaps capslock and ctrl
     (my/create-file-with-content-if-not-exist my/gpg-agent-conf-file "allow-emacs-pinentry")
     (shell-command "gpgconf --reload gpg-agent"))
 
-  (define-key my/write-config-map (kbd "C-g") 'my/setup-gpg-agent)
+  (define-key my/write-config-map (kbd "G") 'my/setup-gpg-agent)
+#+END_SRC
+
+** Write mbsync config
+#+BEGIN_SRC emacs-lisp
+  (defun my/setup-mbsync ()
+    (interactive)
+    (if (not (file-directory-p "/home/admin/Maildir/"))
+        (progn
+          (make-directory my/device/maildir)
+          (make-directory (concat my/device/maildir "gmail"))
+          (make-directory (concat my/device/maildir "gmail/inbox"))))
+
+    (my/create-file-with-content-if-not-exist (expand-file-name "~/.mbsyncrc")
+                                              (concat 
+                                               "IMAPAccount gmail
+  # Address to connect to
+  Host imap.gmail.com
+  User ENTER EMAIL
+  Pass ENTER PASSWORD
+  # To store the password in an encrypted file use PassCmd instead of Pass
+  # PassCmd \"gpg2 -q --for-your-eyes-only --no-tty -d ~/.mailpass.gpg\"
+  #
+  # Use SSL
+  SSLType IMAPS
+  # The following line should work. If get certificate errors, uncomment the two following lines and read the \"Troubleshooting\" section.
+  CertificateFile /etc/ssl/certs/ca-certificates.crt
+  #CertificateFile ~/.cert/imap.gmail.com.pem
+  #CertificateFile ~/.cert/Equifax_Secure_CA.pem
+
+  IMAPStore gmail-remote
+  Account gmail
+
+  MaildirStore gmail
+  Subfolders Verbatim
+  # The trailing \"/\" is important
+  Path " (concat my/device/maildir "gmail/") "
+  Inbox " (concat my/device/maildir "gmail/inbox/") "
+
+  Channel gmail
+  Master :gmail-remote:
+  Slave :gmail-local:
+  # Exclude everything under the internal [Gmail] folder, except the interesting folders
+  Patterns * ![Gmail]* \"[Gmail]/Sent Mail\" \"[Gmail]/Starred\" \"[Gmail]/All Mail\"
+  # Or include everything
+  #Patterns *
+  # Automatically create missing mailboxes, both locally and on the server
+  Create Both
+  # Save the synchronization state files in the relevant directory
+  SyncState *
+
+
+
+  #Channel sync-gmail-default
+  #Master :gmail-remote:
+  #Slave :gmail-local:
+  ## Select some mailboxes to sync
+  #Patterns \"INBOX\" \"arch\"
+  #
+  #Channel sync-gmail-sent
+  #Master :gmail-remote:\"[Gmail]/Sent\"
+  #Slave :gmail-local:sent
+  #
+  #Channel sync-gmail-trash
+  #Master :gmail-remote:\"[Gmail]/Trash\"
+  #Slave :gmail-local:trash
+  #
+  ## Get all the channels together into a group.
+  #Group gmail
+  #Channel sync-gmail-default
+  #Channel sync-gmail-sent
+  #Channel sync-gmail-trash
+  ")))
 #+END_SRC
 
 ** Write all configs
@@ -1430,13 +1502,14 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 ** Toggle mono-font
 #+BEGIN_SRC emacs-lisp
   ;;(font-get "opensans" :spacing)
-  (defun my/toggle-mono-font()
+  (defun my/toggle-mono-font(&optional arg)
+    "If ARG is non-nil enable monofont, otherwise toggle it."
     (interactive)
     (if window-system
-      (if (not my/is-font-mono)
-          (if  (string= (face-attribute 'default :family) my/font-raw)
-              (my/set-default-font my/mono-font)
-          (my/set-default-font my/font)))))
+        (if (not my/is-font-mono)
+            (if  (or arg (string= (face-attribute 'default :family) my/font-raw))
+                (my/set-default-font my/mono-font)
+              (my/set-default-font my/font)))))
 
   (define-key my/leader-map (kbd "C-f") 'my/toggle-mono-font)
 #+END_SRC
@@ -4430,11 +4503,12 @@ We use class names for all windows expect for Java applications and GIMP (becaus
       
 *** Fix background colors shr
 #+BEGIN_SRC emacs-lisp
-  (setq shr-color-visible-luminance-min 80)
-  (setq shr-color-visible-distance-min 5)
+  ;; Try fixing colors
+  ;;(setq shr-color-visible-luminance-min 80)
+  ;;(setq shr-color-visible-distance-min 5)
 
   ;; Fully disables colors
-  ;;(advice-add #'shr-colorize-region :around (defun shr-no-colourise-region (&rest ignore)))
+  (advice-add #'shr-colorize-region :around (defun shr-no-colourise-region (&rest ignore)))
 #+END_SRC
 
 *** Auto-open image at point
@@ -5010,21 +5084,59 @@ emms doesn't automatically connect to mpd when loading playlist, results in empt
 
 * Mail
 ** Mu4e
+Requires =mu= and =mbsync= (or equivalent) to be installed
 #+BEGIN_SRC emacs-lisp
-  ;; (straight-use-package '(mu4e :type git :host github :repo "djcb/mu"
-                               ;; :files ("mu4e/mu4e-view.el")))
-  ;; (straight-use-package '(mu :type git :host github :repo "djcb/mu"
-                             ;; :files((:exclude"mu4e/*"))))
-  ;; (setq mu4e-mu-binary
-        ;; ;; "el-get-dir/mu4e/mu/mu"
-        ;; (expand-file-name
-         ;; (concat
-          ;; user-emacs-directory
-          ;; "straight/build/mu4e")))
-;; 
-  ;; (defun my/install-mu4e ()
-  ;; (interactive)
-  ;; (shell-command (concat "cd " user-emacs-directory "straight/repos/mu4e; ./autogen.sh; make")))
+  (straight-use-package '(mu4e :type git :host github :repo "djcb/mu"
+                               :files ("mu4e/*.el")))
+
+  (require 'mu4e)
+
+  (setq mu4e-completing-read-function 'completing-read)
+
+  (setq mu4e-maildir my/device/maildir)
+  (setq mu4e-attachment-dir "~/Downloads")
+
+  (define-key my/leader-map (kbd "M") 'mu4e)
+
+  (defvar my/sync-mail-hook nil)
+  (defun my/sync-mail ()
+    (interactive)
+    ;; Sync mailbox, index mails, signal done
+    (async-shell-command "mbsync -a; mu index; echo 'DONE!'")
+    ;; Give it 5 seconds to complete, then update modeline, etc
+    (run-with-timer 5 nil (lambda () (interactive) (run-hooks 'my/sync-mail-hook))))
+
+  (run-with-timer 60 300 'my/sync-mail)
+#+END_SRC
+
+*** Conversations
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'mu4e-conversation)
+  (require 'mu4e-conversation)
+
+  (global-mu4e-conversation-mode)
+#+END_SRC
+
+*** Alert
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'mu4e-alert)
+
+  (add-hook 'after-init-hook #'mu4e-alert-enable-mode-line-display)
+  (add-hook 'my/sync-mail-hook #'mu4e-alert-update-mail-count-modeline)
+#+END_SRC
+
+**** Set mode line format
+#+BEGIN_SRC emacs-lisp
+  (defun my/mu4e-alert-modeline-formatter (mail-count)
+    (if (not (zerop mail-count))
+        (concat " | Mail [" (number-to-string mail-count) "]")))
+
+  (setq mu4e-alert-modeline-formatter #'my/mu4e-alert-modeline-formatter)
+#+END_SRC
+
+*** Faces
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'mu4e-headers-mode-hook '(lambda () (interactive) (my/toggle-mono-font t)))
 #+END_SRC
 
 ** Gnus
@@ -6678,6 +6790,60 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
     (set-face-attribute 'my/eww-code-face nil :foreground my/foreground-color :background my/background-color-2 :family my/mono-font)
 
     ;;(defvar my/evil-goggles-highlight-color)
+
+    ;;; Mu4e
+    (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background my/foreground-color-6)
+
+    (set-face-attribute 'mu4e-attach-number-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-cited-1-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-cited-2-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-cited-3-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-cited-4-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-cited-5-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-cited-6-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-cited-7-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-compose-header-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-compose-separator-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-contact-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-context-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-conversation-header nil :foreground my/foreground-color :background my/background-color-2)
+    (set-face-attribute 'mu4e-conversation-sender-1 nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-conversation-sender-2 nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-conversation-sender-3 nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-conversation-sender-4 nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-conversation-sender-5 nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-conversation-sender-6 nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-conversation-sender-7 nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-conversation-sender-8 nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-conversation-sender-me nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-conversation-unread nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-draft-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-flagged-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-footer-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-forwarded-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-header-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-header-highlight-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-header-key-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-header-marks-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-header-title-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-header-value-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-highlight-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-link-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-modeline-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-moved-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-ok-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-region-code nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-replied-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-special-header-value-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-system-face nil :foreground my/foreground-color :background my/background-color :slant 'italic)
+    (set-face-attribute 'mu4e-title-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-trashed-face nil :foreground my/foreground-color :background my/background-color :strike-through t)
+    (set-face-attribute 'mu4e-unread-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-url-number-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-view-body-face nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'mu4e-warning-face nil :foreground "red" :background my/background-color)
+
+
     ;;; Evil-goggles
     ;;; 2 color approach
     ;; (set-face-attribute 'evil-goggles-change-face nil :foreground my/background-color :background my/foreground-color)
@@ -7089,7 +7255,7 @@ Use lv-line to create a mode line on the top of the screen
                  " >"
                  )))))
 
-  (which-function-mode 1)
+  ;;(which-function-mode 1)
 
   ;;(remove-hook 'my/switch-buffer-hook 'which-func-update)
 
@@ -7418,7 +7584,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
   ;; Only applicable to X since terminal never stretches, etc
   (add-hook 'exwm-workspace-switch-hook 'my/frame-width-update)
-  (add-hook 'exwm-init-hook '(lambda () (interactive) (run-with-timer 0.2 nil '(lambda () (interactive) (my/frame-width-update) (my/lv-line--update)))) t)
+  (add-hook 'exwm-init-hook (lambda () (interactive) (run-with-timer 1 nil '(lambda () (interactive) (my/frame-width-update) (my/lv-line--update)))) t)
 
   (defun my/mode-line-align (left right)
     "Return a string of `window-width' length containing LEFT, and RIGHT aligned respectively."
@@ -7503,7 +7669,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                                     "]"))))
 
 
-                      which-func-current
+                      ;;which-func-current
 
                       ;; (:eval
                       ;; (let ((which-func (which-function)))
@@ -7556,6 +7722,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                       (:eval (if (not (= my/eye-timer-que 0))
                                  (propertize (concat  " - E: " my/eye-timer-que-formated) 'face '(:foreground "red"))))
 
+                      mu4e-alert-mode-line
 
                       " | "
 
