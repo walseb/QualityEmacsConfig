@@ -1219,7 +1219,7 @@ This swaps capslock and ctrl
 #+BEGIN_SRC emacs-lisp
   (defun my/setup-mbsync ()
     (interactive)
-    (if (not (file-directory-p "/home/admin/Maildir/"))
+    (if (not (file-directory-p my/device/maildir))
         (progn
           (make-directory my/device/maildir)
           (make-directory (concat my/device/maildir "gmail"))
@@ -1230,8 +1230,8 @@ This swaps capslock and ctrl
                                                "IMAPAccount gmail
   # Address to connect to
   Host imap.gmail.com
-  User ENTER EMAIL
-  Pass ENTER PASSWORD
+  User INSERT USER
+  Pass INSERT PASSWORD
   # To store the password in an encrypted file use PassCmd instead of Pass
   # PassCmd \"gpg2 -q --for-your-eyes-only --no-tty -d ~/.mailpass.gpg\"
   #
@@ -1245,46 +1245,47 @@ This swaps capslock and ctrl
   IMAPStore gmail-remote
   Account gmail
 
-  MaildirStore gmail
+  MaildirStore gmail-local
   Subfolders Verbatim
   # The trailing \"/\" is important
+
   Path " (concat my/device/maildir "gmail/") "
   Inbox " (concat my/device/maildir "gmail/inbox/") "
 
-  Channel gmail
-  Master :gmail-remote:
-  Slave :gmail-local:
-  # Exclude everything under the internal [Gmail] folder, except the interesting folders
-  Patterns * ![Gmail]* \"[Gmail]/Sent Mail\" \"[Gmail]/Starred\" \"[Gmail]/All Mail\"
+  #Channel gmail
+  #Master :gmail-remote:
+  #Slave :gmail-local:
+  ## Exclude everything under the internal [Gmail] folder, except the interesting folders
+  #Patterns * ![Gmail]* \"[Gmail]/Sent Mail\" \"[Gmail]/Starred\" \"[Gmail]/All Mail\" \"[Gmail]/Trash\"
+
+  Channel gmail-all
+  Master :gmail-remote:\"[Gmail]/All Mail\"
+  Slave :gmail-local:all
+
+  Channel gmail-sent
+  Master :gmail-remote:\"[Gmail]/Sent Mail\"
+  Slave :gmail-local:sent
+
+  Channel gmail-starred
+  Master :gmail-remote:\"[Gmail]/Starred\"
+  Slave :gmail-local:starred
+
+  Channel gmail-trash
+  Master :gmail-remote:\"[Gmail]/Trash\"
+  Slave :gmail-local:trash
+
+  Group gmail
+  Channel gmail-all
+  Channel gmail-sent
+  Channel gmail-starred
+  Channel gmail-trash
+
   # Or include everything
   #Patterns *
   # Automatically create missing mailboxes, both locally and on the server
   Create Both
   # Save the synchronization state files in the relevant directory
-  SyncState *
-
-
-
-  #Channel sync-gmail-default
-  #Master :gmail-remote:
-  #Slave :gmail-local:
-  ## Select some mailboxes to sync
-  #Patterns \"INBOX\" \"arch\"
-  #
-  #Channel sync-gmail-sent
-  #Master :gmail-remote:\"[Gmail]/Sent\"
-  #Slave :gmail-local:sent
-  #
-  #Channel sync-gmail-trash
-  #Master :gmail-remote:\"[Gmail]/Trash\"
-  #Slave :gmail-local:trash
-  #
-  ## Get all the channels together into a group.
-  #Group gmail
-  #Channel sync-gmail-default
-  #Channel sync-gmail-sent
-  #Channel sync-gmail-trash
-  ")))
+  SyncState *")))
 #+END_SRC
 
 ** Write all configs
