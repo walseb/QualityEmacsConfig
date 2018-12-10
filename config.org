@@ -310,49 +310,6 @@ Define my mode for setting global settings in all buffers
   ;; (my/global-mode 1)
 #+END_SRC
 
-* Alert
-#+BEGIN_SRC emacs-lisp
-  (straight-use-package 'alert)
-#+END_SRC
-
-** Fix mode line notification face
-#+BEGIN_SRC emacs-lisp
-  (defun alert-mode-line-notify (info)
-    (copy-face 'mode-line 'alert-saved-mode-line-face)
-    (let ((color (cdr (assq (plist-get info :severity)
-                            alert-severity-colors))))
-      (my/alert-blink-mode-line color)))
-
-  (defun my/alert-blink-mode-line (color)
-    ;; Doesn't work if you use color directly??
-    (setq my/alert-blink-color color)
-
-    (run-with-timer 0.25 nil (lambda () (interactive)
-                                (set-face-attribute 'mode-line nil :foreground my/alert-blink-color :background my/alert-blink-color)))
-
-    (run-with-timer 0.5 nil 'my/alert-mode-line-restore)
-
-    (run-with-timer 0.75 nil (lambda () (interactive)
-                                (set-face-attribute 'mode-line nil :foreground my/alert-blink-color :background my/alert-blink-color)))
-
-    (run-with-timer 1 nil 'my/alert-mode-line-restore)
-
-    (run-with-timer 1.25 nil (lambda () (interactive)
-                                (set-face-attribute 'mode-line nil :foreground my/alert-blink-color :background my/alert-blink-color)))
-
-    (run-with-timer 1.5 nil 'my/alert-mode-line-restore))
-
-  (defun my/alert-mode-line-restore ()
-    (set-face-attribute 'mode-line nil :foreground "white" :background "white"))
-
-  ;; Disable auto revert back face
-  (defun alert-mode-line-restore (_info))
-#+END_SRC
-** Settings
-#+BEGIN_SRC emacs-lisp
-  (setq alert-default-style 'mode-line)
-#+END_SRC
-
 * Generic functions and variables
 ** File management
 *** Create directory if directory doesn't exist
@@ -1036,6 +993,50 @@ When changing leader, change =my/leader-map-key=
   (define-key evil-visual-state-map (kbd my/leader-map-key) my/leader-map)
 #+END_SRC
 
+* Alert
+#+BEGIN_SRC emacs-lisp
+  (defvar my/past-alerts (list))
+
+  (defun my/alert (&optional str severity)
+    (let ((color
+           (pcase severity
+             ('low "green")
+             ('med  "yellow")
+             ('high  "red")
+             (_   "blue"))))
+      (my/alert-blink-fringe color)
+
+      (if str
+          (progn
+            (push " " my/past-alerts)
+            (push (propertize (concat "[" str "]") 'face `(:background ,color)) my/past-alerts)
+            (message str)))))
+
+  (defvar my/alert-blink-fringe-color "red")
+
+  (defun my/alert-blink-fringe (color)
+    (setq my/alert-blink-fringe-color color)
+    (run-with-timer 0.25 nil 'my/alert-fringe-set-color)
+    (run-with-timer 0.5 nil 'my/alert-fringe-restore)
+    (run-with-timer 0.75 nil 'my/alert-fringe-set-color)
+    (run-with-timer 1 nil 'my/alert-fringe-restore)
+    (run-with-timer 1.25 nil 'my/alert-fringe-set-color)
+    (run-with-timer 1.5 nil 'my/alert-fringe-restore))
+
+  (defun my/alert-fringe-set-color ()
+    (set-face-attribute 'fringe nil :foreground my/alert-blink-fringe-color :background my/alert-blink-fringe-color))
+
+  (defun my/alert-fringe-restore ()
+    (set-face-attribute 'fringe nil :foreground nil :background nil))
+
+  (defun my/alert-reset ()
+    (interactive)
+    (setq my/past-alerts (list))
+    (my/eye-timer-reset))
+
+  (define-key my/leader-map (kbd "R") 'my/alert-reset)
+#+END_SRC
+
 * Package management
 ** Guix
 #+BEGIN_SRC emacs-lisp
@@ -1230,7 +1231,7 @@ This swaps capslock and ctrl
                                                "IMAPAccount gmail
   # Address to connect to
   Host imap.gmail.com
-  User INSERT USER
+  User INSERT EMAIL
   Pass INSERT PASSWORD
   # To store the password in an encrypted file use PassCmd instead of Pass
   # PassCmd \"gpg2 -q --for-your-eyes-only --no-tty -d ~/.mailpass.gpg\"
@@ -1248,44 +1249,40 @@ This swaps capslock and ctrl
   MaildirStore gmail-local
   Subfolders Verbatim
   # The trailing \"/\" is important
-
-  Path " (concat my/device/maildir "gmail/") "
-  Inbox " (concat my/device/maildir "gmail/inbox/") "
-
-  #Channel gmail
-  #Master :gmail-remote:
-  #Slave :gmail-local:
-  ## Exclude everything under the internal [Gmail] folder, except the interesting folders
-  #Patterns * ![Gmail]* \"[Gmail]/Sent Mail\" \"[Gmail]/Starred\" \"[Gmail]/All Mail\" \"[Gmail]/Trash\"
+  Path " (concat my/device/maildir "/gmail/") "
+  Inbox " (concat my/device/maildir "/gmail/inbox/") "
 
   Channel gmail-all
   Master :gmail-remote:\"[Gmail]/All Mail\"
   Slave :gmail-local:all
+  # Automatically create missing mailboxes, both locally and on the server
+  Create Both
+  # Save the synchronization state files in the relevant directory
+  SyncState *
 
   Channel gmail-sent
   Master :gmail-remote:\"[Gmail]/Sent Mail\"
   Slave :gmail-local:sent
+  Create Both
+  SyncState *
 
   Channel gmail-starred
   Master :gmail-remote:\"[Gmail]/Starred\"
   Slave :gmail-local:starred
+  Create Both
+  SyncState *
 
   Channel gmail-trash
   Master :gmail-remote:\"[Gmail]/Trash\"
   Slave :gmail-local:trash
+  Create Both
+  SyncState *
 
   Group gmail
   Channel gmail-all
   Channel gmail-sent
   Channel gmail-starred
-  Channel gmail-trash
-
-  # Or include everything
-  #Patterns *
-  # Automatically create missing mailboxes, both locally and on the server
-  Create Both
-  # Save the synchronization state files in the relevant directory
-  SyncState *")))
+  Channel gmail-trash")))
 #+END_SRC
 
 ** Write all configs
@@ -1707,16 +1704,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (define-key my/open-map (kbd "p") 'my/open-passwords)
 #+END_SRC
 
-** Open activity reports
-#+BEGIN_SRC emacs-lisp
-  (defun my/open-activity-reports ()
-    (interactive)
-    (find-file (concat user-emacs-directory "ActivityReports.org"))
-    (run-hooks 'my/open-map-hook))
-
-  (define-key my/open-map (kbd "r") 'my/open-activity-reports)
-#+END_SRC
-
 ** Visit agenda file
 #+BEGIN_SRC emacs-lisp
   (defun my/agenda-file-visit ()
@@ -1945,7 +1932,6 @@ Vim bindings to change fold
                                         (pos (flycheck-error-pos error)) )
                             (goto-char (flycheck-error-pos error))))
                 :history 'counsel-flycheck-history)))
-
 
   (define-key my/leader-map (kbd "J") 'counsel-flycheck)
 #+END_SRC
@@ -3269,13 +3255,14 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'dumb-jump)
 
-  (defun my/jump-to-definition ()
+  (defun my/auto-jump-to-definition ()
     (interactive)
     (pcase major-mode
       ('fsharp-mode (fsharp-ac/gotodefn-at-point))
+      ('clojure-mode (clojure-find-def))
       (_ (dumb-jump-go))))
 
-  (define-key my/leader-map (kbd "t") 'my/jump-to-definition)
+  (define-key my/leader-map (kbd "t") 'my/auto-jump-to-definition)
 
   (setq dumb-jump-selector 'ivy)
 #+END_SRC
@@ -4061,9 +4048,9 @@ Disable rainbow delimiters
 ** Alert when task is done
 #+BEGIN_SRC emacs-lisp
   (add-hook 'eshell-after-prompt-hook (lambda () (interactive) (if (not (= 1 (line-number-at-pos (point))))
-                                                                    (progn
-                                                                      (alert "Eshell command done!" :severity 'high)
-                                                                      (message "Eshell command done!")))))
+                                                                   (progn
+                                                                     (my/alert nil 'low)
+                                                                     (message "Eshell command done!")))))
 #+END_SRC
 
 ** Keys
@@ -4083,8 +4070,7 @@ Disable rainbow delimiters
     (evil-define-key 'normal eshell-mode-map (kbd "C-p") 'eshell-previous-matching-input-from-input)
     (evil-define-key 'normal eshell-mode-map (kbd "C-n") 'eshell-next-matching-input-from-input)
     (evil-define-key 'insert eshell-mode-map (kbd "C-p") 'eshell-previous-matching-input-from-input)
-    (evil-define-key 'insert eshell-mode-map (kbd "C-n") 'eshell-next-matching-input-from-input)
-    )
+    (evil-define-key 'insert eshell-mode-map (kbd "C-n") 'eshell-next-matching-input-from-input))
 
   (add-hook 'eshell-mode-hook 'my/bind-eshell-keys)
 #+END_SRC
@@ -4108,9 +4094,17 @@ Disable rainbow delimiters
   (define-key evil-insert-state-map (kbd "M-r") '(lambda () (interactive) (my/fake-key "ä" ?\ä)))
   (define-key evil-insert-state-map (kbd "M-j") '(lambda () (interactive) (my/fake-key "ö" ?\ö)))
 
+  (define-key evil-insert-state-map (kbd "M-W") '(lambda () (interactive) (my/fake-key "Å" ?\å)))
+  (define-key evil-insert-state-map (kbd "M-R") '(lambda () (interactive) (my/fake-key "Ä" ?\ä)))
+  (define-key evil-insert-state-map (kbd "M-J") '(lambda () (interactive) (my/fake-key "Ö" ?\ö)))
+
   (define-key evil-replace-state-map (kbd "M-w") '(lambda () (interactive) (my/fake-key "å" ?\å)))
   (define-key evil-replace-state-map (kbd "M-r") '(lambda () (interactive) (my/fake-key "ä" ?\ä)))
   (define-key evil-replace-state-map (kbd "M-j") '(lambda () (interactive) (my/fake-key "ö" ?\ö)))
+
+  (define-key evil-replace-state-map (kbd "M-W") '(lambda () (interactive) (my/fake-key "Å" ?\Å)))
+  (define-key evil-replace-state-map (kbd "M-R") '(lambda () (interactive) (my/fake-key "Ä" ?\Ä)))
+  (define-key evil-replace-state-map (kbd "M-J") '(lambda () (interactive) (my/fake-key "Ö" ?\Ö)))
 #+END_SRC
 
 *** Backspace/delete C-h, C-l
@@ -6723,6 +6717,7 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
     ;; Underlines part of current line
     ;;(set-face-attribute 'hl-line nil :foreground my/foreground-color :background nil :underline t)
     (set-face-attribute 'hl-line nil :foreground my/foreground-color :background my/background-color-2 :underline nil)
+
     ;;;  Org
     ;; =make this bold= 
     (set-face-attribute 'org-verbatim nil :weight 'bold)
@@ -6732,7 +6727,7 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
     ;;; Dired
     (set-face-attribute 'dired-directory nil :foreground my/background-color :background my/foreground-color)
 
-  ;;; Spray
+    ;;; Spray
     ;;  (set-face-attribute 'spray-accent-face nil :foreground "red" :background my/background-color)
     (set-face-attribute 'spray-accent-face nil :foreground my/foreground-color :background my/background-color :underline t)
 
@@ -6783,11 +6778,11 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
     (set-face-attribute 'avy-lead-face-1 nil :foreground my/background-color :background my/foreground-color-4)
     (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background my/foreground-color-6)
 
-    ;; Eshell
+    ;;; Eshell
     (require 'em-prompt)
     (set-face-attribute 'eshell-prompt nil :foreground  "purple" :background my/background-color)
 
-    ;; Eww
+    ;;; Eww
     (set-face-attribute 'my/eww-code-face nil :foreground my/foreground-color :background my/background-color-2 :family my/mono-font)
 
     ;;(defvar my/evil-goggles-highlight-color)
@@ -6900,7 +6895,6 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
 
   (define-key my/leader-map (kbd "M-c") 'my/paper-mode)
 #+END_SRC
-
 
 ** Indicate empty lines
 #+BEGIN_SRC emacs-lisp
@@ -7558,6 +7552,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     (setq my/eye-timer-que-formated (number-to-string my/eye-timer-que)))
 
   (defun my/eye-timer-add ()
+    (my/alert "Eye timer" 'high)
     (setq my/eye-timer-que (+ 1 my/eye-timer-que))
     (setq my/eye-timer-que-formated (my/eye-timer-get-formated-time))
     (setq my/eye-timer-last-break (float-time))
@@ -7569,11 +7564,6 @@ When projectile-mode is on, project name is updated on every keypress, here it i
         (my/eye-timer-add)))
 
   (run-with-timer 0 60 'my/eye-timer-update)
-#+END_SRC
-
-**** Keys
-#+BEGIN_SRC emacs-lisp
-  (define-key my/system-commands-map (kbd "e") 'my/eye-timer-reset)
 #+END_SRC
 
 *** Mode line format
@@ -7688,6 +7678,10 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                    (format-mode-line
                     (quote
                      (
+                      (:eval my/past-alerts)
+
+                      "| "
+
                       (:eval (if my/mode-line-show-GC-stats
                                  (concat
                                   " GC: " (number-to-string (truncate gc-elapsed))
@@ -7735,36 +7729,6 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
                       ))
                     ))))
-#+END_SRC
-
-* Activity report
-#+BEGIN_SRC emacs-lisp
-  (defvar my/current-activity nil)
-
-  (defun my/format-activity-report (activity)
-    (concat "[" my/date " - " my/time "] " "20 min" " - " activity))
-
-  (defun my/report-activity ()
-    (my/add-to-or-create-file-with-content
-     (concat user-emacs-directory "ActivityReports.org")
-     (my/format-activity-report
-      (unwind-protect
-          (progn
-            (setq my/current-activity nil)
-            (setq my/current-activity (completing-read "Report activity: " '(
-                                                                             ("None")))))
-        (if my/current-activity
-            my/current-activity
-          (my/add-to-or-create-file-with-content (concat user-emacs-directory "ActivityReports.org") (my/format-activity-report "CANCELLED")))
-        ;; Activate timer again, using the second arg in `run-with-timer' doesn't work if you cancel prompt
-        (run-with-timer 1200 nil 'my/report-activity)))))
-
-  (defun my/report-close-emacs ()
-    (my/add-to-or-create-file-with-content (concat user-emacs-directory "ActivityReports.org") (my/format-activity-report "EMACS QUIT")))
-
-  (add-hook 'kill-emacs-hook 'my/report-close-emacs)
-
-  (run-with-timer 1200 nil 'my/report-activity)
 #+END_SRC
 
 * Report start time
