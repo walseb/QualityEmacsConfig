@@ -540,15 +540,16 @@ Default file-size-human-readable returns decimal values
   (setq garbage-collection-messages t)
 
   ;; Get 80% of memory
-  (defvar my/emacs-max-ram-usage (floor (* (* (car (memory-info)) 0.8) 1024))
-    "Max ram emacs can use before having to jump ship
-  Is in bytes")
-
-    (if my/emacs-max-ram-usage
-        (setq gc-cons-threshold my/emacs-max-ram-usage))
+  ;; (defvar my/emacs-max-ram-usage (floor (* (* (car (memory-info)) 0.8) 1024))
+    ;; "Max ram emacs can use before having to jump ship
+  ;; Is in bytes")
+  ;; 
+  ;; (if my/emacs-max-ram-usage
+      ;; (setq gc-cons-threshold 800000))
+  (setq gc-cons-threshold 800000)
 
   ;; (defun garbage-collect (&rest args) 
-    ;; (message "Emacs is trying to garbage collect, it's time to jump ship"))
+  ;; (message "Emacs is trying to garbage collect, it's time to jump ship"))
 #+END_SRC
 
 ** Disable custom
@@ -1031,8 +1032,7 @@ When changing leader, change =my/leader-map-key=
 
   (defun my/alert-reset ()
     (interactive)
-    (setq my/past-alerts (list))
-    (my/eye-timer-reset))
+    (setq my/past-alerts (list)))
 
   (define-key my/leader-map (kbd "R") 'my/alert-reset)
 #+END_SRC
@@ -1514,13 +1514,14 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
 *** Toggle local mono font
 #+BEGIN_SRC emacs-lisp
-  (defun my/toggle-local-mono-font()
+  (defun my/toggle-local-mono-font(&optional arg)
+    "If ARG is non-nil enable monofont, otherwise toggle it."
     (interactive)
     (if window-system
-      (if (not my/is-font-mono)
-          (if  (string= (face-attribute 'default :family) my/font-raw)
-              (face-remap-add-relative 'default :family my/mono-font)
-          (face-remap-add-relative 'default :family my/font-raw)))))
+        (if (not my/is-font-mono)
+            (if  (or arg (string= (face-attribute 'default :family) my/font-raw))
+                (face-remap-add-relative 'default :family my/mono-font)
+              (face-remap-add-relative 'default :family my/font-raw)))))
 
   (define-key my/leader-map (kbd "M-f") 'my/toggle-local-mono-font)
 #+END_SRC
@@ -1571,6 +1572,14 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 ** Hotkey to hide cursor
 #+BEGIN_SRC emacs-lisp
   (define-key my/leader-map (kbd "M-h") (lambda () (interactive) (setq cursor-type nil)))
+#+END_SRC
+
+** Tetris
+#+BEGIN_SRC emacs-lisp
+  (evil-define-key 'insert tetris-mode-map (kbd "p") 'tetris-rotate-next)
+  (evil-define-key 'insert tetris-mode-map (kbd "n") 'tetris-move-down)
+  (evil-define-key 'insert tetris-mode-map (kbd "h") 'tetris-move-left)
+  (evil-define-key 'insert tetris-mode-map (kbd "l") 'tetris-move-right)
 #+END_SRC
 
 * File options
@@ -3318,6 +3327,7 @@ Shows information in echo area
     (if (eq evil-state 'visual)
         (my/auto-eval-region)
       (pcase major-mode
+        ('org-mode (call-interactively 'org-babel-execute-src-block))
         ('scheme-mode (geiser-eval-last-sexp nil))
         ('clojure-mode (cider-eval-last-sexp))
         ('plantuml-mode (plantuml-preview-region 0 (line-beginning-position) (line-end-position)))
@@ -4459,10 +4469,8 @@ We use class names for all windows expect for Java applications and GIMP (becaus
   ;; (exwm-input--fake-key (event-basic-type ?\C-a))
 #+END_SRC
 
-* Browser
-** Eww/shr
+* Shr
 #+BEGIN_SRC emacs-lisp
-  (require 'eww)
   (require 'shr)
 #+END_SRC
 
@@ -4491,11 +4499,6 @@ We use class names for all windows expect for Java applications and GIMP (becaus
       (add-to-list 'shr-external-rendering-functions '(code . my/eww-tag-code))))
 #+END_SRC
 
-*** Add URL to buffer name
-#+BEGIN_SRC emacs-lisp
-  (add-hook 'eww-after-render-hook '(lambda () (interactive) (my/give-buffer-unique-name (concat "eww - " (plist-get eww-data :title)))))
-#+END_SRC
-      
 *** Fix background colors shr
 #+BEGIN_SRC emacs-lisp
   ;; Try fixing colors
@@ -4531,6 +4534,17 @@ Redefine function to attempt to open image if link at point wasn't found
           (browse-url url))))))
 #+END_SRC
 
+* Browser
+** Eww/shr
+#+BEGIN_SRC emacs-lisp
+  (require 'eww)
+#+END_SRC
+
+*** Add URL to buffer name
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'eww-after-render-hook '(lambda () (interactive) (my/give-buffer-unique-name (concat "eww - " (plist-get eww-data :title)))))
+#+END_SRC
+      
 *** Keys
 #+BEGIN_SRC emacs-lisp
   ;; (define-key eww-mode-map [?\d] 'eww-back-url)
@@ -5078,102 +5092,45 @@ emms doesn't automatically connect to mpd when loading playlist, results in empt
 #+END_SRC
 
 * Mail
-** Mu4e
-Requires =mu= and =mbsync= (or equivalent) to be installed
-#+BEGIN_SRC emacs-lisp
-  (straight-use-package '(mu4e :type git :host github :repo "djcb/mu"
-                               :files ("mu4e/*.el")))
-
-  (require 'mu4e)
-
-  (setq mu4e-completing-read-function 'completing-read)
-
-  (setq mu4e-maildir my/device/maildir)
-  (setq mu4e-attachment-dir "~/Downloads")
-
-  (define-key my/leader-map (kbd "M") 'mu4e)
-
-  (defvar my/sync-mail-hook nil)
-  (defun my/sync-mail ()
-    (interactive)
-    ;; Sync mailbox, index mails, signal done
-    (async-shell-command "mbsync -a; mu index; echo 'DONE!'")
-    ;; Give it 5 seconds to complete, then update modeline, etc
-    (run-with-timer 5 nil (lambda () (interactive) (run-hooks 'my/sync-mail-hook))))
-
-  (run-with-timer 60 300 'my/sync-mail)
-#+END_SRC
-
-*** Conversations
-#+BEGIN_SRC emacs-lisp
-  (straight-use-package 'mu4e-conversation)
-  (require 'mu4e-conversation)
-
-  (global-mu4e-conversation-mode)
-#+END_SRC
-
-*** Alert
-#+BEGIN_SRC emacs-lisp
-  (straight-use-package 'mu4e-alert)
-
-  (add-hook 'after-init-hook #'mu4e-alert-enable-mode-line-display)
-  (add-hook 'my/sync-mail-hook #'mu4e-alert-update-mail-count-modeline)
-#+END_SRC
-
-**** Set mode line format
-#+BEGIN_SRC emacs-lisp
-  (defun my/mu4e-alert-modeline-formatter (mail-count)
-    (if (not (zerop mail-count))
-        (concat " | Mail [" (number-to-string mail-count) "]")))
-
-  (setq mu4e-alert-modeline-formatter #'my/mu4e-alert-modeline-formatter)
-#+END_SRC
-
-*** Faces
-#+BEGIN_SRC emacs-lisp
-  (add-hook 'mu4e-headers-mode-hook '(lambda () (interactive) (my/toggle-mono-font t)))
-#+END_SRC
-
 ** Gnus
 .gnus.el is written in =write config map=
+https://github.com/gongzhitaao/GnusSolution
+https://www.gnu.org/software/emacs/manual/html_node/gnus/Comparing-Mail-Back-Ends.html
 #+BEGIN_SRC emacs-lisp
   (require 'gnus)
   (define-key my/open-map (kbd "g") 'gnus)
 
+  ;; Encrypt passwords
+  (setq netrc-file "~/.authinfo.gpg")
+
   (setq gnus-use-full-window nil)
 #+END_SRC
 
-*** Agent
+*** Sources
 #+BEGIN_SRC emacs-lisp
-  (setq gnus-agent-cache t)
+  (setq gnus-select-method '(nnimap "Dovecot"
+                                    (nnimap-stream network)
+                                    (nnimap-address "localhost")
+                                    (nnimap-authenticator login)
+                                    (nnimap-user "admin")))
+  (setq gnus-secondary-select-methods
+        '((nntp "news.gmane.org")))
 
-  ;; auto go online????
-  ;;(setq gnus-agent-go-online t)
+  (setq mail-user-agent 'gnus-user-agent)
+  (setq read-mail-command 'gnus)
+  (setq send-mail-function 'message-send-mail-with-sendmail)
+  (setq sendmail-program "msmtp")
 
-  ;; ???
-  ;;(setq gnus-agent-consider-all-articles nil)
-
-
-  ;; Topic prompts
-  ;;(setq gnus-server-unopen-status VALUE)
-  ;; Message prompts
-  ;;(setq gnus-auto-goto-ignores VALUE)
-
-  ;; never que mail if sent when offline, change later
-  (setq gnus-agent-queue-mail nil)
-
-  (require 'gnus-agent)
-  (add-to-list 'gnus-category-alist '(gmail (agent-predicate . short)))
-#+END_SRC
-
-*** Global
-#+BEGIN_SRC emacs-lisp
-  ;;Fix bug in gnus, Replace [ and ] with _ in ADAPT file names
-  (setq nnheader-file-name-translation-alist '((?[ . ?_) (?] . ?_)) )
+  ;; (setq smtpmail-smtp-server "smtp.gmail.com"
+  ;; smtpmail-smtp-service 587
+  ;; ;; Make Gnus NOT ignore [Gmail] mailboxes
+  ;; gnus-ignored-newsgroups "^to\\.\\|^[0-9. ]+\\( \\|$\\)\\|^[\"]\"[#'()]")
 #+END_SRC
 
 *** Minor settings
 #+BEGIN_SRC emacs-lisp
+  ;;Fix bug in gnus, Replace [ and ] with _ in ADAPT file names
+  ;;(setq nnheader-file-name-translation-alist '((?[ . ?_) (?] . ?_)) )
 
   ;; Maybe disable later
   ;;(setq gnus-save-killed-list nil)
@@ -5198,14 +5155,7 @@ Requires =mu= and =mbsync= (or equivalent) to be installed
   (setq gnus-read-newsrc-file nil)
   (setq gnus-save-newsrc-file nil)
 
-  ;; Replace with ivy later. Default value: "gnus-emacs-completing-read"
-  (setq gnus-completing-read-function (quote gnus-ido-completing-read))
-
-  ;; Don't mark unread after download
-  (setq gnus-agent-mark-unread-after-downloaded nil)
-
-  ;; Maybe need to enable again
-  ;; '(gnus-article-date-lapsed-new-header t)
+  (setq gnus-completing-read-function 'gnus-emacs-completing-read)
 #+END_SRC
 
 *** Group mode
@@ -5224,71 +5174,49 @@ Mode for choosing server
 
 ;; Apparently only some servers support using 'some
 ;;(setq gnus-read-active-file 't)
- (setq gnus-read-active-file 'some)
- (setq gnus-check-new-newsgroups 'ask-server)
+ ;;(setq gnus-read-active-file 'some)
+ ;;(setq gnus-check-new-newsgroups 'ask-server)
 #+END_SRC
 
-**** Methods
-#+BEGIN_SRC emacs-lisp
-(setq gnus-select-method '(nntp "news.gmane.org"))
-
-(add-to-list 'gnus-secondary-select-methods
-             '(nnimap "Gmail"
-                      (nnimap-address "imap.gmail.com")
-                      (nnimap-server-port "imaps")
-                      (nnimap-stream ssl)
-                      ;; Don't want to delete mails on server
-                      ;; (nnmail-expiry-target "nnimap+gmail:[Gmail]/Trash")  ;; Move expired messages to Gmail's trash.
-                      (nnmail-expiry-wait 90)))
-                      
-(setq smtpmail-smtp-server "smtp.gmail.com"
-      smtpmail-smtp-service 587
-      ;; Make Gnus NOT ignore [Gmail] mailboxes
-      gnus-ignored-newsgroups "^to\\.\\|^[0-9. ]+\\( \\|$\\)\\|^[\"]\"[#'()]")
-#+END_SRC
-
-**** Topic mode
+*** Topic mode
 Adds headers to each server, tree view
 #+BEGIN_SRC emacs-lisp
-      (defun my/gnus-topic-mode ()
-        ;; Tree view for groups.
-        ;; List all groups over level 5
-        (my/gnus-topic-setup))
+  (defun my/gnus-topic-mode ()
+    ;; Tree view for groups.
+    ;; List all groups over level 5
+    (my/gnus-topic-setup))
 
   (add-hook 'gnus-topic-mode-hook 'my/gnus-topic-mode)
-
 
   (defun my/gnus-topic-setup ()
     "Hides non-relevant servers and puts them into categories. To show all servers, disable my/gnus-topic-mode"
 
     ;; "Gnus" is the root folder, and there are three mail accounts, "misc", "hotmail", "gmail"
-    (setq gnus-topic-topology '(("Gnus" visible)
-                                (("hotmail" visible nil nil))
-                                (("gmail" visible nil nil))))
+    (setq gnus-topic-topology '
+          (("Gnus" visible)
+           (("News" visible)
+            (("News topic 1" visible)))
 
-    (setq gnus-topic-alist '(("hotmail"
-                              "nnimap+hotmail:Inbox"
-                              "nnimap+hotmail:Drafts"
-                              "nnimap+hotmail:Sent"
-                              "nnimap+hotmail:Junk"
-                              "nnimap+hotmail:Deleted")
-                             ("gmail"
-                              "nnimap+Gmail:INBOX"
-                              "nnimap+Gmail:[Gmail]/Sent Mail"
-                              "nnimap+Gmail:[Gmail]/Spam"
-                              "nnimap+Gmail:[Gmail]/Trash"
-                              "nnimap+Gmail:[Gmail]/Drafts"
-                              )
-                             ("Gnus"))))
+           (("Mail" visible)
+            (("gmail" visible))
+            (("gmail-main" visible)))))
 
-  ;; (eval-after-load 'gnus-topic
+    (setq gnus-topic-alist '(
+                             (("Gnus"))
+                             ("gmail-main"
+                              "main-gmail/All"
+                              "main-gmail/Sent"
+                              "main-gmail/Starred"
+                              "main-gmail/Trash"))))
+
+    ;; (eval-after-load 'gnus-topic
     ;; '(progn
-       ;; (setq gnus-message-archive-group '((format-time-string "sent.%Y")))
-       ;; (setq gnus-server-alist '(("archive" nnfolder "archive" (nnfolder-directory "~/Mail/archive")
-                                  ;; (nnfolder-active-file "~/Mail/archive/active")
-                                  ;; (nnfolder-get-new-mail nil)
-                                  ;; (nnfolder-inhibit-expiry t))
-                                 ;; ))))
+    ;; (setq gnus-message-archive-group '((format-time-string "sent.%Y")))
+    ;; (setq gnus-server-alist '(("archive" nnfolder "archive" (nnfolder-directory "~/Mail/archive")
+    ;; (nnfolder-active-file "~/Mail/archive/active")
+    ;; (nnfolder-get-new-mail nil)
+    ;; (nnfolder-inhibit-expiry t))
+    ;; ))))
 
 #+END_SRC
 
@@ -5312,37 +5240,60 @@ Adds headers to each server, tree view
 Mode for choosing which mail to open
 #+BEGIN_SRC emacs-lisp
   (defun my/gnus-summary-mode ()
-    (toggle-truncate-lines 1))
+    (setq truncate-lines t)
+    (my/toggle-local-mono-font t))
 
-   ;; '(gnus-summary-mode-line-format "U%U %S" )
-  (setq-default gnus-summary-line-format "%U%R%d %-5,5L %-20,20n %B%-80,80S\n")
   (add-hook 'gnus-summary-mode-hook 'my/gnus-summary-mode)
 
+  ;; '(gnus-summary-mode-line-format "U%U %S" )
+  ;; https://www.gnu.org/software/emacs/manual/html_node/gnus/Summary-Buffer-Lines.html
+  (setq-default gnus-summary-line-format
+                (concat
+                 ;; Is unread
+                 "%U"
+                 ">"
+                 ;; Total thread score
+                 "%V"
+                 ;; Has been replied to/cached/saved
+                 "%R"
+                 ;; Tab
+                 "\t"
+                 ;; Date as specified by `gnus-user-date-format-alist`
+                 "%&user-date; \t"
+                 ;; Linecount, leave -5,5 spacing
+                 "%-5,5L"
+                 ;; Sender taken from header, leave -20,20 spacing
+                 "%-20,20n"
+
+                 "\t"
+                 ;; Reply tree
+                 "%B"
+                 ;; Article subject string
+                 "%-80,80S"
+                 ;; End
+                 "\n"))
+
+  (setq gnus-user-date-format-alist '((t . "%Y-%m-%d %H:%M")))
+  (setq gnus-thread-sort-functions '(gnus-thread-sort-by-date))
+  
+  ;; Supposed to be better
   (setq-default gnus-summary-thread-gathering-function 'gnus-gather-threads-by-references)
 
-  (setq-default gnus-sum-thread-tree-false-root "")
-  (setq-default gnus-sum-thread-tree-indent " ")
-  (setq-default gnus-sum-thread-tree-leaf-with-other "├► ")
-  (setq-default gnus-sum-thread-tree-root "")
-  (setq-default gnus-sum-thread-tree-single-leaf "╰► ")
-  (setq-default gnus-sum-thread-tree-vertical "│")
+  (setq gnus-sum-thread-tree-false-root ""
+        gnus-sum-thread-tree-single-indent ""
+        gnus-sum-thread-tree-root ""
+        gnus-sum-thread-tree-vertical"|"
+        gnus-sum-thread-tree-leaf-with-other "+-> "
+        gnus-sum-thread-tree-single-leaf"\\-> "
+        gnus-sum-thread-tree-indent " ")
 
+  ;; '(gnus-summary-thread-gathering-function (quote gnus-gather-threads-by-references))
 
-   ;; '(gnus-summary-thread-gathering-function (quote gnus-gather-threads-by-references))
-
-   ;; '(gnus-thread-hide-subtree t)
-   ;; '(gnus-thread-sort-functions (quote gnus-thread-sort-by-most-recent-date))
-   ;; '(gnus-treat-hide-citation t)
-   ;; '(gnus-unread-mark 42)
-   ;; '(gnus-ancient-mark 32)
-#+END_SRC
-
-**** Thread sorting
-#+BEGIN_SRC emacs-lisp
-;; Sort by date
-(setq gnus-thread-sort-functions
-      '(gnus-thread-sort-by-most-recent-date
-        (not gnus-thread-sort-by-number)))
+  ;; '(gnus-thread-hide-subtree t)
+  ;; '(gnus-thread-sort-functions (quote gnus-thread-sort-by-most-recent-date))
+  ;; '(gnus-treat-hide-citation t)
+  ;; '(gnus-unread-mark 42)
+  ;; '(gnus-ancient-mark 32)
 #+END_SRC
 
 **** Visuals
@@ -5358,7 +5309,7 @@ Mode for choosing which mail to open
 #+BEGIN_SRC emacs-lisp
 (setq gnus-parameters
       '(("nnimap.*"
-         (gnus-use-scoring nil)) ;scoring is annoying when I check latest email
+         (gnus-use-scoring nil)) ;; Enable later
         ))
 #+END_SRC
 
@@ -5368,39 +5319,39 @@ Mode for choosing which mail to open
   (evil-define-key 'normal gnus-summary-mode-map (kbd (concat my/leader-map-key "a")) 'my/gnus-summary-map)
 
   (evil-define-key 'normal gnus-summary-mode-map (kbd "i") 'nil)
-  (evil-define-key 'normal gnus-summary-mode-map (kbd "RET") (lambda () (interactive) (gnus-summary-scroll-up 1)))
+  (evil-define-key 'normal gnus-summary-mode-map (kbd "RET") 'gnus-summary-scroll-up)
 
   (defun my/gnus-summary-show-all-mail ()
     "Show all mail"
     (interactive)
     (gnus-summary-rescan-group 1))
 
-  (define-key 'my/gnus-summary-map (kbd "a") 'my/gnus-summary-show-all-mail)
+  (define-key 'my/gnus-summary-map (kbd "s") 'my/gnus-summary-show-all-mail)
 #+END_SRC
 
 *** Article mode
 Mode for reading contents of mail
 #+BEGIN_SRC emacs-lisp
-(defun my/gnus-article-mode ()
-  ;; Font lock mode disables colors in html mail for whatever reason
-  (font-lock-mode -1))
+  (defun my/gnus-article-mode ()
+    ;; Font lock mode disables colors in html mail for whatever reason
+    (font-lock-mode -1))
 
-(add-hook 'gnus-article-mode-hook 'my/gnus-article-mode)
+  (add-hook 'gnus-article-mode-hook 'my/gnus-article-mode)
 
-(defun my/gnus-article-display-mode ()
-  ;;  (gnus-article-de-quoted-unreadable)
-  ;;  (gnus-article-emphasize)
-  ;;  (gnus-article-hide-boring-headers)
-  ;;  (gnus-article-hide-headers-if-wanted)
-  ;;  (gnus-article-hide-pgp)
-  ;;  (gnus-article-highlight)
-  ;;  (gnus-article-highlight-citation)
-  ;;  (gnus-article-date-local)
-  )
+  (defun my/gnus-article-display-mode ()
+    ;;  (gnus-article-de-quoted-unreadable)
+    ;;  (gnus-article-emphasize)
+    ;;  (gnus-article-hide-boring-headers)
+    ;;  (gnus-article-hide-headers-if-wanted)
+    ;;  (gnus-article-hide-pgp)
+    ;;  (gnus-article-highlight)
+    ;;  (gnus-article-highlight-citation)
+    ;;  (gnus-article-date-local)
+    )
 
-(add-hook 'gnus-article-display-hook 'my/gnus-article-display-mode)
+  (add-hook 'gnus-article-display-hook 'my/gnus-article-display-mode)
 
- ;; '(gnus-article-mode-line-format "U%U %S" )
+   ;; '(gnus-article-mode-line-format "U%U %S" )
 #+END_SRC
 
 **** Date headers
@@ -6650,6 +6601,10 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
     (setq my/background-color "#232323")
     (setq my/foreground-color "#E6E1DC") 
 
+    (setq my/diff-new-color "#E6E1DC") 
+    (setq my/diff-changed-color "#E6E1DC") 
+
+
     (if window-system
         (progn
           (setq my/foreground-color-1 (color-darken-name my/foreground-color 5))
@@ -6787,61 +6742,8 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
 
     ;;(defvar my/evil-goggles-highlight-color)
 
-    ;;; Mu4e
-    (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background my/foreground-color-6)
-
-    (set-face-attribute 'mu4e-attach-number-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-cited-1-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-cited-2-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-cited-3-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-cited-4-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-cited-5-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-cited-6-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-cited-7-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-compose-header-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-compose-separator-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-contact-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-context-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-conversation-header nil :foreground my/foreground-color :background my/background-color-2)
-    (set-face-attribute 'mu4e-conversation-sender-1 nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-conversation-sender-2 nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-conversation-sender-3 nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-conversation-sender-4 nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-conversation-sender-5 nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-conversation-sender-6 nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-conversation-sender-7 nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-conversation-sender-8 nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-conversation-sender-me nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-conversation-unread nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-draft-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-flagged-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-footer-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-forwarded-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-header-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-header-highlight-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-header-key-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-header-marks-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-header-title-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-header-value-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-highlight-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-link-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-modeline-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-moved-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-ok-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-region-code nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-replied-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-special-header-value-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-system-face nil :foreground my/foreground-color :background my/background-color :slant 'italic)
-    (set-face-attribute 'mu4e-title-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-trashed-face nil :foreground my/foreground-color :background my/background-color :strike-through t)
-    (set-face-attribute 'mu4e-unread-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-url-number-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-view-body-face nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'mu4e-warning-face nil :foreground "red" :background my/background-color)
-
-
     ;;; Evil-goggles
-    ;;; 2 color approach
+    ;;;; 2 color approach
     ;; (set-face-attribute 'evil-goggles-change-face nil :foreground my/background-color :background my/foreground-color)
     ;; (set-face-attribute 'evil-goggles-commentary-face nil :foreground my/background-color :background my/foreground-color)
     ;; (set-face-attribute 'evil-goggles-delete-face nil :foreground my/background-color :background my/foreground-color)
@@ -7466,8 +7368,8 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 **** Config error
 #+BEGIN_SRC emacs-lisp
   (add-hook 'after-init-hook (lambda () (interactive)
-                                (if (my/has-config-error)
-                                    (my/mode-line-error-list-add "CONFIG ERROR!"))))
+                               (if (my/has-config-error)
+                                   (my/alert "CONFIG ERROR!" 'high))))
 #+END_SRC
 
 **** Load average
@@ -7536,27 +7438,12 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 #+BEGIN_SRC emacs-lisp
   (defvar my/eye-timer-last-break (float-time))
 
-  (defvar my/eye-timer-que 0)
-  (defvar my/eye-timer-que-formated "")
-  (defvar my/eye-timer-mode-line-error "EYE TIMER!")
   ;; In seconds
   (defvar my/eye-timer-break-every (* 21 60))
 
-  (defun my/eye-timer-reset ()
-    (interactive)
-    (setq my/eye-timer-que 0)
-    (setq my/eye-timer-que-formated (my/eye-timer-get-formated-time))
-    (my/mode-line-error-list-remove my/eye-timer-mode-line-error))
-
-  (defun my/eye-timer-get-formated-time ()
-    (setq my/eye-timer-que-formated (number-to-string my/eye-timer-que)))
-
   (defun my/eye-timer-add ()
     (my/alert "Eye timer" 'high)
-    (setq my/eye-timer-que (+ 1 my/eye-timer-que))
-    (setq my/eye-timer-que-formated (my/eye-timer-get-formated-time))
-    (setq my/eye-timer-last-break (float-time))
-    (my/mode-line-error-list-add my/eye-timer-mode-line-error))
+    (setq my/eye-timer-last-break (float-time)))
 
   (defun my/eye-timer-update ()
     (interactive)
@@ -7635,9 +7522,6 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                       ;; Print error if any
                       "%e"
 
-                      (:eval (if my/mode-line-error-list
-                                 (concat (propertize my/mode-line-error-list-formatted 'face '(:background "purple")) " | ")))
-
                       ;; Print mode
                       "%m > " 
                       ;; Print buffer name
@@ -7691,8 +7575,8 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
                       (:eval (if my/mode-line-enable-network-traffic
                                  (concat
-                                  my/rx-delta-formatted " ↑ "
-                                  my/tx-delta-formatted " ↓ |")))
+                                  my/tx-delta-formatted " ↑ "
+                                  my/rx-delta-formatted " ↓ |")))
 
                       (:eval (if my/mode-line-enable-available-mem
                                  (concat " MEM: "
@@ -7714,8 +7598,6 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                       " |"
 
                       (:eval (concat " Up: " my/uptime-total-time-formated))
-                      (:eval (if (not (= my/eye-timer-que 0))
-                                 (propertize (concat  " - E: " my/eye-timer-que-formated) 'face '(:foreground "red"))))
 
                       mu4e-alert-mode-line
 
