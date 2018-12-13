@@ -1,0 +1,51 @@
+IMAPAccount main-gmail
+# Address to connect to
+Host imap.gmail.com
+User INSERT-USERNAME
+Pass INSERT-PASSWORD
+# Password protect it "gpg2 -q --for-your-eyes-only --no-tty -d ~/.mailpass.gpg"
+# OR maybe  "gpg -d ~/.mutt/isyncpassword.gpg"
+# Use SSL
+SSLType IMAPS
+# The following line should work. If get certificate errors, uncomment the two following lines and read the "Troubleshooting" section.
+CertificateFile /etc/ssl/certs/ca-certificates.crt
+#CertificateFile ~/.cert/imap.gmail.com.pem
+#CertificateFile ~/.cert/Equifax_Secure_CA.pem
+
+IMAPStore main-gmail-remote
+Account main-gmail
+
+MaildirStore main-gmail-local
+Subfolders Verbatim
+# The trailing "/" is important
+Path ~/Maildir/main-gmail/
+Inbox ~/Maildir/main-gmail/inbox/
+
+Channel main-gmail-all
+Master :main-gmail-remote:"[Gmail]/All Mail"
+Slave :main-gmail-local:All
+
+Channel main-gmail-sent
+Master :main-gmail-remote:"[Gmail]/Sent Mail"
+Slave :main-gmail-local:Sent
+
+Channel main-gmail-starred
+Master :main-gmail-remote:"[Gmail]/Starred"
+Slave :main-gmail-local:Starred
+
+Channel main-gmail-trash
+Master :main-gmail-remote:"[Gmail]/Trash"
+Slave :main-gmail-local:Trash
+
+# Automatically create missing mailboxes, both locally and on the server
+Create Both
+# Automatically delete messages on either side if they are found deleted on the other.
+Expunge Both
+# Save the synchronization state files in the relevant directory
+SyncState *
+
+Group main-gmail
+Channel main-gmail-all
+Channel main-gmail-sent
+Channel main-gmail-starred
+Channel main-gmail-trash

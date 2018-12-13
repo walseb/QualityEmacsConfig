@@ -546,7 +546,9 @@ Default file-size-human-readable returns decimal values
   ;; 
   ;; (if my/emacs-max-ram-usage
       ;; (setq gc-cons-threshold 800000))
-  (setq gc-cons-threshold 800000)
+  (setq gc-cons-threshold 80000000)
+
+  (setq my/final-gc-mem 800000)
 
   ;; (defun garbage-collect (&rest args) 
   ;; (message "Emacs is trying to garbage collect, it's time to jump ship"))
@@ -780,13 +782,14 @@ Allows for using indention as text objects
 ** Evil-multiple cursors
 #+BEGIN_SRC emacs-lisp
   ;; (straight-use-package 'evil-mc)
-;; 
+  ;; 
   ;; (global-evil-mc-mode 1)
-;; 
+  ;; 
   ;; (define-prefix-command 'my/evil-mc-map)
+  ;;(define-key my/leader-map (kbd "q") 'my/evil-mc-map)
   ;; (define-key evil-normal-state-map (kbd "m") 'my/evil-mc-map)
   ;; (define-key evil-visual-state-map (kbd "m") 'my/evil-mc-map)
-;; 
+  ;; 
   ;; (define-key my/evil-mc-map (kbd "d") 'evil-mc-undo-all-cursors)
   ;; (define-key my/evil-mc-map (kbd "v") 'evil-mc-make-cursor-here)
   ;; (define-key my/evil-mc-map (kbd "V") 'evil-mc-make-all-cursors)
@@ -794,9 +797,15 @@ Allows for using indention as text objects
   ;; (define-key my/evil-mc-map (kbd "S") 'evil-mc-resume-cursors)
   ;; (define-key my/evil-mc-map (kbd "n") 'evil-mc-make-and-goto-next-cursor)
   ;; (define-key my/evil-mc-map (kbd "p") 'evil-mc-make-and-goto-prev-cursor)
-;; 
+  ;; 
   ;; (define-key my/evil-mc-map (kbd "g g") 'evil-mc-make-and-goto-first-cursor)
   ;; (define-key my/evil-mc-map (kbd "G") 'evil-mc-make-and-goto-last-cursor)
+
+  ;; (define-key evil-visual-state-map "A" 'evil-append)
+  ;; (define-key evil-visual-state-map "I" 'evil-insert)
+  ;; 
+  ;; (define-key evil-visual-state-map "R" 'evil-change)
+  ;; 
 #+END_SRC
 
 ** Keys
@@ -1214,75 +1223,6 @@ This swaps capslock and ctrl
     (shell-command "gpgconf --reload gpg-agent"))
 
   (define-key my/write-config-map (kbd "G") 'my/setup-gpg-agent)
-#+END_SRC
-
-** Write mbsync config
-#+BEGIN_SRC emacs-lisp
-  (defun my/setup-mbsync ()
-    (interactive)
-    (if (not (file-directory-p my/device/maildir))
-        (progn
-          (make-directory my/device/maildir)
-          (make-directory (concat my/device/maildir "gmail"))
-          (make-directory (concat my/device/maildir "gmail/inbox"))))
-
-    (my/create-file-with-content-if-not-exist (expand-file-name "~/.mbsyncrc")
-                                              (concat 
-                                               "IMAPAccount gmail
-  # Address to connect to
-  Host imap.gmail.com
-  User INSERT EMAIL
-  Pass INSERT PASSWORD
-  # To store the password in an encrypted file use PassCmd instead of Pass
-  # PassCmd \"gpg2 -q --for-your-eyes-only --no-tty -d ~/.mailpass.gpg\"
-  #
-  # Use SSL
-  SSLType IMAPS
-  # The following line should work. If get certificate errors, uncomment the two following lines and read the \"Troubleshooting\" section.
-  CertificateFile /etc/ssl/certs/ca-certificates.crt
-  #CertificateFile ~/.cert/imap.gmail.com.pem
-  #CertificateFile ~/.cert/Equifax_Secure_CA.pem
-
-  IMAPStore gmail-remote
-  Account gmail
-
-  MaildirStore gmail-local
-  Subfolders Verbatim
-  # The trailing \"/\" is important
-  Path " (concat my/device/maildir "/gmail/") "
-  Inbox " (concat my/device/maildir "/gmail/inbox/") "
-
-  Channel gmail-all
-  Master :gmail-remote:\"[Gmail]/All Mail\"
-  Slave :gmail-local:all
-  # Automatically create missing mailboxes, both locally and on the server
-  Create Both
-  # Save the synchronization state files in the relevant directory
-  SyncState *
-
-  Channel gmail-sent
-  Master :gmail-remote:\"[Gmail]/Sent Mail\"
-  Slave :gmail-local:sent
-  Create Both
-  SyncState *
-
-  Channel gmail-starred
-  Master :gmail-remote:\"[Gmail]/Starred\"
-  Slave :gmail-local:starred
-  Create Both
-  SyncState *
-
-  Channel gmail-trash
-  Master :gmail-remote:\"[Gmail]/Trash\"
-  Slave :gmail-local:trash
-  Create Both
-  SyncState *
-
-  Group gmail
-  Channel gmail-all
-  Channel gmail-sent
-  Channel gmail-starred
-  Channel gmail-trash")))
 #+END_SRC
 
 ** Write all configs
@@ -5108,11 +5048,14 @@ https://www.gnu.org/software/emacs/manual/html_node/gnus/Comparing-Mail-Back-End
 
 *** Sources
 #+BEGIN_SRC emacs-lisp
-  (setq gnus-select-method '(nnimap "Dovecot"
-                                    (nnimap-stream network)
-                                    (nnimap-address "localhost")
-                                    (nnimap-authenticator login)
-                                    (nnimap-user "admin")))
+  ;; If dovecot server is setup
+  (if (my/is-system-package-installed 'dovecot)
+      (setq gnus-select-method '(nnimap "Dovecot"
+                                        (nnimap-stream network)
+                                        (nnimap-address "localhost")
+                                        (nnimap-authenticator login)
+                                        (nnimap-user "admin"))))
+
   (setq gnus-secondary-select-methods
         '((nntp "news.gmane.org")))
 
@@ -5182,8 +5125,6 @@ Mode for choosing server
 Adds headers to each server, tree view
 #+BEGIN_SRC emacs-lisp
   (defun my/gnus-topic-mode ()
-    ;; Tree view for groups.
-    ;; List all groups over level 5
     (my/gnus-topic-setup))
 
   (add-hook 'gnus-topic-mode-hook 'my/gnus-topic-mode)
@@ -5208,22 +5149,12 @@ Adds headers to each server, tree view
                               "main-gmail/Sent"
                               "main-gmail/Starred"
                               "main-gmail/Trash"))))
-
-    ;; (eval-after-load 'gnus-topic
-    ;; '(progn
-    ;; (setq gnus-message-archive-group '((format-time-string "sent.%Y")))
-    ;; (setq gnus-server-alist '(("archive" nnfolder "archive" (nnfolder-directory "~/Mail/archive")
-    ;; (nnfolder-active-file "~/Mail/archive/active")
-    ;; (nnfolder-get-new-mail nil)
-    ;; (nnfolder-inhibit-expiry t))
-    ;; ))))
-
 #+END_SRC
 
 **** Keys
 #+BEGIN_SRC emacs-lisp
   (evil-define-key 'normal gnus-group-mode-map (kbd "i") 'nil)
-  (evil-define-key 'normal gnus-group-mode-map (kbd "RET") 'gnus-topic-select-group)
+  (evil-define-key 'normal gnus-group-mode-map (kbd "RET") (lambda () (interactive) (gnus-topic-select-group t)))
 
   (define-prefix-command 'my/gnus-group-map)
   (evil-define-key 'normal gnus-group-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-group-map)
@@ -5233,7 +5164,7 @@ Adds headers to each server, tree view
     (interactive)
     (gnus-group-list-all-groups 5))
 
-  (define-key 'my/gnus-group-map (kbd "a") 'my/gnus-group-list-all-subscribed-groups)
+  (define-key 'my/gnus-group-map (kbd "s") 'my/gnus-group-list-all-subscribed-groups)
 #+END_SRC
 
 *** Summary mode
@@ -5287,8 +5218,6 @@ Mode for choosing which mail to open
         gnus-sum-thread-tree-single-leaf"\\-> "
         gnus-sum-thread-tree-indent " ")
 
-  ;; '(gnus-summary-thread-gathering-function (quote gnus-gather-threads-by-references))
-
   ;; '(gnus-thread-hide-subtree t)
   ;; '(gnus-thread-sort-functions (quote gnus-thread-sort-by-most-recent-date))
   ;; '(gnus-treat-hide-citation t)
@@ -5338,16 +5267,16 @@ Mode for reading contents of mail
 
   (add-hook 'gnus-article-mode-hook 'my/gnus-article-mode)
 
-  (defun my/gnus-article-display-mode ()
-    ;;  (gnus-article-de-quoted-unreadable)
-    ;;  (gnus-article-emphasize)
-    ;;  (gnus-article-hide-boring-headers)
-    ;;  (gnus-article-hide-headers-if-wanted)
-    ;;  (gnus-article-hide-pgp)
-    ;;  (gnus-article-highlight)
-    ;;  (gnus-article-highlight-citation)
-    ;;  (gnus-article-date-local)
-    )
+  ;;(defun my/gnus-article-display-mode ()
+  ;;  (gnus-article-de-quoted-unreadable)
+  ;;  (gnus-article-emphasize)
+  ;;  (gnus-article-hide-boring-headers)
+  ;;  (gnus-article-hide-headers-if-wanted)
+  ;;  (gnus-article-hide-pgp)
+  ;;  (gnus-article-highlight)
+  ;;  (gnus-article-highlight-citation)
+  ;;  (gnus-article-date-local)
+  ;;)
 
   (add-hook 'gnus-article-display-hook 'my/gnus-article-display-mode)
 
@@ -5399,13 +5328,49 @@ Mode for writing mail
 *** Misc
 **** Random color gnus logo
 #+BEGIN_SRC emacs-lisp
-(random t) ; Randomize sequence of random numbers
-(defun my/random-hex (&optional num)
-  (interactive "P")
-  (let (($n (if (numberp num) (abs num) 6 )))
-    (format  (concat "%0" (number-to-string $n) "x" ) (random (1- (expt 16 $n))))))
+  (random t) ; Randomize sequence of random numbers
+  (defun my/random-hex (&optional num)
+    (interactive "P")
+    (let (($n (if (numberp num) (abs num) 6 )))
+      (format  (concat "%0" (number-to-string $n) "x" ) (random (1- (expt 16 $n))))))
 
-(setq gnus-logo-colors (list (concat "#" (my/random-hex 6)) (concat "#" (my/random-hex 6))))
+  (setq gnus-logo-colors (list (concat "#" (my/random-hex 6)) (concat "#" (my/random-hex 6))))
+#+END_SRC
+
+** mbsync
+#+BEGIN_SRC emacs-lisp
+  (defvar my/sync-mail-hook nil)
+
+  (defun my/sync-mail ()
+    (interactive)
+    (async-shell-command "mbsync -a")
+    (run-with-timer 4 nil (lambda () (interactive) (run-hooks 'my/sync-mail-hook))))
+
+  (if (my/is-system-package-installed 'mbsync)
+      (run-with-timer 0 300 'my/sync-mail))
+#+END_SRC
+
+** Display unread mail count
+#+BEGIN_SRC emacs-lisp
+  (defun my/gnus-scan-unread ()
+    (if (get-buffer "*Group*")
+        (gnus-group-get-new-news)
+      (gnus)))
+
+  (defun my/gnus-get-unread-mail-count ()
+    (my/gnus-get-unread "Mail"))
+
+    (defun my/gnus-get-unread-news-count ()
+      (my/gnus-get-unread "News"))
+
+  (defun my/gnus-get-unread (inbox)
+    (let ((result ""))
+      (dotimes (i (length gnus-topic-unreads))
+        (if (string= inbox (car (nth i gnus-topic-unreads)))
+            (progn
+              (setq result (number-to-string (cdr (nth i gnus-topic-unreads))))
+              (setq i (length gnus-topic-unreads)))))
+      result))
 #+END_SRC
 
 * System
@@ -7286,8 +7251,19 @@ Transmitted
 
 **** Mail
 #+BEGIN_SRC emacs-lisp
-  ;;  (display-time-use-mail-icon 1)
-  ;;  (setq display-time-mail-directory t)
+  (defvar my/gnus-unread-string "")
+
+  (defun my/gnus-update-unread()
+    (my/gnus-scan-unread)
+    (setq my/gnus-unread-string
+          (concat
+           "M:"
+           (my/gnus-get-unread-mail-count)
+           " > N:"
+           (my/gnus-get-unread-news-count))))
+
+  (add-hook 'my/sync-mail-hook 'my/gnus-update-unread)
+  (add-hook 'gnus-summary-exit-map 'my/gnus-update-unread)
 #+END_SRC
 
 **** Battery
@@ -7599,7 +7575,10 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
                       (:eval (concat " Up: " my/uptime-total-time-formated))
 
-                      mu4e-alert-mode-line
+                      " | "
+
+                      (:eval my/gnus-unread-string)
+
 
                       " | "
 
@@ -7611,6 +7590,11 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
                       ))
                     ))))
+#+END_SRC
+
+* Restore gc mem
+#+BEGIN_SRC emacs-lisp
+  (setq gc-cons-threshold my/final-gc-mem)
 #+END_SRC
 
 * Report start time
