@@ -5366,6 +5366,24 @@ Make date headers better with timezone calculation and time passed
   (evil-define-key 'normal gnus-article-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-article-map)
 #+END_SRC
 
+*** Browse server mode
+**** Keys
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/gnus-browse-mode-map)
+  (evil-define-key 'normal gnus-browse-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-browse-mode-map)
+
+  (evil-define-key 'normal gnus-browse-mode-map (kbd "RET") 'gnus-browse-select-group)
+#+END_SRC
+
+*** Server mode
+**** Keys
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/gnus-server-mode-map)
+  (evil-define-key 'normal gnus-server-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-server-mode-map)
+
+  (evil-define-key 'normal gnus-server-mode-map (kbd "RET") 'gnus-server-read-server)
+#+END_SRC
+
 *** Message mode
 Mode for writing mail
 
