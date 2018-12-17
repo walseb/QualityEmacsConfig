@@ -3926,7 +3926,7 @@ Enable org mode for .org.gpg files
 
   (setq eshell-highlight-prompt t)
   (setq eshell-hist-ignoredups t)
-  (setq eshell-history-size 1000)
+  (setq eshell-history-size 10000)
 
   (setq-default eshell-status-in-mode-line nil)
   (defun my/eshell ()
@@ -5104,51 +5104,101 @@ https://www.gnu.org/software/emacs/manual/html_node/gnus/Comparing-Mail-Back-End
 *** Group mode
 Mode for choosing server
 #+BEGIN_SRC emacs-lisp
-(defun my/gnus-group-mode ()
-  ;; Tree view for groups.
-  (gnus-topic-mode)
-  ;; List all groups over level 5
-  (gnus-group-list-all-groups 5))
+  (defun my/gnus-group-mode ()
+    ;; Tree view for groups.
+    (gnus-topic-mode)
+    ;; List all groups over level 5
+    (gnus-group-list-all-groups 5))
 
-(add-hook 'gnus-group-mode-hook 'my/gnus-group-mode)
+  (add-hook 'gnus-group-mode-hook 'my/gnus-group-mode)
 
-;; Always show inbox
-;; (setq gnus-permanently-visible-groups "INBOX")
+  ;; Always show inbox
+  ;; (setq gnus-permanently-visible-groups "INBOX")
 
-;; Apparently only some servers support using 'some
-;;(setq gnus-read-active-file 't)
- ;;(setq gnus-read-active-file 'some)
- ;;(setq gnus-check-new-newsgroups 'ask-server)
+  ;; Apparently only some servers support using 'some
+  ;;(setq gnus-read-active-file 't)
+   ;;(setq gnus-read-active-file 'some)
+   ;;(setq gnus-check-new-newsgroups 'ask-server)
 #+END_SRC
 
 *** Topic mode
 Adds headers to each server, tree view
 #+BEGIN_SRC emacs-lisp
   (defun my/gnus-topic-mode ()
-    (my/gnus-topic-setup))
+    (my/gnus-topic-setup)
+    (my/gnus-topic-add-gmane-groups))
 
   (add-hook 'gnus-topic-mode-hook 'my/gnus-topic-mode)
+#+END_SRC
 
+**** Subscribe to gmane groups
+#+BEGIN_SRC emacs-lisp
+  (defvar my/gnus-topic-gmane-prefix "nntp+news.gmane.org:")
+
+  (setq my/gnus-gmane-subscribed-emacs `(
+                                         ;; Gnus
+                                         ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.help") ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.general") ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.announce") ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.user")))
+
+  (setq my/gnus-gmane-subscribed-fsharp `(
+                                          ;; Gnus
+                                          ,(concat my/gnus-topic-gmane-prefix "gwene.com.reddit.pay.r.fsharp")))
+
+  (setq my/gnus-gmane-subscribed-guile `(
+                                         ;; Gnus
+                                         ,(concat my/gnus-topic-gmane-prefix "gmane.lisp.guile.user")))
+
+  (defun my/gnus-gmane-subscribed-get()
+    (append
+     my/gnus-gmane-subscribed-guile
+     my/gnus-gmane-subscribed-fsharp
+     my/gnus-gmane-subscribed-emacs))
+
+  (defun my/gnus-topic-add-gmane-groups ()
+    (let ((list (my/gnus-gmane-subscribed-get)))
+      (dotimes (i (+ 1 (length list)))
+        (add-to-list 'gnus-newsrc-alist `(,(nth i list) 3 nil nil "nntp:news.gmane.org"))))
+
+    ;; Move the dummy entry to the top
+    (setq gnus-newsrc-alist (delete '("dummy.group" 0 nil) gnus-newsrc-alist))
+    ;; We don't need the dummy group?
+    ;;(add-to-list 'gnus-newsrc-alist '("dummy.group" 0 nil))
+    )
+#+END_SRC
+
+**** Topic setup
+#+BEGIN_SRC emacs-lisp
   (defun my/gnus-topic-setup ()
     "Hides non-relevant servers and puts them into categories. To show all servers, disable my/gnus-topic-mode"
 
     ;; "Gnus" is the root folder, and there are three mail accounts, "misc", "hotmail", "gmail"
     (setq gnus-topic-topology '
           (("Gnus" visible)
-           (("News" visible)
-            (("News topic 1" visible)))
 
+           ;; Mail
            (("Mail" visible)
             (("gmail" visible))
-            (("gmail-main" visible)))))
+            (("gmail-main" visible)))
 
-    (setq gnus-topic-alist '(
-                             (("Gnus"))
+           ;; News
+           (("News" visible)
+            (("Emacs" visible))
+            (("Fsharp" visible))
+            (("Guile" visible))
+            )))
+
+    (setq gnus-topic-alist `((("Gnus"))
+                             ;; Mail
                              ("gmail-main"
                               "main-gmail/All"
                               "main-gmail/Sent"
                               "main-gmail/Starred"
-                              "main-gmail/Trash"))))
+                              "main-gmail/Trash")
+
+                             ;; News
+                             ,(append '("Emacs") my/gnus-gmane-subscribed-emacs)
+                             ,(append '("Fsharp") my/gnus-gmane-subscribed-fsharp)
+                             ,(append '("Guile") my/gnus-gmane-subscribed-guile)
+                             )))
 #+END_SRC
 
 **** Keys
@@ -6641,8 +6691,9 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
     ;;;  Org
     ;; =make this bold= 
     (set-face-attribute 'org-verbatim nil :weight 'bold)
-    ;;(set-face-attribute 'org-code nil )
-    ;;(set-face-attribute 'org-quote nil )
+    (set-face-attribute 'org-code nil :family my/mono-font)
+
+    (set-face-attribute 'org-quote nil :slant 'italic)
 
     ;;; Dired
     (set-face-attribute 'dired-directory nil :foreground my/background-color :background my/foreground-color)
