@@ -5,4 +5,7 @@
 ;; Get from doing "xrandr" in shell
 (defvar my/device/monitor-setup nil)
 
+;; Xrandr command to run
+(defvar my/device/monitor-setup-command "")
+
 (defvar my/device/maildir (concat user-emacs-directory "Maildir"))

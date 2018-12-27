@@ -235,6 +235,7 @@ make sure you compiled with the =-g= flag
 ** Make authinfo gpg file
 #+BEGIN_SRC emacs-lisp
   (setq netrc-file "~/.authinfo.gpg")
+  (setq auth-sources '("~/.authinfo.gpg"))
 #+END_SRC
 
 * Package management
@@ -2132,7 +2133,17 @@ Doesn't work with my setup right now
   (global-flycheck-mode)
 #+END_SRC
 
-** Flycheck-package
+*** Flycheck inline
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'flycheck-inline)
+
+  (require 'flycheck-inline)
+
+  (with-eval-after-load 'flycheck
+    (add-hook 'flycheck-mode-hook #'turn-on-flycheck-inline))
+#+END_SRC
+
+*** Flycheck-package
 Flycheck with extra correction for elisp packages
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'flycheck-package)
@@ -3397,6 +3408,11 @@ Shows information in echo area
   (straight-use-package 'lsp-ui)
 #+END_SRC
 
+** Elgot
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'eglot)
+#+END_SRC
+
 ** Common lisp
 *** Slime
 #+BEGIN_SRC emacs-lisp
@@ -3515,15 +3531,15 @@ or
 
     ;; TODO right now these are permanently set if you start lsp-java mode
     ;; Taken from lsp-java readme
-    (setq lsp-inhibit-message t)
-    (setq lsp-eldoc-render-all nil)
-    (setq lsp-highlight-symbol-at-point nil)
+    (setq-local lsp-inhibit-message t)
+    (setq-local lsp-eldoc-render-all nil)
+    (setq-local lsp-highlight-symbol-at-point nil)
 
-    (setq lsp-ui-sideline-enable t)
-    (setq lsp-ui-sideline-show-symbol t)
-    (setq lsp-ui-sideline-show-hover t)
-    (setq lsp-ui-sideline-show-code-actions t)
-    (setq lsp-ui-sideline-update-mode 'point))
+    (setq-local lsp-ui-sideline-enable t)
+    (setq-local lsp-ui-sideline-show-symbol t)
+    (setq-local lsp-ui-sideline-show-hover t)
+    (setq-local lsp-ui-sideline-show-code-actions t)
+    (setq-local lsp-ui-sideline-update-mode 'point))
 
   (add-hook 'java-mode-hook 'my/java-mode)
 #+END_SRC
@@ -3580,9 +3596,9 @@ Windows performance tweaks
 #+BEGIN_SRC emacs-lisp
   (when (boundp 'w32-pipe-read-delay)
     (setq w32-pipe-read-delay 0))
-  ;; Set the buffer size to 64K on Windows (from the original 4K)
-  (when (boundp 'w32-pipe-buffer-size)
-    (setq irony-server-w32-pipe-buffer-size (* 64 1024)))
+   ;; Set the buffer size to 64K on Windows (from the original 4K)
+   (when (boundp 'w32-pipe-buffer-size)
+   (setq irony-server-w32-pipe-buffer-size (* 64 1024)))
 #+END_SRC
 
 **** Flycheck-irony
@@ -3606,6 +3622,23 @@ Windows performance tweaks
   (straight-use-package 'irony-eldoc)
 
   (add-hook 'irony-mode-hook #'irony-eldoc)
+#+END_SRC
+
+*** Elgot
+#+BEGIN_SRC emacs-lisp
+  ;; (add-hook 'c-mode-hook 'eglot-ensure)
+  ;; (add-hook 'c++-mode-hook 'eglot-ensure)
+  ;; (add-hook 'objc-mode-hook 'eglot-ensure)
+#+END_SRC
+
+*** CCLS
+#+BEGIN_SRC emacs-lisp
+     ;; (straight-use-package 'ccls)
+     ;; (require 'ccls)
+  ;;  
+     ;; (add-hook 'c-mode-hook 'lsp-mode)
+     ;; (add-hook 'c++-mode-hook 'lsp-mode)
+     ;; (add-hook 'objc-mode-hook 'lsp-mode)
 #+END_SRC
 
 *** Cling
@@ -4571,6 +4604,9 @@ Redefine function to attempt to open image if link at point wasn't found
 
       (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-s") 'exwm-firefox-core-quick-find)
 
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
+      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
+
    ;;; Visual
       (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up-select)
       (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down-select)
@@ -4580,6 +4616,9 @@ Redefine function to attempt to open image if link at point wasn't found
       (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "j") 'exwm-firefox-core-find-next)
       (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "J") 'exwm-firefox-core-find-previous)
 
+      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
+      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
+
    ;;; Insert
       (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up-select)
       (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down-select)
@@ -4588,7 +4627,10 @@ Redefine function to attempt to open image if link at point wasn't found
       (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-r") '(lambda () (interactive) (exwm-input--fake-key ?\ä)))
       (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-j") '(lambda () (interactive) (exwm-input--fake-key ?\ö)))
 
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
       (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)))
+
+
 #+END_SRC
 
 ** Next browser
@@ -4626,6 +4668,11 @@ If enabled it auto enables projectile, which has high CPU usage
   (straight-use-package 'magit)
 
   (setq git-commit-summary-max-length 50)
+#+END_SRC
+
+*** Forge
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package '(forge :type git :host github :repo "magit/forge"))
 #+END_SRC
 
 *** Keys
@@ -4729,8 +4776,8 @@ If enabled it auto enables projectile, which has high CPU usage
   (defvar my/audio-sink nil)
   ;; Pulse sometimes first starts when a video, etc starts
   (defun my/pulse-update-audio-sink ()
-    (if (not my/audio-sink)
-        (setq my/audio-sink (substring  (shell-command-to-string "pacmd list-sinks | grep \"index\"") (string-match "[0-9]" (shell-command-to-string "pacmd list-sinks | grep \"index\"")) -1))))
+    (interactive)
+    (setq my/audio-sink (substring (shell-command-to-string "pacmd list-sinks | grep \"\* index\"") (string-match "[0-9]" (shell-command-to-string "pacmd list-sinks | grep \"index\"")) -1)))
 
   (defun my/pulse-mute-toggle ()
     (interactive)
@@ -4761,6 +4808,9 @@ If enabled it auto enables projectile, which has high CPU usage
 
   (global-set-key (kbd "s--") 'my/pulse-lower-volume)
 #+END_SRC
+
+#+RESULTS:
+: my/pulse-lower-volume
 
 ** Music
 #+BEGIN_SRC emacs-lisp
@@ -5121,6 +5171,24 @@ Mode for choosing server
    ;;(setq gnus-check-new-newsgroups 'ask-server)
 #+END_SRC
 
+**** Keys
+#+BEGIN_SRC emacs-lisp
+  (evil-define-key 'normal gnus-group-mode-map (kbd "i") 'nil)
+  (evil-define-key 'normal gnus-group-mode-map (kbd "RET") (lambda () (interactive) (gnus-topic-select-group t)))
+  (evil-define-key 'normal gnus-group-mode-map (kbd "TAB") 'gnus-topic-select-group)
+  (evil-define-key 'insert gnus-group-mode-map (kbd "TAB") 'gnus-topic-select-group)
+
+  (define-prefix-command 'my/gnus-group-map)
+  (evil-define-key 'normal gnus-group-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-group-map)
+
+  (defun my/gnus-group-list-all-subscribed-groups ()
+    "List all subscribed groups with or without un-read messages"
+    (interactive)
+    (gnus-group-list-all-groups 5))
+
+  (define-key 'my/gnus-group-map (kbd "s") 'my/gnus-group-list-all-subscribed-groups)
+#+END_SRC
+
 *** Topic mode
 Adds headers to each server, tree view
 #+BEGIN_SRC emacs-lisp
@@ -5139,6 +5207,9 @@ Adds headers to each server, tree view
                                          ;; Gnus
                                          ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.help") ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.general") ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.announce") ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.user")))
 
+  (setq my/gnus-gmane-subscribed-emacs-blogs `(
+                                               ,(concat my/gnus-topic-gmane-prefix "gwene.com.oremacs") ,(concat my/gnus-topic-gmane-prefix "gwene.me.emacsair")))
+
   (setq my/gnus-gmane-subscribed-fsharp `(
                                           ;; Gnus
                                           ,(concat my/gnus-topic-gmane-prefix "gwene.com.reddit.pay.r.fsharp")))
@@ -5151,6 +5222,7 @@ Adds headers to each server, tree view
     (append
      my/gnus-gmane-subscribed-guile
      my/gnus-gmane-subscribed-fsharp
+     my/gnus-gmane-subscribed-emacs-blogs
      my/gnus-gmane-subscribed-emacs))
 
   (defun my/gnus-topic-add-gmane-groups ()
@@ -5181,7 +5253,8 @@ Adds headers to each server, tree view
 
            ;; News
            (("News" visible)
-            (("Emacs" visible))
+            (("Emacs" visible)
+             (("Emacs blogs" visible)))
             (("Fsharp" visible))
             (("Guile" visible))
             )))
@@ -5196,6 +5269,7 @@ Adds headers to each server, tree view
 
                              ;; News
                              ,(append '("Emacs") my/gnus-gmane-subscribed-emacs)
+                             ,(append '("Emacs blogs") my/gnus-gmane-subscribed-emacs-blogs)
                              ,(append '("Fsharp") my/gnus-gmane-subscribed-fsharp)
                              ,(append '("Guile") my/gnus-gmane-subscribed-guile)
                              )))
@@ -5203,18 +5277,8 @@ Adds headers to each server, tree view
 
 **** Keys
 #+BEGIN_SRC emacs-lisp
-  (evil-define-key 'normal gnus-group-mode-map (kbd "i") 'nil)
-  (evil-define-key 'normal gnus-group-mode-map (kbd "RET") (lambda () (interactive) (gnus-topic-select-group t)))
-
-  (define-prefix-command 'my/gnus-group-map)
-  (evil-define-key 'normal gnus-group-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-group-map)
-
-  (defun my/gnus-group-list-all-subscribed-groups ()
-    "List all subscribed groups with or without un-read messages"
-    (interactive)
-    (gnus-group-list-all-groups 5))
-
-  (define-key 'my/gnus-group-map (kbd "s") 'my/gnus-group-list-all-subscribed-groups)
+  (define-prefix-command 'my/gnus-topic-map)
+  (evil-define-key 'normal gnus-topic-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-topic-map)
 #+END_SRC
 
 *** Summary mode
@@ -5408,14 +5472,19 @@ Mode for writing mail
 ** mbsync
 #+BEGIN_SRC emacs-lisp
   (defvar my/sync-mail-hook nil)
+  (defvar my/sync-mail-has-begun nil)
 
   (defun my/sync-mail ()
     (interactive)
     (async-shell-command "mbsync -a")
-    (run-with-timer 4 nil (lambda () (interactive) (run-hooks 'my/sync-mail-hook))))
+    (run-with-timer 0 nil (lambda () (interactive) (run-hooks 'my/sync-mail-hook))))
 
-  (if (my/is-system-package-installed 'mbsync)
-      (run-with-timer 0 300 'my/sync-mail))
+
+  (add-hook 'gnus-topic-mode-hook 'my/sync-mail-begin)
+
+  (defun my/sync-mail-begin ()
+    (if (my/is-system-package-installed 'mbsync)
+        (run-with-timer 10 300 'my/sync-mail)))
 #+END_SRC
 
 ** Display unread mail count
@@ -5495,6 +5564,8 @@ Mode for writing mail
         (start-process-shell-command
          "xrandr" nil "xrandr --output LVDS1 --auto"))))
   (define-key my/system-monitor-map (kbd "a") 'my/auto-connect-screen)
+
+  (async-shell-command my/device/monitor-setup-command "xrandr setup buffer")
 #+END_SRC
 
 ** Process monitors
@@ -6631,6 +6702,7 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
     (setq my/background-color "#f0f0f0")
     (setq my/foreground-color "#232323") 
 
+    (setq my/background-color "#000000")
     (setq my/background-color "#232323")
     (setq my/foreground-color "#E6E1DC") 
 

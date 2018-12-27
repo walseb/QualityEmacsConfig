@@ -2,9 +2,10 @@ IMAPAccount main-gmail
 # Address to connect to
 Host imap.gmail.com
 User INSERT-USERNAME
-Pass INSERT-PASSWORD
-# Password protect it "gpg2 -q --for-your-eyes-only --no-tty -d ~/.mailpass.gpg"
-# OR maybe  "gpg -d ~/.mutt/isyncpassword.gpg"
+PassCmd "gpg2 -q --for-your-eyes-only --no-tty -d ~/.mbsyncpassword.gpg"
+# Plaintext: "Pass INSERTPASSWORD"
+# Password protect it "PassCmd gpg2 -q --for-your-eyes-only --no-tty -d ~/.mbsyncpassword.gpg"
+# OR maybe  "gpg -d ~/mbsyncpassword.gpg"
 # Use SSL
 SSLType IMAPS
 # The following line should work. If get certificate errors, uncomment the two following lines and read the "Troubleshooting" section.
