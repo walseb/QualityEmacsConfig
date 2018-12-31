@@ -227,6 +227,13 @@ Add compile libraries to =irony--compile-options=. For gtk set =irony--compile-o
 ** GDB doesn't work properly
 make sure you compiled with the =-g= flag
 
+** Compatibility
+*** Mesa 3d software rendering
+Makes godot work with old computers
+#+BEGIN_SRC command
+LIBGL_ALWAYS_SOFTWARE=1 godot-mono 
+#+END_SRC
+
 * Security
 #+BEGIN_SRC emacs-lisp
   (setq network-security-level 'high)
@@ -273,6 +280,14 @@ Bootstrap straight.el
   ;; If a device config is not made, load the default one
   (if (not (my/load-if-exists (concat user-emacs-directory "device.el")))
       (load-file (concat user-emacs-directory "device-template.el")))
+#+END_SRC
+
+* Libraries
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 's)
+  (straight-use-package 'dash)
+  (require 's)
+  (require 'dash)
 #+END_SRC
 
 * Persistent keys
@@ -1742,6 +1757,827 @@ Vim bindings to change fold
   ;; (define-key evil-motion-state-map (kbd "z C-c") 'origami-close-all-nodes)
 #+END_SRC
 
+* Org
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'org)
+  (require 'org)
+  (require 'org-agenda)
+
+  (define-prefix-command 'my/org-mode-map)
+  (evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a")) 'my/org-mode-map)
+#+END_SRC
+
+** Babel
+*** Supported runnable languages
+  ;; (org-babel-do-load-languages
+   ;; 'org-babel-load-languages
+   ;; '((R . t)
+     ;; (ditaa . t)
+     ;; (dot . t)
+     ;; (emacs-lisp . t)
+     ;; (gnuplot . t)
+     ;; (haskell . nil)
+     ;; (ocaml . nil)
+     ;; (python . t)
+     ;; (ruby . t)
+     ;; (screen . nil)
+     ;; (sh . t)
+     ;; (sql . nil)
+     ;; (sqlite . t)))
+
+** Bullets
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'org-bullets)
+  (require 'org-bullets)
+
+  (when window-system
+    (if (eq system-type 'windows-nt)
+        (setq inhibit-compacting-font-caches t))
+    (add-hook 'org-mode-hook (lambda () (interactive) (org-bullets-mode))))
+#+END_SRC
+
+** Visuals
+*** Change face of levels
+#+BEGIN_SRC emacs-lisp
+  (set-face-attribute 'org-level-1 nil :inherit 'outline-1 :height 1.9)
+  (set-face-attribute 'org-level-2 nil :inherit 'outline-2 :height 1.6)
+  (set-face-attribute 'org-level-3 nil :inherit 'outline-3 :height 1.4)
+  (set-face-attribute 'org-level-4 nil :inherit 'outline-4 :height 1.3)
+  (set-face-attribute 'org-level-5 nil :inherit 'outline-5 :height 1.25)
+  (set-face-attribute 'org-level-6 nil :inherit 'outline-6 :height 1.2)
+  (set-face-attribute 'org-level-7 nil :inherit 'outline-7 :height 1.15)
+  (set-face-attribute 'org-level-8 nil :inherit 'outline-8 :height 1.10)
+
+  ;; :weight 'semi-bold
+#+END_SRC
+
+*** Ellipsis face
+#+BEGIN_SRC emacs-lisp
+  (setq org-ellipsis my/fold-ellipsis)
+#+END_SRC
+
+*** Always truncate lines
+#+BEGIN_SRC emacs-lisp
+  (setq org-startup-truncated nil)
+#+END_SRC
+
+** Indent mode
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'org-mode-hook 'org-indent-mode)
+#+END_SRC
+
+** Org SRC
+*** Make c-' open in current window
+#+BEGIN_SRC emacs-lisp
+  (setq org-src-window-setup 'current-window)
+#+END_SRC
+
+*** Don't save window layout
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'org-src-mode-hook '(lambda () (interactive) (setq org-src--saved-temp-window-config nil)))
+#+END_SRC
+   
+*** SRC region templates
+**** Emacs lisp
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'org-structure-template-alist
+               '("el" "#+BEGIN_SRC emacs-lisp\n?\n#+END_SRC"))
+#+END_SRC
+
+**** Plant uml
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'org-structure-template-alist
+               '("uml" "#+BEGIN_SRC plantuml\n?\n#+END_SRC"))
+#+END_SRC
+
+**** R export to image
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'org-structure-template-alist
+               '("ri" "#+BEGIN_SRC R :results output graphics :file RImage.png\n?\n#+END_SRC"))
+#+END_SRC
+
+** Export
+TODO
+ox-html5slide
+org-html-themes
+*** Syntax highlighting for HTML export
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'htmlize)
+#+END_SRC
+
+*** Twitter bootstrap
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'ox-twbs)
+#+END_SRC
+
+** Agenda
+Give agenda file to use
+#+BEGIN_SRC emacs-lisp
+  (if (file-exists-p "~/Notes/Agenda.org")
+      (setq org-agenda-files (quote ("~/Notes/Agenda.org"))))
+#+END_SRC
+*** Stop agenda from messing with windows
+#+BEGIN_SRC emacs-lisp
+(setq org-agenda-window-setup 'current-window)
+#+END_SRC
+
+*** Display at startup
+Spawn agenda buffer
+#+BEGIN_SRC emacs-lisp
+  ;;(org-agenda-list)
+#+END_SRC
+
+**** Declare switch function
+Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
+#+BEGIN_SRC emacs-lisp
+  (defun my/switch-to-agenda()
+    (interactive)
+    (switch-to-buffer "*Org Agenda*"))
+#+END_SRC
+
+**** Run switch function as initial buffer choice
+#+BEGIN_SRC emacs-lisp
+  (setq initial-buffer-choice 'my/switch-to-agenda)
+#+END_SRC
+
+**** Close all other open windows at start
+#+BEGIN_SRC emacs-lisp
+  (delete-other-windows)
+#+END_SRC
+
+** Clock
+#+BEGIN_SRC emacs-lisp
+;;(setq org-clock-mode-line-total today)
+#+END_SRC
+
+*** Keys
+#+BEGIN_SRC emacs-lisp
+  ;; (define-prefix-command 'my/clock-map)
+  ;; (define-key my/leader-map (kbd "c") 'my/clock-map)
+;; 
+  ;; (define-key my/clock-map (kbd "s") 'org-clock-in)
+  ;; (define-key my/clock-map (kbd "S") 'org-clock-out)
+  ;; (define-key my/clock-map (kbd "C-s") 'org-clock-in-last)
+;; 
+  ;; (define-key my/clock-map (kbd "e") 'org-clock-modify-effort-estimate)
+#+END_SRC
+
+** Export
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-export-map)
+  (define-key my/org-mode-map (kbd "E") 'my/org-export-map)
+#+END_SRC
+
+*** ASCII
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-export-ascii-map)
+  (define-key my/org-export-map (kbd "a") 'my/org-export-ascii-map)
+
+  (define-key my/org-export-ascii-map (kbd "a") 'org-ascii-export-to-ascii)
+#+END_SRC
+
+*** HTML
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-export-html-map)
+  (define-key my/org-export-map (kbd "h") 'my/org-export-html-map)
+
+  (define-key my/org-export-html-map (kbd "h") 'org-html-export-to-html)
+  (define-key my/org-export-html-map (kbd "t") 'org-twbs-export-to-html)
+#+END_SRC
+
+*** PDF
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-export-pdf-map)
+  (define-key my/org-export-map (kbd "p") 'my/org-export-pdf-map)
+
+  (define-key my/org-export-pdf-map (kbd "p") 'org-latex-export-to-pdf)
+#+END_SRC
+
+*** Beamer presentation
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-export-slides-map)
+  (define-key my/org-export-map (kbd "s") 'my/org-export-slides-map)
+
+  (define-key my/org-export-slides-map (kbd "b") 'org-beamer-export-to-pdf)
+#+END_SRC
+
+*** Markdown
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-export-markdown-map)
+  (define-key my/org-export-map (kbd "m") 'my/org-export-markdown-map)
+
+  (define-key my/org-export-markdown-map (kbd "m") 'org-md-export-to-markdown)
+#+END_SRC
+
+*** ODT
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-export-odt-map)
+  (define-key my/org-export-map (kbd "o") 'my/org-export-odt-map)
+
+  (define-key my/org-export-odt-map (kbd "o") 'org-odt-export-to-odt)
+#+END_SRC
+
+*** Latex
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-export-latex-map)
+  (define-key my/org-export-map (kbd "l") 'my/org-export-latex-map)
+
+  (define-key my/org-export-latex-map (kbd "l") 'org-latex-export-to-latex)
+#+END_SRC
+
+** Key
+#+BEGIN_SRC emacs-lisp
+  ;;(evil-define-key 'normal org-mode-map (kbd "TAB") 'org-cycle)
+  (evil-define-key 'normal org-mode-map (kbd "C-s") 'swiper)
+
+  (define-key my/org-mode-map (kbd "i") 'org-toggle-inline-images)
+  (define-key my/org-mode-map (kbd "f") 'org-insert-link)
+  (define-key my/org-mode-map (kbd "e") 'org-babel-execute-src-block)
+
+  (define-key my/org-mode-map (kbd "p") 'org-shiftup)
+  (define-key my/org-mode-map (kbd "n") 'org-shiftdown)
+  (define-key my/org-mode-map (kbd "l") 'org-shiftright)
+  (define-key my/org-mode-map (kbd "h") 'org-shiftleft)
+
+  (define-key my/org-mode-map (kbd "P") 'org-metaup)
+  (define-key my/org-mode-map (kbd "N") 'org-metadown)
+  (define-key my/org-mode-map (kbd "L") 'org-metaright)
+  (define-key my/org-mode-map (kbd "H") 'org-metaleft)
+
+  (define-key my/org-mode-map (kbd "|") 'org-table-create-or-convert-from-region)
+
+  (define-key my/org-mode-map (kbd "z") 'org-shifttab)
+
+  (define-prefix-command 'my/org-show-mode-map)
+  (define-key my/org-mode-map (kbd "s") 'my/org-show-mode-map)
+
+  (define-key my/org-show-mode-map (kbd "l") 'org-toggle-link-display)
+#+END_SRC
+
+*** Macros
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-macros-map)
+  (define-key my/org-mode-map (kbd "m") 'my/org-macros-map)
+#+END_SRC
+
+**** Org
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-org-macros-map)
+  (define-key my/org-macros-map (kbd "o") 'my/org-org-macros-map)
+
+  ;; Center text, doesn't work for all exports
+  (define-key my/org-org-macros-map (kbd "c") (lambda () (interactive) (insert "#+BEGIN_CENTER") (newline) (newline) (insert "#+END_CENTER")))
+
+  ;; Comment
+  (define-key my/org-org-macros-map (kbd "C") (lambda () (interactive) (insert "#+BEGIN_COMMENT") (newline) (newline) (insert "#+END_COMMENT")))
+#+END_SRC
+
+**** Latex
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-latex-macros-map)
+  (define-key my/org-macros-map (kbd "l") 'my/org-latex-macros-map)
+
+  ;;Literal latex code for export
+  (define-key my/org-latex-macros-map (kbd "i") (lambda () (interactive) (insert "#+LATEX: ")))
+
+  ;; Header
+  (define-key my/org-latex-macros-map (kbd "h") (lambda () (interactive) (insert "#+LATEX_HEADER: ")))
+
+  ;; Newline
+  (define-key my/org-latex-macros-map (kbd "RET") (lambda () (interactive) (insert "#+LATEX: \\newpage")))
+
+  ;; Fix huge margins
+  (define-key my/org-latex-macros-map (kbd "4") (lambda () (interactive) (insert "#+LATEX_HEADER: \\usepackage[a4paper, total={6in, 8in}]{geometry}")))
+
+  ;; Make lists compact
+  (define-key my/org-latex-macros-map (kbd "C-l") (lambda () (interactive) (insert "#+LATEX_HEADER: \\usepackage{enumitem}") (newline) (insert "#+LATEX_HEADER: \\setitemize{noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt}")))
+#+END_SRC
+
+**** HTML
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/org-html-macros-map)
+  (define-key my/org-macros-map (kbd "h") 'my/org-html-macros-map)
+
+  ;;Literal HTML code for export
+  (define-key my/org-html-macros-map (kbd "i") (lambda () (interactive) (insert "#+HTML: ")))
+
+  ;;HTML break line
+  (define-key my/org-html-macros-map (kbd "RET") (lambda () (interactive) (insert "#+HTML: <br><br />")))
+#+END_SRC
+
+
+* Outline
+http://www.modernemacs.com/post/outline-ivy/
+#+BEGIN_SRC emacs-lisp
+  ;; Must be set before outline is loaded
+  ;; Required by outorg
+  (defvar outline-minor-mode-prefix "\M-#")
+
+  (straight-use-package 'outline)
+
+  (add-hook 'prog-mode-hook 'outline-minor-mode)
+#+END_SRC
+
+** Outshine
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'outshine)
+  ;; (straight-use-package '(outshine :type git :host github :repo "alphapapa/outshine"))
+  (require 'outshine)
+
+  (add-hook 'outline-minor-mode-hook 'outshine-mode)
+
+  (setq outshine-startup-folded-p nil)
+#+END_SRC
+
+** Outorg
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'outorg)
+#+END_SRC
+
+** Visuals
+#+BEGIN_SRC emacs-lisp
+  (setq counsel-outline-face-style nil)
+
+  (set-face-attribute 'outshine-level-1 nil :inherit 'outline-1 :height 1.9)
+  (set-face-attribute 'outshine-level-2 nil :inherit 'outline-2 :height 1.6)
+  (set-face-attribute 'outshine-level-3 nil :inherit 'outline-3 :height 1.4)
+  (set-face-attribute 'outshine-level-4 nil :inherit 'outline-4 :height 1.3)
+  (set-face-attribute 'outshine-level-5 nil :inherit 'outline-5 :height 1.25)
+  (set-face-attribute 'outshine-level-6 nil :inherit 'outline-6 :height 1.2)
+  (set-face-attribute 'outshine-level-7 nil :inherit 'outline-7 :height 1.15)
+  (set-face-attribute 'outshine-level-8 nil :inherit 'outline-8 :height 1.10)
+#+END_SRC
+
+** Java outline
+#+BEGIN_SRC emacs-lisp
+;; (setq outline-regexp "\\(?:\\([ \t]*.*\\(class\\|interface\\)[ \t]+[a-zA-Z0-9_]+[ \t\n]*\\({\\|extends\\|implements\\)\\)\\|[ \t]*\\(public\\|private\\|static\\|final\\|native\\|synchronized\\|transient\\|volatile\\|strictfp\\| \\|\t\\)*[ \t]+\\(\\([a-zA-Z0-9_]\\|\\( *\t*< *\t*\\)\\|\\( *\t*> *\t*\\)\\|\\( *\t*, *\t*\\)\\|\\( *\t*\\[ *\t*\\)\\|\\(]\\)\\)+\\)[ \t]+[a-zA-Z0-9_]+[ \t]*(\\(.*\\))[ \t]*\\(throws[ \t]+\\([a-zA-Z0-9_, \t\n]*\\)\\)?[ \t\n]*{\\)" )
+#+END_SRC
+
+** Allow indented outlines
+use "^\s*" instead of "^"
+#+BEGIN_SRC emacs-lisp
+  (setq outline-regexp  "[*\^L]+")
+
+  (defun outshine-chomp (str)
+    "Chomp leading and trailing whitespace from STR."
+    (save-excursion
+      (save-match-data
+        (while (string-match
+                "\\`\n+\\|^\s*\\s-+\\|\\s-+$\\|\n+\\'"
+                str)
+          (setq str (replace-match "" t t str)))
+        str)))
+
+  (defun outshine-change-level (delta)
+    "Workhorse for `outline-demote' and `outline-promote'."
+    (let* ((headlist (outshine-headings-list))
+           (atom (outshine-headings-atom headlist))
+           (re (concat "^\s*" outline-regexp))
+           (transmode (and transient-mark-mode mark-active))
+           beg end)
+
+      ;; Find the boundaries for this operation
+      (save-excursion
+        (if transmode
+            (setq beg (min (point) (mark))
+                  end (max (point) (mark)))
+          (outline-back-to-heading)
+          (setq beg (point))
+          (outline-end-of-heading)
+          (outline-end-of-subtree)
+          (setq end (point)))
+        (setq beg (move-marker (make-marker) beg)
+              end (move-marker (make-marker) end))
+
+        (let (head newhead level newlevel static)
+
+          ;; First a dry run to test if there is any trouble ahead.
+          (goto-char beg)
+          (while (re-search-forward re end t)
+            (outshine-change-heading headlist delta atom 'test))
+
+          ;; Now really do replace the headings
+          (goto-char beg)
+          (while (re-search-forward re end t)
+            (outshine-change-heading headlist delta atom))))))
+
+  (defun outshine-headings-list ()
+    "Return a list of relevant headings, either a user/mode defined
+  list, or an alist derived from scanning the buffer."
+    (let (headlist)
+      (cond
+       (outshine-promotion-headings
+        ;; configured by the user or the mode
+        (setq headlist outshine-promotion-headings))
+
+       ((and (eq major-mode 'outline-mode) (string= outline-regexp "[*\^L]+"))
+        ;; default outline mode with original regexp
+        ;; this need special treatment because of the \f in the regexp
+        (setq headlist '(("*" . 1) ("**" . 2))))  ; will be extrapolated
+
+       (t ;; Check if the buffer contains a complete set of headings
+        (let ((re (concat "^\s*" outline-regexp)) head level)
+          (save-excursion
+            (goto-char (point-min))
+            (while (re-search-forward re nil t)
+              (save-excursion
+                (beginning-of-line 1)
+                (setq head (outshine-cleanup-match (match-string 0))
+                      level (funcall outline-level))
+                (add-to-list  'headlist (cons head level))))))
+        ;; Check for uniqueness of levels in the list
+        (let* ((hl headlist) entry level seen nonunique)
+          (while (setq entry (car hl))
+            (setq hl (cdr hl)
+                  level (cdr entry))
+            (if (and (not (outshine-static-level-p level))
+                     (member level seen))
+                ;; We have two entries for the same level.
+                (add-to-list 'nonunique level))
+            (add-to-list 'seen level))
+          (if nonunique
+              (error "Cannot promote/demote: non-unique headings at level %s\nYou may want to configure `outline-promotion-headings'."
+                     (mapconcat 'int-to-string nonunique ","))))))
+      ;; OK, return the list
+      headlist))
+
+  (defun outshine-calc-outline-level ()
+    "Calculate the right outline level for the
+    outshine-regexp"
+    (save-excursion
+      ;; THIS FIXED IT
+      (back-to-indentation)
+      (save-match-data
+        (and
+         (looking-at (outshine-calc-outline-regexp))
+         ;; ;; FIXME this works?
+         ;; (looking-at outline-regexp)
+         (let ((m-strg (match-string-no-properties 0)))
+           (if outshine-enforce-no-comment-padding-p
+               ;; deal with oldschool elisp headings (;;;+)
+               (setq m-strg
+                     (split-string
+                      (substring m-strg 2)
+                      nil
+                      'OMIT-NULLS))
+             ;; orgmode style elisp heading (;; *+)
+             (setq m-strg
+                   (split-string
+                    m-strg
+                    (format "%s" outshine-normalized-comment-start)
+                    'OMIT-NULLS)))
+           (length
+            (mapconcat
+             (lambda (str)
+               (car
+                (split-string
+                 str
+                 " "
+                 'OMIT-NULLS)))
+             m-strg
+             "")))
+         ))))
+
+  ;; (advice-add 'outshine-calc-outline-level :before (lambda () (interactive) (back-to-indentation)))
+#+END_SRC
+
+** Allow indented outlines - outline mode
+#+BEGIN_SRC emacs-lisp
+  (defvar outline-font-lock-keywords
+    '(
+      ;; Highlight headings according to the level.
+      (eval . (list (concat "^\s*\\(?:" outline-regexp "\\).+")
+                    0 '(outline-font-lock-face) nil t)))
+    "Additional expressions to highlight in Outline mode.")
+
+  (define-derived-mode outline-mode text-mode "Outline"
+    "Set major mode for editing outlines with selective display.
+  Headings are lines which start with asterisks: one for major headings,
+  two for subheadings, etc.  Lines not starting with asterisks are body lines.
+
+  Body text or subheadings under a heading can be made temporarily
+  invisible, or visible again.  Invisible lines are attached to the end
+  of the heading, so they move with it, if the line is killed and yanked
+  back.  A heading with text hidden under it is marked with an ellipsis (...).
+
+  \\{outline-mode-map}
+  The commands `outline-hide-subtree', `outline-show-subtree',
+  `outline-show-children', `outline-hide-entry',
+  `outline-show-entry', `outline-hide-leaves', and `outline-show-branches'
+  are used when point is on a heading line.
+
+  The variable `outline-regexp' can be changed to control what is a heading.
+  A line is a heading if `outline-regexp' matches something at the
+  beginning of the line.  The longer the match, the deeper the level.
+
+  Turning on outline mode calls the value of `text-mode-hook' and then of
+  `outline-mode-hook', if they are non-nil."
+    (make-local-variable 'line-move-ignore-invisible)
+    (setq line-move-ignore-invisible t)
+    ;; Cause use of ellipses for invisible text.
+    (add-to-invisibility-spec '(outline . t))
+    (set (make-local-variable 'paragraph-start)
+         (concat paragraph-start "\\|\\(?:" outline-regexp "\\)"))
+    ;; Inhibit auto-filling of header lines.
+    (set (make-local-variable 'auto-fill-inhibit-regexp) outline-regexp)
+    (set (make-local-variable 'paragraph-separate)
+         (concat paragraph-separate "\\|\\(?:" outline-regexp "\\)"))
+    (set (make-local-variable 'font-lock-defaults)
+         '(outline-font-lock-keywords t nil nil backward-paragraph))
+    (setq imenu-generic-expression
+          (list (list nil (concat "^\s*\\(?:" outline-regexp "\\).*$") 0)))
+    (add-hook 'change-major-mode-hook 'outline-show-all nil t))
+
+  (defun outline-next-heading ()
+    "Move to the next (possibly invisible) heading line."
+    (interactive)
+    ;; Make sure we don't match the heading we're at.
+    (if (and (bolp) (not (eobp))) (forward-char 1))
+    (if (re-search-forward (concat "^\s*\\(?:" outline-regexp "\\)")
+                           nil 'move)
+        (goto-char (match-beginning 0))))
+
+
+  (defun outline-previous-heading ()
+    "Move to the previous (possibly invisible) heading line."
+    (interactive)
+    (re-search-backward (concat "^\s*\\(?:" outline-regexp "\\)")
+                        nil 'move))
+
+  (defun outline-back-to-heading (&optional invisible-ok)
+    (interactive)
+    "Move to previous heading line, or beg of this line if it's a heading.
+  Only visible heading lines are considered, unless INVISIBLE-OK is non-nil."
+    (beginning-of-line)
+    ;; Hack, doesn't work otherwise
+    ;;(next-line)
+    (or (outline-on-heading-p invisible-ok)
+        (let (found)
+          (save-excursion
+            (while (not found)
+              (or (progn
+                    (back-to-indentation)
+                    (let ((result (looking-at outline-regexp)))
+                      (beginning-of-line)
+                      result))
+                  (re-search-backward (concat "^\s*\\(?:" outline-regexp "\\)")
+                                      nil t)
+                  (error "Before first heading"))
+              (setq found (and (or invisible-ok (not (outline-invisible-p)))
+                               (point)))))
+          (goto-char found)
+          (back-to-indentation)
+          found)))
+
+  (defun outline-map-region (fun beg end)
+    "Call FUN for every heading between BEG and END.
+  When FUN is called, point is at the beginning of the heading and
+  the match data is set appropriately."
+    (save-excursion
+      (setq end (copy-marker end))
+      (goto-char beg)
+      (when (re-search-forward (concat "^\s*\\(?:" outline-regexp "\\)") end t)
+        (goto-char (match-beginning 0))
+        (funcall fun)
+        (while (and (progn
+                      (outline-next-heading)
+                      (< (point) end))
+                    (not (eobp)))
+          (funcall fun)))))
+
+  (defun outline-next-visible-heading (arg)
+    "Move to the next visible heading line.
+  With ARG, repeats or can move backward if negative.
+  A heading line is one that starts with a `*' (or that
+  `outline-regexp' matches)."
+    (interactive "p")
+    (if (< arg 0)
+        (beginning-of-line)
+      (end-of-line))
+    (let (found-heading-p)
+      (while (and (not (bobp)) (< arg 0))
+        (while (and (not (bobp))
+                    (setq found-heading-p
+                          (re-search-backward
+                           (concat "^\s*\\(?:" outline-regexp "\\)")
+                           nil 'move))
+                    (outline-invisible-p)))
+        (setq arg (1+ arg)))
+      (while (and (not (eobp)) (> arg 0))
+        (while (and (not (eobp))
+                    (setq found-heading-p
+                          (re-search-forward
+                           (concat "^\s*\\(?:" outline-regexp "\\)")
+                           nil 'move))
+                    (outline-invisible-p (match-beginning 0))))
+        (setq arg (1- arg)))
+      (if found-heading-p (beginning-of-line))))
+
+  ;; Fixes `(outline-next-preface)' used in `(outline-hide-body)'
+  (defun outline-next-preface ()
+    "Skip forward to just before the next heading line.
+  If there's no following heading line, stop before the newline
+  at the end of the buffer."
+    (if (re-search-forward (concat "\n\s*\\(?:" outline-regexp "\\)")
+                           nil 'move)
+        (goto-char (match-beginning 0)))
+    (if (and (bolp) (or outline-blank-line (eobp)) (not (bobp)))
+        (forward-char -1)))
+#+END_SRC
+
+** Fix counsel-outline
+#+BEGIN_SRC emacs-lisp
+  (defun counsel-outline-candidates (&optional settings)
+    "Return an alist of outline heading completion candidates.
+  Each element is a pair (HEADING . MARKER), where the string
+  HEADING is located at the position of MARKER.  SETTINGS is a
+  plist entry from `counsel-outline-settings', which see."
+    (let ((bol-regex (concat "^\s*\\(?:"
+                             (or (plist-get settings :outline-regexp)
+                                 outline-regexp)
+                             "\\)"))
+          (outline-title-fn (or (plist-get settings :outline-title)
+                                #'counsel-outline-title))
+          (outline-level-fn (or (plist-get settings :outline-level)
+                                outline-level))
+          (display-style (or (plist-get settings :display-style)
+                             counsel-outline-display-style))
+          (path-separator (or (plist-get settings :path-separator)
+                              counsel-outline-path-separator))
+          (face-style (or (plist-get settings :face-style)
+                          counsel-outline-face-style))
+          (custom-faces (or (plist-get settings :custom-faces)
+                            counsel-outline-custom-faces))
+          (stack-level 0)
+          (orig-point (point))
+          cands name level marker stack)
+      (save-excursion
+        (setq counsel-outline--preselect 0)
+        (goto-char (point-min))
+        (while (re-search-forward bol-regex nil t)
+          (save-excursion
+            (setq name (or (save-match-data
+                             (funcall outline-title-fn))
+                           ""))
+            (goto-char (match-beginning 0))
+            (setq marker (point-marker))
+            (setq level (funcall outline-level-fn))
+            (cond ((eq display-style 'path)
+                   ;; Update stack.  The empty entry guards against incorrect
+                   ;; headline hierarchies, e.g. a level 3 headline
+                   ;; immediately following a level 1 entry.
+                   (while (<= level stack-level)
+                     (pop stack)
+                     (cl-decf stack-level))
+                   (while (> level stack-level)
+                     (push "" stack)
+                     (cl-incf stack-level))
+                   (setf (car stack)
+                         (counsel-outline--add-face
+                          name level face-style custom-faces))
+                   (setq name (mapconcat #'identity
+                                         (reverse stack)
+                                         path-separator)))
+                  (t
+                   (when (eq display-style 'headline)
+                     (setq name (concat (make-string level ?*) " " name)))
+                   (setq name (counsel-outline--add-face
+                               name level face-style custom-faces))))
+            (push (cons name marker) cands))
+          (unless (or (string= name "")
+                      (< orig-point marker))
+            (cl-incf counsel-outline--preselect))))
+      (nreverse cands)))
+#+END_SRC
+
+** Outline bullets
+http://www.modernemacs.com/post/outline-ivy/
+http://www.modernemacs.com/post/outline-bullets/
+https://github.com/ekaschalk/.spacemacs.d/blob/master/layers/display/local/pretty-outlines/pretty-outlines.el
+https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
+#+BEGIN_SRC emacs-lisp
+  (defmacro with-face (STR &rest PROPS)
+    "Return STR propertized with PROPS."
+    `(propertize ,STR 'face (list ,@PROPS)))
+
+  (defvar pretty-outlines-bullets-bullet-list org-bullets-bullet-list
+    "An implemention of `org-bullets-bullet-list' for outlines.")
+
+  (defvar-local pretty-outlines-buffer-font-lock-keyword nil)
+
+  (defun pretty-outlines--add-font-locks (font-lock-alist)
+    "Put text property for FONT-LOCK-ALIST for var-width replacements."
+    (setq pretty-outlines-buffer-font-lock-keyword
+          (-map (-lambda ((rgx outline-str))
+                  `(,rgx (0 (prog1 nil
+                              (put-text-property (match-beginning 1) (match-end 1)
+                                                 'display ,outline-str)))))
+                font-lock-alist))
+    (font-lock-add-keywords nil pretty-outlines-buffer-font-lock-keyword))
+
+  (defun pretty-outlines-remove-font-locks ()
+    (interactive)
+    (font-lock-remove-keywords nil pretty-outlines-buffer-font-lock-keyword))
+
+  (defun pretty-outlines--bullets-rgx-at-level (level)
+    "Calculate regex or outline-bullets at LEVEL."
+    ;; In buffers like org, `outshine-calc-outline-string-at-level 1' always returns "  ", check for this
+    (if (not (string= (s-trim (outshine-calc-outline-string-at-level 1)) ""))
+        (concat "\\(^\s*"
+                (->> level
+                     1+
+                     outshine-calc-outline-string-at-level
+                     s-trim-right
+                     (s-replace "*" "\\*"))
+                "\\) ")))
+
+  (defun pretty-outlines--propertize-bullet (level bullet)
+    "Add LEVEL-dependent face to BULLET."
+    (with-face bullet
+               (pcase level
+                 (0 '(:inherit outline-1 :underline nil :height 1.9))
+                 (1 '(:inherit outline-2 :underline nil :height 1.6))
+                 (2 '(:inherit outline-3 :underline nil :height 1.4))
+                 (3 '(:inherit outline-4 :underline nil :height 1.3))
+                 (4 '(:inherit outline-5 :underline nil :height 1.25))
+                 (5 '(:inherit outline-6 :underline nil :height 1.2))
+                 (6 '(:inherit outline-7 :underline nil :height 1.15))
+                 (7 '(:inherit outline-8 :underline nil :height 1.10))
+                 (_ nil))))
+
+  (defun pretty-outlines--bullets-cycle ()
+    "Cycle through `pretty-outlines-bullets-bullet-list'"
+    (-let [max-outline-depth 8]
+      (->> pretty-outlines-bullets-bullet-list -cycle (-take max-outline-depth))))
+
+  (defun pretty-outlines--format-bullet (level bullet)
+    "Propertize and perform all other styling for BULLET at LEVEL."
+    (concat (s-repeat level " ")
+            (pretty-outlines--propertize-bullet level bullet)))
+
+  (defun pretty-outlines-add-bullets ()
+    "Use with `add-hook' to enable pretty-outlines-bullets-bullet-list for mode."
+    (interactive)
+    ;; Not sure why, but org mode headers are small otherwise
+    (if (not (string= major-mode "org-mode"))
+        (->>
+         (pretty-outlines--bullets-cycle)
+         (-map-indexed (-lambda (level bullet)
+                         (list (pretty-outlines--bullets-rgx-at-level level)
+                               (pretty-outlines--format-bullet level bullet))))
+         pretty-outlines--add-font-locks)))
+
+  (add-hook 'outline-mode-hook 'pretty-outlines-add-bullets t)
+  (add-hook 'outline-minor-mode-hook 'pretty-outlines-add-bullets t)
+#+END_SRC
+
+** Outline ellipsis
+#+BEGIN_SRC emacs-lisp
+  (defvar outline-display-table (make-display-table))
+  (set-display-table-slot outline-display-table 'selective-display
+                          (vector (make-glyph-code my/fold-ellipsis-char 'escape-glyph)))
+  (defun set-outline-display-table ()
+    (setf buffer-display-table outline-display-table))
+
+  (add-hook 'outline-mode-hook 'set-outline-display-table)
+  (add-hook 'outline-minor-mode-hook 'set-outline-display-table)
+#+END_SRC
+
+** Keys
+#+BEGIN_SRC emacs-lisp
+    (defun my/outline-hide-all-body ()
+      (interactive)
+      (outline-show-all)
+      (outline-hide-body))
+
+  (my/evil-normal-define-key "ga" 'my/outline-hide-all-body)
+  (my/evil-normal-define-key "gA" 'outline-show-all)
+
+  (my/evil-normal-define-key "go" 'evil-open-fold)
+  (my/evil-normal-define-key "gO" 'evil-open-fold-rec)
+
+  (my/evil-normal-define-key "gh" 'evil-close-fold)
+  (my/evil-normal-define-key "gH" '(lambda () (interactive) (hide-sublevels 1)))
+
+  (defvar-local buffer-has-outline-bullets t)
+  (defun my/toggle-outline-bullets ()
+    (interactive)
+    (if (not (string= major-mode "org-mode"))
+        (progn
+          (if buffer-has-outline-bullets
+              (progn
+                (setq buffer-has-outline-bullets nil)
+                (pretty-outlines-remove-font-locks))
+            (setq buffer-has-outline-bullets t)
+            (pretty-outlines-add-bullets))
+
+          ;; Completely refresh font-lock
+          (set-text-properties (point-min) (point-max) nil))))
+
+  (define-key my/leader-map (kbd "C-h") 'my/toggle-outline-bullets)
+#+END_SRC
+
+
 * Completion
 ** Ivy
 #+BEGIN_SRC emacs-lisp
@@ -2894,314 +3730,6 @@ Version 2015-07-30"
   ;; (evil-define-key 'insert  (kbd ":e") 'epa-dired-do-encrypt)
 #+END_SRC
 
-* Org
-#+BEGIN_SRC emacs-lisp
-  (straight-use-package 'org)
-  (require 'org)
-  (require 'org-agenda)
-
-  (define-prefix-command 'my/org-mode-map)
-  (evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a")) 'my/org-mode-map)
-#+END_SRC
-
-** Babel
-*** Supported runnable languages
-  ;; (org-babel-do-load-languages
-   ;; 'org-babel-load-languages
-   ;; '((R . t)
-     ;; (ditaa . t)
-     ;; (dot . t)
-     ;; (emacs-lisp . t)
-     ;; (gnuplot . t)
-     ;; (haskell . nil)
-     ;; (ocaml . nil)
-     ;; (python . t)
-     ;; (ruby . t)
-     ;; (screen . nil)
-     ;; (sh . t)
-     ;; (sql . nil)
-     ;; (sqlite . t)))
-
-** Bullets
-#+BEGIN_SRC emacs-lisp
-  (straight-use-package 'org-bullets)
-  (require 'org-bullets)
-
-  (when window-system
-    (if (eq system-type 'windows-nt)
-        (setq inhibit-compacting-font-caches t))
-    (add-hook 'org-mode-hook (lambda () (interactive) (org-bullets-mode))))
-#+END_SRC
-
-** Visuals
-*** Change face of levels
-#+BEGIN_SRC emacs-lisp
-  (set-face-attribute 'org-level-1 nil :inherit 'outline-1 :height 1.9)
-  (set-face-attribute 'org-level-2 nil :inherit 'outline-2 :height 1.6)
-  (set-face-attribute 'org-level-3 nil :inherit 'outline-3 :height 1.4)
-  (set-face-attribute 'org-level-4 nil :inherit 'outline-4 :height 1.3)
-  (set-face-attribute 'org-level-5 nil :inherit 'outline-5 :height 1.25)
-  (set-face-attribute 'org-level-6 nil :inherit 'outline-6 :height 1.2)
-  (set-face-attribute 'org-level-7 nil :inherit 'outline-7 :height 1.15)
-  (set-face-attribute 'org-level-8 nil :inherit 'outline-8 :height 1.10)
-
-  ;; :weight 'semi-bold
-#+END_SRC
-
-*** Ellipsis face
-#+BEGIN_SRC emacs-lisp
-  (setq org-ellipsis my/fold-ellipsis)
-#+END_SRC
-
-*** Always truncate lines
-#+BEGIN_SRC emacs-lisp
-  (setq org-startup-truncated nil)
-#+END_SRC
-
-** Indent mode
-#+BEGIN_SRC emacs-lisp
-  (add-hook 'org-mode-hook 'org-indent-mode)
-#+END_SRC
-
-** Org SRC
-*** Make c-' open in current window
-#+BEGIN_SRC emacs-lisp
-  (setq org-src-window-setup 'current-window)
-#+END_SRC
-
-*** Don't save window layout
-#+BEGIN_SRC emacs-lisp
-  (add-hook 'org-src-mode-hook '(lambda () (interactive) (setq org-src--saved-temp-window-config nil)))
-#+END_SRC
-   
-*** SRC region templates
-**** Emacs lisp
-#+BEGIN_SRC emacs-lisp
-  (add-to-list 'org-structure-template-alist
-               '("el" "#+BEGIN_SRC emacs-lisp\n?\n#+END_SRC"))
-#+END_SRC
-
-**** Plant uml
-#+BEGIN_SRC emacs-lisp
-  (add-to-list 'org-structure-template-alist
-               '("uml" "#+BEGIN_SRC plantuml\n?\n#+END_SRC"))
-#+END_SRC
-
-**** R export to image
-#+BEGIN_SRC emacs-lisp
-  (add-to-list 'org-structure-template-alist
-               '("ri" "#+BEGIN_SRC R :results output graphics :file RImage.png\n?\n#+END_SRC"))
-#+END_SRC
-
-** Export
-TODO
-ox-html5slide
-org-html-themes
-*** Syntax highlighting for HTML export
-#+BEGIN_SRC emacs-lisp
-  (straight-use-package 'htmlize)
-#+END_SRC
-
-*** Twitter bootstrap
-#+BEGIN_SRC emacs-lisp
-  (straight-use-package 'ox-twbs)
-#+END_SRC
-
-** Agenda
-Give agenda file to use
-#+BEGIN_SRC emacs-lisp
-  (if (file-exists-p "~/Notes/Agenda.org")
-      (setq org-agenda-files (quote ("~/Notes/Agenda.org"))))
-#+END_SRC
-*** Stop agenda from messing with windows
-#+BEGIN_SRC emacs-lisp
-(setq org-agenda-window-setup 'current-window)
-#+END_SRC
-
-*** Display at startup
-Spawn agenda buffer
-#+BEGIN_SRC emacs-lisp
-  ;;(org-agenda-list)
-#+END_SRC
-
-**** Declare switch function
-Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
-#+BEGIN_SRC emacs-lisp
-  (defun my/switch-to-agenda()
-    (interactive)
-    (switch-to-buffer "*Org Agenda*"))
-#+END_SRC
-
-**** Run switch function as initial buffer choice
-#+BEGIN_SRC emacs-lisp
-  (setq initial-buffer-choice 'my/switch-to-agenda)
-#+END_SRC
-
-**** Close all other open windows at start
-#+BEGIN_SRC emacs-lisp
-  (delete-other-windows)
-#+END_SRC
-
-** Clock
-#+BEGIN_SRC emacs-lisp
-;;(setq org-clock-mode-line-total today)
-#+END_SRC
-
-*** Keys
-#+BEGIN_SRC emacs-lisp
-  ;; (define-prefix-command 'my/clock-map)
-  ;; (define-key my/leader-map (kbd "c") 'my/clock-map)
-;; 
-  ;; (define-key my/clock-map (kbd "s") 'org-clock-in)
-  ;; (define-key my/clock-map (kbd "S") 'org-clock-out)
-  ;; (define-key my/clock-map (kbd "C-s") 'org-clock-in-last)
-;; 
-  ;; (define-key my/clock-map (kbd "e") 'org-clock-modify-effort-estimate)
-#+END_SRC
-
-** Export
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/org-export-map)
-  (define-key my/org-mode-map (kbd "E") 'my/org-export-map)
-#+END_SRC
-
-*** ASCII
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/org-export-ascii-map)
-  (define-key my/org-export-map (kbd "a") 'my/org-export-ascii-map)
-
-  (define-key my/org-export-ascii-map (kbd "a") 'org-ascii-export-to-ascii)
-#+END_SRC
-
-*** HTML
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/org-export-html-map)
-  (define-key my/org-export-map (kbd "h") 'my/org-export-html-map)
-
-  (define-key my/org-export-html-map (kbd "h") 'org-html-export-to-html)
-  (define-key my/org-export-html-map (kbd "t") 'org-twbs-export-to-html)
-#+END_SRC
-
-*** PDF
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/org-export-pdf-map)
-  (define-key my/org-export-map (kbd "p") 'my/org-export-pdf-map)
-
-  (define-key my/org-export-pdf-map (kbd "p") 'org-latex-export-to-pdf)
-#+END_SRC
-
-*** Beamer presentation
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/org-export-slides-map)
-  (define-key my/org-export-map (kbd "s") 'my/org-export-slides-map)
-
-  (define-key my/org-export-slides-map (kbd "b") 'org-beamer-export-to-pdf)
-#+END_SRC
-
-*** Markdown
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/org-export-markdown-map)
-  (define-key my/org-export-map (kbd "m") 'my/org-export-markdown-map)
-
-  (define-key my/org-export-markdown-map (kbd "m") 'org-md-export-to-markdown)
-#+END_SRC
-
-*** ODT
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/org-export-odt-map)
-  (define-key my/org-export-map (kbd "o") 'my/org-export-odt-map)
-
-  (define-key my/org-export-odt-map (kbd "o") 'org-odt-export-to-odt)
-#+END_SRC
-
-*** Latex
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/org-export-latex-map)
-  (define-key my/org-export-map (kbd "l") 'my/org-export-latex-map)
-
-  (define-key my/org-export-latex-map (kbd "l") 'org-latex-export-to-latex)
-#+END_SRC
-
-** Key
-#+BEGIN_SRC emacs-lisp
-  ;;(evil-define-key 'normal org-mode-map (kbd "TAB") 'org-cycle)
-  (evil-define-key 'normal org-mode-map (kbd "C-s") 'swiper)
-
-  (define-key my/org-mode-map (kbd "i") 'org-toggle-inline-images)
-  (define-key my/org-mode-map (kbd "f") 'org-insert-link)
-  (define-key my/org-mode-map (kbd "e") 'org-babel-execute-src-block)
-
-  (define-key my/org-mode-map (kbd "p") 'org-shiftup)
-  (define-key my/org-mode-map (kbd "n") 'org-shiftdown)
-  (define-key my/org-mode-map (kbd "l") 'org-shiftright)
-  (define-key my/org-mode-map (kbd "h") 'org-shiftleft)
-
-  (define-key my/org-mode-map (kbd "P") 'org-metaup)
-  (define-key my/org-mode-map (kbd "N") 'org-metadown)
-  (define-key my/org-mode-map (kbd "L") 'org-metaright)
-  (define-key my/org-mode-map (kbd "H") 'org-metaleft)
-
-  (define-key my/org-mode-map (kbd "|") 'org-table-create-or-convert-from-region)
-
-  (define-key my/org-mode-map (kbd "z") 'org-shifttab)
-
-  (define-prefix-command 'my/org-show-mode-map)
-  (define-key my/org-mode-map (kbd "s") 'my/org-show-mode-map)
-
-  (define-key my/org-show-mode-map (kbd "l") 'org-toggle-link-display)
-#+END_SRC
-
-*** Macros
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/org-macros-map)
-  (define-key my/org-mode-map (kbd "m") 'my/org-macros-map)
-#+END_SRC
-
-**** Org
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/org-org-macros-map)
-  (define-key my/org-macros-map (kbd "o") 'my/org-org-macros-map)
-
-  ;; Center text, doesn't work for all exports
-  (define-key my/org-org-macros-map (kbd "c") (lambda () (interactive) (insert "#+BEGIN_CENTER") (newline) (newline) (insert "#+END_CENTER")))
-
-  ;; Comment
-  (define-key my/org-org-macros-map (kbd "C") (lambda () (interactive) (insert "#+BEGIN_COMMENT") (newline) (newline) (insert "#+END_COMMENT")))
-#+END_SRC
-
-**** Latex
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/org-latex-macros-map)
-  (define-key my/org-macros-map (kbd "l") 'my/org-latex-macros-map)
-
-  ;;Literal latex code for export
-  (define-key my/org-latex-macros-map (kbd "i") (lambda () (interactive) (insert "#+LATEX: ")))
-
-  ;; Header
-  (define-key my/org-latex-macros-map (kbd "h") (lambda () (interactive) (insert "#+LATEX_HEADER: ")))
-
-  ;; Newline
-  (define-key my/org-latex-macros-map (kbd "RET") (lambda () (interactive) (insert "#+LATEX: \\newpage")))
-
-  ;; Fix huge margins
-  (define-key my/org-latex-macros-map (kbd "4") (lambda () (interactive) (insert "#+LATEX_HEADER: \\usepackage[a4paper, total={6in, 8in}]{geometry}")))
-
-  ;; Make lists compact
-  (define-key my/org-latex-macros-map (kbd "C-l") (lambda () (interactive) (insert "#+LATEX_HEADER: \\usepackage{enumitem}") (newline) (insert "#+LATEX_HEADER: \\setitemize{noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt}")))
-#+END_SRC
-
-**** HTML
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/org-html-macros-map)
-  (define-key my/org-macros-map (kbd "h") 'my/org-html-macros-map)
-
-  ;;Literal HTML code for export
-  (define-key my/org-html-macros-map (kbd "i") (lambda () (interactive) (insert "#+HTML: ")))
-
-  ;;HTML break line
-  (define-key my/org-html-macros-map (kbd "RET") (lambda () (interactive) (insert "#+HTML: <br><br />")))
-#+END_SRC
-
 * Gud
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'realgud)
@@ -3364,6 +3892,19 @@ Shows information in echo area
   (define-key my/leader-map (kbd "C-d") 'my/auto-remove-debug)
   (define-key my/leader-map (kbd "D") 'my/auto-debug-buffer)
   (define-key my/leader-map (kbd "M-d") 'my/auto-start-debugger)
+#+END_SRC
+
+*** Auto compile
+#+BEGIN_SRC emacs-lisp
+  (defun my/auto-compile ()
+    (interactive)
+    (pcase major-mode
+      ('emacs-lisp-mode (emacs-lisp-byte-compile))
+      ('clojure-mode (cider-eval-last-sexp))
+      ('plantuml-mode (plantuml-preview-buffer 0))
+      (_ (recompile))))
+
+  (define-key my/leader-map (kbd "C") 'my/auto-compile)
 #+END_SRC
 
 ** Documentation
@@ -3728,7 +4269,6 @@ https://github.com/brianqq/inferior-cling
   (evil-define-key 'normal c++-mode-map (kbd (concat my/leader-map-key " a")) 'my/c-mode-map)
 
   (define-key my/c-mode-map (kbd "e") 'cling)
-  (define-key my/c-mode-map (kbd "c") 'recompile)
 
   (define-key my/c-mode-map (kbd "n") 'gud-step)
   (define-key my/c-mode-map (kbd "N") 'gud-next)
@@ -6158,503 +6698,6 @@ https://www.emacswiki.org/emacs/ArtistMode
   (define-key my/image-mode-map (kbd "a") 'my/blimp-annotate-middle)
 #+END_SRC
 
-* Outline
-http://www.modernemacs.com/post/outline-ivy/
-#+BEGIN_SRC emacs-lisp
-  (straight-use-package 'outorg)
-  (straight-use-package 'outshine)
-  (require 'outshine)
-
-  (add-hook 'outline-minor-mode-hook 'outshine-hook-function)
-
-  (add-hook 'prog-mode-hook 'outline-minor-mode)
-  (setq outshine-startup-folded-p nil)
-#+END_SRC
-
-** Visuals
-#+BEGIN_SRC emacs-lisp
-  (setq counsel-outline-face-style nil)
-
-  (set-face-attribute 'outshine-level-1 nil :inherit 'outline-1 :height 1.9)
-  (set-face-attribute 'outshine-level-2 nil :inherit 'outline-2 :height 1.6)
-  (set-face-attribute 'outshine-level-3 nil :inherit 'outline-3 :height 1.4)
-  (set-face-attribute 'outshine-level-4 nil :inherit 'outline-4 :height 1.3)
-  (set-face-attribute 'outshine-level-5 nil :inherit 'outline-5 :height 1.25)
-  (set-face-attribute 'outshine-level-6 nil :inherit 'outline-6 :height 1.2)
-  (set-face-attribute 'outshine-level-7 nil :inherit 'outline-7 :height 1.15)
-  (set-face-attribute 'outshine-level-8 nil :inherit 'outline-8 :height 1.10)
-#+END_SRC
-
-** Java outline
-#+BEGIN_SRC emacs-lisp
-;; (setq outline-regexp "\\(?:\\([ \t]*.*\\(class\\|interface\\)[ \t]+[a-zA-Z0-9_]+[ \t\n]*\\({\\|extends\\|implements\\)\\)\\|[ \t]*\\(public\\|private\\|static\\|final\\|native\\|synchronized\\|transient\\|volatile\\|strictfp\\| \\|\t\\)*[ \t]+\\(\\([a-zA-Z0-9_]\\|\\( *\t*< *\t*\\)\\|\\( *\t*> *\t*\\)\\|\\( *\t*, *\t*\\)\\|\\( *\t*\\[ *\t*\\)\\|\\(]\\)\\)+\\)[ \t]+[a-zA-Z0-9_]+[ \t]*(\\(.*\\))[ \t]*\\(throws[ \t]+\\([a-zA-Z0-9_, \t\n]*\\)\\)?[ \t\n]*{\\)" )
-#+END_SRC
-
-** Allow indented outlines
-use "^\s*" instead of "^"
-#+BEGIN_SRC emacs-lisp
-  (setq outline-regexp  "[*\^L]+")
-
-  (defun outshine-chomp (str)
-    "Chomp leading and trailing whitespace from STR."
-    (save-excursion
-      (save-match-data
-        (while (string-match
-                "\\`\n+\\|^\s*\\s-+\\|\\s-+$\\|\n+\\'"
-                str)
-          (setq str (replace-match "" t t str)))
-        str)))
-
-  (defun outshine-change-level (delta)
-    "Workhorse for `outline-demote' and `outline-promote'."
-    (let* ((headlist (outshine-headings-list))
-           (atom (outshine-headings-atom headlist))
-           (re (concat "^\s*" outline-regexp))
-           (transmode (and transient-mark-mode mark-active))
-           beg end)
-
-      ;; Find the boundaries for this operation
-      (save-excursion
-        (if transmode
-            (setq beg (min (point) (mark))
-                  end (max (point) (mark)))
-          (outline-back-to-heading)
-          (setq beg (point))
-          (outline-end-of-heading)
-          (outline-end-of-subtree)
-          (setq end (point)))
-        (setq beg (move-marker (make-marker) beg)
-              end (move-marker (make-marker) end))
-
-        (let (head newhead level newlevel static)
-
-          ;; First a dry run to test if there is any trouble ahead.
-          (goto-char beg)
-          (while (re-search-forward re end t)
-            (outshine-change-heading headlist delta atom 'test))
-
-          ;; Now really do replace the headings
-          (goto-char beg)
-          (while (re-search-forward re end t)
-            (outshine-change-heading headlist delta atom))))))
-
-  (defun outshine-headings-list ()
-    "Return a list of relevant headings, either a user/mode defined
-  list, or an alist derived from scanning the buffer."
-    (let (headlist)
-      (cond
-       (outshine-promotion-headings
-        ;; configured by the user or the mode
-        (setq headlist outshine-promotion-headings))
-
-       ((and (eq major-mode 'outline-mode) (string= outline-regexp "[*\^L]+"))
-        ;; default outline mode with original regexp
-        ;; this need special treatment because of the \f in the regexp
-        (setq headlist '(("*" . 1) ("**" . 2))))  ; will be extrapolated
-
-       (t ;; Check if the buffer contains a complete set of headings
-        (let ((re (concat "^\s*" outline-regexp)) head level)
-          (save-excursion
-            (goto-char (point-min))
-            (while (re-search-forward re nil t)
-              (save-excursion
-                (beginning-of-line 1)
-                (setq head (outshine-cleanup-match (match-string 0))
-                      level (funcall outline-level))
-                (add-to-list  'headlist (cons head level))))))
-        ;; Check for uniqueness of levels in the list
-        (let* ((hl headlist) entry level seen nonunique)
-          (while (setq entry (car hl))
-            (setq hl (cdr hl)
-                  level (cdr entry))
-            (if (and (not (outshine-static-level-p level))
-                     (member level seen))
-                ;; We have two entries for the same level.
-                (add-to-list 'nonunique level))
-            (add-to-list 'seen level))
-          (if nonunique
-              (error "Cannot promote/demote: non-unique headings at level %s\nYou may want to configure `outline-promotion-headings'."
-                     (mapconcat 'int-to-string nonunique ","))))))
-      ;; OK, return the list
-      headlist))
-
-  (defun outshine-calc-outline-level ()
-    "Calculate the right outline level for the
-    outshine-regexp"
-    (save-excursion
-      ;; THIS FIXED IT
-      (back-to-indentation)
-      (save-match-data
-        (and
-         (looking-at (outshine-calc-outline-regexp))
-         ;; ;; FIXME this works?
-         ;; (looking-at outline-regexp)
-         (let ((m-strg (match-string-no-properties 0)))
-           (if outshine-enforce-no-comment-padding-p
-               ;; deal with oldschool elisp headings (;;;+)
-               (setq m-strg
-                     (split-string
-                      (substring m-strg 2)
-                      nil
-                      'OMIT-NULLS))
-             ;; orgmode style elisp heading (;; *+)
-             (setq m-strg
-                   (split-string
-                    m-strg
-                    (format "%s" outshine-normalized-comment-start)
-                    'OMIT-NULLS)))
-           (length
-            (mapconcat
-             (lambda (str)
-               (car
-                (split-string
-                 str
-                 " "
-                 'OMIT-NULLS)))
-             m-strg
-             "")))
-         ))))
-
-  ;; (advice-add 'outshine-calc-outline-level :before (lambda () (interactive) (back-to-indentation)))
-#+END_SRC
-
-** Allow indented outlines - outline mode
-#+BEGIN_SRC emacs-lisp
-  (defvar outline-font-lock-keywords
-    '(
-      ;; Highlight headings according to the level.
-      (eval . (list (concat "^\s*\\(?:" outline-regexp "\\).+")
-                    0 '(outline-font-lock-face) nil t)))
-    "Additional expressions to highlight in Outline mode.")
-
-  (define-derived-mode outline-mode text-mode "Outline"
-    "Set major mode for editing outlines with selective display.
-  Headings are lines which start with asterisks: one for major headings,
-  two for subheadings, etc.  Lines not starting with asterisks are body lines.
-
-  Body text or subheadings under a heading can be made temporarily
-  invisible, or visible again.  Invisible lines are attached to the end
-  of the heading, so they move with it, if the line is killed and yanked
-  back.  A heading with text hidden under it is marked with an ellipsis (...).
-
-  \\{outline-mode-map}
-  The commands `outline-hide-subtree', `outline-show-subtree',
-  `outline-show-children', `outline-hide-entry',
-  `outline-show-entry', `outline-hide-leaves', and `outline-show-branches'
-  are used when point is on a heading line.
-
-  The variable `outline-regexp' can be changed to control what is a heading.
-  A line is a heading if `outline-regexp' matches something at the
-  beginning of the line.  The longer the match, the deeper the level.
-
-  Turning on outline mode calls the value of `text-mode-hook' and then of
-  `outline-mode-hook', if they are non-nil."
-    (make-local-variable 'line-move-ignore-invisible)
-    (setq line-move-ignore-invisible t)
-    ;; Cause use of ellipses for invisible text.
-    (add-to-invisibility-spec '(outline . t))
-    (set (make-local-variable 'paragraph-start)
-         (concat paragraph-start "\\|\\(?:" outline-regexp "\\)"))
-    ;; Inhibit auto-filling of header lines.
-    (set (make-local-variable 'auto-fill-inhibit-regexp) outline-regexp)
-    (set (make-local-variable 'paragraph-separate)
-         (concat paragraph-separate "\\|\\(?:" outline-regexp "\\)"))
-    (set (make-local-variable 'font-lock-defaults)
-         '(outline-font-lock-keywords t nil nil backward-paragraph))
-    (setq imenu-generic-expression
-          (list (list nil (concat "^\s*\\(?:" outline-regexp "\\).*$") 0)))
-    (add-hook 'change-major-mode-hook 'outline-show-all nil t))
-
-  (defun outline-next-heading ()
-    "Move to the next (possibly invisible) heading line."
-    (interactive)
-    ;; Make sure we don't match the heading we're at.
-    (if (and (bolp) (not (eobp))) (forward-char 1))
-    (if (re-search-forward (concat "^\s*\\(?:" outline-regexp "\\)")
-                           nil 'move)
-        (goto-char (match-beginning 0))))
-
-
-  (defun outline-previous-heading ()
-    "Move to the previous (possibly invisible) heading line."
-    (interactive)
-    (re-search-backward (concat "^\s*\\(?:" outline-regexp "\\)")
-                        nil 'move))
-
-  (defun outline-back-to-heading (&optional invisible-ok)
-    (interactive)
-    "Move to previous heading line, or beg of this line if it's a heading.
-  Only visible heading lines are considered, unless INVISIBLE-OK is non-nil."
-    (beginning-of-line)
-    ;; Hack, doesn't work otherwise
-    ;;(next-line)
-    (or (outline-on-heading-p invisible-ok)
-        (let (found)
-          (save-excursion
-            (while (not found)
-              (or (progn
-                    (back-to-indentation)
-                    (let ((result (looking-at outline-regexp)))
-                      (beginning-of-line)
-                      result))
-                  (re-search-backward (concat "^\s*\\(?:" outline-regexp "\\)")
-                                      nil t)
-                  (error "Before first heading"))
-              (setq found (and (or invisible-ok (not (outline-invisible-p)))
-                               (point)))))
-          (goto-char found)
-          (back-to-indentation)
-          found)))
-
-  (defun outline-map-region (fun beg end)
-    "Call FUN for every heading between BEG and END.
-  When FUN is called, point is at the beginning of the heading and
-  the match data is set appropriately."
-    (save-excursion
-      (setq end (copy-marker end))
-      (goto-char beg)
-      (when (re-search-forward (concat "^\s*\\(?:" outline-regexp "\\)") end t)
-        (goto-char (match-beginning 0))
-        (funcall fun)
-        (while (and (progn
-                      (outline-next-heading)
-                      (< (point) end))
-                    (not (eobp)))
-          (funcall fun)))))
-
-  (defun outline-next-visible-heading (arg)
-    "Move to the next visible heading line.
-  With ARG, repeats or can move backward if negative.
-  A heading line is one that starts with a `*' (or that
-  `outline-regexp' matches)."
-    (interactive "p")
-    (if (< arg 0)
-        (beginning-of-line)
-      (end-of-line))
-    (let (found-heading-p)
-      (while (and (not (bobp)) (< arg 0))
-        (while (and (not (bobp))
-                    (setq found-heading-p
-                          (re-search-backward
-                           (concat "^\s*\\(?:" outline-regexp "\\)")
-                           nil 'move))
-                    (outline-invisible-p)))
-        (setq arg (1+ arg)))
-      (while (and (not (eobp)) (> arg 0))
-        (while (and (not (eobp))
-                    (setq found-heading-p
-                          (re-search-forward
-                           (concat "^\s*\\(?:" outline-regexp "\\)")
-                           nil 'move))
-                    (outline-invisible-p (match-beginning 0))))
-        (setq arg (1- arg)))
-      (if found-heading-p (beginning-of-line))))
-
-  ;; Fixes `(outline-next-preface)' used in `(outline-hide-body)'
-  (defun outline-next-preface ()
-    "Skip forward to just before the next heading line.
-  If there's no following heading line, stop before the newline
-  at the end of the buffer."
-    (if (re-search-forward (concat "\n\s*\\(?:" outline-regexp "\\)")
-                           nil 'move)
-        (goto-char (match-beginning 0)))
-    (if (and (bolp) (or outline-blank-line (eobp)) (not (bobp)))
-        (forward-char -1)))
-#+END_SRC
-
-** Fix counsel-outline
-#+BEGIN_SRC emacs-lisp
-  (defun counsel-outline-candidates (&optional settings)
-    "Return an alist of outline heading completion candidates.
-  Each element is a pair (HEADING . MARKER), where the string
-  HEADING is located at the position of MARKER.  SETTINGS is a
-  plist entry from `counsel-outline-settings', which see."
-    (let ((bol-regex (concat "^\s*\\(?:"
-                             (or (plist-get settings :outline-regexp)
-                                 outline-regexp)
-                             "\\)"))
-          (outline-title-fn (or (plist-get settings :outline-title)
-                                #'counsel-outline-title))
-          (outline-level-fn (or (plist-get settings :outline-level)
-                                outline-level))
-          (display-style (or (plist-get settings :display-style)
-                             counsel-outline-display-style))
-          (path-separator (or (plist-get settings :path-separator)
-                              counsel-outline-path-separator))
-          (face-style (or (plist-get settings :face-style)
-                          counsel-outline-face-style))
-          (custom-faces (or (plist-get settings :custom-faces)
-                            counsel-outline-custom-faces))
-          (stack-level 0)
-          (orig-point (point))
-          cands name level marker stack)
-      (save-excursion
-        (setq counsel-outline--preselect 0)
-        (goto-char (point-min))
-        (while (re-search-forward bol-regex nil t)
-          (save-excursion
-            (setq name (or (save-match-data
-                             (funcall outline-title-fn))
-                           ""))
-            (goto-char (match-beginning 0))
-            (setq marker (point-marker))
-            (setq level (funcall outline-level-fn))
-            (cond ((eq display-style 'path)
-                   ;; Update stack.  The empty entry guards against incorrect
-                   ;; headline hierarchies, e.g. a level 3 headline
-                   ;; immediately following a level 1 entry.
-                   (while (<= level stack-level)
-                     (pop stack)
-                     (cl-decf stack-level))
-                   (while (> level stack-level)
-                     (push "" stack)
-                     (cl-incf stack-level))
-                   (setf (car stack)
-                         (counsel-outline--add-face
-                          name level face-style custom-faces))
-                   (setq name (mapconcat #'identity
-                                         (reverse stack)
-                                         path-separator)))
-                  (t
-                   (when (eq display-style 'headline)
-                     (setq name (concat (make-string level ?*) " " name)))
-                   (setq name (counsel-outline--add-face
-                               name level face-style custom-faces))))
-            (push (cons name marker) cands))
-          (unless (or (string= name "")
-                      (< orig-point marker))
-            (cl-incf counsel-outline--preselect))))
-      (nreverse cands)))
-#+END_SRC
-
-** Outline bullets
-http://www.modernemacs.com/post/outline-ivy/
-http://www.modernemacs.com/post/outline-bullets/
-https://github.com/ekaschalk/.spacemacs.d/blob/master/layers/display/local/pretty-outlines/pretty-outlines.el
-https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
-#+BEGIN_SRC emacs-lisp
-  (defmacro with-face (STR &rest PROPS)
-    "Return STR propertized with PROPS."
-    `(propertize ,STR 'face (list ,@PROPS)))
-
-  (defvar pretty-outlines-bullets-bullet-list org-bullets-bullet-list
-    "An implemention of `org-bullets-bullet-list' for outlines.")
-
-  (defvar-local pretty-outlines-buffer-font-lock-keyword nil)
-
-  (defun pretty-outlines--add-font-locks (font-lock-alist)
-    "Put text property for FONT-LOCK-ALIST for var-width replacements."
-    (setq pretty-outlines-buffer-font-lock-keyword
-          (-map (-lambda ((rgx outline-str))
-                  `(,rgx (0 (prog1 nil
-                              (put-text-property (match-beginning 1) (match-end 1)
-                                                 'display ,outline-str)))))
-                font-lock-alist))
-    (font-lock-add-keywords nil pretty-outlines-buffer-font-lock-keyword))
-
-  (defun pretty-outlines-remove-font-locks ()
-    (interactive)
-    (font-lock-remove-keywords nil pretty-outlines-buffer-font-lock-keyword))
-
-  (require 's)
-  (defun pretty-outlines--bullets-rgx-at-level (level)
-    "Calculate regex or outline-bullets at LEVEL."
-    ;; In buffers like org, `outshine-calc-outline-string-at-level 1' always returns "  ", check for this
-    (if (not (string= (s-trim (outshine-calc-outline-string-at-level 1)) ""))
-        (concat "\\(^\s*"
-                (->> level
-                     1+
-                     outshine-calc-outline-string-at-level
-                     s-trim-right
-                     (s-replace "*" "\\*"))
-                "\\) ")))
-
-  (defun pretty-outlines--propertize-bullet (level bullet)
-    "Add LEVEL-dependent face to BULLET."
-    (with-face bullet
-               (pcase level
-                 (0 '(:inherit outline-1 :underline nil :height 1.9))
-                 (1 '(:inherit outline-2 :underline nil :height 1.6))
-                 (2 '(:inherit outline-3 :underline nil :height 1.4))
-                 (3 '(:inherit outline-4 :underline nil :height 1.3))
-                 (4 '(:inherit outline-5 :underline nil :height 1.25))
-                 (5 '(:inherit outline-6 :underline nil :height 1.2))
-                 (6 '(:inherit outline-7 :underline nil :height 1.15))
-                 (7 '(:inherit outline-8 :underline nil :height 1.10))
-                 (_ nil))))
-
-  (defun pretty-outlines--bullets-cycle ()
-    "Cycle through `pretty-outlines-bullets-bullet-list'"
-    (-let [max-outline-depth 8]
-      (->> pretty-outlines-bullets-bullet-list -cycle (-take max-outline-depth))))
-
-  (defun pretty-outlines--format-bullet (level bullet)
-    "Propertize and perform all other styling for BULLET at LEVEL."
-    (concat (s-repeat level " ")
-            (pretty-outlines--propertize-bullet level bullet)))
-
-  (defun pretty-outlines-add-bullets ()
-    "Use with `add-hook' to enable pretty-outlines-bullets-bullet-list for mode."
-    (interactive)
-    ;; Not sure why, but org mode headers are small otherwise
-    (if (not (string= major-mode "org-mode"))
-        (->>
-         (pretty-outlines--bullets-cycle)
-         (-map-indexed (-lambda (level bullet)
-                         (list (pretty-outlines--bullets-rgx-at-level level)
-                               (pretty-outlines--format-bullet level bullet))))
-         pretty-outlines--add-font-locks)))
-
-  (add-hook 'outline-mode-hook 'pretty-outlines-add-bullets t)
-  (add-hook 'outline-minor-mode-hook 'pretty-outlines-add-bullets t)
-#+END_SRC
-
-** Outline ellipsis
-#+BEGIN_SRC emacs-lisp
-  (defvar outline-display-table (make-display-table))
-  (set-display-table-slot outline-display-table 'selective-display
-                          (vector (make-glyph-code my/fold-ellipsis-char 'escape-glyph)))
-  (defun set-outline-display-table ()
-    (setf buffer-display-table outline-display-table))
-
-  (add-hook 'outline-mode-hook 'set-outline-display-table)
-  (add-hook 'outline-minor-mode-hook 'set-outline-display-table)
-#+END_SRC
-
-** Keys
-#+BEGIN_SRC emacs-lisp
-    (defun my/outline-hide-all-body ()
-      (interactive)
-      (outline-show-all)
-      (outline-hide-body))
-
-  (my/evil-normal-define-key "ga" 'my/outline-hide-all-body)
-  (my/evil-normal-define-key "gA" 'outline-show-all)
-
-  (my/evil-normal-define-key "go" 'evil-open-fold)
-  (my/evil-normal-define-key "gO" 'evil-open-fold-rec)
-
-  (my/evil-normal-define-key "gh" 'evil-close-fold)
-  (my/evil-normal-define-key "gH" '(lambda () (interactive) (hide-sublevels 1)))
-
-  (defvar-local buffer-has-outline-bullets t)
-  (defun my/toggle-outline-bullets ()
-    (interactive)
-    (if (not (string= major-mode "org-mode"))
-        (progn
-          (if buffer-has-outline-bullets
-              (progn
-                (setq buffer-has-outline-bullets nil)
-                (pretty-outlines-remove-font-locks))
-            (setq buffer-has-outline-bullets t)
-            (pretty-outlines-add-bullets))
-
-          ;; Completely refresh font-lock
-          (set-text-properties (point-min) (point-max) nil))))
-
-  (define-key my/leader-map (kbd "C-h") 'my/toggle-outline-bullets)
-#+END_SRC
-
 * Spray
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'spray)
@@ -7022,6 +7065,9 @@ Highlight thing under cursor and all other occurrences
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'highlight-thing)
 
+  ;; Show hits in all windows
+  (setq highlight-thing-all-visible-buffers-p t)
+
   ;; Don't highlight the word true or false
   ;;(setq highlight-thing-ignore-list '("False" "True"))
 
@@ -7030,6 +7076,13 @@ Highlight thing under cursor and all other occurrences
 
   (setq highlight-thing-case-sensitive-p 1) 
   (global-highlight-thing-mode)
+#+END_SRC
+
+*** Don't highlight huge buffers
+#+BEGIN_SRC emacs-lisp
+  (setq highlight-thing-limit-to-region-in-large-buffers-p nil)
+  (setq highlight-thing-narrow-region-lines 15)
+  (setq highlight-thing-large-buffer-limit 5000)
 #+END_SRC
 
 ** Disable blinking cursor
