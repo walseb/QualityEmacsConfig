@@ -472,17 +472,8 @@ Default file-size-human-readable returns decimal values
                             :height my/default-face-height)))
 #+END_SRC
 
-* Theme
-#+BEGIN_SRC emacs-lisp
-  ;; (when window-system
-    ;; (straight-use-package 'twilight-anti-bright-theme)
-    ;; (load-theme 'twilight-anti-bright t))
-
-  (when (not window-system)
-    (load-theme 'wheatgrass t))
-#+END_SRC
-
-** Fonts
+* Fonts
+** Normal fonts
 #+BEGIN_SRC emacs-lisp  
   (defvar my/is-font-mono nil)
   (defvar my/font nil)
@@ -522,6 +513,7 @@ Default file-size-human-readable returns decimal values
   (defvar my/mono-font (my/get-best-mono-font))
 #+END_SRC
 
+* Startup processes
 ** Make sure mode line is disabled before any windows are created
 #+BEGIN_SRC emacs-lisp
   (if window-system
@@ -532,7 +524,6 @@ Default file-size-human-readable returns decimal values
     (setq-default mode-line-format nil))
 #+END_SRC
 
-* Startup processes
 ** Prevent async command from opening new window
 #+BEGIN_SRC emacs-lisp
   ;; Buffers that I don't want popping up by default
@@ -747,13 +738,13 @@ Allows for using indention as text objects
 
   ;;(define-key evil-motion-state-map "!" 'evil-textobj-anyblock-forward-open-block-start)
 
-  ;; (add-hook 'lisp-mode-hook
-  ;; (lambda ()
-  ;; (setq-local evil-textobj-anyblock-blocks
-  ;; '(("(" . ")")
-  ;; ("{" . "}")
-  ;; ("\\[" . "\\]")
-  ;; ("\"" . "\"")))))
+  (setq evil-textobj-anyblock-blocks
+        '(("(" . ")")
+          ("{" . "}")
+          ("\\[" . "\\]")
+          ("<" . ">")
+          ("\"" . "\"")
+          ("“" . "”")))
 #+END_SRC
 
 *** Evil-surround
@@ -2065,7 +2056,6 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
   (define-key my/org-html-macros-map (kbd "RET") (lambda () (interactive) (insert "#+HTML: <br><br />")))
 #+END_SRC
 
-
 * Outline
 http://www.modernemacs.com/post/outline-ivy/
 #+BEGIN_SRC emacs-lisp
@@ -2577,7 +2567,6 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
   (define-key my/leader-map (kbd "C-h") 'my/toggle-outline-bullets)
 #+END_SRC
 
-
 * Completion
 ** Ivy
 #+BEGIN_SRC emacs-lisp
@@ -2686,7 +2675,7 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
   (define-key my/help-map (kbd "C-c") 'counsel-colors-emacs)
   (define-key my/help-map (kbd "C") 'counsel-colors-web)
 
-  (define-key my/leader-map (kbd "i") 'counsel-imenu)
+  (define-key my/leader-map (kbd "S") 'counsel-imenu)
   (define-key my/leader-map (kbd "h") 'counsel-outline)
 #+END_SRC
 
@@ -3028,7 +3017,7 @@ Flycheck with extra correction for elisp packages
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-key my/leader-map (kbd "S") 'yas-insert-snippet)
+  (define-key my/leader-map (kbd "i") 'yas-insert-snippet)
 
   (define-key my/help-map (kbd "y") 'yas-describe-tables)
 #+END_SRC
@@ -3398,9 +3387,9 @@ g-; and g-,
   (add-hook 'my/switch-window-hook (lambda () (interactive) (run-hooks 'my/switch-buffer-hook) t))
 
   (defadvice evil-window-up (after evil-window-up-after activate) (run-hooks 'my/switch-buffer-hook))
-  (defadvice evil-window-down (after evil-window-up-after activate) (run-hooks 'my/switch-buffer-hook))
-  (defadvice evil-window-left (after evil-window-up-after activate) (run-hooks 'my/switch-buffer-hook))
-  (defadvice evil-window-right (after evil-window-up-after activate) (run-hooks 'my/switch-buffer-hook))
+  (defadvice evil-window-down (after evil-window-down activate) (run-hooks 'my/switch-buffer-hook))
+  (defadvice evil-window-left (after evil-window-left activate) (run-hooks 'my/switch-buffer-hook))
+  (defadvice evil-window-right (after evil-window-right activate) (run-hooks 'my/switch-buffer-hook))
 #+END_SRC
 
 ** Window settings 
@@ -3928,7 +3917,7 @@ Shows information in echo area
   (add-hook 'plantuml-mode-hook 'my/plantuml-mode)
 #+END_SRC
 
-** LSP mode
+** LSP
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'lsp-mode)
 #+END_SRC
@@ -3951,7 +3940,7 @@ Shows information in echo area
 
 ** Elgot
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'eglot)
+  ;; (straight-use-package 'eglot)
 #+END_SRC
 
 ** Common lisp
@@ -4123,46 +4112,46 @@ or
 ** C/CPP
 *** Irony
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'irony)
-
-  (add-hook 'c++-mode-hook 'irony-mode)
-  (add-hook 'c-mode-hook 'irony-mode)
-  (add-hook 'objc-mode-hook 'irony-mode)
-
-  (add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)
+  ;; (straight-use-package 'irony)
+;; 
+  ;; (add-hook 'c++-mode-hook 'irony-mode)
+  ;; (add-hook 'c-mode-hook 'irony-mode)
+  ;; (add-hook 'objc-mode-hook 'irony-mode)
+;; 
+  ;; (add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)
 #+END_SRC
 
 **** Windows tweaks
 Windows performance tweaks
 #+BEGIN_SRC emacs-lisp
-  (when (boundp 'w32-pipe-read-delay)
-    (setq w32-pipe-read-delay 0))
-   ;; Set the buffer size to 64K on Windows (from the original 4K)
-   (when (boundp 'w32-pipe-buffer-size)
-   (setq irony-server-w32-pipe-buffer-size (* 64 1024)))
+  ;; (when (boundp 'w32-pipe-read-delay)
+    ;; (setq w32-pipe-read-delay 0))
+   ;; ;; Set the buffer size to 64K on Windows (from the original 4K)
+   ;; (when (boundp 'w32-pipe-buffer-size)
+   ;; (setq irony-server-w32-pipe-buffer-size (* 64 1024)))
 #+END_SRC
 
 **** Flycheck-irony
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'flycheck-irony)
-
-  (eval-after-load 'flycheck
-    '(add-hook 'flycheck-mode-hook #'flycheck-irony-setup))
+  ;; (straight-use-package 'flycheck-irony)
+;; 
+  ;; (eval-after-load 'flycheck
+    ;; '(add-hook 'flycheck-mode-hook #'flycheck-irony-setup))
 #+END_SRC
 
 **** Company-irony
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'company-irony)
-
-  (eval-after-load 'company
-    '(add-to-list 'company-backends 'company-irony))
+  ;; (straight-use-package 'company-irony)
+;; 
+  ;; (eval-after-load 'company
+    ;; '(add-to-list 'company-backends 'company-irony))
 #+END_SRC
 
 **** Eldoc-irony
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'irony-eldoc)
-
-  (add-hook 'irony-mode-hook #'irony-eldoc)
+  ;; (straight-use-package 'irony-eldoc)
+;; 
+  ;; (add-hook 'irony-mode-hook #'irony-eldoc)
 #+END_SRC
 
 *** Elgot
@@ -4172,14 +4161,18 @@ Windows performance tweaks
   ;; (add-hook 'objc-mode-hook 'eglot-ensure)
 #+END_SRC
 
-*** CCLS
+*** LSP CCLS
 #+BEGIN_SRC emacs-lisp
-     ;; (straight-use-package 'ccls)
-     ;; (require 'ccls)
-  ;;  
-     ;; (add-hook 'c-mode-hook 'lsp-mode)
-     ;; (add-hook 'c++-mode-hook 'lsp-mode)
-     ;; (add-hook 'objc-mode-hook 'lsp-mode)
+  (straight-use-package 'ccls)
+  (require 'ccls)
+
+  (add-hook 'c-mode-hook 'lsp-mode)
+  (add-hook 'c++-mode-hook 'lsp-mode)
+  (add-hook 'objc-mode-hook 'lsp-mode)
+
+  (add-hook 'c-mode-hook (lambda () (push 'company-lsp company-backends)))
+  (add-hook 'c++-mode-hook (lambda () (push 'company-lsp company-backends)))
+  (add-hook 'objc-mode-hook (lambda () (push 'company-lsp company-backends)))
 #+END_SRC
 
 *** Cling
@@ -6711,8 +6704,113 @@ https://www.emacswiki.org/emacs/ArtistMode
   (define-key my/leader-map (kbd "M-v") 'spray-mode)
 #+END_SRC
 
-* Visuals
-** Theme
+* Ligatures
+#+BEGIN_SRC emacs-lisp
+  (global-prettify-symbols-mode 1)
+  (setq prettify-symbols-unprettify-at-point 'right-edge)
+
+  ;; Redefine so that prettify mode is enabled even if a buffer local symbols alist isn't defined
+  (defun turn-on-prettify-symbols-mode ()
+    (when (not prettify-symbols-mode)
+      (prettify-symbols-mode 1)))
+
+  ;; Replace comments with symbol
+  ;; "^[\s\\|\t]*;+"
+  ;; \\(^ *;; \\*\\) 
+#+END_SRC
+
+** Generic
+#+BEGIN_SRC emacs-lisp
+  (defvar my/generic-equal-symbols 
+    '(
+      ("!=" . ?≠)
+      (">=" . ?≥)
+      ("<=" . ?≤)
+      ))
+
+  (defvar my/generic-arrow-symbols 
+    '(("->" . ?→)
+      ("<-" . ?←)
+      ("->>" . ?↠)
+      ("<<-" . ?↞)
+      ("|>" . ?⊳)
+      ("<|" . ?⊲)
+      ("<<" . ?≪)
+      (">>" . ?≫)))
+
+  (defvar my/generic-greek-symbols 
+    '(("lambda" . ?λ)
+      ))
+#+END_SRC
+
+** Fsharp
+#+BEGIN_SRC emacs-lisp
+  (defvar my/fsharp-symbols 
+    (list))
+#+END_SRC
+
+** C/CPP
+#+BEGIN_SRC emacs-lisp
+  (defvar my/fsharp-symbols 
+    '(
+      ("!=" . ?≠)
+      ))
+#+END_SRC
+
+** Elisp
+#+BEGIN_SRC emacs-lisp
+  (setq my/elisp-symbols 
+        '(
+          ("defun" . ?λ)
+          ))
+#+END_SRC
+    
+** Set symbol by mode
+#+BEGIN_SRC emacs-lisp
+  (setq-default prettify-symbols-alist
+                (append
+                 my/generic-greek-symbols 
+                 my/generic-equal-symbols
+                 my/generic-arrow-symbols))
+
+  (add-hook 'prog-mode-hook (lambda () (interactive)
+                              (setq-local prettify-symbols-alist
+                                          (pcase major-mode
+                                            ('fsharp-mode (append
+                                                           my/fsharp-symbols
+                                                           my/generic-greek-symbols 
+                                                           my/generic-equal-symbols
+                                                           my/generic-arrow-symbols
+                                                           ))
+                                            ('emacs-lisp-mode (append
+                                                               my/elisp-symbols
+                                                               my/generic-greek-symbols 
+                                                               my/generic-equal-symbols
+                                                               my/generic-arrow-symbols
+                                                               ))
+                                            ('lisp-interaction-mode (append
+                                                                     my/elisp-symbols
+                                                                     my/generic-greek-symbols 
+                                                                     my/generic-equal-symbols
+                                                                     my/generic-arrow-symbols
+                                                                     ))
+                                            ))))
+
+  ;; (add-hook 'prog-mode-hook
+  ;; (lambda ()
+  ;; (setq-local prettify-symbols-alist
+  ;; (pcase major-mode
+  ;; ('emacs-lisp-mode
+  ;; (append
+  ;; my/generic-arrow-symbols
+  ;; my/generic-equal-symbols))))))
+
+  ;; (add-hook 'emacs-lisp-mode-hook
+  ;; (lambda ()
+  ;; (push '(">=" . ?≥) prettify-symbols-alist)))
+#+END_SRC
+
+* Theme
 #+BEGIN_SRC emacs-lisp
   (defun my/paper-mode()
     (interactive)
@@ -6947,6 +7045,7 @@ https://www.emacswiki.org/emacs/ArtistMode
   (define-key my/leader-map (kbd "M-c") 'my/paper-mode)
 #+END_SRC
 
+* Visuals
 ** Indicate empty lines
 #+BEGIN_SRC emacs-lisp
   (setq-default indicate-empty-lines t)
@@ -7047,17 +7146,6 @@ Changes colors of delimiters eg. {()}
 ** Highlight current line
 #+BEGIN_SRC emacs-lisp
   (global-hl-line-mode t)
-#+END_SRC
-
-** Pretty mode (converts text into symbols)
-Only enable when using GUI. Transforms ASCII to symbols depending on mode
-#+BEGIN_SRC emacs-lisp
-  ;; TODO Global pretty mode is buggy when using swiper, generates tons of garbage, normal pretty-mode works
-  ;; When the function (global-pretty-mode t) is run, it generates a TON of garbage since it searches the newly created swiper buffer
-  ;; Look at turn-on-pretty-if-desired
-  ;; (when window-system
-  ;; (straight-use-package 'pretty-mode)
-  ;; (global-pretty-mode t))
 #+END_SRC
 
 ** Highlight thing
