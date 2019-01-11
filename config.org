@@ -472,6 +472,27 @@ Default file-size-human-readable returns decimal values
                             :height my/default-face-height)))
 #+END_SRC
 
+** Overlay
+#+BEGIN_SRC emacs-lisp
+(defun my/inline-overlay-print (string)
+  (let ((inline-overlay (make-overlay (point) (line-end-position))))
+    ;; Put overlay
+    (overlay-put inline-overlay 'after-string
+		 (propertize
+		  (concat
+		   " ;=>"
+		   string
+		   )
+		  'face '(:foreground "light blue")
+		  ))
+    ;; Just sit for 100 seconds
+    (sit-for 100)
+    ;; Then delete overlay
+    (delete-overlay inline-overlay)))
+
+;; (my/inline-overlay-print "test")
+#+END_SRC
+
 * Fonts
 ** Normal fonts
 #+BEGIN_SRC emacs-lisp  
@@ -1435,13 +1456,20 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 ** Zoom
 #+BEGIN_SRC emacs-lisp
   ;; (defun my/increase-volume ()
-    ;; (interactive)
-    ;; (text-scale-set 0))
+  ;; (interactive)
+  ;; (text-scale-set 0))
   ;; (define-key my/leader-map (kbd "+") ')
   ;; (define-key my/leader-map (kbd "_") '(lambda () (interactive) (text-scale-set 0)))
-;; 
-  (define-key my/leader-map (kbd "-") '(lambda () (interactive) (text-scale-decrease 1)))
-  (define-key my/leader-map (kbd "=") '(lambda () (interactive) (text-scale-increase 1)))
+  ;; 
+  (define-key my/leader-map (kbd "-") '(lambda () (interactive) (text-scale-decrease 4)))
+  (define-key my/leader-map (kbd "=") '(lambda () (interactive) (text-scale-increase 4)))
+
+  (define-key my/leader-map (kbd "C--") '(lambda () (interactive) (text-scale-decrease 1)))
+  (define-key my/leader-map (kbd "C-=") '(lambda () (interactive) (text-scale-increase 1)))
+
+
+  (define-key my/leader-map (kbd "+") '(lambda () (interactive) (text-scale-mode 0)))
+  (define-key my/leader-map (kbd "_") '(lambda () (interactive) (text-scale-mode 0)))
 #+END_SRC
 
 ** Toggle mono-font
@@ -1480,7 +1508,7 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
 ** Help mode
 #+BEGIN_SRC emacs-lisp
-  (define-key my/leader-map (kbd "C-h") help-map)
+  ;;(define-key my/leader-map (kbd "C-h") help-map)
 #+END_SRC
 
 *** Disable help mode binds
@@ -1711,41 +1739,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 ** Suggest
 #+BEGIN_SRC emacs-lisp
   (define-key my/leader-map (kbd "s") 'suggest)
-#+END_SRC
-
-* Folding
-** Narrowing
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/narrow-map)
-  (define-key my/leader-map (kbd "n") 'my/narrow-map)
-
-  (define-key my/narrow-map (kbd "w") 'widen)
-  (define-key my/narrow-map (kbd "r") 'narrow-to-region)
-
-  (define-key my/narrow-map (kbd "p") 'narrow-to-page)
-  (define-key my/narrow-map (kbd "d") 'narrow-to-defun)
-#+END_SRC
-
-** Origami
-#+BEGIN_SRC emacs-lisp
-   ;;(straight-use-package 'origami)
-;; 
-   ;;(global-origami-mode)
-#+END_SRC
-
-*** Visuals
-#+BEGIN_SRC emacs-lisp
-;;  (setq origami-fold-replacement my/fold-ellipsis)
-#+END_SRC
-
-*** Keys
-Vim bindings to change fold
-#+BEGIN_SRC emacs-lisp
-  ;; (define-key evil-motion-state-map (kbd "z n") 'origami-forward-fold)
-  ;; (define-key evil-motion-state-map (kbd "z p") 'origami-previous-fold)
-;; 
-  ;; (define-key evil-motion-state-map (kbd "z C-o") 'origami-open-all-nodes)
-  ;; (define-key evil-motion-state-map (kbd "z C-c") 'origami-close-all-nodes)
 #+END_SRC
 
 * Org
@@ -2531,6 +2524,44 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
 
   (add-hook 'outline-mode-hook 'set-outline-display-table)
   (add-hook 'outline-minor-mode-hook 'set-outline-display-table)
+#+END_SRC
+
+** Narrowing
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/narrow-map)
+  (define-key my/leader-map (kbd "n") 'my/narrow-map)
+
+  (define-key my/narrow-map (kbd "w") 'widen)
+  (define-key my/narrow-map (kbd "r") 'narrow-to-region)
+
+  (define-key my/narrow-map (kbd "p") 'narrow-to-page)
+  (define-key my/narrow-map (kbd "d") 'narrow-to-defun)
+#+END_SRC
+
+** Folding
+*** Origami
+#+BEGIN_SRC emacs-lisp
+   (straight-use-package 'origami)
+
+   (global-origami-mode)
+#+END_SRC
+
+*** Visuals
+#+BEGIN_SRC emacs-lisp
+  (setq origami-fold-replacement my/fold-ellipsis)
+#+END_SRC
+
+*** Keys
+Vim bindings to change fold
+#+BEGIN_SRC emacs-lisp
+  (define-key evil-motion-state-map (kbd "g N") 'origami-forward-fold)
+  (define-key evil-motion-state-map (kbd "g P") 'origami-previous-fold)
+
+  (define-key evil-motion-state-map (kbd "g C-o") 'origami-open-node)
+  (define-key evil-motion-state-map (kbd "g C-h") 'origami-close-node)
+
+  (define-key evil-motion-state-map (kbd "g M-o") 'origami-open-all-nodes)
+  (define-key evil-motion-state-map (kbd "g M-h") 'origami-close-all-nodes)
 #+END_SRC
 
 ** Keys
@@ -3728,20 +3759,12 @@ Version 2015-07-30"
 
 * Code
 ** Generic
-*** Jump to definition
+*** Ivy-xref
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'dumb-jump)
+  (straight-use-package 'ivy-xref)
 
-  (defun my/auto-jump-to-definition ()
-    (interactive)
-    (pcase major-mode
-      ('fsharp-mode (fsharp-ac/gotodefn-at-point))
-      ('clojure-mode (clojure-find-def))
-      (_ (dumb-jump-go))))
-
-  (define-key my/leader-map (kbd "t") 'my/auto-jump-to-definition)
-
-  (setq dumb-jump-selector 'ivy)
+  (require 'ivy-xref)
+  (setq xref-show-xrefs-function #'ivy-xref-show-xrefs)
 #+END_SRC
 
 *** Smartparens
@@ -3788,6 +3811,35 @@ Shows information in echo area
   ;; (setq highlight-indent-guides-delay 0)
 #+END_SRC
 
+*** Auto jump to definition
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'dumb-jump)
+
+  (defun my/auto-jump-to-definition ()
+    (interactive)
+    (pcase major-mode
+      ('fsharp-mode (fsharp-ac/gotodefn-at-point))
+      ('clojure-mode (clojure-find-def))
+      ('c-mode (xref-find-definitions))
+      ('c++-mode (xref-find-definitions))
+      ('objc-mode (xref-find-definitions))
+      (_ (dumb-jump-go))))
+
+  (define-key my/leader-map (kbd "t") 'my/auto-jump-to-definition)
+
+  (setq dumb-jump-selector 'ivy)
+#+END_SRC
+
+*** Auto find references
+#+BEGIN_SRC emacs-lisp
+  (defun my/auto-find-references ()
+    (interactive)
+    (pcase major-mode
+      (_ (xref-find-references))))
+
+  (define-key my/leader-map (kbd "C-r") 'my/auto-find-references)
+#+END_SRC
+
 *** Auto eval
 #+BEGIN_SRC emacs-lisp
   (defun my/auto-eval ()
@@ -3802,7 +3854,7 @@ Shows information in echo area
         ('fsharp-mode (fsharp-eval-phrase))
         ('c-mode (cling-send-region (line-beginning-position) (line-end-position)))
         ('c++-mode (cling-send-region (line-beginning-position) (line-end-position)))
-        (_ (eval-last-sexp nil)))))
+        (_ (eval-defun nil)))))
 
   (defun my/auto-eval-region ()
     (interactive)
@@ -3812,7 +3864,7 @@ Shows information in echo area
       ('fsharp-mode (fsharp-eval-region (point) (mark t)))
       ('c-mode (cling-send-region (point) (mark t)))
       ('c++-mode (cling-send-region (point) (mark t)))
-      (_ (eval-last-sexp nil))))
+      (_ (eval-region (point) (mark t) t))))
 
   (defun my/auto-eval-buffer ()
     (interactive)
@@ -3879,7 +3931,7 @@ Shows information in echo area
 
   (define-key my/leader-map (kbd "d") 'my/auto-debug)
   (define-key my/leader-map (kbd "C-d") 'my/auto-remove-debug)
-  (define-key my/leader-map (kbd "D") 'my/auto-debug-buffer)
+  ;;(define-key my/leader-map (kbd "D") 'my/auto-debug-buffer)
   (define-key my/leader-map (kbd "M-d") 'my/auto-start-debugger)
 #+END_SRC
 
@@ -3920,17 +3972,15 @@ Shows information in echo area
 ** LSP
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'lsp-mode)
+
+  ;; Normally lsp-mode starts up flymake mode automaticall which breaks ccls
+  (setq lsp-prefer-flymake nil)
 #+END_SRC
 
 *** Company LSP
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'company-lsp)
 
-  ;; Requested by lsp java
-  (setq company-lsp-enable-snippe t)
-  (setq company-lsp-cache-candidates t)
-  ;;(push 'java-mode company-global-modes)
-  (add-hook 'java-mode-hook (lambda () (push 'company-lsp company-backends)))
 #+END_SRC
 
 *** LSP-ui
@@ -4069,7 +4119,12 @@ or
     (setq-local lsp-ui-sideline-show-symbol t)
     (setq-local lsp-ui-sideline-show-hover t)
     (setq-local lsp-ui-sideline-show-code-actions t)
-    (setq-local lsp-ui-sideline-update-mode 'point))
+    (setq-local lsp-ui-sideline-update-mode 'point)
+
+    ;; Requested by lsp java
+    (setq-local company-lsp-enable-snippet t)
+    (setq-local company-lsp-cache-candidates t)
+    (push 'company-lsp company-backends))
 
   (add-hook 'java-mode-hook 'my/java-mode)
 #+END_SRC
@@ -4085,7 +4140,6 @@ or
   (define-key my/java-mode-map (kbd "i") 'lsp-java-organize-imports)
   (define-key my/java-mode-map (kbd "C-b") 'lsp-java-build-project)
 
-  (define-key my/java-mode-map (kbd "d") 'xref-find-definitions)
   (define-key my/java-mode-map (kbd "f") 'xref-find-references)
   (define-key my/java-mode-map (kbd "a") 'xref-find-apropos)
 
@@ -4166,9 +4220,15 @@ Windows performance tweaks
   (straight-use-package 'ccls)
   (require 'ccls)
 
-  (add-hook 'c-mode-hook 'lsp-mode)
-  (add-hook 'c++-mode-hook 'lsp-mode)
-  (add-hook 'objc-mode-hook 'lsp-mode)
+  (setq ccls-executable "/bin/ccls")
+
+  (add-hook 'c-mode-hook '(lambda () (interactive) (aggressive-indent-mode 0)))
+  (add-hook 'c++-mode-hook '(lambda () (interactive) (aggressive-indent-mode 0)))
+  (add-hook 'objc-mode-hook '(lambda () (interactive) (aggressive-indent-mode 0)))
+
+  (add-hook 'c-mode-hook 'lsp)
+  (add-hook 'c++-mode-hook 'lsp)
+  (add-hook 'objc-mode-hook 'lsp)
 
   (add-hook 'c-mode-hook (lambda () (push 'company-lsp company-backends)))
   (add-hook 'c++-mode-hook (lambda () (push 'company-lsp company-backends)))
@@ -4418,14 +4478,20 @@ TODO: Fix settings, grab them from package site
    (add-to-list 'auto-mode-alist '("\\.xml?\\'" . web-mode))
 #+END_SRC
 
+*** Debugger
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'dap-mode)
+#+END_SRC
+
 * Encryption
 ** GPG  
 *** Pinentry
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'pinentry)
 
-  ;; Takes 0.000273s, autorun
-  (add-hook 'exwm-init-hook 'pinentry-start)
+  (if window-system
+      (add-hook 'exwm-init-hook 'pinentry-start)
+    (pinentry-start))
 #+END_SRC
 
 *** Reset GPG agent
@@ -4688,9 +4754,8 @@ Disable rainbow delimiters
 
 **** j 
 #+BEGIN_SRC emacs-lisp
-  (my/evil-normal-define-key "j" 'evil-search-next)
-
-  (my/evil-normal-define-key "J" 'evil-search-previous)
+  (my/evil-normal-define-key "j" 'evil-search-previous)
+  (my/evil-normal-define-key "J" 'evil-search-next)
 
   ;; ex
   ;;(evil-ex-define-cmd "new" 'evil-window-new)
@@ -5153,17 +5218,18 @@ Redefine function to attempt to open image if link at point wasn't found
       (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
 
    ;;; Insert
-      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up-select)
-      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down-select)
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up-select)
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down-select)
 
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-u") 'exwm-firefox-core-half-page-up)
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
+    
       (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-w") '(lambda () (interactive) (exwm-input--fake-key ?\å)))
       (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-r") '(lambda () (interactive) (exwm-input--fake-key ?\ä)))
       (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-j") '(lambda () (interactive) (exwm-input--fake-key ?\ö)))
 
       (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
       (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)))
-
-
 #+END_SRC
 
 ** Next browser
@@ -5237,6 +5303,12 @@ If enabled it auto enables projectile, which has high CPU usage
 
   (define-prefix-command 'my/vc-map)
   (define-key my/leader-map (kbd "v") 'my/vc-map)
+
+  (define-key my/vc-map (kbd "n") 'diff-hl-next-hunk)
+  (define-key my/vc-map (kbd "p") 'diff-hl-previous-hunk)
+
+  (define-key my/vc-map (kbd "r") 'diff-hl-revert-hunk)
+  (define-key my/vc-map (kbd "=") 'diff-hl-diff-goto-hunk)
 
   (define-key my/vc-map (kbd "o") 'counsel-git-grep)
   (define-key my/vc-map (kbd "a") 'counsel-projectile-ag)
@@ -6096,9 +6168,11 @@ Mode for writing mail
            "xrandr" nil "xrandr --output VGA1 --primary --auto --output LVDS1 --off")
         (start-process-shell-command
          "xrandr" nil "xrandr --output LVDS1 --auto"))))
+
   (define-key my/system-monitor-map (kbd "a") 'my/auto-connect-screen)
 
-  (async-shell-command my/device/monitor-setup-command "xrandr setup buffer")
+  (if (window-system)
+      (async-shell-command my/device/monitor-setup-command "xrandr setup buffer"))
 #+END_SRC
 
 ** Process monitors
@@ -6706,7 +6780,8 @@ https://www.emacswiki.org/emacs/ArtistMode
 
 * Ligatures
 #+BEGIN_SRC emacs-lisp
-  (global-prettify-symbols-mode 1)
+  (if window-system
+      (global-prettify-symbols-mode 1))
   (setq prettify-symbols-unprettify-at-point 'right-edge)
 
   ;; Redefine so that prettify mode is enabled even if a buffer local symbols alist isn't defined
@@ -6818,41 +6893,16 @@ https://www.emacswiki.org/emacs/ArtistMode
              ;; Don't change magit faces
              (if (not (string-match "magit" (symbol-name face)))
                  (set-face-attribute face nil :foreground nil :background nil)))
-    ;;(setq my/foreground-color "#8b4513")
-    ;;(setq my/foreground-color "brown")
-    ;;(setq my/background-color "black")
 
-    ;; (setq  my/background-color "#2a1f1f")
-    ;; (setq my/foreground-color "#d15120")
-
-    ;; Night theme
-    (setq my/foreground-color "gray")
-    (setq my/background-color "#14191F")
-
-    ;; Day theme
-    (setq my/mark-color "yellow4")
-    (setq my/foreground-color "black")
-    ;;(setq my/background-color "white") 
-    (setq my/background-color "#4682b4") 
-    ;;(setq my/background-color "#87cefa") 
-
-    ;; Dark theme 2 - spacemacs  - https://github.com/nashamri/spacemacs-theme/blob/master/spacemacs-common.el
-    ;;(setq my/foreground-color "#b2b2b2")
-    ;;(setq my/background-color "#292b2e") 
-
-    (setq my/background-color "#f0f0f0")
-    (setq my/foreground-color "#232323") 
-
-    (setq my/background-color "#000000")
-    (setq my/background-color "#232323")
-    (setq my/foreground-color "#E6E1DC") 
-
-    (setq my/diff-new-color "#E6E1DC") 
-    (setq my/diff-changed-color "#E6E1DC") 
-
+    (setq my/diff-added-color "#335533") 
+    (setq my/diff-changed-color "#aaaa22") 
+    (setq my/diff-removed-color "#553333") 
 
     (if window-system
         (progn
+          (setq my/mark-color my/diff-changed-color) 
+
+          (setq my/foreground-color "#E6E1DC") 
           (setq my/foreground-color-1 (color-darken-name my/foreground-color 5))
           (setq my/foreground-color-2 (color-darken-name my/foreground-color 10))
           (setq my/foreground-color-3 (color-darken-name my/foreground-color 15))
@@ -6860,22 +6910,32 @@ https://www.emacswiki.org/emacs/ArtistMode
           (setq my/foreground-color-5 (color-darken-name my/foreground-color 25))
           (setq my/foreground-color-6 (color-darken-name my/foreground-color 30))
 
+          (setq my/background-color "#232323")
           (setq my/background-color-1 (color-lighten-name my/background-color 5))
           (setq my/background-color-2 (color-lighten-name my/background-color 10))
           (setq my/background-color-3 (color-lighten-name my/background-color 15))
-          (setq my/background-color-4 (color-lighten-name my/background-color 20)))
+          (setq my/background-color-4 (color-lighten-name my/background-color 20))
+          )
 
-      (setq my/foreground-color-1 "brown")
-      (setq my/foreground-color-2 "brown")
-      (setq my/foreground-color-3 "orange")
-      (setq my/foreground-color-4 "orange")
-      (setq my/foreground-color-5 "yellow")
-      (setq my/foreground-color-6 "yellow")
+      (setq my/mark-color "yellow") 
 
+      (setq my/foreground-color "white") 
+      (setq my/foreground-color-1 "white")
+      (setq my/foreground-color-2 "white")
+      (setq my/foreground-color-3 "white")
+      (setq my/foreground-color-4 "white")
+      (setq my/foreground-color-5 "white")
+      (setq my/foreground-color-6 "white")
+
+      (setq my/background-color "black")
       (setq my/background-color-1 "black")
       (setq my/background-color-2 "black")
-      (setq my/background-color-3 "gray")
-      (setq my/background-color-4 "gray"))
+      (setq my/background-color-3 "black")
+      (setq my/background-color-4 "black")
+
+      (setq my/diff-added-color "green") 
+      (setq my/diff-changed-color "yellow") 
+      (setq my/diff-removed-color "red"))
 
     ;;; Emacs
     (set-face-attribute 'default nil :foreground my/foreground-color :background my/background-color)
@@ -6982,7 +7042,9 @@ https://www.emacswiki.org/emacs/ArtistMode
 
     ;;; Eshell
     (require 'em-prompt)
-    (set-face-attribute 'eshell-prompt nil :foreground  "purple" :background my/background-color)
+    (if window-system
+        (set-face-attribute 'eshell-prompt nil :foreground "purple" :background my/background-color)
+      (set-face-attribute 'eshell-prompt nil :foreground "magenta" :background my/background-color))
 
     ;;; Eww
     (set-face-attribute 'my/eww-code-face nil :foreground my/foreground-color :background my/background-color-2 :family my/mono-font)
@@ -7005,9 +7067,9 @@ https://www.emacswiki.org/emacs/ArtistMode
     ;; (set-face-attribute 'evil-goggles-surround-face nil :foreground my/background-color :background my/foreground-color)
     ;; (set-face-attribute 'evil-goggles-yank-face nil :foreground my/background-color :background my/foreground-color)
 
-    (set-face-attribute 'diff-added nil  :background "#335533")
-    (set-face-attribute 'diff-changed nil :background "#aaaa22")
-    (set-face-attribute 'diff-removed nil :background "#553333")
+    (set-face-attribute 'diff-added nil  :background my/diff-added-color)
+    (set-face-attribute 'diff-changed nil :background my/diff-changed-color)
+    (set-face-attribute 'diff-removed nil :background my/diff-removed-color)
 
     ;; (set-face-attribute 'diff-added nil  :background "green")
     ;; (set-face-attribute 'diff-changed nil :background "yellow")
@@ -7038,7 +7100,7 @@ https://www.emacswiki.org/emacs/ArtistMode
 
   (if window-system
       (add-hook 'exwm-init-hook 'my/paper-mode)
-    (add-hook 'after-init-hook 'my/paper-mode))
+  (add-hook 'after-init-hook 'my/paper-mode))
 
   ;; (counsel-faces)
 
@@ -7171,6 +7233,13 @@ Highlight thing under cursor and all other occurrences
   (setq highlight-thing-limit-to-region-in-large-buffers-p nil)
   (setq highlight-thing-narrow-region-lines 15)
   (setq highlight-thing-large-buffer-limit 5000)
+#+END_SRC
+
+** Hl-anything
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'hl-anything)
+
+  (define-key my/leader-map (kbd "M") 'hl-highlight-thingatpt-local)
 #+END_SRC
 
 ** Disable blinking cursor
