@@ -6843,6 +6843,12 @@ https://www.emacswiki.org/emacs/ArtistMode
   ;; \\(^ *;; \\*\\) 
 #+END_SRC
 
+** Magit
+#+BEGIN_SRC emacs-lisp
+  ;; Prettify symbols doesn't work with magit
+  (add-hook 'magit-mode-hook '(lambda () (interactive) (prettify-symbols-mode -1)))
+#+END_SRC
+
 ** Generic
 #+BEGIN_SRC emacs-lisp
   (defvar my/generic-equal-symbols 
@@ -7035,6 +7041,15 @@ https://www.emacswiki.org/emacs/ArtistMode
 
     (set-face-attribute 'org-quote nil :slant 'italic)
 
+    ;;; Diff
+    (set-face-attribute 'diff-added nil  :background my/diff-added-color)
+    (set-face-attribute 'diff-changed nil :background my/diff-changed-color)
+    (set-face-attribute 'diff-removed nil :background my/diff-removed-color)
+
+    (set-face-attribute 'diff-refine-added nil  :background my/diff-added-color)
+    (set-face-attribute 'diff-refine-changed nil :background my/diff-changed-color)
+    (set-face-attribute 'diff-refine-removed nil :background my/diff-removed-color)
+
     ;;; Dired
     (set-face-attribute 'dired-directory nil :foreground my/background-color :background my/foreground-color)
 
@@ -7116,9 +7131,6 @@ https://www.emacswiki.org/emacs/ArtistMode
     ;; (set-face-attribute 'evil-goggles-surround-face nil :foreground my/background-color :background my/foreground-color)
     ;; (set-face-attribute 'evil-goggles-yank-face nil :foreground my/background-color :background my/foreground-color)
 
-    (set-face-attribute 'diff-added nil  :background my/diff-added-color)
-    (set-face-attribute 'diff-changed nil :background my/diff-changed-color)
-    (set-face-attribute 'diff-removed nil :background my/diff-removed-color)
 
     ;; (set-face-attribute 'diff-added nil  :background "green")
     ;; (set-face-attribute 'diff-changed nil :background "yellow")
@@ -7149,7 +7161,7 @@ https://www.emacswiki.org/emacs/ArtistMode
 
   (if window-system
       (add-hook 'exwm-init-hook 'my/paper-mode)
-  (add-hook 'after-init-hook 'my/paper-mode))
+    (add-hook 'after-init-hook 'my/paper-mode))
 
   ;; (counsel-faces)
 
