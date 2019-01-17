@@ -220,9 +220,13 @@ Get =gpick=
 https://potassco.org/doc/start/
 
 ** C libraries not imported
-Add compile libraries to =irony--compile-options=. For gtk set =irony--compile-options= like this
-#+BEGIN_SRC emacs-lisp
+Add a .ccls file and format it like this
+#+BEGIN_SRC
+  g++
+  -lstdc++
+  -I/usr/include/SDL2
 #+END_SRC
+(can also use clang++, etc)
  
 ** GDB doesn't work properly
 make sure you compiled with the =-g= flag
@@ -234,9 +238,25 @@ Makes godot work with old computers
 LIBGL_ALWAYS_SOFTWARE=1 godot-mono 
 #+END_SRC
 
+** Stuff todo
+*** Delete around char 'c'
+Need to find how to use the "inside" operator, etc
+#+BEGIN_SRC
+  (evil-define-motion evil-find-char (char)
+    (interactive "<C>")
+    (evil-find-char 1 char)
+    )
+#+END_SRC
+
 * Security
 #+BEGIN_SRC emacs-lisp
   (setq network-security-level 'high)
+#+END_SRC
+
+** Cert settings
+#+BEGIN_SRC emacs-lisp
+  (setq gnutls-verify-error t)
+  (setq tls-checktrust t)
 #+END_SRC
 
 ** Make authinfo gpg file
@@ -295,13 +315,13 @@ Bootstrap straight.el
   (defvar my/keys-mode-map (make-sparse-keymap))
 
   ;; Emacs 27 doesn't support :init-value, :keymap, etc
-  (if (string< emacs-version "27")
-      (define-minor-mode my/keys-mode
-        ;; init value t to enable it in fundamental mode
-        ;; More info: http://emacs.stackexchange.com/q/16693/115
-        :init-value t
-        :keymap my/keys-mode-map)
-    (define-minor-mode my/keys-mode nil t nil my/keys-mode-map))
+  ;; (if (string< emacs-version "27")
+  ;; (define-minor-mode my/keys-mode
+  ;; ;; init value t to enable it in fundamental mode
+  ;; ;; More info: http://emacs.stackexchange.com/q/16693/115
+  ;; :init-value t
+  ;; :keymap my/keys-mode-map)
+  (define-minor-mode my/keys-mode nil t nil my/keys-mode-map)
 
   (add-to-list 'emulation-mode-map-alists `((my/keys-mode . ,my/keys-mode-map)))
 #+END_SRC
@@ -1263,61 +1283,6 @@ This swaps capslock and ctrl
     (my/setup-mpd))
 
   (define-key my/write-config-map (kbd "a") 'my/write-all-config)
-#+END_SRC
-
-* Install software
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/software-install-map)
-  (define-key my/leader-map (kbd "I") 'my/software-install-map)
-#+END_SRC
-
-** Install eclipse java language server
-For use with lsp-java
-#+BEGIN_SRC emacs-lisp
-  (defun my/install-eclipse-java-language-server()
-    (interactive)
-    (shell-command "
-  cd ~
-  rm -rf ~/.emacs.d/eclipse.jdt.ls/server/
-  mkdir -p ~/.emacs.d/eclipse.jdt.ls/server/
-  wget http://download.eclipse.org/jdtls/snapshots/jdt-language-server-latest.tar.gz -O /tmp/jdt-latest.tar
-  tar xf /tmp/jdt-latest.tar -C ~/.emacs.d/eclipse.jdt.ls/server/
-  "))
-
-  (define-key my/software-install-map (kbd "j") 'my/install-eclipse-java-language-server)
-#+END_SRC
-
-** Install pdf tools
-#+BEGIN_SRC emacs-lisp
-  (define-key my/software-install-map (kbd "p") 'pdf-tools-install)
-#+END_SRC
-
-** Install omnisharp
-#+BEGIN_SRC emacs-lisp
-  (define-key my/software-install-map (kbd "o") 'omnisharp-install-server)
-#+END_SRC
-
-** Install rtags
-You need llvm
-#+BEGIN_SRC emacs-lisp
-  ;; (defun my/install-rtags ()
-    ;; (interactive)
-    ;; (async-shell-command " cd ~
-  ;; git clone --recursive https://github.com/Andersbakken/rtags.git
-  ;; cd rtags
-  ;; cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 .
-  ;; make"))
-;; 
-  ;; (define-key my/software-install-map (kbd "r") 'my/install-rtags)
-#+END_SRC
-
-** Compile config
-#+BEGIN_SRC emacs-lisp
-  (defun my/compile-config ()
-    (interactive)
-    (byte-compile-file my/config-exported-location nil))
-
-  (define-key my/software-install-map (kbd "C-c") 'my/compile-config)
 #+END_SRC
 
 * Minor
@@ -3111,23 +3076,23 @@ Flycheck with extra correction for elisp packages
 
 ** Relative line numbers
 #+BEGIN_SRC emacs-lisp
-  (when (version<= "26.0.50" emacs-version )
-    (global-display-line-numbers-mode)
-
-    (setq display-line-numbers-type 'relative)
-    (setq-default display-line-numbers-type 'relative)
-    (setq display-line-numbers-current-absolute nil)
-    (setq-default display-line-numbers-current-absolute nil)
-
-    ;; Fixes org headings not 
-    ;;(add-hook 'org-mode-hook (lambda ()(interactive) (setq-local display-line-numbers-type 'visual)))
-    (add-hook 'outline-mode-hook (lambda ()(interactive) (setq-local display-line-numbers-type 'visual)))
-    (add-hook 'outline-minor-mode-hook (lambda ()(interactive) (setq-local display-line-numbers-type 'visual)))
-
-    (if window-system
-        (progn
-          (set-face-attribute 'line-number-current-line nil :family my/mono-font)
-          (set-face-attribute 'line-number nil :family my/mono-font))))
+  ;; (when (version<= "26.0.50" emacs-version )
+    ;; (global-display-line-numbers-mode)
+  ;; 
+    ;; (setq display-line-numbers-type 'relative)
+    ;; (setq-default display-line-numbers-type 'relative)
+    ;; (setq display-line-numbers-current-absolute nil)
+    ;; (setq-default display-line-numbers-current-absolute nil)
+  ;; 
+    ;; ;; Fixes org headings not 
+    ;; ;;(add-hook 'org-mode-hook (lambda ()(interactive) (setq-local display-line-numbers-type 'visual)))
+    ;; (add-hook 'outline-mode-hook (lambda ()(interactive) (setq-local display-line-numbers-type 'visual)))
+    ;; (add-hook 'outline-minor-mode-hook (lambda ()(interactive) (setq-local display-line-numbers-type 'visual)))
+  ;; 
+    ;; (if window-system
+        ;; (progn
+          ;; (set-face-attribute 'line-number-current-line nil :family my/mono-font)
+          ;; (set-face-attribute 'line-number nil :family my/mono-font))))
 #+END_SRC
 
 ** Avy
@@ -3781,6 +3746,8 @@ Shows information in echo area
   (setq eldoc-echo-area-use-multiline-p 't)
   (setq-default eldoc-echo-area-use-multiline-p 't)
   (setq eldoc-idle-delay 0)
+
+  (setq tooltip-resize-echo-area t)
 #+END_SRC
 
 *** Aggressive indent
@@ -3854,7 +3821,8 @@ Shows information in echo area
         ('fsharp-mode (fsharp-eval-phrase))
         ('c-mode (cling-send-region (line-beginning-position) (line-end-position)))
         ('c++-mode (cling-send-region (line-beginning-position) (line-end-position)))
-        (_ (eval-defun nil)))))
+        ('csharp-mode (my/csharp-run-repl))
+        (_ (eval-last-sexp nil)))))
 
   (defun my/auto-eval-region ()
     (interactive)
@@ -3864,6 +3832,7 @@ Shows information in echo area
       ('fsharp-mode (fsharp-eval-region (point) (mark t)))
       ('c-mode (cling-send-region (point) (mark t)))
       ('c++-mode (cling-send-region (point) (mark t)))
+      ('csharp-mode (my/csharp-run-repl))
       (_ (eval-region (point) (mark t) t))))
 
   (defun my/auto-eval-buffer ()
@@ -3875,6 +3844,7 @@ Shows information in echo area
       ('fsharp-mode (fsharp-eval-region (point-min) (point-max)))
       ('c-mode (cling-send-buffer))
       ('c++-mode (cling-send-buffer))
+      ('csharp-mode (my/csharp-run-repl))
       (_ (eval-buffer nil))))
 
   (defun my/auto-eval-print ()
@@ -3882,7 +3852,8 @@ Shows information in echo area
     (pcase major-mode
       ('scheme-mode (geiser-eval-last-sexp t))
       ('clojure-mode (cider-eval-print-last-sexp))
-      (_ eval-print-last-sexp nil)))
+      ('csharp-mode (my/csharp-run-repl))
+      (_ (eval-print-last-sexp nil))))
 
   (define-key my/leader-map (kbd "e") 'my/auto-eval)
   (define-key my/leader-map (kbd "E") 'my/auto-eval-buffer)
@@ -4095,36 +4066,12 @@ or
 =ENSIME= 
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'lsp-java)
-
-  (add-hook 'java-mode-hook 'lsp-java-enable)
-  (add-hook 'java-mode-hook (lambda () (lsp-ui-flycheck-enable t)))
-  (add-hook 'java-mode-hook 'lsp-ui-sideline-mode)
-
-  ;; set the projects that are going to be imported into the workspace.
-  (setq lsp-java--workspace-folders 
-        (list 
-         "~/eclipse-workspace/"
-         "~/workspace"))
+  (require 'lsp-java)
 
   (defun my/java-mode ()
-    (aggressive-indent-mode 0)
-
-    ;; TODO right now these are permanently set if you start lsp-java mode
-    ;; Taken from lsp-java readme
-    (setq-local lsp-inhibit-message t)
-    (setq-local lsp-eldoc-render-all nil)
-    (setq-local lsp-highlight-symbol-at-point nil)
-
-    (setq-local lsp-ui-sideline-enable t)
-    (setq-local lsp-ui-sideline-show-symbol t)
-    (setq-local lsp-ui-sideline-show-hover t)
-    (setq-local lsp-ui-sideline-show-code-actions t)
-    (setq-local lsp-ui-sideline-update-mode 'point)
-
-    ;; Requested by lsp java
-    (setq-local company-lsp-enable-snippet t)
-    (setq-local company-lsp-cache-candidates t)
-    (push 'company-lsp company-backends))
+    (aggressive-indent-mode -1)
+    (lsp)
+    )
 
   (add-hook 'java-mode-hook 'my/java-mode)
 #+END_SRC
@@ -4348,12 +4295,25 @@ https://github.com/brianqq/inferior-cling
   (straight-use-package 'csharp-mode)
 #+END_SRC
 
+*** REPL
+#+BEGIN_SRC emacs-lisp
+  (defun my/csharp-run-repl()
+    (interactive)
+    (eshell) (insert "csharp") (eshell-send-input))
+#+END_SRC
+
 *** Omnisharp-emacs
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'omnisharp)
 
-  (add-hook 'csharp-mode-hook 'omnisharp-mode)
-  (add-hook 'csharp-mode-hook (lambda () (push 'company-omnisharp company-backends)))
+  ;;(add-hook 'csharp-mode-hook (lambda () (push 'company-omnisharp company-backends)))
+
+  (eval-after-load 'company '(add-to-list 'company-backends #'company-omnisharp))
+
+  ;; This hack fixes omnisharp on arch linux
+  ;; Read https://github.com/OmniSharp/omnisharp-emacs/issues/459
+  (if (eq system-type 'gnu/linux)
+      (let ((dotnet-version (string-trim (shell-command-to-string "dotnet --version")))) (setenv "MSBuildSDKsPath" (format "/opt/dotnet/sdk/%s/Sdks" dotnet-version))))
 #+END_SRC
 
 **** Keys
@@ -4392,6 +4352,16 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 ;;       (message "~/.omnisharp/omnisharp.json created")
 ;;       )
 ;;   )
+#+END_SRC
+
+*** My csharp mode
+#+BEGIN_SRC emacs-lisp
+  (defun my/csharp-mode ()
+    (omnisharp-mode)
+    (company-mode)
+    (flycheck-mode))
+
+  (add-hook 'csharp-mode-hook 'my/csharp-mode)
 #+END_SRC
 
 ** F#
@@ -4566,11 +4536,12 @@ Enable org mode for .org.gpg files
     (eshell)
     (my/give-buffer-unique-name "*eshell*"))
 
-  (defun my/eshell-insert-history ()
-    (interactive)
-    (insert (completing-read "Eshell history: "
-                             (delete-dups
-                              (ring-elements eshell-history-ring)))))
+  ;; Use `counsel-esh-history' instead
+  ;; (defun my/eshell-insert-history ()
+  ;; (interactive)
+  ;; (insert (completing-read "Eshell history: "
+  ;; (delete-dups
+  ;; (ring-elements eshell-history-ring)))))
 #+END_SRC
 
 ** Aliases
@@ -4647,7 +4618,7 @@ Disable rainbow delimiters
     (evil-define-key 'normal eshell-mode-map (kbd "RET") 'eshell-send-input)
     (define-key eshell-mode-map [remap evil-ret] 'eshell-send-input)
 
-    (define-key my/eshell-mode-map (kbd "k") 'my/eshell-insert-history)
+    (define-key my/eshell-mode-map (kbd "k") 'counsel-esh-history)
 
     (evil-define-key 'normal eshell-mode-map (kbd "C-p") 'eshell-previous-matching-input-from-input)
     (evil-define-key 'normal eshell-mode-map (kbd "C-n") 'eshell-next-matching-input-from-input)
@@ -4733,29 +4704,28 @@ Disable rainbow delimiters
 *** n(search-next) <--> j(Move up)
 **** n
 #+BEGIN_SRC emacs-lisp
-  (define-key evil-window-map "n" 'evil-window-down)
-  (define-key evil-window-map "N" 'evil-window-move-very-bottom)
+  (my/evil-normal-define-key "n" 'evil-next-line)
 
-(my/evil-normal-define-key "n" 'evil-next-line)
-
-(my/evil-normal-define-key "N" 'evil-join)
-
+  (my/evil-normal-define-key "N" 'evil-join)
 
   ;; ex
   ;;  (evil-ex-define-cmd "j[oin]" 'evil-ex-join)
   ;;  (evil-ex-define-cmd "ju[mps]" 'evil-show-jumps)
 
-(my/evil-normal-define-key "gN" 'evil-join-whitespace)
+  (my/evil-normal-define-key "gN" 'evil-join-whitespace)
 
-(my/evil-normal-define-key "gn" 'evil-next-visual-line)
+  (my/evil-normal-define-key "gn" 'evil-next-visual-line)
 
   (define-key evil-window-map (kbd "C-S-n") 'evil-window-move-very-bottom)
 #+END_SRC
 
 **** j 
 #+BEGIN_SRC emacs-lisp
-  (my/evil-normal-define-key "j" 'evil-search-previous)
-  (my/evil-normal-define-key "J" 'evil-search-next)
+  ;; (my/evil-normal-define-key "j" 'evil-search-next)
+  ;; (my/evil-normal-define-key "J" 'evil-search-previous)
+
+  (my/evil-normal-define-key "j" 'isearch-repeat-forward)
+  (my/evil-normal-define-key "J" 'isearch-repeat-backward)
 
   ;; ex
   ;;(evil-ex-define-cmd "new" 'evil-window-new)
@@ -4764,6 +4734,26 @@ Disable rainbow delimiters
 
   (my/evil-normal-define-key "gj" 'evil-next-match)
   (my/evil-normal-define-key "gJ" 'evil-previous-match)
+#+END_SRC
+
+*** Rebind search key 
+#+BEGIN_SRC emacs-lisp
+  ;; (my/evil-normal-define-key "s" 'evil-search-forward)
+  ;; (my/evil-normal-define-key "S" 'evil-search-backward)
+  ;; (define-key evil-visual-state-map "s" 'evil-search-forward)
+  ;; (define-key evil-visual-state-map "S" 'evil-search-backward)
+
+  (my/evil-normal-define-key "s" 'isearch-forward)
+  (my/evil-normal-define-key "S" 'isearch-backward)
+
+  (define-key evil-visual-state-map "s" 'isearch-forward)
+  (define-key evil-visual-state-map "S" 'isearch-backward)
+
+  (my/evil-normal-define-key "/" 'evil-substitute)
+  (my/evil-normal-define-key "?" 'evil-change-whole-line)
+
+  (define-key evil-visual-state-map "/" 'evil-substitute)
+  (define-key evil-visual-state-map "?" 'evil-change-whole-line)
 #+END_SRC
 
 *** Rebind save key
@@ -6211,6 +6201,61 @@ Mode for writing mail
   (define-key my/profiler-map (kbd "r") 'profiler-report)
 #+END_SRC
 
+** Install software
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/software-install-map)
+  (define-key my/system-commands-map (kbd "i") 'my/software-install-map)
+#+END_SRC
+
+*** Install eclipse java language server
+For use with lsp-java
+#+BEGIN_SRC emacs-lisp
+  (defun my/install-eclipse-java-language-server()
+    (interactive)
+    (shell-command "
+  cd ~
+  rm -rf ~/.emacs.d/eclipse.jdt.ls/server/
+  mkdir -p ~/.emacs.d/eclipse.jdt.ls/server/
+  wget http://download.eclipse.org/jdtls/snapshots/jdt-language-server-latest.tar.gz -O /tmp/jdt-latest.tar
+  tar xf /tmp/jdt-latest.tar -C ~/.emacs.d/eclipse.jdt.ls/server/
+  "))
+
+  (define-key my/software-install-map (kbd "j") 'my/install-eclipse-java-language-server)
+#+END_SRC
+
+*** Install pdf tools
+#+BEGIN_SRC emacs-lisp
+  (define-key my/software-install-map (kbd "p") 'pdf-tools-install)
+#+END_SRC
+
+*** Install omnisharp
+#+BEGIN_SRC emacs-lisp
+  (define-key my/software-install-map (kbd "o") 'omnisharp-install-server)
+#+END_SRC
+
+*** Install rtags
+You need llvm
+#+BEGIN_SRC emacs-lisp
+  ;; (defun my/install-rtags ()
+    ;; (interactive)
+    ;; (async-shell-command " cd ~
+  ;; git clone --recursive https://github.com/Andersbakken/rtags.git
+  ;; cd rtags
+  ;; cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 .
+  ;; make"))
+;; 
+  ;; (define-key my/software-install-map (kbd "r") 'my/install-rtags)
+#+END_SRC
+
+*** Compile config
+#+BEGIN_SRC emacs-lisp
+  (defun my/compile-config ()
+    (interactive)
+    (byte-compile-file my/config-exported-location nil))
+
+  (define-key my/software-install-map (kbd "C-c") 'my/compile-config)
+#+END_SRC
+
 * Networking
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/net-utils-map)
@@ -6335,8 +6380,14 @@ TODO counsel-tramp
 * Spelling
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/spell-map)
-  (define-key my/leader-map (kbd "C-l") 'my/spell-map)
+  (define-key my/leader-map (kbd "I") 'my/spell-map)
 
+  (define-key my/spell-map (kbd "d") 'ispell-change-dictionary)
+  (define-key my/spell-map (kbd "s") 'flyspell-mode)
+#+END_SRC
+
+** Company
+#+BEGIN_SRC emacs-lisp
   (defun my/toggle-company-ispell ()
     (interactive)
     (cond
@@ -6347,8 +6398,6 @@ TODO counsel-tramp
       (add-to-list 'company-backends 'company-ispell)
       (message "company-ispell enabled!"))))
 
-  (define-key my/spell-map (kbd "l") 'ispell-change-dictionary)
-  (define-key my/spell-map (kbd "s") 'flyspell-mode)
   (define-key my/spell-map (kbd "c") 'my/toggle-company-ispell)
 #+END_SRC
 
