@@ -2645,6 +2645,8 @@ Vim bindings to change fold
 
   (evil-define-key 'normal ivy-minibuffer-map (kbd "DEL") 'ivy-backward-delete-char)
   (evil-define-key 'insert ivy-minibuffer-map (kbd "DEL") 'ivy-backward-delete-char)
+
+  (evil-define-key 'normal ivy-minibuffer-map (kbd "RET") 'ivy-done)
 #+END_SRC
 
 ** Counsel
