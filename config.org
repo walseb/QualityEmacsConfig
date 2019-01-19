@@ -637,6 +637,11 @@ Stop custom from editing init.el
 
 ** Bind evil key
 #+BEGIN_SRC emacs-lisp
+  (defun my/evil-normal-define-key-in-mode (mode key command)
+    (interactive)
+    (evil-define-key 'normal mode (kbd key) command)
+    (evil-define-key 'motion mode (kbd key) command))
+
   (defun my/evil-normal-define-key (key command)
     (interactive)
     (define-key evil-normal-state-map (kbd key) command)
@@ -3741,6 +3746,11 @@ Version 2015-07-30"
   ;; (smartparens-global-mode)
 #+END_SRC
     
+*** Quick-peek
+#+BEGIN_SRC emacs-lisp
+  ;; (setq quick-peek-spacer nil)
+#+END_SRC
+
 *** Eldoc
 Shows information in echo area
 #+BEGIN_SRC emacs-lisp
@@ -3750,6 +3760,13 @@ Shows information in echo area
   (setq eldoc-idle-delay 0)
 
   (setq tooltip-resize-echo-area t)
+#+END_SRC
+
+**** Inline
+#+BEGIN_SRC emacs-lisp
+  ;; (straight-use-package 'eldoc-overlay)
+  ;; 
+  ;; (global-eldoc-overlay-mode)
 #+END_SRC
 
 *** Aggressive indent
@@ -3953,7 +3970,6 @@ Shows information in echo area
 *** Company LSP
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'company-lsp)
-
 #+END_SRC
 
 *** LSP-ui
@@ -4522,7 +4538,7 @@ Enable org mode for .org.gpg files
 #+END_SRC
 
 * Eshell
- ;https://github.com/howardabrams/dot-files/blob/master/emacs-eshell.org
+ https://github.com/howardabrams/dot-files/blob/master/emacs-eshell.org
 #+BEGIN_SRC emacs-lisp
   (require 'eshell)
   ;; Change to temporary name before renaming
@@ -4544,6 +4560,43 @@ Enable org mode for .org.gpg files
   ;; (insert (completing-read "Eshell history: "
   ;; (delete-dups
   ;; (ring-elements eshell-history-ring)))))
+#+END_SRC
+
+** Autocompletion
+#+BEGIN_SRC emacs-lisp
+  (defun company-eshell-history (command &optional arg &rest ignored)
+    (interactive (list 'interactive))
+    (cl-case command
+      (interactive (company-begin-backend 'company-eshell-history))
+      (prefix (and (eq major-mode 'eshell-mode)
+                   (let ((word (company-grab-word)))
+                     (save-excursion
+                       (eshell-bol)
+                       (and (looking-at-p (s-concat word "$")) word)))))
+      (candidates (remove-duplicates
+                   (->> (ring-elements eshell-history-ring)
+                      (remove-if-not (lambda (item) (s-prefix-p arg item)))
+                      (mapcar 's-trim))
+                   :test 'string=))
+      (sorted t)))
+
+  (add-to-list 'company-backends 'company-eshell-history)
+#+END_SRC
+
+** Eldoc
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'esh-help)
+
+  (require 'esh-help)
+  (setup-esh-help-eldoc)
+#+END_SRC
+
+** Did you mean
+#+BEGIN_SRC emacs-lisp
+;; (straight-use-package 'eshell-did-you-mean)
+
+;; (require 'eshell-did-you-mean)
+;; (eshell-did-you-mean-setup)
 #+END_SRC
 
 ** Aliases
@@ -4577,6 +4630,12 @@ Disable rainbow delimiters
 #+BEGIN_SRC emacs-lisp
   (require 'em-term)
   (add-to-list 'eshell-visual-commands "vim")
+  (add-to-list 'eshell-visual-commands "wifi-menu")
+
+  (setq eshell-visual-subcommands
+        '(("git" "log" "diff" "show")
+          ("sudo" "wifi-menu") 
+          ("sudo" "vi" "visudo")))
 #+END_SRC
 
 ** Remove banner
@@ -5156,72 +5215,72 @@ Redefine function to attempt to open image if link at point wasn't found
         (exwm-input-send-next-key 2))
 
    ;;; Normal
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "f") 'my/exwm-firefox-evil-link-hint)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "f" 'my/exwm-firefox-evil-link-hint)
 
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up)
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-p" 'exwm-firefox-core-up)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-n" 'exwm-firefox-core-down)
 
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "p" 'exwm-firefox-core-up)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "n" 'exwm-firefox-core-down)
 
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-l") 'exwm-firefox-core-right)
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-h") 'exwm-firefox-core-left)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-l" 'exwm-firefox-core-right)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-h" 'exwm-firefox-core-left)
 
-      (evil-define-key 'motion exwm-firefox-evil-mode-map (kbd "C-l") 'exwm-firefox-core-right)
-      (evil-define-key 'motion exwm-firefox-evil-mode-map (kbd "C-h") 'exwm-firefox-core-left)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-l" 'exwm-firefox-core-right)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-h" 'exwm-firefox-core-left)
 
-      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-l") '(lambda () (interactive) (exwm-input--fake-key 'delete)))
-      (evil-define-key 'insert  exwm-firefox-evil-mode-map (kbd "C-h") '(lambda () (interactive) (exwm-input--fake-key 'backspace)))
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-l" '(lambda () (interactive) (exwm-input--fake-key 'delete)))
+      (my/evil-normal-define-key-in-mode  exwm-firefox-evil-mode-map "C-h" '(lambda () (interactive) (exwm-input--fake-key 'backspace)))
 
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "p" 'exwm-firefox-core-up)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "n" 'exwm-firefox-core-down)
 
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up)
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-p" 'exwm-firefox-core-up)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-n" 'exwm-firefox-core-down)
 
-      (evil-define-key 'motion exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up)
-      (evil-define-key 'motion exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-p" 'exwm-firefox-core-up)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-n" 'exwm-firefox-core-down)
 
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-w" 'exwm-firefox-core-half-page-down)
 
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "N") 'exwm-firefox-core-tab-next)
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "P") 'exwm-firefox-core-tab-previous)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "N" 'exwm-firefox-core-tab-next)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "P" 'exwm-firefox-core-tab-previous)
 
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "s") 'exwm-firefox-core-tab-close)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "s" 'exwm-firefox-core-tab-close)
 
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "j") 'exwm-firefox-core-find-next)
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "J") 'exwm-firefox-core-find-previous)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "j" 'exwm-firefox-core-find-next)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "J" 'exwm-firefox-core-find-previous)
 
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-s") 'exwm-firefox-core-quick-find)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-s" 'exwm-firefox-core-quick-find)
 
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
-      (evil-define-key 'normal exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-y" 'exwm-firefox-core-copy)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-k" 'exwm-firefox-core-paste)
 
    ;;; Visual
-      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up-select)
-      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down-select)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "p" 'exwm-firefox-core-up-select)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "n" 'exwm-firefox-core-down-select)
 
-      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down-select)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-w" 'exwm-firefox-core-half-page-down-select)
 
-      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "j") 'exwm-firefox-core-find-next)
-      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "J") 'exwm-firefox-core-find-previous)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "j" 'exwm-firefox-core-find-next)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "J" 'exwm-firefox-core-find-previous)
 
-      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
-      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-y" 'exwm-firefox-core-copy)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-k" 'exwm-firefox-core-paste)
 
    ;;; Insert
-      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up-select)
-      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down-select)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-p" 'exwm-firefox-core-up-select)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-n" 'exwm-firefox-core-down-select)
 
-      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-u") 'exwm-firefox-core-half-page-up)
-      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
-    
-      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-w") '(lambda () (interactive) (exwm-input--fake-key ?\å)))
-      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-r") '(lambda () (interactive) (exwm-input--fake-key ?\ä)))
-      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-j") '(lambda () (interactive) (exwm-input--fake-key ?\ö)))
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-u" 'exwm-firefox-core-half-page-up)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-w" 'exwm-firefox-core-half-page-down)
 
-      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
-      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)))
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "M-w" '(lambda () (interactive) (exwm-input--fake-key ?\å)))
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "M-r" '(lambda () (interactive) (exwm-input--fake-key ?\ä)))
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "M-j" '(lambda () (interactive) (exwm-input--fake-key ?\ö)))
+
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-y" 'exwm-firefox-core-copy)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-k" 'exwm-firefox-core-paste)))
 #+END_SRC
 
 ** Next browser
@@ -7105,6 +7164,11 @@ https://www.emacswiki.org/emacs/ArtistMode
     (set-face-attribute 'avy-lead-face-0 nil :foreground my/background-color :background my/foreground-color-2)
     (set-face-attribute 'avy-lead-face-1 nil :foreground my/background-color :background my/foreground-color-4)
     (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background my/foreground-color-6)
+
+    ;;; Eldoc inline
+    ;; If eldoc overlay is in use
+    (if (require 'eldoc-overlay nil 'noerror)
+        (set-face-attribute 'quick-peek-background-face nil :foreground my/foreground-color-6 :background my/background-color))
 
     ;;; Eshell
     (require 'em-prompt)
