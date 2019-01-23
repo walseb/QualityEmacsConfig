@@ -522,6 +522,12 @@ Default file-size-human-readable returns decimal values
 ;; (my/inline-overlay-print "test")
 #+END_SRC
 
+** Trim string
+#+BEGIN_SRC emacs-lisp
+  (defun my/trim-whitespace (string)
+    (replace-regexp-in-string "\\`[ \t\n]*" "" (replace-regexp-in-string "[ \t\n]*\\'" "" string)))
+#+END_SRC
+
 * Fonts
 ** Normal fonts
 #+BEGIN_SRC emacs-lisp  
@@ -5368,6 +5374,22 @@ If enabled it auto enables projectile, which has high CPU usage
   (require 'magit-mode)
   (define-key magit-mode-map (kbd "M-<tab>") 'my/toggle-switch-to-minibuffer)
 #+END_SRC
+**** General
+#+BEGIN_SRC emacs-lisp
+  (require 'magit)
+
+  (my/evil-normal-define-key-in-mode magit-mode-map "0" 'magit-diff-default-context)
+  (my/evil-normal-define-key-in-mode magit-mode-map "1" 'magit-section-show-level-1)
+  (my/evil-normal-define-key-in-mode magit-mode-map  "2" 'magit-section-show-level-2)
+  (my/evil-normal-define-key-in-mode magit-mode-map  "3" 'magit-section-show-level-3)
+  (my/evil-normal-define-key-in-mode magit-mode-map  "4" 'magit-section-show-level-4)
+
+  ;; Can't unbind "s"?
+  ;;(my/evil-normal-define-key-in-mode magit-mode-map  "s" 'isearch-forward)
+  ;;(define-key magit-status-mode-map "s" 'isearch-forward)
+  ;;(my/evil-normal-define-key-in-mode magit-status-mode-map  "s" 'isearch-forward)
+  ;;(my/evil-normal-define-key-in-mode magit-untracked-section-map  "s" 'isearch-forward)
+#+END_SRC
 
 ** diff-hl
 #+BEGIN_SRC emacs-lisp
@@ -5395,7 +5417,7 @@ If enabled it auto enables projectile, which has high CPU usage
   (define-key my/vc-map (kbd "n") 'diff-hl-next-hunk)
   (define-key my/vc-map (kbd "p") 'diff-hl-previous-hunk)
 
-  (define-key my/vc-map (kbd "r") 'diff-hl-revert-hunk)
+  (define-key my/vc-map (kbd "k") 'diff-hl-revert-hunk)
   (define-key my/vc-map (kbd "=") 'diff-hl-diff-goto-hunk)
 
   (define-key my/vc-map (kbd "o") 'counsel-git-grep)
@@ -6952,7 +6974,8 @@ https://www.emacswiki.org/emacs/ArtistMode
   (add-hook 'magit-mode-hook '(lambda () (interactive) (prettify-symbols-mode -1)))
 #+END_SRC
 
-** Generic
+** Symbols
+*** Generic
 #+BEGIN_SRC emacs-lisp
   (defvar my/generic-equal-symbols 
     '(
@@ -6972,17 +6995,16 @@ https://www.emacswiki.org/emacs/ArtistMode
       (">>" . ?≫)))
 
   (defvar my/generic-greek-symbols 
-    '(("lambda" . ?λ)
-      ))
+    '(("lambda" . ?λ)))
 #+END_SRC
 
-** Fsharp
+*** Fsharp
 #+BEGIN_SRC emacs-lisp
   (defvar my/fsharp-symbols 
     (list))
 #+END_SRC
 
-** C/CPP
+*** C/CPP
 #+BEGIN_SRC emacs-lisp
   (defvar my/fsharp-symbols 
     '(
@@ -6990,7 +7012,7 @@ https://www.emacswiki.org/emacs/ArtistMode
       ))
 #+END_SRC
 
-** Elisp
+*** Elisp
 #+BEGIN_SRC emacs-lisp
   (setq my/elisp-symbols 
         '(
@@ -6998,13 +7020,14 @@ https://www.emacswiki.org/emacs/ArtistMode
           ))
 #+END_SRC
     
-** Set symbol by mode
+*** Set symbol by mode
 #+BEGIN_SRC emacs-lisp
   (setq-default prettify-symbols-alist
                 (append
                  my/generic-greek-symbols 
                  my/generic-equal-symbols
-                 my/generic-arrow-symbols))
+                 my/generic-arrow-symbols
+                 ))
 
   (add-hook 'prog-mode-hook (lambda () (interactive)
                               (setq-local prettify-symbols-alist
@@ -7041,6 +7064,34 @@ https://www.emacswiki.org/emacs/ArtistMode
   ;; (add-hook 'emacs-lisp-mode-hook
   ;; (lambda ()
   ;; (push '(">=" . ?≥) prettify-symbols-alist)))
+#+END_SRC
+
+** Comment to symbols
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'prog-mode-hook (lambda () (interactive) 
+                              (setq-local prettify-symbols-alist
+                                          (append
+                                           prettify-symbols-alist
+                                           `((,(my/trim-whitespace comment-start) . ?|)))))
+            t)
+
+  (defun my/prettify-symbols-default-compose-p (start end _match)
+    "Return true iff the symbol MATCH should be composed.
+  The symbol starts at position START and ends at position END.
+  This is the default for `prettify-symbols-compose-predicate'
+  which is suitable for most programming languages such as C or Lisp."
+    ;; Check that the chars should really be composed into a symbol.
+    (let* ((syntaxes-beg (if (memq (char-syntax (char-after start)) '(?w ?_))
+                             '(?w ?_) '(?. ?\\)))
+           (syntaxes-end (if (memq (char-syntax (char-before end)) '(?w ?_))
+                             '(?w ?_) '(?. ?\\))))
+      (not (or (memq (char-syntax (or (char-before start) ?\s)) syntaxes-beg)
+               (memq (char-syntax (or (char-after end) ?\s)) syntaxes-end)
+               ;; It looks like this part makes it ignore comments, remove it
+               ;;(nth 8 (syntax-ppss))
+               ))))
+
+  (setq-default prettify-symbols-compose-predicate #'my/prettify-symbols-default-compose-p)
 #+END_SRC
 
 * Theme
