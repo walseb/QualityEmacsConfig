@@ -227,6 +227,10 @@ Add a .ccls file and format it like this
   -I/usr/include/SDL2
 #+END_SRC
 (can also use clang++, etc)
+
+*** Other reason
+It could be that LSP doesn't tell CCLS the correct workspace
+To fix this do =M-x lsp-workspace-folders-remove= then select what you think is the current workspace then =M-x lsp-workspace-folders-add= and select the actual root (the file with a =.ccls= file in it)
  
 ** GDB doesn't work properly
 make sure you compiled with the =-g= flag
@@ -308,6 +312,11 @@ Bootstrap straight.el
   (straight-use-package 'dash)
   (require 's)
   (require 'dash)
+#+END_SRC
+
+** Elpatch
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'el-patch)
 #+END_SRC
 
 * Persistent keys
@@ -642,10 +651,32 @@ Stop custom from editing init.el
     (evil-define-key 'normal mode (kbd key) command)
     (evil-define-key 'motion mode (kbd key) command))
 
+  (defun my/evil-insert-define-key-in-mode (mode key command)
+    (interactive)
+    (evil-define-key 'insert mode (kbd key) command))
+
+  (defun my/evil-universal-define-key-in-mode (mode key command)
+    (evil-define-key 'visual mode (kbd key) command))
+
+  (defun my/evil-universal-define-key-in-mode (mode key command)
+    (interactive)
+    (my/evil-normal-define-key-in-mode mode key command)
+    (my/evil-universal-define-key-in-mode mode key command)
+    (my/evil-insert-define-key-in-mode mode key command))
+
+
+
+
   (defun my/evil-normal-define-key (key command)
     (interactive)
     (define-key evil-normal-state-map (kbd key) command)
     (define-key evil-motion-state-map (kbd key) command))
+
+  (defun my/evil-normal-visual-define-key (key command)
+    (interactive)
+    (define-key evil-normal-state-map (kbd key) command)
+    (define-key evil-motion-state-map (kbd key) command)
+    (define-key evil-visual-state-map (kbd key) command))
 
   (defun my/evil-universal-define-key (key command)
     (interactive)
@@ -739,7 +770,7 @@ https://github.com/supermomonga/evil-textobj-entire
 *** Evil-line
 https://github.com/syohex/evil-textobj-line
 #+BEGIN_SRC emacs-lisp
-  (defun evil-line-range (count beg end type &optional inclusive)
+  (defun my/evil-line-range (count beg end type &optional inclusive)
     (if inclusive
         (evil-range (line-beginning-position) (line-end-position))
       (let ((start (save-excursion
@@ -751,15 +782,15 @@ https://github.com/syohex/evil-textobj-line
                    (point))))
         (evil-range start end))))
 
-  (evil-define-text-object evil-a-line (count &optional beg end type)
+  (evil-define-text-object my/evil-a-line (count &optional beg end type)
     "Select range between a character by which the command is followed."
-    (evil-line-range count beg end type t))
-  (evil-define-text-object evil-inner-line (count &optional beg end type)
+    (my/evil-line-range count beg end type t))
+  (evil-define-text-object my/evil-inner-line (count &optional beg end type)
     "Select inner range between a character by which the command is followed."
-    (evil-line-range count beg end type))
+    (my/evil-line-range count beg end type))
 
-  (define-key evil-outer-text-objects-map "l" 'evil-a-line)
-  (define-key evil-inner-text-objects-map "l" 'evil-inner-line)
+  (define-key evil-outer-text-objects-map "l" 'my/evil-a-line)
+  (define-key evil-inner-text-objects-map "l" 'my/evil-inner-line)
 #+END_SRC
 
 *** Evil-indent-plus
@@ -1790,25 +1821,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 #+BEGIN_SRC emacs-lisp
   (add-hook 'org-src-mode-hook '(lambda () (interactive) (setq org-src--saved-temp-window-config nil)))
 #+END_SRC
-   
-*** SRC region templates
-**** Emacs lisp
-#+BEGIN_SRC emacs-lisp
-  (add-to-list 'org-structure-template-alist
-               '("el" "#+BEGIN_SRC emacs-lisp\n?\n#+END_SRC"))
-#+END_SRC
-
-**** Plant uml
-#+BEGIN_SRC emacs-lisp
-  (add-to-list 'org-structure-template-alist
-               '("uml" "#+BEGIN_SRC plantuml\n?\n#+END_SRC"))
-#+END_SRC
-
-**** R export to image
-#+BEGIN_SRC emacs-lisp
-  (add-to-list 'org-structure-template-alist
-               '("ri" "#+BEGIN_SRC R :results output graphics :file RImage.png\n?\n#+END_SRC"))
-#+END_SRC
 
 ** Export
 TODO
@@ -1968,57 +1980,6 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
   (define-key my/org-show-mode-map (kbd "l") 'org-toggle-link-display)
 #+END_SRC
 
-*** Macros
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/org-macros-map)
-  (define-key my/org-mode-map (kbd "m") 'my/org-macros-map)
-#+END_SRC
-
-**** Org
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/org-org-macros-map)
-  (define-key my/org-macros-map (kbd "o") 'my/org-org-macros-map)
-
-  ;; Center text, doesn't work for all exports
-  (define-key my/org-org-macros-map (kbd "c") (lambda () (interactive) (insert "#+BEGIN_CENTER") (newline) (newline) (insert "#+END_CENTER")))
-
-  ;; Comment
-  (define-key my/org-org-macros-map (kbd "C") (lambda () (interactive) (insert "#+BEGIN_COMMENT") (newline) (newline) (insert "#+END_COMMENT")))
-#+END_SRC
-
-**** Latex
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/org-latex-macros-map)
-  (define-key my/org-macros-map (kbd "l") 'my/org-latex-macros-map)
-
-  ;;Literal latex code for export
-  (define-key my/org-latex-macros-map (kbd "i") (lambda () (interactive) (insert "#+LATEX: ")))
-
-  ;; Header
-  (define-key my/org-latex-macros-map (kbd "h") (lambda () (interactive) (insert "#+LATEX_HEADER: ")))
-
-  ;; Newline
-  (define-key my/org-latex-macros-map (kbd "RET") (lambda () (interactive) (insert "#+LATEX: \\newpage")))
-
-  ;; Fix huge margins
-  (define-key my/org-latex-macros-map (kbd "4") (lambda () (interactive) (insert "#+LATEX_HEADER: \\usepackage[a4paper, total={6in, 8in}]{geometry}")))
-
-  ;; Make lists compact
-  (define-key my/org-latex-macros-map (kbd "C-l") (lambda () (interactive) (insert "#+LATEX_HEADER: \\usepackage{enumitem}") (newline) (insert "#+LATEX_HEADER: \\setitemize{noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt}")))
-#+END_SRC
-
-**** HTML
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/org-html-macros-map)
-  (define-key my/org-macros-map (kbd "h") 'my/org-html-macros-map)
-
-  ;;Literal HTML code for export
-  (define-key my/org-html-macros-map (kbd "i") (lambda () (interactive) (insert "#+HTML: ")))
-
-  ;;HTML break line
-  (define-key my/org-html-macros-map (kbd "RET") (lambda () (interactive) (insert "#+HTML: <br><br />")))
-#+END_SRC
-
 * Outline
 http://www.modernemacs.com/post/outline-ivy/
 #+BEGIN_SRC emacs-lisp
@@ -2071,7 +2032,10 @@ use "^\s*" instead of "^"
 #+BEGIN_SRC emacs-lisp
   (setq outline-regexp  "[*\^L]+")
 
-  (defun outshine-chomp (str)
+  (el-patch-feature outline)
+  (el-patch-feature outshine)
+
+  (el-patch-defun outshine-chomp (str)
     "Chomp leading and trailing whitespace from STR."
     (save-excursion
       (save-match-data
@@ -2081,7 +2045,7 @@ use "^\s*" instead of "^"
           (setq str (replace-match "" t t str)))
         str)))
 
-  (defun outshine-change-level (delta)
+  (el-patch-defun outshine-change-level (delta)
     "Workhorse for `outline-demote' and `outline-promote'."
     (let* ((headlist (outshine-headings-list))
            (atom (outshine-headings-atom headlist))
@@ -2114,7 +2078,7 @@ use "^\s*" instead of "^"
           (while (re-search-forward re end t)
             (outshine-change-heading headlist delta atom))))))
 
-  (defun outshine-headings-list ()
+  (el-patch-defun outshine-headings-list ()
     "Return a list of relevant headings, either a user/mode defined
   list, or an alist derived from scanning the buffer."
     (let (headlist)
@@ -2154,7 +2118,7 @@ use "^\s*" instead of "^"
       ;; OK, return the list
       headlist))
 
-  (defun outshine-calc-outline-level ()
+  (el-patch-defun outshine-calc-outline-level ()
     "Calculate the right outline level for the
     outshine-regexp"
     (save-excursion
@@ -2196,13 +2160,14 @@ use "^\s*" instead of "^"
 
 ** Allow indented outlines - outline mode
 #+BEGIN_SRC emacs-lisp
-  (defvar outline-font-lock-keywords
+  (el-patch-defvar outline-font-lock-keywords
     '(
       ;; Highlight headings according to the level.
       (eval . (list (concat "^\s*\\(?:" outline-regexp "\\).+")
                     0 '(outline-font-lock-face) nil t)))
     "Additional expressions to highlight in Outline mode.")
 
+  ;; `el-patch-define-minor-mode' doesn't work properly on this??
   (define-derived-mode outline-mode text-mode "Outline"
     "Set major mode for editing outlines with selective display.
   Headings are lines which start with asterisks: one for major headings,
@@ -2241,7 +2206,7 @@ use "^\s*" instead of "^"
           (list (list nil (concat "^\s*\\(?:" outline-regexp "\\).*$") 0)))
     (add-hook 'change-major-mode-hook 'outline-show-all nil t))
 
-  (defun outline-next-heading ()
+  (el-patch-defun outline-next-heading ()
     "Move to the next (possibly invisible) heading line."
     (interactive)
     ;; Make sure we don't match the heading we're at.
@@ -2251,13 +2216,13 @@ use "^\s*" instead of "^"
         (goto-char (match-beginning 0))))
 
 
-  (defun outline-previous-heading ()
+  (el-patch-defun outline-previous-heading ()
     "Move to the previous (possibly invisible) heading line."
     (interactive)
     (re-search-backward (concat "^\s*\\(?:" outline-regexp "\\)")
                         nil 'move))
 
-  (defun outline-back-to-heading (&optional invisible-ok)
+  (el-patch-defun outline-back-to-heading (&optional invisible-ok)
     (interactive)
     "Move to previous heading line, or beg of this line if it's a heading.
   Only visible heading lines are considered, unless INVISIBLE-OK is non-nil."
@@ -2282,7 +2247,7 @@ use "^\s*" instead of "^"
           (back-to-indentation)
           found)))
 
-  (defun outline-map-region (fun beg end)
+  (el-patch-defun outline-map-region (fun beg end)
     "Call FUN for every heading between BEG and END.
   When FUN is called, point is at the beginning of the heading and
   the match data is set appropriately."
@@ -2298,7 +2263,7 @@ use "^\s*" instead of "^"
                     (not (eobp)))
           (funcall fun)))))
 
-  (defun outline-next-visible-heading (arg)
+  (el-patch-defun outline-next-visible-heading (arg)
     "Move to the next visible heading line.
   With ARG, repeats or can move backward if negative.
   A heading line is one that starts with a `*' (or that
@@ -2327,7 +2292,7 @@ use "^\s*" instead of "^"
       (if found-heading-p (beginning-of-line))))
 
   ;; Fixes `(outline-next-preface)' used in `(outline-hide-body)'
-  (defun outline-next-preface ()
+  (el-patch-defun outline-next-preface ()
     "Skip forward to just before the next heading line.
   If there's no following heading line, stop before the newline
   at the end of the buffer."
@@ -2686,10 +2651,10 @@ Vim bindings to change fold
   https://github.com/nathankot/dotemacs/blob/master/init.el
 #+BEGIN_SRC emacs-lisp
 
-  (defvar counsel-flycheck-history nil
+  (defvar my/counsel-flycheck-history nil
     "History for `counsel-flycheck'")
 
-  (defun counsel-flycheck ()
+  (defun my/counsel-flycheck ()
     (interactive)
     (if (not (bound-and-true-p flycheck-mode))
         (message "Flycheck mode is not available or enabled")
@@ -2709,9 +2674,9 @@ Vim bindings to change fold
                           (-when-let* ( (error (get-text-property 0 'tabulated-list-id s))
                                         (pos (flycheck-error-pos error)) )
                             (goto-char (flycheck-error-pos error))))
-                :history 'counsel-flycheck-history)))
+                :history 'my/counsel-flycheck-history)))
 
-  (define-key my/leader-map (kbd "J") 'counsel-flycheck)
+  (define-key my/leader-map (kbd "J") 'my/counsel-flycheck)
 #+END_SRC
 
 ** Swiper 
@@ -3013,14 +2978,21 @@ Flycheck with extra correction for elisp packages
 
   (straight-use-package 'yasnippet-snippets)
 
-  ;;(yas-reload-all)
-
-  (add-hook 'prog-mode-hook 'yas-minor-mode-on)
+  (yas-global-mode 1)
 #+END_SRC
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-key my/leader-map (kbd "i") 'yas-insert-snippet)
+  (defvar my/yas-init nil)
+
+  (defun my/yas-insert-snippet ()
+    (interactive)
+    (when (not my/yas-init)
+      (yas-reload-all)
+      (setq my/yas-init t))
+    (call-interactively 'yas-insert-snippet))
+
+  (define-key my/leader-map (kbd "i") 'my/yas-insert-snippet)
 
   (define-key my/help-map (kbd "y") 'yas-describe-tables)
 #+END_SRC
@@ -3576,8 +3548,8 @@ Version 2015-07-30"
   (evil-define-key 'insert dired-mode-map  (kbd "Q") 'dired-do-find-regexp-and-replace)
   (evil-define-key 'normal dired-mode-map  (kbd "R") 'dired-do-rename)
   (evil-define-key 'insert dired-mode-map  (kbd "R") 'dired-do-rename)
-  (evil-define-key 'normal dired-mode-map  (kbd "S") 'dired-do-symlink)
   (evil-define-key 'insert dired-mode-map  (kbd "S") 'dired-do-symlink)
+  (evil-define-key 'Normal dired-mode-map  (kbd "S") 'dired-do-symlink)
   (evil-define-key 'insert dired-mode-map  (kbd "T") 'dired-do-touch)
   (evil-define-key 'normal dired-mode-map  (kbd "X") 'dired-do-shell-command)
   (evil-define-key 'insert dired-mode-map  (kbd "X") 'dired-do-shell-command)
@@ -3663,7 +3635,6 @@ Version 2015-07-30"
   (evil-define-key 'insert dired-mode-map (kbd "o") 'dired-find-file-other-window)
   (evil-define-key 'insert dired-mode-map (kbd "\C-o") 'dired-display-file)
   (evil-define-key 'insert dired-mode-map (kbd "p") 'dired-previous-line)
-  (evil-define-key 'normal dired-mode-map (kbd "s") 'my/dired-sort-menu)
   (evil-define-key 'insert dired-mode-map (kbd "s") 'my/dired-sort-menu)
   (evil-define-key 'insert dired-mode-map (kbd "t") 'dired-toggle-marks)
   (evil-define-key 'insert dired-mode-map (kbd "u") 'dired-unmark)
@@ -3729,6 +3700,40 @@ Version 2015-07-30"
   ;;(require 'realgud)
 #+END_SRC
 
+* Eldoc
+Shows information in echo area
+#+BEGIN_SRC emacs-lisp
+  ;; Needed??
+  ;; (add-hook 'emacs-lisp-mode-hook 'eldoc-mode)
+  (setq eldoc-echo-area-use-multiline-p t)
+  (setq-default eldoc-echo-area-use-multiline-p t)
+  (setq eldoc-idle-delay 0)
+
+  (setq tooltip-resize-echo-area t)
+
+  ;; Update function to only show documentation when not in insert mode
+  (el-patch-feature eldoc)
+  (el-patch-defun eldoc-print-current-symbol-info ()
+    "Print the text produced by `eldoc-documentation-function'."
+    ;; This is run from post-command-hook or some idle timer thing,
+    ;; so we need to be careful that errors aren't ignored.
+    (if (not (eq evil-state 'insert))
+        (with-demoted-errors "eldoc error: %s"
+          (and (or (eldoc-display-message-p)
+                   ;; Erase the last message if we won't display a new one.
+                   (when eldoc-last-message
+                     (eldoc-message nil)
+                     nil))
+               (eldoc-message (funcall eldoc-documentation-function))))))
+#+END_SRC
+
+** Inline
+#+BEGIN_SRC emacs-lisp
+  ;; (straight-use-package 'eldoc-overlay)
+  ;; 
+  ;; (global-eldoc-overlay-mode)
+#+END_SRC
+
 * Code
 ** Generic
 *** Ivy-xref
@@ -3749,24 +3754,6 @@ Version 2015-07-30"
 *** Quick-peek
 #+BEGIN_SRC emacs-lisp
   ;; (setq quick-peek-spacer nil)
-#+END_SRC
-
-*** Eldoc
-Shows information in echo area
-#+BEGIN_SRC emacs-lisp
-  (add-hook 'emacs-lisp-mode-hook 'eldoc-mode)
-  (setq eldoc-echo-area-use-multiline-p 't)
-  (setq-default eldoc-echo-area-use-multiline-p 't)
-  (setq eldoc-idle-delay 0)
-
-  (setq tooltip-resize-echo-area t)
-#+END_SRC
-
-**** Inline
-#+BEGIN_SRC emacs-lisp
-  ;; (straight-use-package 'eldoc-overlay)
-  ;; 
-  ;; (global-eldoc-overlay-mode)
 #+END_SRC
 
 *** Aggressive indent
@@ -4203,61 +4190,61 @@ Windows performance tweaks
 *** Cling
 https://github.com/brianqq/inferior-cling
 #+BEGIN_SRC emacs-lisp
-  (defun cling (&optional flags)
+  (defun my/cling (&optional flags)
     "Move to the buffer containing Cling, or create one if it does not exist. Defaults to C++11"
     (interactive)
     (let ((flags (or flags "-std=c++11"))) 
       (make-comint "inferior-cling" "cling" nil flags)
       (switch-to-buffer-other-window "*inferior-cling*")))
 
-  (defun cling-send-string (string &optional process)
+  (defun my/cling-send-string (string &optional process)
     "Send a string terminated with a newline to the inferior-cling buffer. Has the effect of executing a command"
     (let ((process (or process (get-process "inferior-cling"))))
       (comint-send-string process string)
       (comint-send-string process "\n")))
 
-  (defun cling-send-region (start end)
+  (defun my/cling-send-region (start end)
     "Sends the region in the current buffer between `start` and `end` to the inferior-cling buffer. Sends the currently selected region when called interactively."
     (interactive "r")
-    (cling-send-string (buffer-substring start end)))
+    (my/cling-send-string (buffer-substring start end)))
 
-  (defun cling-send-buffer ()
+  (defun my/cling-send-buffer ()
     "Sends the current buffer to the inferior-cling buffer."
     (interactive)
-    (cling-send-region (point-min) (point-max))) ;;do i want to wrap-raw this? 
+    (my/cling-send-region (point-min) (point-max))) ;;do i want to wrap-raw this? 
 
-  (defun cling-wrap-raw (string)
+  (defun my/cling-wrap-raw (string)
     "Wraps `string` in \".rawInput\", which tells Cling to accept function definitions"
     (format ".rawInput\n%s\n.rawInput" string))
 
-  (defun cling-wrap-region-and-send (start end)
+  (defun my/cling-wrap-region-and-send (start end)
     "Sends the region between start and end (currently selected when called interactively) to cling in raw input mode "
     (interactive "r")
-    (cling-send-string (cling-wrap-raw (buffer-substring start end))))
+    (my/cling-send-string (my/cling-wrap-raw (buffer-substring start end))))
 
-  (defun flatten-function-def ()
+  (defun my/flatten-function-def ()
     "Flattens a function definition into a single line. This makes it easier to send to the inferior-cling buffer"
     (interactive)
     (replace-regexp "
   " "" nil (mark) (point))) ;;;Why did I do this again? 
 
-  (defun select-defun ()
+  (defun my/select-defun ()
     "Selects the defun containing the point. Currently only works when point is on the line where the function's name is declared."
     (interactive)
     (move-beginning-of-line nil)
     (push-mark (point))
     (re-search-forward "{")
     (save-excursion
-     (flatten-function-def))
+      (my/flatten-function-def))
     (backward-char)
     (forward-sexp))
 
-  (defun cling-wrap-defun-and-send ()
+  (defun my/cling-wrap-defun-and-send ()
     "Sends the current defun to cling in raw input mode. Currently only works when point is on the first line of function definition."
     (interactive)
     (save-excursion
-      (select-defun)
-      (cling-wrap-region-and-send (mark) (point))
+      (my/select-defun)
+      (my/cling-wrap-region-and-send (mark) (point))
       (undo)
       (undo)));;;this is a rather leaky way of doing temporary changes. there should be some way to save buffer contents or something
   ;;;probably uses with-temp-buffer
@@ -4469,6 +4456,67 @@ TODO: Fix settings, grab them from package site
 *** Debugger
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'dap-mode)
+#+END_SRC
+
+* Macros
+#+BEGIN_SRC emacs-lisp
+  ;; (define-prefix-command 'my/macro-map)
+;; 
+  ;; (define-key my/leader-map (kbd "q") 'my/macro-map)
+#+END_SRC
+
+** Elmacro
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'elmacro)
+  ;; (require 'elmacro)
+
+  ;; (define-globalized-minor-mode my/elmacro-global-mode elmacro-mode
+    ;; (lambda ()
+      ;; (elmacro-mode 1)))
+  ;; 
+  ;; (my/elmacro-global-mode 1)
+#+END_SRC
+
+** Macro mechanisms
+#+BEGIN_SRC emacs-lisp
+  (defun my/get-interactive-commands ()
+    (let ((cmds  ()))
+      (mapatoms (lambda (s) (when (commandp s) (push s cmds))))
+      cmds))
+
+  (defvar my/current-macro-name "")
+  (defvar my/current-macro-number 0)
+
+  (defun my/macro-record-toggle ()
+    (interactive)
+    (if elmacro-mode
+        (my/macro-record-stop)
+      (my/macro-record)))
+
+  (defun my/macro-record ()
+    (setq my/current-macro-number (+ my/current-macro-number 1))
+    (setq my/current-macro-name (concat "my/rec-macro-" (number-to-string my/current-macro-number) "-" (completing-read "Macro name: " nil)))
+    (elmacro-mode 1)
+    (call-interactively 'kmacro-start-macro-or-insert-counter))
+
+  (defun my/macro-record-stop ()
+    (call-interactively 'kmacro-end-or-call-macro)
+    (elmacro-show-last-macro my/current-macro-name)
+    (elmacro-mode -1)
+    (eval-buffer)
+    )
+
+  (defun my/macro-run()
+    (interactive)
+    (call-interactively
+     (intern (ivy-read "Macros: " (reverse (sort (my/get-interactive-commands) 'string-lessp))
+                       :initial-input "^my/rec-macro- "))))
+
+  ;; Get thing
+  ;; (call-interactively  (intern "counsel-M-x"))
+
+  (my/evil-normal-visual-define-key "q" 'my/macro-record-toggle)
+  (my/evil-normal-visual-define-key "Q" 'my/macro-run)
 #+END_SRC
 
 * Encryption
@@ -5134,7 +5182,8 @@ We use class names for all windows expect for Java applications and GIMP (becaus
 *** Auto-open image at point
 Redefine function to attempt to open image if link at point wasn't found
 #+BEGIN_SRC emacs-lisp
-  (defun shr-browse-url (&optional external mouse-event)
+  (el-patch-feature shr)
+  (el-patch-defun shr-browse-url (&optional external mouse-event)
     "Browse the URL at point using `browse-url'.
   If EXTERNAL is non-nil (interactively, the prefix argument), browse
   the URL using `shr-external-browser'.
@@ -5214,73 +5263,61 @@ Redefine function to attempt to open image if link at point wasn't found
         (exwm-input--fake-key ?f)
         (exwm-input-send-next-key 2))
 
-   ;;; Normal
+      ;;; Normal
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "f" 'my/exwm-firefox-evil-link-hint)
 
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-p" 'exwm-firefox-core-up)
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-n" 'exwm-firefox-core-down)
-
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "p" 'exwm-firefox-core-up)
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "n" 'exwm-firefox-core-down)
-
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-l" 'exwm-firefox-core-right)
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-h" 'exwm-firefox-core-left)
-
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-l" 'exwm-firefox-core-right)
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-h" 'exwm-firefox-core-left)
-
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-l" '(lambda () (interactive) (exwm-input--fake-key 'delete)))
-      (my/evil-normal-define-key-in-mode  exwm-firefox-evil-mode-map "C-h" '(lambda () (interactive) (exwm-input--fake-key 'backspace)))
-
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "p" 'exwm-firefox-core-up)
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "n" 'exwm-firefox-core-down)
-
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-p" 'exwm-firefox-core-up)
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-n" 'exwm-firefox-core-down)
-
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-p" 'exwm-firefox-core-up)
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-n" 'exwm-firefox-core-down)
-
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-w" 'exwm-firefox-core-half-page-down)
-
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "N" 'exwm-firefox-core-tab-next)
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "P" 'exwm-firefox-core-tab-previous)
-
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "s" 'exwm-firefox-core-tab-close)
-
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "j" 'exwm-firefox-core-find-next)
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "J" 'exwm-firefox-core-find-previous)
-
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-s" 'exwm-firefox-core-quick-find)
-
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-y" 'exwm-firefox-core-copy)
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-k" 'exwm-firefox-core-paste)
 
-   ;;; Visual
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "p" 'exwm-firefox-core-up-select)
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "n" 'exwm-firefox-core-down-select)
+      ;;; Visual
+      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up-select)
+      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down-select)
 
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-w" 'exwm-firefox-core-half-page-down-select)
+      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up-select)
+      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down-select)
 
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "j" 'exwm-firefox-core-find-next)
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "J" 'exwm-firefox-core-find-previous)
+      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down-select)
 
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-y" 'exwm-firefox-core-copy)
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-k" 'exwm-firefox-core-paste)
+      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "j") 'exwm-firefox-core-find-next)
+      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "J") 'exwm-firefox-core-find-previous)
 
-   ;;; Insert
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-p" 'exwm-firefox-core-up-select)
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-n" 'exwm-firefox-core-down-select)
+      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
+      (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
 
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-u" 'exwm-firefox-core-half-page-up)
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-w" 'exwm-firefox-core-half-page-down)
+      ;;; Insert
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up-select)
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down-select)
 
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "M-w" '(lambda () (interactive) (exwm-input--fake-key ?\å)))
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "M-r" '(lambda () (interactive) (exwm-input--fake-key ?\ä)))
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "M-j" '(lambda () (interactive) (exwm-input--fake-key ?\ö)))
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-u") 'exwm-firefox-core-half-page-up)
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
 
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-y" 'exwm-firefox-core-copy)
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-k" 'exwm-firefox-core-paste)))
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-w") '(lambda () (interactive) (exwm-input--fake-key ?\å)))
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-r") '(lambda () (interactive) (exwm-input--fake-key ?\ä)))
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-j") '(lambda () (interactive) (exwm-input--fake-key ?\ö)))
+
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
+      (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)))
+
+  (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-l") '(lambda () (interactive) (exwm-input--fake-key 'delete)))
+  (evil-define-key 'insert  exwm-firefox-evil-mode-map (kbd "C-h") '(lambda () (interactive) (exwm-input--fake-key 'backspace)))
+
 #+END_SRC
 
 ** Next browser
@@ -5385,6 +5422,10 @@ If enabled it auto enables projectile, which has high CPU usage
 *** Ivy-youtube
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'ivy-youtube)
+  ;; Need to require to be able to set `ivy-yoube-key'
+  (require 'ivy-youtube)
+  
+  (setq ivy-youtube-key my/ivy-youtube-key)
 
   (setq ivy-youtube-play-at "mpv")
 
@@ -5416,7 +5457,8 @@ If enabled it auto enables projectile, which has high CPU usage
          "/bestaudio))"
          "/best"))
 
-  (defun ivy-youtube-play-on-process (video-url)
+  (el-patch-feature ivy-youtube)
+  (el-patch-defun ivy-youtube-play-on-process (video-url)
     "Start a process based on ivy-youtube-play-at variable passing VIDEO-URL."
     (message (format "Starting a process with: [%s %s] with youtube-dl parameters: %s" ivy-youtube-play-at video-url mpv-youtube-dl-parameters))
     (make-process :name "Ivy Youtube"

@@ -9,3 +9,5 @@
 (defvar my/device/monitor-setup-command "")
 
 (defvar my/device/maildir (concat user-emacs-directory "Maildir"))
+
+(defvar my/ivy-youtube-key nil)
