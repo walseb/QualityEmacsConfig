@@ -522,12 +522,6 @@ Default file-size-human-readable returns decimal values
 ;; (my/inline-overlay-print "test")
 #+END_SRC
 
-** Trim string
-#+BEGIN_SRC emacs-lisp
-  (defun my/trim-whitespace (string)
-    (replace-regexp-in-string "\\`[ \t\n]*" "" (replace-regexp-in-string "[ \t\n]*\\'" "" string)))
-#+END_SRC
-
 * Fonts
 ** Normal fonts
 #+BEGIN_SRC emacs-lisp  
@@ -661,34 +655,35 @@ Stop custom from editing init.el
     (interactive)
     (evil-define-key 'insert mode (kbd key) command))
 
-  (defun my/evil-universal-define-key-in-mode (mode key command)
+  (defun my/evil-visual-define-key-in-mode (mode key command)
     (evil-define-key 'visual mode (kbd key) command))
 
   (defun my/evil-universal-define-key-in-mode (mode key command)
     (interactive)
     (my/evil-normal-define-key-in-mode mode key command)
-    (my/evil-universal-define-key-in-mode mode key command)
+    (my/evil-visual-define-key-in-mode mode key command)
     (my/evil-insert-define-key-in-mode mode key command))
 
 
-
+  (defun my/evil-insert-define-key (key command)
+    (interactive)
+    (define-key evil-insert-state-map (kbd key) command))
 
   (defun my/evil-normal-define-key (key command)
     (interactive)
     (define-key evil-normal-state-map (kbd key) command)
     (define-key evil-motion-state-map (kbd key) command))
 
-  (defun my/evil-normal-visual-define-key (key command)
-    (interactive)
-    (define-key evil-normal-state-map (kbd key) command)
-    (define-key evil-motion-state-map (kbd key) command)
-    (define-key evil-visual-state-map (kbd key) command))
+  (defun my/evil-visual-define-key (key command)
+    (interactive
+     (define-key evil-visual-state-map (kbd key) command)))
+
 
   (defun my/evil-universal-define-key (key command)
     (interactive)
+    (my/evil-insert-define-key key command)
     (my/evil-normal-define-key key command)
-    (define-key evil-insert-state-map (kbd key) command)
-    (define-key evil-visual-state-map (kbd key) command))
+    (my/evil-visual-define-key key command))
 #+END_SRC
 
 ** Settings
@@ -1090,7 +1085,10 @@ When changing leader, change =my/leader-map-key=
   (my/evil-normal-define-key "U" 'undo-tree-visualize)
 
   (my/evil-normal-define-key my/leader-map-key my/leader-map)
-  (define-key evil-visual-state-map (kbd my/leader-map-key) my/leader-map)
+  (my/evil-visual-define-key my/leader-map-key my/leader-map)
+
+  (my/evil-universal-define-key my/mod-leader-map-key my/leader-map)
+
 #+END_SRC
 
 * Alert
@@ -1133,7 +1131,7 @@ When changing leader, change =my/leader-map-key=
     (interactive)
     (setq my/past-alerts (list)))
 
-  (define-key my/leader-map (kbd "R") 'my/alert-reset)
+  (define-key my/leader-map (kbd "DEL") 'my/alert-reset)
 #+END_SRC
 
 * Package management
@@ -1537,8 +1535,19 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
 ** Compilation mode
 #+BEGIN_SRC emacs-lisp
-  (setq compilation-mode-map (make-sparse-keymap))
-  (setq-default compilation-mode-map (make-sparse-keymap))
+  ;; (setq compilation-mode-map (make-sparse-keymap))
+  ;; (setq-default compilation-mode-map (make-sparse-keymap))
+  ;; 
+  ;; (setq compilation-minor-mode-map (make-sparse-keymap))
+  ;; (setq-default compilation-minor-mode-map (make-sparse-keymap))
+  ;; 
+  ;; (setq compilation-shell-minor-mode-map (make-sparse-keymap))
+  ;; (setq-default compilation-shell-minor-mode-map (make-sparse-keymap))
+  ;; 
+  ;; (setq compilation-mode-tool-bar-map (make-sparse-keymap))
+  ;; (setq-default compilation-mode-tool-bar-map (make-sparse-keymap))
+
+  (advice-add 'compilation-mode :after (lambda () (interactive) (evil-force-normal-state)))
 #+END_SRC
 
 ** Prefer loading newest lisp source file
@@ -2571,6 +2580,13 @@ Vim bindings to change fold
   (setq ivy-format-function 'ivy-format-function-line)
 #+END_SRC
 
+*** Wgrep
+Needed by ivy-occur to edit buffers
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'wgrep)
+  (require 'wgrep)
+#+END_SRC
+
 *** Keys
 #+BEGIN_SRC emacs-lisp
   (defun my/ivy-top ()
@@ -2623,6 +2639,45 @@ Vim bindings to change fold
   (evil-define-key 'insert ivy-minibuffer-map (kbd "DEL") 'ivy-backward-delete-char)
 
   (evil-define-key 'normal ivy-minibuffer-map (kbd "RET") 'ivy-done)
+#+END_SRC
+
+**** Ivy occur
+Also ivy-occur-grep
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/ivy-occur-map)
+  (evil-define-key 'normal ivy-occur-mode-map (kbd (concat my/leader-map-key " a")) 'my/ivy-occur-map)
+  (evil-define-key 'normal ivy-occur-grep-mode-map (kbd (concat my/leader-map-key " a")) 'my/ivy-occur-map)
+
+  (define-key my/ivy-occur-map (kbd "w") 'ivy-wgrep-change-to-wgrep-mode)
+  (define-key my/ivy-occur-map (kbd "r") 'ivy-occur-revert-buffer)
+
+  (evil-define-key 'normal ivy-occur-mode-map (kbd "RET") 'ivy-occur-press)
+  (evil-define-key 'normal ivy-occur-mode-map (kbd "p") 'evil-previous-line)
+  (evil-define-key 'normal ivy-occur-mode-map (kbd "n") 'evil-next-line)
+  (evil-define-key 'normal ivy-occur-mode-map (kbd "D") 'ivy-occur-delete-candidate)
+  (evil-define-key 'normal ivy-occur-mode-map (kbd "C-h") 'ivy-occur-read-action)
+
+  (evil-define-key 'normal ivy-occur-grep-mode-map (kbd "RET") 'ivy-occur-press)
+  (evil-define-key 'normal ivy-occur-grep-mode-map (kbd "p") 'evil-previous-line)
+  (evil-define-key 'normal ivy-occur-grep-mode-map (kbd "n") 'evil-next-line)
+  (evil-define-key 'normal ivy-occur-grep-mode-map (kbd "D") 'ivy-occur-delete-candidate)
+  (evil-define-key 'normal ivy-occur-grep-mode-map (kbd "C-h") 'ivy-occur-read-action)
+
+  ;; (define-key map (kbd "a") 'ivy-occur-read-action)
+  ;; (define-key map (kbd "o") 'ivy-occur-dispatch)
+  ;; (define-key map (kbd "c") 'ivy-occur-toggle-calling)
+#+END_SRC
+
+**** wgrep
+Used in ivy occur
+#+BEGIN_SRC emacs-lisp
+  (setq wgrep-mode-map (make-sparse-keymap))
+
+  (define-prefix-command 'my/wgrep-map)
+  (evil-define-key 'normal wgrep-mode-map (kbd (concat my/leader-map-key " a")) 'my/wgrep-map)
+
+  (define-key my/wgrep-map (kbd "s") 'wgrep-finish-edit)
+  (define-key my/wgrep-map (kbd "k") 'wgrep-abort-changes)
 #+END_SRC
 
 ** Counsel
@@ -3413,12 +3468,23 @@ g-; and g-,
 * Dired
 #+BEGIN_SRC emacs-lisp
   (require 'dired)
+  (require 'wdired)
 
   (defun my/dired-mode ()
     (rainbow-delimiters-mode-disable)
     (dired-hide-details-mode))
 
   (add-hook 'dired-mode-hook 'my/dired-mode)
+#+END_SRC
+
+** Move file between windows
+#+BEGIN_SRC emacs-lisp
+  (setq dired-dwim-target t)
+#+END_SRC
+
+** Change permissions in wdired
+#+BEGIN_SRC emacs-lisp
+  (setq wdired-allow-to-change-permissions 'advanced) 
 #+END_SRC
 
 ** Human readable file sizes
@@ -3456,7 +3522,7 @@ Make file sizes human readable
   (evil-define-key 'normal wdired-mode-map (kbd (concat my/leader-map-key " a")) 'my/wdired-mode-map)
 
   (define-key my/wdired-mode-map (kbd "s") 'wdired-finish-edit)
-  (define-key my/wdired-mode-map (kbd "u") 'wdired-abort-changes)
+  (define-key my/wdired-mode-map (kbd "k") 'wdired-abort-changes)
 #+END_SRC
 
 ** Dired collapse
@@ -3802,6 +3868,7 @@ Shows information in echo area
       ('c-mode (xref-find-definitions))
       ('c++-mode (xref-find-definitions))
       ('objc-mode (xref-find-definitions))
+      ('csharp-mode (omnisharp-go-to-definition))
       (_ (dumb-jump-go))))
 
   (define-key my/leader-map (kbd "t") 'my/auto-jump-to-definition)
@@ -3809,14 +3876,15 @@ Shows information in echo area
   (setq dumb-jump-selector 'ivy)
 #+END_SRC
 
-*** Auto find references
+*** Auto find usages
 #+BEGIN_SRC emacs-lisp
-  (defun my/auto-find-references ()
+  (defun my/auto-find-usages ()
     (interactive)
     (pcase major-mode
+      ('csharp-mode (omnisharp-find-usages-with-ido))
       (_ (xref-find-references))))
 
-  (define-key my/leader-map (kbd "C-r") 'my/auto-find-references)
+  (define-key my/leader-map (kbd "u") 'my/auto-find-usages)
 #+END_SRC
 
 *** Auto eval
@@ -3912,10 +3980,10 @@ Shows information in echo area
       ('c++-mode (my/start-gdb))
       (_ (eval-last-sexp nil))))
 
-  (define-key my/leader-map (kbd "d") 'my/auto-debug)
-  (define-key my/leader-map (kbd "C-d") 'my/auto-remove-debug)
+  (define-key my/leader-map (kbd "D") 'my/auto-debug)
+  (define-key my/leader-map (kbd "C-D") 'my/auto-remove-debug)
   ;;(define-key my/leader-map (kbd "D") 'my/auto-debug-buffer)
-  (define-key my/leader-map (kbd "M-d") 'my/auto-start-debugger)
+  (define-key my/leader-map (kbd "M-D") 'my/auto-start-debugger)
 #+END_SRC
 
 *** Auto compile
@@ -4301,6 +4369,49 @@ https://github.com/brianqq/inferior-cling
   (define-key my/c-mode-map (kbd "b") 'gdb-display-breakpoints-buffer)
 #+END_SRC
 
+*** Auto view documentation
+#+BEGIN_SRC emacs-lisp
+  (defun my/auto-view-docs ()
+    (interactive)
+    (pcase major-mode
+      ('csharp-mode (omnisharp-current-type-documentation))
+      (_ (find-function-at-point))))
+
+  (define-key my/leader-map (kbd "d") 'my/auto-view-docs)
+#+END_SRC
+
+*** Auto rename
+#+BEGIN_SRC emacs-lisp
+  (defun my/auto-rename ()
+    (interactive)
+    (pcase major-mode
+      ('csharp-mode (omnisharp-rename))
+      (_ (find-function-at-point))))
+
+  (define-key my/leader-map (kbd "R") 'my/auto-rename)
+#+END_SRC
+
+*** Auto format
+#+BEGIN_SRC emacs-lisp
+  (defun my/auto-format-buffer ()
+    (interactive)
+    (pcase major-mode
+      ('csharp-mode (omnisharp-code-format-entire-file))
+      (_ ())))
+
+  (defun my/auto-format-region ()
+    (interactive)
+    (pcase major-mode
+      ('csharp-mode (omnisharp-code-format-region))
+      (_ ())))
+
+  (define-key my/leader-map (kbd "<") 'my/auto-format-buffer)
+  (define-key my/leader-map (kbd ">") 'my/auto-format-buffer)
+  (define-key my/leader-map (kbd ",") 'my/auto-format-region)
+  (define-key my/leader-map (kbd ".") 'my/auto-format-region)
+#+END_SRC
+
+
 ** C#
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'csharp-mode)
@@ -4333,15 +4444,13 @@ https://github.com/brianqq/inferior-cling
   (evil-define-key 'normal csharp-mode-map (kbd (concat my/leader-map-key " a")) 'my/csharp-mode-map)
 
   (define-key my/csharp-mode-map (kbd "r") 'omnisharp-run-code-action-refactoring)
-  (define-key my/csharp-mode-map (kbd "f") 'omnisharp-code-format-entire-file)
-  (define-key my/csharp-mode-map (kbd "R") 'omnisharp-rename-interactively)
-  (define-key my/csharp-mode-map (kbd "s") 'omnisharp-reload-solution)
-  (define-key my/csharp-mode-map (kbd "d") 'omnisharp-go-to-definition-other-window)
-  (define-key my/csharp-mode-map (kbd "u") 'omnisharp-find-usages)
+  (define-key my/csharp-mode-map (kbd "S") 'omnisharp-reload-solution)
+  (define-key my/csharp-mode-map (kbd "u") 'omnisharp-fix-usings)
   (define-key my/csharp-mode-map (kbd "i") 'omnisharp-find-implementations)
-  (define-key my/csharp-mode-map (kbd "p") 'omnisharp-navigate-to-solution-file)
-  (define-key my/csharp-mode-map (kbd "a") 'omnisharp-solution-actions)
   (define-key my/csharp-mode-map (kbd "e") 'omnisharp-solution-errors)
+  (define-key my/csharp-mode-map (kbd "o") 'omnisharp-show-overloads-at-point)
+
+  (define-key my/csharp-mode-map (kbd "g") 'omnisharp-navigate-to-solution-file)
 #+END_SRC
 
 **** Write formatting settings to omnisharp server config
@@ -4521,8 +4630,11 @@ TODO: Fix settings, grab them from package site
   ;; Get thing
   ;; (call-interactively  (intern "counsel-M-x"))
 
-  (my/evil-normal-visual-define-key "q" 'my/macro-record-toggle)
-  (my/evil-normal-visual-define-key "Q" 'my/macro-run)
+  (my/evil-normal-define-key "q" 'my/macro-record-toggle)
+  (my/evil-normal-define-key "Q" 'my/macro-run)
+
+  (my/evil-visual-define-key "q" 'my/macro-record-toggle)
+  (my/evil-visual-define-key "Q" 'my/macro-run)
 #+END_SRC
 
 * Encryption
@@ -4544,6 +4656,7 @@ TODO: Fix settings, grab them from package site
     (pinentry-stop)
     (pinentry-start))
 #+END_SRC
+
 ** Passwords
 Enable org mode for .org.gpg files
 #+BEGIN_SRC emacs-lisp
@@ -5374,6 +5487,7 @@ If enabled it auto enables projectile, which has high CPU usage
   (require 'magit-mode)
   (define-key magit-mode-map (kbd "M-<tab>") 'my/toggle-switch-to-minibuffer)
 #+END_SRC
+
 **** General
 #+BEGIN_SRC emacs-lisp
   (require 'magit)
@@ -6886,11 +7000,17 @@ https://www.emacswiki.org/emacs/ArtistMode
   (add-hook 'image-mode-hook '(lambda () (interactive) (display-line-numbers-mode -1)))
 #+END_SRC
 
+*** Open otf fonts with image mode
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'auto-mode-alist '("\\.otf\\'" . image-mode))
+#+END_SRC
+
 *** Blimp
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'blimp)
 
-  (setq eimp-enable-undo t)
+  (with-eval-after-load 'eimp
+    (setq eimp-enable-undo t))
 
   (add-hook 'image-mode-hook 'blimp-mode)
 #+END_SRC
@@ -7072,7 +7192,7 @@ https://www.emacswiki.org/emacs/ArtistMode
                               (setq-local prettify-symbols-alist
                                           (append
                                            prettify-symbols-alist
-                                           `((,(my/trim-whitespace comment-start) . ?|)))))
+                                           `((,(string-trim comment-start) . ?|)))))
             t)
 
   (defun my/prettify-symbols-default-compose-p (start end _match)
