@@ -1,7 +1,7 @@
 * Docs
 ** Requirements
 *** All
-=xorg-server xorg-xrandr xorg-xinit xorg-setxkbmap mlocate atool unzip mono pulseaudio pavucontrol icecat/firefox the_silver_searcher imagemagick ttf-inconsolata ttf-opensans ttf-dejavu aspell aspell-en aspell-sv mpd mpc poppler poppler-glib=
+=xorg-server xorg-xrandr xorg-xinit xorg-setxkbmap mlocate atool unzip mono pulseaudio pavucontrol firefox the_silver_searcher imagemagick ttf-inconsolata ttf-opensans ttf-dejavu aspell aspell-en aspell-sv mpd mpc poppler poppler-glib=
 *** All optional
 =msbuild dotnet-sdk godot-mono guile fsharp=
 
@@ -251,6 +251,21 @@ Need to find how to use the "inside" operator, etc
     (evil-find-char 1 char)
     )
 #+END_SRC
+
+** Sharing folders via virtualbox
+https://wiki.archlinux.org/index.php/VirtualBox#Enable_shared_folders
+1. 
+Devices -> Insert guest additions CD images
+
+2. 
+On guest if arch install =virtualbox-guest-utils=
+
+3.
+Run
+#+BEGIN_SRC bash
+sudo mount -t vboxsf -o uid=1000,gid=1000 SHARED_FOLDER_NAME MOUNT_DIR
+#+END_SRC
+1000 in the command is fetched from running =id= 
 
 * Security
 #+BEGIN_SRC emacs-lisp
@@ -3825,7 +3840,10 @@ Shows information in echo area
     
 *** Quick-peek
 #+BEGIN_SRC emacs-lisp
-  ;; (setq quick-peek-spacer nil)
+  (straight-use-package '(quick-peek :type git :host github :repo "walseb/quick-peek"))
+  (require 'quick-peek)
+
+  (setq quick-peek-spacer nil)
 #+END_SRC
 
 *** Aggressive indent
