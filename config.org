@@ -679,7 +679,6 @@ Stop custom from editing init.el
     (my/evil-visual-define-key-in-mode mode key command)
     (my/evil-insert-define-key-in-mode mode key command))
 
-
   (defun my/evil-insert-define-key (key command)
     (interactive)
     (define-key evil-insert-state-map (kbd key) command))
@@ -3240,6 +3239,21 @@ Flycheck with extra correction for elisp packages
     (avy-goto-subword-0 t nil (line-beginning-position) (line-end-position)))
 #+END_SRC
 
+*** Avy-goto-subword-0
+**** Below
+#+BEGIN_SRC emacs-lisp
+  (defun my/avy-goto-subword-0-below()
+    (interactive)
+    (avy-goto-subword-0 t nil (point) (window-end (selected-window) t)))
+#+END_SRC
+
+**** Above
+#+BEGIN_SRC emacs-lisp
+  (defun my/avy-goto-subword-0-above()
+    (interactive)
+    (avy-goto-subword-0 t nil (window-start (selected-window)) (point)))
+#+END_SRC
+
 ** Avy flycheck
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'avy-flycheck)
@@ -4984,16 +4998,11 @@ Disable rainbow delimiters
 
 *** Rebind search key 
 #+BEGIN_SRC emacs-lisp
-  ;; (my/evil-normal-define-key "s" 'evil-search-forward)
-  ;; (my/evil-normal-define-key "S" 'evil-search-backward)
-  ;; (define-key evil-visual-state-map "s" 'evil-search-forward)
-  ;; (define-key evil-visual-state-map "S" 'evil-search-backward)
+  (my/evil-normal-define-key "s" 'my/avy-goto-subword-0-below)
+  (my/evil-normal-define-key "S" 'my/avy-goto-subword-0-above)
 
-  (my/evil-normal-define-key "s" 'isearch-forward)
-  (my/evil-normal-define-key "S" 'isearch-backward)
-
-  (define-key evil-visual-state-map "s" 'isearch-forward)
-  (define-key evil-visual-state-map "S" 'isearch-backward)
+  (define-key evil-visual-state-map "s" 'my/avy-goto-subword-0-below)
+  (define-key evil-visual-state-map "S" 'my/avy-goto-subword-0-above)
 
   (my/evil-normal-define-key "/" 'evil-substitute)
   (my/evil-normal-define-key "?" 'evil-change-whole-line)
