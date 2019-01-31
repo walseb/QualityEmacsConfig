@@ -4998,11 +4998,18 @@ Disable rainbow delimiters
 
 *** Rebind search key 
 #+BEGIN_SRC emacs-lisp
-  (my/evil-normal-define-key "s" 'my/avy-goto-subword-0-below)
-  (my/evil-normal-define-key "S" 'my/avy-goto-subword-0-above)
+  ;;(my/evil-normal-define-key "s" 'my/avy-goto-subword-0-below)
+  ;;(my/evil-normal-define-key "S" 'my/avy-goto-subword-0-above)
+  ;;
+  ;;(my/evil-visual-define-key "s" 'my/avy-goto-subword-0-below)
+  ;;(my/evil-visual-define-key "S" 'my/avy-goto-subword-0-above)
 
-  (define-key evil-visual-state-map "s" 'my/avy-goto-subword-0-below)
-  (define-key evil-visual-state-map "S" 'my/avy-goto-subword-0-above)
+  (my/evil-normal-define-key "s" 'avy-goto-subword-1)
+  (my/evil-normal-define-key "S" 'avy-goto-subword-1)
+
+  (my/evil-visual-define-key "s" 'avy-goto-subword-1)
+  (my/evil-visual-define-key "S" 'avy-goto-subword-1)
+
 
   (my/evil-normal-define-key "/" 'evil-substitute)
   (my/evil-normal-define-key "?" 'evil-change-whole-line)
