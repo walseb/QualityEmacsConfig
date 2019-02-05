@@ -1994,10 +1994,10 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
   (define-key my/org-mode-map (kbd "l") 'org-shiftright)
   (define-key my/org-mode-map (kbd "h") 'org-shiftleft)
 
-  (define-key my/org-mode-map (kbd "P") 'org-metaup)
-  (define-key my/org-mode-map (kbd "N") 'org-metadown)
-  (define-key my/org-mode-map (kbd "L") 'org-metaright)
-  (define-key my/org-mode-map (kbd "H") 'org-metaleft)
+  (define-key my/org-mode-map (kbd "P") 'org-shiftmetaup)
+  (define-key my/org-mode-map (kbd "N") 'org-shiftmetadown)
+  (define-key my/org-mode-map (kbd "L") 'org-shiftmetaright)
+  (define-key my/org-mode-map (kbd "H") 'org-shiftmetaleft)
 
   (define-key my/org-mode-map (kbd "|") 'org-table-create-or-convert-from-region)
 
@@ -5005,17 +5005,16 @@ Disable rainbow delimiters
   ;;(my/evil-visual-define-key "S" 'my/avy-goto-subword-0-above)
 
   (my/evil-normal-define-key "s" 'avy-goto-subword-1)
-  (my/evil-normal-define-key "S" 'avy-goto-subword-1)
+  (my/evil-normal-define-key "S" 'avy-goto-subword-0)
 
   (my/evil-visual-define-key "s" 'avy-goto-subword-1)
-  (my/evil-visual-define-key "S" 'avy-goto-subword-1)
+  (my/evil-visual-define-key "S" 'avy-goto-subword-0)
 
-
-  (my/evil-normal-define-key "/" 'evil-substitute)
-  (my/evil-normal-define-key "?" 'evil-change-whole-line)
-
-  (define-key evil-visual-state-map "/" 'evil-substitute)
-  (define-key evil-visual-state-map "?" 'evil-change-whole-line)
+  ;; (my/evil-normal-define-key "/" 'evil-substitute)
+  ;; (my/evil-normal-define-key "?" 'evil-change-whole-line)
+  ;; 
+  ;; (define-key evil-visual-state-map "/" 'evil-substitute)
+  ;; (define-key evil-visual-state-map "?" 'evil-change-whole-line)
 #+END_SRC
 
 *** Rebind save key
@@ -5026,7 +5025,6 @@ Disable rainbow delimiters
       ;;(my/fake-open-keymap "C-x")
       ;;(my/fake-key (kbd "C-s") ?\C-s)
       ;;)
-
 
   (general-simulate-key "C-x C-s")
 
