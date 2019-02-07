@@ -4612,9 +4612,55 @@ TODO: Fix settings, grab them from package site
   ;; (define-key my/leader-map (kbd "q") 'my/macro-map)
 #+END_SRC
 
+** Macro manager
+#+BEGIN_SRC emacs-lisp
+  (defvar my/current-macro-number 0)
+  (defvar my/macro-store '())
+  (defvar my/macro-last-name nil)
+
+  (defun my/macro-record-toggle ()
+    (interactive)
+    (if defining-kbd-macro
+        (my/macro-record-stop)
+      (my/macro-record-start)))
+
+  (defun my/macro-record-start ()
+    (setq my/macro-last-name (completing-read "macro name: " nil))
+    (call-interactively 'kmacro-start-macro))
+
+  (defun my/macro-record-stop ()
+    (setq my/current-macro-number (+ my/current-macro-number 1))
+    (call-interactively 'kmacro-end-macro)
+    (add-to-list 'my/macro-store `(,(concat (number-to-string my/current-macro-number) "-" my/macro-last-name) . ,last-kbd-macro)))
+
+  (defun my/macro-prompt ()
+    (completing-read "Macro: " (mapcar (lambda (entry) (interactive) `(,(car entry))) my/macro-store)))
+
+  (defun my/macro-run (count)
+    (interactive "P")
+    (let ((macro (my/macro-prompt)))
+      (setq last-kbd-macro (cdr (seq-find (lambda (entry) (interactive) (string= (car entry) macro)) my/macro-store))))
+    (if count
+        (dotimes (i count)
+          (call-last-kbd-macro))
+      (call-last-kbd-macro))
+    (evil-force-normal-state))
+
+  ;; (defun my/macro-edit ()
+    ;; (my/macro-prompt)
+    ;; )
+
+  (my/evil-normal-define-key "q" 'my/macro-record-toggle)
+  (my/evil-visual-define-key "q" 'my/macro-record-toggle)
+
+  (my/evil-normal-define-key "Q" 'my/macro-run)
+  (my/evil-visual-define-key "Q" 'my/macro-run)
+#+END_SRC
+
 ** Elmacro
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'elmacro)
+  ;; Elmacro doesn't work with evil
+  ;; (straight-use-package 'elmacro)
   ;; (require 'elmacro)
 
   ;; (define-globalized-minor-mode my/elmacro-global-mode elmacro-mode
@@ -4624,49 +4670,49 @@ TODO: Fix settings, grab them from package site
   ;; (my/elmacro-global-mode 1)
 #+END_SRC
 
-** Macro mechanisms
+*** Macro mechanisms
 #+BEGIN_SRC emacs-lisp
-  (defun my/get-interactive-commands ()
-    (let ((cmds  ()))
-      (mapatoms (lambda (s) (when (commandp s) (push s cmds))))
-      cmds))
-
-  (defvar my/current-macro-name "")
-  (defvar my/current-macro-number 0)
-
-  (defun my/macro-record-toggle ()
-    (interactive)
-    (if elmacro-mode
-        (my/macro-record-stop)
-      (my/macro-record)))
-
-  (defun my/macro-record ()
-    (setq my/current-macro-number (+ my/current-macro-number 1))
-    (setq my/current-macro-name (concat "my/rec-macro-" (number-to-string my/current-macro-number) "-" (completing-read "Macro name: " nil)))
-    (elmacro-mode 1)
-    (call-interactively 'kmacro-start-macro-or-insert-counter))
-
-  (defun my/macro-record-stop ()
-    (call-interactively 'kmacro-end-or-call-macro)
-    (elmacro-show-last-macro my/current-macro-name)
-    (elmacro-mode -1)
-    (eval-buffer)
-    )
-
-  (defun my/macro-run()
-    (interactive)
-    (call-interactively
-     (intern (ivy-read "Macros: " (reverse (sort (my/get-interactive-commands) 'string-lessp))
-                       :initial-input "^my/rec-macro- "))))
+  ;; (defun my/get-interactive-commands ()
+    ;; (let ((cmds  ()))
+      ;; (mapatoms (lambda (s) (when (commandp s) (push s cmds))))
+      ;; cmds))
+  ;; 
+  ;; (defvar my/current-macro-name "")
+  ;; (defvar my/current-macro-number 0)
+  ;; 
+  ;; (defun my/macro-record-toggle ()
+    ;; (interactive)
+    ;; (if elmacro-mode
+        ;; (my/macro-record-stop)
+      ;; (my/macro-record)))
+  ;; 
+  ;; (defun my/macro-record ()
+    ;; (setq my/current-macro-number (+ my/current-macro-number 1))
+    ;; (setq my/current-macro-name (concat "my/rec-macro-" (number-to-string my/current-macro-number) "-" (completing-read "Macro name: " nil)))
+    ;; (elmacro-mode 1)
+    ;; (call-interactively 'kmacro-start-macro-or-insert-counter))
+  ;; 
+  ;; (defun my/macro-record-stop ()
+    ;; (call-interactively 'kmacro-end-or-call-macro)
+    ;; (elmacro-show-last-macro my/current-macro-name)
+    ;; (elmacro-mode -1)
+    ;; (eval-buffer)
+    ;; )
+  ;; 
+  ;; (defun my/macro-run()
+    ;; (interactive)
+    ;; (call-interactively
+     ;; (intern (ivy-read "Macros: " (reverse (sort (my/get-interactive-commands) 'string-lessp))
+                       ;; :initial-input "^my/rec-macro- "))))
 
   ;; Get thing
   ;; (call-interactively  (intern "counsel-M-x"))
 
-  (my/evil-normal-define-key "q" 'my/macro-record-toggle)
-  (my/evil-normal-define-key "Q" 'my/macro-run)
-
-  (my/evil-visual-define-key "q" 'my/macro-record-toggle)
-  (my/evil-visual-define-key "Q" 'my/macro-run)
+  ;; (my/evil-normal-define-key "q" 'my/macro-record-toggle)
+  ;; (my/evil-normal-define-key "Q" 'my/macro-run)
+  ;; 
+  ;; (my/evil-visual-define-key "q" 'my/macro-record-toggle)
+  ;; (my/evil-visual-define-key "Q" 'my/macro-run)
 #+END_SRC
 
 * Encryption
