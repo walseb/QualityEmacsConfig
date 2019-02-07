@@ -3980,7 +3980,7 @@ Shows information in echo area
     (if (eq evil-state 'visual)
         (my/auto-debug-region)
       (pcase major-mode
-        ('emacs-lisp-mode (call-interactively #'edebug-set-breakpoint))
+        ('emacs-lisp-mode (progn (require 'edebug) (call-interactively #'edebug-set-breakpoint)))
         ('c-mode (call-interactively #'gud-break))
         ('c++-mode (call-interactively #'gud-break))
         (_ (eval-last-sexp nil)))))
@@ -4625,36 +4625,55 @@ TODO: Fix settings, grab them from package site
       (my/macro-record-start)))
 
   (defun my/macro-record-start ()
+    (interactive)
     (setq my/macro-last-name (completing-read "macro name: " nil))
     (call-interactively 'kmacro-start-macro))
 
   (defun my/macro-record-stop ()
+    (interactive)
     (setq my/current-macro-number (+ my/current-macro-number 1))
     (call-interactively 'kmacro-end-macro)
-    (add-to-list 'my/macro-store `(,(concat (number-to-string my/current-macro-number) "-" my/macro-last-name) . ,last-kbd-macro)))
+    (add-to-list 'my/macro-store `(,my/macro-last-name . ,last-kbd-macro)))
 
   (defun my/macro-prompt ()
-    (completing-read "Macro: " (mapcar (lambda (entry) (interactive) `(,(car entry))) my/macro-store)))
+    ;; Ivy doesn't sort, so use it
+    (ivy-read "Macros: "  (my/macro-get-names)))
+
+  (defun my/macro-get-names ()
+    (mapcar (lambda (entry) (interactive) (car entry)) my/macro-store))
 
   (defun my/macro-run (count)
     (interactive "P")
     (let ((macro (my/macro-prompt)))
-      (setq last-kbd-macro (cdr (seq-find (lambda (entry) (interactive) (string= (car entry) macro)) my/macro-store))))
+      (setq last-kbd-macro
+            (cdr
+             (seq-find (lambda (entry) (interactive) (string= (car entry) macro)) my/macro-store))))
     (if count
         (dotimes (i count)
           (call-last-kbd-macro))
       (call-last-kbd-macro))
     (evil-force-normal-state))
 
-  ;; (defun my/macro-edit ()
-    ;; (my/macro-prompt)
-    ;; )
+  (defun my/macro-modify-store (var pos)
+    (setf (nth pos my/macro-store) var))
+
+  (defun my/macro-modify ()
+    (interactive)
+    (let* ((macro-name (my/macro-prompt))
+           (pos (cl-position macro-name (my/macro-get-names) :test 'string=)))
+      (my/macro-modify-store
+       `(,macro-name .
+                     ,(ivy-read "Change to: " nil :initial-input (cdr (nth pos my/macro-store))))
+       pos)))
 
   (my/evil-normal-define-key "q" 'my/macro-record-toggle)
   (my/evil-visual-define-key "q" 'my/macro-record-toggle)
 
   (my/evil-normal-define-key "Q" 'my/macro-run)
   (my/evil-visual-define-key "Q" 'my/macro-run)
+
+  (my/evil-normal-define-key "@" 'my/macro-modify)
+  (my/evil-visual-define-key "@" 'my/macro-modify)
 #+END_SRC
 
 ** Elmacro
