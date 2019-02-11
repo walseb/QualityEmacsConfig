@@ -1094,7 +1094,7 @@ When changing leader, change =my/leader-map-key=
   (defvar my/mod-window-leader-key "M-C-=")
 
   (define-prefix-command 'my/help-map)
-  (define-key my/leader-map (kbd "H") 'my/help-map)
+  (define-key my/leader-map (kbd "h") 'my/help-map)
 
   (my/evil-normal-define-key "U" 'undo-tree-visualize)
 
@@ -2522,10 +2522,10 @@ Vim bindings to change fold
   (define-key evil-motion-state-map (kbd "g P") 'origami-previous-fold)
 
   (define-key evil-motion-state-map (kbd "g C-o") 'origami-open-node)
-  (define-key evil-motion-state-map (kbd "g C-h") 'origami-close-node)
+  (define-key evil-motion-state-map (kbd "g TAB") 'origami-close-node)
 
   (define-key evil-motion-state-map (kbd "g M-o") 'origami-open-all-nodes)
-  (define-key evil-motion-state-map (kbd "g M-h") 'origami-close-all-nodes)
+  (define-key evil-motion-state-map (kbd "g M-t") 'origami-close-all-nodes)
 #+END_SRC
 
 ** Keys
@@ -2541,8 +2541,8 @@ Vim bindings to change fold
   (my/evil-normal-define-key "go" 'evil-open-fold)
   (my/evil-normal-define-key "gO" 'evil-open-fold-rec)
 
-  (my/evil-normal-define-key "gh" 'evil-close-fold)
-  (my/evil-normal-define-key "gH" '(lambda () (interactive) (hide-sublevels 1)))
+  (my/evil-normal-define-key "gt" 'evil-close-fold)
+  (my/evil-normal-define-key "gT" '(lambda () (interactive) (hide-sublevels 1)))
 
   (defvar-local buffer-has-outline-bullets t)
   (defun my/toggle-outline-bullets ()
@@ -2719,7 +2719,7 @@ Used in ivy occur
   (define-key my/help-map (kbd "C") 'counsel-colors-web)
 
   (define-key my/leader-map (kbd "S") 'counsel-imenu)
-  (define-key my/leader-map (kbd "h") 'counsel-outline)
+  (define-key my/leader-map (kbd "TAB") 'counsel-outline)
 #+END_SRC
 
 ** Counsel flycheck
@@ -2783,7 +2783,7 @@ Used in ivy occur
   (defun my/swiper-thing-at-point ()
     "jump to word under cursor"
     (interactive)
-    (my/use-swiper-or-grep (thing-at-point 'evil-WORD)))
+    (my/use-swiper-or-grep (thing-at-point 'symbol)))
 
     (my/evil-normal-define-key "#" 'my/swiper-thing-at-point)
     (my/evil-normal-define-key "*" 'my/swiper-thing-at-point)
@@ -3082,6 +3082,93 @@ Flycheck with extra correction for elisp packages
 (my/evil-normal-define-key "^" 'my/go-to-middle-of-line)
 #+END_SRC
 
+** Navigate indent
+https://emacs.stackexchange.com/questions/20900/navigate-by-indentation
+#+BEGIN_SRC emacs-lisp
+  (defun indentation-get-next-good-line (direction skip good)
+    "Moving in direction `direction', and skipping over blank lines and lines that
+  satisfy relation `skip' between their indentation and the original indentation,
+  finds the first line whose indentation satisfies predicate `good'."
+    (let ((starting-indentation (current-indentation))
+          (lines-moved direction))
+      (save-excursion
+        (while (and (zerop (forward-line direction))
+                    (or (eolp)  ; Skip past blank lines and other skip lines
+                        (funcall skip (current-indentation) starting-indentation)))
+          (setq lines-moved (+ lines-moved direction)))
+        ;; Now we can't go further. Which case is it?
+        (if (and
+             (not (eobp))
+             (not (bobp))
+             (funcall good (current-indentation) starting-indentation))
+            lines-moved
+          nil))))
+
+  (defun indentation-get-next-sibling-line ()
+    "The line number of the next sibling, if any."
+    (indentation-get-next-good-line 1 '> '=))
+
+  (defun indentation-get-previous-sibling-line ()
+    "The line number of the previous sibling, if any"
+    (indentation-get-next-good-line -1 '> '=))
+
+  (defun indentation-get-parent-line ()
+    "The line number of the parent, if any."
+    (indentation-get-next-good-line -1 '>= '<))
+
+  (defun indentation-get-child-line ()
+    "The line number of the first child, if any."
+    (indentation-get-next-good-line +1 'ignore '>))
+
+
+  (defun indentation-move-to-line (func preserve-column name)
+    "Move the number of lines given by func. If not possible, use `name' to say so."
+    (let ((saved-column (current-column))
+          (lines-to-move-by (funcall func)))
+      (if lines-to-move-by
+          (progn
+            (forward-line lines-to-move-by)
+            (move-to-column (if preserve-column
+                                saved-column
+                              (current-indentation))))
+        (message "No %s to move to." name))))
+
+  (defun indentation-forward-to-next-sibling ()
+    "Move to the next sibling if any, retaining column position."
+    (interactive "@")
+    (indentation-move-to-line 'indentation-get-next-sibling-line t "next sibling"))
+
+  (defun indentation-backward-to-previous-sibling ()
+    "Move to the previous sibling if any, retaining column position."
+    (interactive "@")
+    (indentation-move-to-line 'indentation-get-previous-sibling-line t "previous sibling"))
+
+  (defun indentation-up-to-parent ()
+    "Move to the parent line if any."
+    (interactive "@")
+    (indentation-move-to-line 'indentation-get-parent-line nil "parent"))
+
+  (defun indentation-down-to-child ()
+    "Move to the first child line if any."
+    (interactive "@")
+    (indentation-move-to-line 'indentation-get-child-line nil "child"))
+#+END_SRC
+
+*** Keys
+#+BEGIN_SRC emacs-lisp
+  (my/evil-normal-define-key "g n" 'indentation-forward-to-next-sibling)
+  (my/evil-visual-define-key "g n" 'indentation-forward-to-next-sibling)
+
+  (my/evil-normal-define-key "g p" 'indentation-backward-to-previous-sibling)
+  (my/evil-visual-define-key "g p" 'indentation-backward-to-previous-sibling)
+
+  (my/evil-normal-define-key "g h" 'indentation-up-to-parent)
+  (my/evil-visual-define-key "g h" 'indentation-up-to-parent)
+
+  (my/evil-normal-define-key "g l" 'indentation-down-to-child)
+  (my/evil-visual-define-key "g l" 'indentation-down-to-child)
+#+END_SRC
+
 ** Marks
 #+BEGIN_SRC emacs-lisp
   (setq mark-ring-max 100)
@@ -3324,8 +3411,8 @@ g-; and g-,
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
-  (my/evil-normal-define-key "M-f" 'avy-goto-char-in-line)
-    (define-key my/leader-map (kbd "f") 'avy-goto-char-in-line)
+  ;;(my/evil-normal-define-key "M-f" 'avy-goto-char-in-line)
+    ;;(define-key my/leader-map (kbd "f") 'avy-goto-char-in-line)
 
   (my/evil-normal-define-key "M-w" 'my/avy-goto-word-0-in-line)
     (define-key my/leader-map (kbd "w") 'my/avy-goto-word-0-in-line)
@@ -3426,7 +3513,7 @@ g-; and g-,
       (error "Minibuffer is not active")))
 
   (define-key my/keys-mode-map (kbd "M-TAB") 'my/toggle-switch-to-minibuffer)
-  (my/evil-universal-define-key "M-TAB" 'my/toggle-switch-to-minibuffer)
+  (my/evil-universal-define-key "M-<tab>" 'my/toggle-switch-to-minibuffer)
 #+END_SRC
 
 * Window and buffer settings
@@ -3663,8 +3750,8 @@ Version 2015-07-30"
   (evil-define-key 'normal dired-mode-map  (kbd "&") 'dired-do-async-shell-command)
   (evil-define-key 'insert dired-mode-map  (kbd "&") 'dired-do-async-shell-command)
   ;; Comparison commands
-  (evil-define-key 'normal dired-mode-map (kbd "=") 'dired-diff)
-  (evil-define-key 'insert dired-mode-map (kbd "=") 'dired-diff)
+  (evil-define-key 'normal dired-mode-map (kbd "=") 'my/ediff-dired)
+  (evil-define-key 'insert dired-mode-map (kbd "=") 'my/ediff-dired)
   ;; Make all regexp commands share a `%' prefix:
   ;; We used to get to the submap via a symbol dired-regexp-prefix,
   ;; but that seems to serve little purpose, and copy-keymap
@@ -3854,7 +3941,7 @@ Shows information in echo area
     
 *** Quick-peek
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package '(quick-peek :type git :host github :repo "walseb/quick-peek"))
+  (straight-use-package 'quick-peek)
   (require 'quick-peek)
 
   (setq quick-peek-spacer nil)
@@ -3877,15 +3964,15 @@ Shows information in echo area
 
 *** indent guide
 #+BEGIN_SRC emacs-lisp
-  ;; (straight-use-package 'highlight-indent-guides)
-;; 
-  ;; (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
-;; 
-  ;; ;;(setq highlight-indent-guides-method 'column)
+  (straight-use-package 'highlight-indent-guides)
+
+  (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
+
+  (setq highlight-indent-guides-method 'column)
   ;; (setq highlight-indent-guides-method 'fill)
-;; 
-  ;; (setq highlight-indent-guides-responsive 'top)
-  ;; (setq highlight-indent-guides-delay 0)
+
+  (setq highlight-indent-guides-responsive 'top)
+  (setq highlight-indent-guides-delay 0)
 #+END_SRC
 
 *** Auto jump to definition
@@ -3897,6 +3984,7 @@ Shows information in echo area
     (pcase major-mode
       ('fsharp-mode (fsharp-ac/gotodefn-at-point))
       ('clojure-mode (clojure-find-def))
+      ('emacs-lisp-mode (xref-find-definitions))
       ('c-mode (xref-find-definitions))
       ('c++-mode (xref-find-definitions))
       ('objc-mode (xref-find-definitions))
@@ -4672,8 +4760,8 @@ TODO: Fix settings, grab them from package site
   (my/evil-normal-define-key "Q" 'my/macro-run)
   (my/evil-visual-define-key "Q" 'my/macro-run)
 
-  (my/evil-normal-define-key "@" 'my/macro-modify)
-  (my/evil-visual-define-key "@" 'my/macro-modify)
+  (my/evil-normal-define-key "C-q" 'my/macro-modify)
+  (my/evil-visual-define-key "C-q" 'my/macro-modify)
 #+END_SRC
 
 ** Elmacro
@@ -5022,8 +5110,6 @@ Disable rainbow delimiters
 (my/evil-normal-define-key "P" 'delete-indentation)
 
   (define-key evil-window-map (kbd "C-S-p") 'evil-window-move-very-top)
-
-(my/evil-normal-define-key "gp" 'evil-previous-visual-line)
 #+END_SRC
 
 *** n(search-next) <--> j(Move up)
@@ -5036,10 +5122,6 @@ Disable rainbow delimiters
   ;; ex
   ;;  (evil-ex-define-cmd "j[oin]" 'evil-ex-join)
   ;;  (evil-ex-define-cmd "ju[mps]" 'evil-show-jumps)
-
-  (my/evil-normal-define-key "gN" 'evil-join-whitespace)
-
-  (my/evil-normal-define-key "gn" 'evil-next-visual-line)
 
   (define-key evil-window-map (kbd "C-S-n") 'evil-window-move-very-bottom)
 #+END_SRC
@@ -5552,6 +5634,42 @@ Redefine function to attempt to open image if link at point wasn't found
 #+END_SRC
 
 * Version control
+** Ediff
+#+BEGIN_SRC emacs-lisp
+  (require 'ediff)
+  (setq-default ediff-forward-word-function 'forward-char)
+#+END_SRC
+
+*** Ediff-dired
+https://oremacs.com/2017/03/18/dired-ediff/
+#+BEGIN_SRC emacs-lisp
+  (defun my/ediff-dired ()
+    (interactive)
+    (let ((files (dired-get-marked-files))
+          (wnd (current-window-configuration)))
+      (if (<= (length files) 2)
+          (let ((file1 (car files))
+                (file2 (if (cdr files)
+                           (cadr files)
+                         (read-file-name
+                          "file: "
+                          (dired-dwim-target-directory)))))
+            (if (file-newer-than-file-p file1 file2)
+                (ediff-files file2 file1)
+              (ediff-files file1 file2)))
+        (error "no more than 2 files should be marked"))))
+#+END_SRC
+
+*** Keys
+#+BEGIN_SRC emacs-lisp
+  (setq-default ediff-mode-map (make-sparse-keymap))
+
+  (define-prefix-command 'my/ediff-mode-map)
+  (evil-define-key 'normal ediff-mode-map (kbd (concat my/leader-map-key " a")) 'my/ediff-mode-map)
+  (define-key ediff-mode-map "p" 'ediff-previous-difference)
+  (define-key ediff-mode-map "n" 'ediff-next-difference)
+#+END_SRC
+
 ** Projectile
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'projectile)
@@ -5573,21 +5691,23 @@ If enabled it auto enables projectile, which has high CPU usage
   (setq git-commit-summary-max-length 50)
 #+END_SRC
 
+*** Diff
+#+BEGIN_SRC emacs-lisp
+  (require 'magit-diff)
+  (setq-default magit-diff-refine-hunk 'all)
+  ;;(setq-default magit-diff-refine-ignore-whitespace nil)
+#+END_SRC
+
 *** Forge
 #+BEGIN_SRC emacs-lisp
   (straight-use-package '(forge :type git :host github :repo "magit/forge"))
 #+END_SRC
 
 *** Keys
-#+BEGIN_SRC emacs-lisp
-  ;; Magit ignores this bind by default
-  (require 'magit-mode)
-  (define-key magit-mode-map (kbd "M-<tab>") 'my/toggle-switch-to-minibuffer)
-#+END_SRC
-
 **** General
 #+BEGIN_SRC emacs-lisp
   (require 'magit)
+  (require 'magit-mode)
 
   (my/evil-normal-define-key-in-mode magit-mode-map "0" 'magit-diff-default-context)
   (my/evil-normal-define-key-in-mode magit-mode-map "1" 'magit-section-show-level-1)
@@ -5614,8 +5734,6 @@ If enabled it auto enables projectile, which has high CPU usage
   (add-hook 'dired-mode-hook 'diff-hl-dired-mode)
 
   (add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh)
-
-  ;;(diff-hl-flydiff-mode)
 #+END_SRC
 
 ** Keys 
@@ -5631,23 +5749,23 @@ If enabled it auto enables projectile, which has high CPU usage
   (define-key my/vc-map (kbd "k") 'diff-hl-revert-hunk)
   (define-key my/vc-map (kbd "=") 'diff-hl-diff-goto-hunk)
 
-  (define-key my/vc-map (kbd "o") 'counsel-git-grep)
-  (define-key my/vc-map (kbd "a") 'counsel-projectile-ag)
+  (define-key my/vc-map (kbd "e") 'counsel-projectile-find-file)
+  (define-key my/vc-map (kbd "s") 'counsel-git-grep)
+  ;; (define-key my/vc-map (kbd "s") 'counsel-projectile-ag)
   (define-key my/vc-map (kbd "d") 'projectile-dired)
   (define-key my/vc-map (kbd "D") 'counsel-projectile-find-dir)
-  (define-key my/vc-map (kbd "f") 'counsel-projectile-find-file)
 
   (define-key my/vc-map (kbd "K") 'projectile-kill-buffers)
   (define-key my/vc-map (kbd "f") 'counsel-projectile-switch-to-buffer)
   (define-key my/vc-map (kbd "F") 'projectile-ibuffer)
 
-  (define-key my/vc-map (kbd "S") 'projectile-save-project-buffers)
+  (define-key my/vc-map (kbd "O") 'projectile-save-project-buffers)
   (define-key my/vc-map (kbd "C") 'projectile-compile-project)
 
   (define-key my/vc-map (kbd "!") 'projectile-run-shell-command-in-root)
   (define-key my/vc-map (kbd "&") 'projectile-run-async-shell-command-in-root)
 
-  (define-key my/vc-map (kbd "s") 'magit-status)
+  (define-key my/vc-map (kbd "o") 'magit-status)
 #+END_SRC
 
 * Media
@@ -6706,11 +6824,25 @@ TODO counsel-tramp
 * Find
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/find-map)
-  (define-key my/leader-map (kbd "F") 'my/find-map)
+  (define-key my/leader-map (kbd "f") 'my/find-map)
 
-  (define-key my/find-map (kbd "l") 'counsel-locate)
+  (define-key my/find-map (kbd "e") 'counsel-locate)
 
-  (define-key my/find-map (kbd "g") 'counsel-ag)
+  (define-key my/find-map (kbd "s") 'counsel-ag)
+#+END_SRC
+
+** Custom locate
+Locate only under current dir
+#+BEGIN_SRC emacs-lisp
+  (setq-default counsel-locate-cmd 'my/counsel-locate-cmd-default)
+
+  (defun my/counsel-locate-cmd-default (input)
+    "Return a shell command based on INPUT."
+    (counsel-require-program "locate")
+    (format "locate -i %s | grep -i %s"
+            default-directory
+            (counsel--elisp-to-pcre
+             (ivy--regex input))))
 #+END_SRC
 
 * Spelling
@@ -6973,10 +7105,8 @@ https://www.emacswiki.org/emacs/ArtistMode
     ("C-u" evil-scroll-up nil)
     ("C-w" evil-scroll-down nil)
 
-    ("f" counsel-M-x nil)
+    ("f" counsel-locate nil)
     ("y" counsel-linux-app nil)
-
-    ("u" revert-buffer nil)
 
     ;; Switch window configuration
     ("t" my/load-window-config nil)
@@ -7321,8 +7451,16 @@ https://www.emacswiki.org/emacs/ArtistMode
                  (set-face-attribute face nil :foreground nil :background nil)))
 
     (setq my/diff-added-color "#335533") 
+    (setq my/diff-added-hl-color (color-lighten-name "#335533" 20))
+
     (setq my/diff-changed-color "#aaaa22") 
+    (setq my/diff-changed-hl-color (color-lighten-name "#aaaa22" 20)) 
+
     (setq my/diff-removed-color "#553333") 
+    (setq my/diff-removed-hl-color (color-lighten-name "#553333" 20))
+
+    (setq my/diff-ancestor-color "#5f06b26ccd93") 
+    (setq my/diff-ancestor-hl-color (color-lighten-name "#5f06b26ccd93" 20))
 
     (if window-system
         (progn
@@ -7417,9 +7555,27 @@ https://www.emacswiki.org/emacs/ArtistMode
     (set-face-attribute 'diff-changed nil :background my/diff-changed-color)
     (set-face-attribute 'diff-removed nil :background my/diff-removed-color)
 
-    (set-face-attribute 'diff-refine-added nil  :background my/diff-added-color)
-    (set-face-attribute 'diff-refine-changed nil :background my/diff-changed-color)
-    (set-face-attribute 'diff-refine-removed nil :background my/diff-removed-color)
+    (set-face-attribute 'diff-refine-added nil  :background my/diff-added-hl-color)
+    (set-face-attribute 'diff-refine-changed nil :background my/diff-changed-hl-color)
+    (set-face-attribute 'diff-refine-removed nil :background my/diff-removed-hl-color)
+
+  ;;; Ediff
+    (set-face-attribute 'ediff-current-diff-A nil :background my/diff-removed-color)
+    (set-face-attribute 'ediff-current-diff-Ancestor nil :background my/diff-ancestor-color)
+    (set-face-attribute 'ediff-current-diff-B nil :background my/diff-added-color)
+    (set-face-attribute 'ediff-current-diff-C nil :background my/diff-changed-color)
+    (set-face-attribute 'ediff-even-diff-A nil :background (color-darken-name my/diff-removed-color 18))
+    (set-face-attribute 'ediff-even-diff-Ancestor nil :background (color-darken-name my/diff-ancestor-color 30))
+    (set-face-attribute 'ediff-even-diff-B nil :background (color-darken-name my/diff-added-color 18))
+    (set-face-attribute 'ediff-even-diff-C nil :background (color-darken-name my/diff-changed-color 18))
+    (set-face-attribute 'ediff-fine-diff-A nil :background my/diff-removed-hl-color)
+    (set-face-attribute 'ediff-fine-diff-Ancestor nil :background my/diff-ancestor-hl-color)
+    (set-face-attribute 'ediff-fine-diff-B nil :background my/diff-added-hl-color)
+    (set-face-attribute 'ediff-fine-diff-C nil :background my/diff-changed-hl-color)
+    (set-face-attribute 'ediff-odd-diff-A nil :background (color-darken-name my/diff-removed-color 20))
+    (set-face-attribute 'ediff-odd-diff-Ancestor nil :background (color-darken-name my/diff-ancestor-color 50))
+    (set-face-attribute 'ediff-odd-diff-B nil :background (color-darken-name my/diff-added-color 20))
+    (set-face-attribute 'ediff-odd-diff-C nil :background (color-darken-name my/diff-changed-color 20))
 
     ;;; Dired
     (set-face-attribute 'dired-directory nil :foreground my/background-color :background my/foreground-color)
