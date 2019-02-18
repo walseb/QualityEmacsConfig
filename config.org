@@ -267,6 +267,25 @@ sudo mount -t vboxsf -o uid=1000,gid=1000 SHARED_FOLDER_NAME MOUNT_DIR
 #+END_SRC
 1000 in the command is fetched from running =id= 
 
+** Omnisharp
+ALWAYS check *omnisharp-log* for errors
+
+*** Errors everywhere
+Probably missing system.dll, etc reference
+Could be that the references in your csproj are tailored to windows, etc
+
+*** Only basic errors
+Check this https://github.com/OmniSharp/omnisharp-emacs/issues/459
+Otherwise it's probably because there are errors in *omnisharp-log*
+
+*** Errors everywhere because of missing references
+Check your csproj file
+Remember that wildstars probably aren't supported in omnisharp! Add every script manually via counsel-locate, macros or whatever
+Not like this
+<Compile Include="*.cs" />
+Like this
+<Compile Include="Assets/Script.cs" />
+
 * Security
 #+BEGIN_SRC emacs-lisp
   (setq network-security-level 'high)
@@ -579,16 +598,6 @@ Default file-size-human-readable returns decimal values
 #+END_SRC
 
 * Startup processes
-** Make sure mode line is disabled before any windows are created
-#+BEGIN_SRC emacs-lisp
-  (if window-system
-      (progn
-        (setq mode-line-format "")
-        (setq-default mode-line-format ""))
-    (setq mode-line-format nil)
-    (setq-default mode-line-format nil))
-#+END_SRC
-
 ** Prevent async command from opening new window
 #+BEGIN_SRC emacs-lisp
   ;; Buffers that I don't want popping up by default
@@ -2614,45 +2623,50 @@ Needed by ivy-occur to edit buffers
   (setq ivy-minibuffer-map (make-sparse-keymap))
 
   ;; Enable avy movements in ivy buffer
-  (evil-define-key 'normal ivy-minibuffer-map (kbd "M-n") 'ivy-avy)
-  (evil-define-key 'normal ivy-minibuffer-map (kbd "M-p") 'ivy-avy)
+  (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "M-n" 'ivy-avy)
+  (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "M-p" 'ivy-avy)
 
-  (evil-define-key 'normal ivy-minibuffer-map (kbd "G") 'my/ivy-bot)
-  (evil-define-key 'normal ivy-minibuffer-map (kbd "g g") 'my/ivy-top)
+  (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "G" 'my/ivy-bot)
+  (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "g g" 'my/ivy-top)
 
-  (evil-define-key 'normal ivy-minibuffer-map (kbd "n") 'ivy-next-line)
-  (evil-define-key 'normal ivy-minibuffer-map (kbd "p") 'ivy-previous-line)
+  (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "n" 'ivy-next-line)
+  (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "p" 'ivy-previous-line)
 
   (define-key ivy-minibuffer-map [remap evil-ret] 'ivy-done)
   (define-key ivy-minibuffer-map [remap newline] 'ivy-done)
 
-  (evil-define-key 'insert ivy-minibuffer-map (kbd "C-n") 'ivy-next-line)
-  (evil-define-key 'insert ivy-minibuffer-map (kbd "C-p") 'ivy-previous-line)
+  (my/evil-insert-define-key-in-mode ivy-minibuffer-map  "C-n" 'ivy-next-line)
+  (my/evil-insert-define-key-in-mode ivy-minibuffer-map  "C-p" 'ivy-previous-line)
 
-  (evil-define-key 'normal ivy-minibuffer-map (kbd "C-g") 'minibuffer-keyboard-quit)
-  (evil-define-key 'insert ivy-minibuffer-map (kbd "C-g") 'minibuffer-keyboard-quit)
+  (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "C-g" 'minibuffer-keyboard-quit)
+  (my/evil-insert-define-key-in-mode ivy-minibuffer-map  "C-g" 'minibuffer-keyboard-quit)
 
-  (evil-define-key 'normal ivy-minibuffer-map (kbd "C-u") 'ivy-scroll-down-command)
-  (evil-define-key 'normal ivy-minibuffer-map (kbd "C-w") 'ivy-scroll-up-command)
-  (evil-define-key 'insert ivy-minibuffer-map (kbd "C-u") 'ivy-scroll-down-command)
-  (evil-define-key 'insert ivy-minibuffer-map (kbd "C-w") 'ivy-scroll-up-command)
+  (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "C-u" 'ivy-scroll-down-command)
+  (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "C-w" 'ivy-scroll-up-command)
+  (my/evil-insert-define-key-in-mode ivy-minibuffer-map  "C-u" 'ivy-scroll-down-command)
+  (my/evil-insert-define-key-in-mode ivy-minibuffer-map  "C-w" 'ivy-scroll-up-command)
 
-  (evil-define-key 'normal ivy-minibuffer-map (kbd "C-o") 'ivy-occur)
-  (evil-define-key 'insert ivy-minibuffer-map (kbd "C-o") 'ivy-occur)
+  (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "C-o" 'ivy-occur)
+  (my/evil-insert-define-key-in-mode ivy-minibuffer-map  "C-o" 'ivy-occur)
 
-  (evil-define-key 'normal ivy-minibuffer-map (kbd "C-h") 'ivy-dispatching-done)
-  (evil-define-key 'insert ivy-minibuffer-map (kbd "C-h") 'ivy-dispatching-done)
+  (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "C-h" 'ivy-dispatching-done)
+  (my/evil-insert-define-key-in-mode ivy-minibuffer-map  "C-h" 'ivy-dispatching-done)
 
-  (evil-define-key 'normal ivy-minibuffer-map (kbd "C-s") 'ivy-next-line-or-history)
-  (evil-define-key 'insert ivy-minibuffer-map (kbd "C-s") 'ivy-next-line-or-history)
+  (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "C-s" 'ivy-next-line-or-history)
+  (my/evil-insert-define-key-in-mode ivy-minibuffer-map  "C-s" 'ivy-next-line-or-history)
 
-  (evil-define-key 'normal ivy-minibuffer-map (kbd "TAB") 'ivy-partial-or-done)
-  (evil-define-key 'insert ivy-minibuffer-map (kbd "TAB") 'ivy-partial-or-done)
+  (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "TAB" 'ivy-partial-or-done)
+  (my/evil-insert-define-key-in-mode ivy-minibuffer-map  "TAB" 'ivy-partial-or-done)
 
-  (evil-define-key 'normal ivy-minibuffer-map (kbd "DEL") 'ivy-backward-delete-char)
-  (evil-define-key 'insert ivy-minibuffer-map (kbd "DEL") 'ivy-backward-delete-char)
+  (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "DEL" 'ivy-backward-delete-char)
+  (my/evil-insert-define-key-in-mode ivy-minibuffer-map  "DEL" 'ivy-backward-delete-char)
 
-  (evil-define-key 'normal ivy-minibuffer-map (kbd "RET") 'ivy-done)
+  (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "RET" 'ivy-done)
+
+  ;; Clear ivy input
+  (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "D" '(lambda () (interactive) (beginning-of-line-text)
+                                                                (evil-delete-char (+ 1 (point)) (point-max))
+                                                                (delete-char 1)))
 #+END_SRC
 
 **** Ivy occur
@@ -3984,11 +3998,12 @@ Shows information in echo area
     (pcase major-mode
       ('fsharp-mode (fsharp-ac/gotodefn-at-point))
       ('clojure-mode (clojure-find-def))
-      ('emacs-lisp-mode (xref-find-definitions))
-      ('c-mode (xref-find-definitions))
-      ('c++-mode (xref-find-definitions))
-      ('objc-mode (xref-find-definitions))
+      ('emacs-lisp-mode (call-interactively 'xref-find-definitions))
+      ('c-mode (call-interactively 'xref-find-definitions))
+      ('c++-mode (call-interactively 'xref-find-definitions))
+      ('objc-mode (call-interactively 'xref-find-definitions))
       ('csharp-mode (omnisharp-go-to-definition))
+      ('java-mode (call-interactively 'lsp-find-definition))
       (_ (dumb-jump-go))))
 
   (define-key my/leader-map (kbd "t") 'my/auto-jump-to-definition)
@@ -4002,7 +4017,8 @@ Shows information in echo area
     (interactive)
     (pcase major-mode
       ('csharp-mode (omnisharp-find-usages-with-ido))
-      (_ (xref-find-references))))
+      ('java-mode (lsp-find-references))
+      (_ (call-interactively 'xref-find-references))))
 
   (define-key my/leader-map (kbd "u") 'my/auto-find-usages)
 #+END_SRC
@@ -4624,7 +4640,6 @@ omnisharp.json should be in ~/.omnisharp on all OSs
     (interactive)
     (evil-define-key 'normal fsharp-mode-map (kbd (concat my/leader-map-key " a")) 'my/fsharp-mode-map))
 
-  (define-key my/fsharp-mode-map (kbd "d") 'fsharp-ac/gotodefn-at-point)
   (define-key my/fsharp-mode-map (kbd "v") 'fsharp-mark-phrase)
   (define-key my/fsharp-mode-map (kbd "b") 'fsharp-goto-block-up)
   (define-key my/fsharp-mode-map (kbd "C-r") 'fsharp-ac-status)
@@ -4730,16 +4745,18 @@ TODO: Fix settings, grab them from package site
   (defun my/macro-get-names ()
     (mapcar (lambda (entry) (interactive) (car entry)) my/macro-store))
 
-  (defun my/macro-run (count)
-    (interactive "P")
-    (let ((macro (my/macro-prompt)))
-      (setq last-kbd-macro
-            (cdr
-             (seq-find (lambda (entry) (interactive) (string= (car entry) macro)) my/macro-store))))
+  (defun my/macro-run (macro count)
+    (setq last-kbd-macro
+          (cdr
+           (seq-find (lambda (entry) (interactive) (string= (car entry) macro)) my/macro-store)))
     (if count
         (dotimes (i count)
           (call-last-kbd-macro))
-      (call-last-kbd-macro))
+      (call-last-kbd-macro)))
+
+  (defun my/macro-run-prompt (count)
+    (interactive "P")
+    (my/macro-run (my/macro-prompt) count)
     (evil-force-normal-state))
 
   (defun my/macro-modify-store (var pos)
@@ -4757,11 +4774,46 @@ TODO: Fix settings, grab them from package site
   (my/evil-normal-define-key "q" 'my/macro-record-toggle)
   (my/evil-visual-define-key "q" 'my/macro-record-toggle)
 
-  (my/evil-normal-define-key "Q" 'my/macro-run)
-  (my/evil-visual-define-key "Q" 'my/macro-run)
+  (my/evil-normal-define-key "Q" 'my/macro-run-prompt)
+  (my/evil-visual-define-key "Q" 'my/macro-run-prompt)
 
   (my/evil-normal-define-key "C-q" 'my/macro-modify)
   (my/evil-visual-define-key "C-q" 'my/macro-modify)
+#+END_SRC
+
+** Simple search
+Search useful for making macros
+#+BEGIN_SRC emacs-lisp
+  (defvar my/last-search)
+  (defun my/search-forward ()
+    (interactive)
+    (setq my/last-search (completing-read "Search: " nil))
+    (search-forward-regexp my/last-search))
+
+  (defun my/search-backward ()
+    (interactive)
+    (setq my/last-search (completing-read "Search: " nil))
+    (search-backward-regexp my/last-search))
+
+  (defun my/repeat-search-forward ()
+    (interactive)
+    (search-forward-regexp my/last-search))
+
+  (defun my/repeat-search-backward ()
+    (interactive)
+    (search-backward-regexp my/last-search))
+
+  (my/evil-normal-define-key "/" 'my/search-forward)
+  (my/evil-visual-define-key "/" 'my/search-forward)
+
+  (my/evil-normal-define-key "?" 'my/search-backward)
+  (my/evil-visual-define-key "?" 'my/search-backward)
+
+  (my/evil-normal-define-key "j" 'my/repeat-search-forward)
+  (my/evil-visual-define-key "j" 'my/repeat-search-forward)
+
+  (my/evil-normal-define-key "J" 'my/repeat-search-backward)
+  (my/evil-visual-define-key "J" 'my/repeat-search-backward)
 #+END_SRC
 
 ** Elmacro
@@ -5131,8 +5183,8 @@ Disable rainbow delimiters
   ;; (my/evil-normal-define-key "j" 'evil-search-next)
   ;; (my/evil-normal-define-key "J" 'evil-search-previous)
 
-  (my/evil-normal-define-key "j" 'isearch-repeat-forward)
-  (my/evil-normal-define-key "J" 'isearch-repeat-backward)
+  ;; (my/evil-normal-define-key "j" 'isearch-repeat-forward)
+  ;; (my/evil-normal-define-key "J" 'isearch-repeat-backward)
 
   ;; ex
   ;;(evil-ex-define-cmd "new" 'evil-window-new)
@@ -6825,24 +6877,28 @@ TODO counsel-tramp
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/find-map)
   (define-key my/leader-map (kbd "f") 'my/find-map)
-
-  (define-key my/find-map (kbd "e") 'counsel-locate)
-
-  (define-key my/find-map (kbd "s") 'counsel-ag)
 #+END_SRC
 
 ** Custom locate
 Locate only under current dir
 #+BEGIN_SRC emacs-lisp
-  (setq-default counsel-locate-cmd 'my/counsel-locate-cmd-default)
-
-  (defun my/counsel-locate-cmd-default (input)
-    "Return a shell command based on INPUT."
-    (counsel-require-program "locate")
-    (format "locate -i %s | grep -i %s"
-            default-directory
-            (counsel--elisp-to-pcre
-             (ivy--regex input))))
+  (defun my/locate ()
+    (interactive)
+    (let
+        ((original-gc gc-cons-threshold))
+      (setq gc-cons-threshold 80000000)
+      (let
+          ((locate-cache 
+            (split-string
+             (shell-command-to-string (concat "locate -i " default-directory))
+             "\n")))
+        (ivy-read "Locate: " locate-cache
+                  :action (lambda (file)
+                            (when file
+                              (with-ivy-window
+                                (find-file
+                                 (concat (file-remote-p default-directory) file)))))
+                  :unwind '(lambda () (setq gc-cons-threshold original-gc))))))
 #+END_SRC
 
 * Spelling
@@ -7090,7 +7146,10 @@ https://www.emacswiki.org/emacs/ArtistMode
     ;; Buffer management
     ;; Find file
     ("e" my/find-file nil)
-    ("E" dired-jump nil)
+    ("E" my/locate nil)
+    ("DEL" dired-jump nil)
+
+    ("f" counsel-ag nil)
 
     ;; Switch buffer
     ("A" next-buffer nil)
@@ -7105,7 +7164,6 @@ https://www.emacswiki.org/emacs/ArtistMode
     ("C-u" evil-scroll-up nil)
     ("C-w" evil-scroll-down nil)
 
-    ("f" counsel-locate nil)
     ("y" counsel-linux-app nil)
 
     ;; Switch window configuration
@@ -7679,13 +7737,11 @@ https://www.emacswiki.org/emacs/ArtistMode
     ;; Set mode line height
     (set-face-attribute 'mode-line nil
                         :foreground my/foreground-color
-                        :background my/foreground-color
-                        :height  0.1)
+                        :background my/background-color-1)
 
     (set-face-attribute 'mode-line-inactive nil
-                        :foreground my/background-color
-                        :background my/background-color
-                        :height  0.1)
+                        :foreground my/foreground-color
+                        :background my/background-color)
 
     ;; Highlight faces
     ;;(highlight-indent-guides-auto-set-faces)
@@ -7893,28 +7949,84 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
 *** Mode line
 Set mode line height
 #+BEGIN_SRC emacs-lisp
-  ;; Disable normal mode line
-  ;; (setq mode-line-format nil)
-  ;; (setq-default mode-line-format nil)
+  (setq-default mode-line-format 
+                (quote
+                 (
+                  ;; Print if recursive editing
+                  "%["
 
-  (setq mode-line-format "")
-  (setq-default mode-line-format "")
+                  ;; Information bar
+                  mode-line-mule-info
+                  mode-line-client
 
-  (if window-system
-    ;; Set mode line height
-    (set-face-attribute 'mode-line nil
-                        ;; :foreground (face-attribute 'window-divider :foreground)
-                        ;; :background (face-attribute 'window-divider :background)
-                        :foreground "white" 
-                        :background "white"
-                        :height  0.1
-                        :family my/mono-font)
+                  ;; If buffer is modified
+                  mode-line-modified
 
-    (set-face-attribute 'mode-line-inactive nil
-                        :foreground "dark gray"
-                        :background "dark gray"
-                        :height  0.1
-                        :family my/mono-font))
+                  ;; Turns into @ when remote
+                  mode-line-remote
+
+                  " "
+
+                  ;; Print current line number
+                  ;;"%l"
+                  ;;"%p"
+                  ;;(:eval (format "%d" (/ (window-start) 0.01 (point-max))))
+                  ;;"%p"
+                  "%p"
+
+                  "~"
+                  ;;"@" 
+                  ;; Print total line number
+                  (:eval my/buffer-total-lines)
+
+                  " "
+
+                  (:eval
+                   (pcase evil-state
+                     ('normal "N")
+                     ('insert "I")
+                     ('visual "V")
+                     ('emacs "E")
+                     ('replace "R")))
+
+                  ;;"%I"
+
+                  ;; is narrowed
+                  "%n"
+
+                  " | "
+
+                  ;; Print error if any
+                  "%e"
+
+                  ;; Print mode
+                  "%m > " 
+                  ;; Print buffer name
+
+                  "%b"
+
+                  ;; Git branch and project name
+                  (:eval (if (not (string= my/projectile-project-name "-"))
+                             (progn
+                               (concat
+                                " > " 
+                                my/buffer-git-branch
+                                "@"
+                                "["
+                                my/projectile-project-name
+                                "]"))))
+
+
+                  ;;which-func-current
+
+                  ;; (:eval
+                  ;; (let ((which-func (which-function)))
+                  ;; (if which-func
+                  ;; (concat
+                  ;; " "
+                  ;; which-func))))
+
+                  )))
 #+END_SRC
 
 *** LV-line (top modeline)
@@ -7945,7 +8057,7 @@ Use lv-line to create a mode line on the top of the screen
     (setq indicate-empty-lines nil)
     (set-window-hscroll my/lv-line-window 0)
     (setq window-size-fixed t)
-    (setq mode-line-format nil)
+    ;;(setq mode-line-format nil)
 
     (if window-system
         ;; Change to mono face
@@ -8017,32 +8129,46 @@ Use lv-line to create a mode line on the top of the screen
 #+END_SRC
 
 *** Mode line modules
+http://www.holgerschurig.de/en/emacs-tayloring-the-built-in-mode-line/
+**** Cursor position
+#+BEGIN_SRC emacs-lisp
+  (setq mode-line-position
+        '(;; %p print percent of buffer above top of window, o Top, Bot or All
+          ;; (-3 "%p")
+          ;; %I print the size of the buffer, with kmG etc
+          ;; (size-indication-mode ("/" (-4 "%I")))
+          ;; " "
+          ;; %l print the current line number
+          ;; %c print the current column
+          (line-number-mode ("%l" (column-number-mode ":%c")))))
+#+END_SRC
+
 **** Buffer name
 #+BEGIN_SRC emacs-lisp
-  (defvar my/buffer-name "")
-  (defvar my/max-buffer-name-length 10)
-
-  (defun my/update-max-buffer-name-length()
-    (interactive)
-    (setq my/max-buffer-name-length (floor (/ (frame-width) 10))))
-
-  (defun my/update-buffer-name-string (BUFFER)
-    (interactive)
-    (setq my/buffer-name
-          (if (> (string-width BUFFER) my/max-buffer-name-length)
-              (concat (string-trim-right (substring BUFFER 0 my/max-buffer-name-length)) "...")
-            BUFFER)))
-
-  (if window-system
-      ;; At this point in the code, exwm hasn't had time to maximize the emacs frame
-      (add-hook 'exwm-init-hook 'my/update-max-buffer-name-length)
-    ;; If on terminal, just run it now since it's always maximized
-    (my/update-max-buffer-name-length))
-
-  ;;(add-hook 'buffer-list-update-hook (lambda () (interactive) (my/update-buffer-name-string (buffer-name)) t) t)
-  (add-hook 'my/switch-buffer-hook (lambda () (interactive) (my/update-buffer-name-string (buffer-name)) t) t)
-
-  ;;(add-hook 'window-configuration-change-hook (lambda () (interactive) (my/update-buffer-name-string (buffer-name)) t) t)
+  ;; (defvar my/buffer-name "")
+  ;; (defvar my/max-buffer-name-length 10)
+;; 
+  ;; (defun my/update-max-buffer-name-length()
+    ;; (interactive)
+    ;; (setq my/max-buffer-name-length (floor (/ (frame-width) 10))))
+;; 
+  ;; (defun my/update-buffer-name-string (BUFFER)
+    ;; (interactive)
+    ;; (setq my/buffer-name
+          ;; (if (> (string-width BUFFER) my/max-buffer-name-length)
+              ;; (concat (string-trim-right (substring BUFFER 0 my/max-buffer-name-length)) "...")
+            ;; BUFFER)))
+;; 
+  ;; (if window-system
+      ;; ;; At this point in the code, exwm hasn't had time to maximize the emacs frame
+      ;; (add-hook 'exwm-init-hook 'my/update-max-buffer-name-length)
+    ;; ;; If on terminal, just run it now since it's always maximized
+    ;; (my/update-max-buffer-name-length))
+;; 
+  ;; ;;(add-hook 'buffer-list-update-hook (lambda () (interactive) (my/update-buffer-name-string (buffer-name)) t) t)
+  ;; (add-hook 'my/switch-buffer-hook (lambda () (interactive) (my/update-buffer-name-string (buffer-name)) t) t)
+;; 
+  ;; ;;(add-hook 'window-configuration-change-hook (lambda () (interactive) (my/update-buffer-name-string (buffer-name)) t) t)
 #+END_SRC
 
 **** Which function
@@ -8396,94 +8522,18 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                    (format-mode-line
                     (quote
                      (
-
-                      ;; Print if recursive editing
-                      "%["
-
-                      ;; Information bar
-                      mode-line-mule-info
-                      mode-line-client
-
-                      ;; If buffer is modified
-                      mode-line-modified
-
-                      ;; Turns into @ when remote
-                      mode-line-remote
-
-                      " "
-
-                      ;; Print current line number
-                      ;;"%l"
-                      ;;"%p"
-                      (:eval (format "%d" (/ (window-start) 0.01 (point-max))))
-
-                      "~"
-                      ;;"@" 
-                      ;; Print total line number
-                      (:eval my/buffer-total-lines)
-
-                      " "
-
-                      (:eval
-                       (pcase evil-state
-                         ('normal "N")
-                         ('insert "I")
-                         ('visual "V")
-                         ('emacs "E")
-                         ('replace "R")))
-
-                      ;;"%I"
-
-                      ;; is narrowed
-                      "%n"
-
-                      " | "
-
-                      ;; Print error if any
-                      "%e"
-
-                      ;; Print mode
-                      "%m > " 
-                      ;; Print buffer name
-
-                      ;;(:eval (buffer-name))
-
-                      (:eval my/buffer-name)
-
-                      ;;"%b"
-
-                      ;; Git branch and project name
-                      (:eval (if (not (string= my/projectile-project-name "-"))
-                                 (progn
-                                   (concat
-                                    " > " 
-                                    my/buffer-git-branch
-                                    "@"
-                                    "["
-                                    my/projectile-project-name
-                                    "]"))))
-
-
-                      ;;which-func-current
-
-                      ;; (:eval
-                      ;; (let ((which-func (which-function)))
-                      ;; (if which-func
-                      ;; (concat
-                      ;; " "
-                      ;; which-func))))
-
+                      (:eval (if defining-kbd-macro
+                                 "MACRO"))
                       ;; If memory is less than 1GB
                       (:eval (if (< my/available-mem 1000000000)
                                  "GC FULL! JUMP SHIP!"))
-                      ))
-                    )
+
+                      (:eval my/past-alerts)
+                      )))
 
                    (format-mode-line
                     (quote
                      (
-                      (:eval my/past-alerts)
-
                       "| "
 
                       (:eval (if my/mode-line-show-GC-stats
