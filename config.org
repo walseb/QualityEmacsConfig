@@ -344,6 +344,7 @@ Bootstrap straight.el
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 's)
   (straight-use-package 'dash)
+  (straight-use-package 'ov)
   (require 's)
   (require 'dash)
 #+END_SRC
@@ -4216,6 +4217,12 @@ Shows information in echo area
 #+END_SRC
 
 ** Emacs-lisp
+*** Litable
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package '(litable :type git :host github :repo "Fuco1/blablabla"))
+  (add-hook 'emacs-lisp-mode-hook 'litable-mode)
+#+END_SRC
+
 *** Enable debugging on error
 #+BEGIN_SRC emacs-lisp
   (setq debug-on-error nil)
@@ -5278,9 +5285,6 @@ https://emacs.stackexchange.com/questions/33326/how-do-i-cut-and-paste-effective
   (require 'exwm)
   ;;(require 'exwm-config)
 
-  ;; Fix magit ediff
-  (setq ediff-window-setup-function 'ediff-setup-windows-plain)
-
   ;; enable exwm
   (exwm-enable)
 
@@ -5690,6 +5694,21 @@ Redefine function to attempt to open image if link at point wasn't found
 #+BEGIN_SRC emacs-lisp
   (require 'ediff)
   (setq-default ediff-forward-word-function 'forward-char)
+
+  ;; Fixes exwm bug too?
+  (setq ediff-window-setup-function 'ediff-setup-windows-plain)
+
+  (setq ediff-split-window-function 'split-window-horizontally)
+#+END_SRC
+
+*** A and B to Ancestor
+#+BEGIN_SRC emacs-lisp
+  (defun ediff-copy-both-to-C ()
+    (interactive)
+    (ediff-copy-diff ediff-current-difference nil 'C nil
+                     (concat
+                      (ediff-get-region-contents ediff-current-difference 'A ediff-control-buffer)
+                      (ediff-get-region-contents ediff-current-difference 'B ediff-control-buffer))))
 #+END_SRC
 
 *** Ediff-dired
@@ -8071,6 +8090,7 @@ Use lv-line to create a mode line on the top of the screen
     (set-window-parameter my/lv-line-window 'no-other-window t))
 
   (defun my/lv-line-create ()
+    (interactive)
     (if (not (get-buffer my/lv-line--buffer))
         (generate-new-buffer my/lv-line--buffer))
     (if (not (window-live-p my/lv-line-window))
@@ -8504,6 +8524,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
   (defvar my/frame-width (frame-width))
 
   (defun my/frame-width-update()
+    (interactive)
     (setq my/frame-width (frame-width)))
 
   ;; Only applicable to X since terminal never stretches, etc
