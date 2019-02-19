@@ -7496,7 +7496,7 @@ https://www.emacswiki.org/emacs/ArtistMode
                               (setq-local prettify-symbols-alist
                                           (append
                                            prettify-symbols-alist
-                                           `((,(string-trim comment-start) . ?|)))))
+                                           `((,(string-trim comment-start) . ?>)))))
             t)
 
   (defun my/prettify-symbols-default-compose-p (start end _match)
