@@ -4672,11 +4672,17 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 ** Clojure
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'clojure-mode)
+  (require 'clojure-mode)
 #+END_SRC
 
 *** Cider
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'cider)
+#+END_SRC
+
+**** Enlighten
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'clojure-mode-hook 'cider-enlighten-mode)
 #+END_SRC
 
 *** Keys
@@ -5564,6 +5570,7 @@ Redefine function to attempt to open image if link at point wasn't found
 #+BEGIN_SRC emacs-lisp
   (require 'eww)
 #+END_SRC
+
 
 *** Add URL to buffer name
 #+BEGIN_SRC emacs-lisp
@@ -7446,12 +7453,12 @@ https://www.emacswiki.org/emacs/ArtistMode
     
 *** Set symbol by mode
 #+BEGIN_SRC emacs-lisp
-  (setq-default prettify-symbols-alist
-                (append
-                 my/generic-greek-symbols 
-                 my/generic-equal-symbols
-                 my/generic-arrow-symbols
-                 ))
+  ;; (setq-default prettify-symbols-alist
+                ;; (append
+                 ;; my/generic-greek-symbols 
+                 ;; my/generic-equal-symbols
+                 ;; my/generic-arrow-symbols
+                 ;; ))
 
   (add-hook 'prog-mode-hook (lambda () (interactive)
                               (setq-local prettify-symbols-alist
