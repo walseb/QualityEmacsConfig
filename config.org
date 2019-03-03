@@ -4734,7 +4734,7 @@ TODO: Fix settings, grab them from package site
 
   (defun my/macro-record-start ()
     (interactive)
-    (setq my/macro-last-name (completing-read "macro name: " nil))
+    (setq my/macro-last-name (completing-read "Macro name: " nil))
     (call-interactively 'kmacro-start-macro))
 
   (defun my/macro-record-stop ()
@@ -4743,9 +4743,9 @@ TODO: Fix settings, grab them from package site
     (call-interactively 'kmacro-end-macro)
     (add-to-list 'my/macro-store `(,my/macro-last-name . ,last-kbd-macro)))
 
-  (defun my/macro-prompt ()
+  (defun my/macro-prompt (message)
     ;; Ivy doesn't sort, so use it
-    (ivy-read "Macros: "  (my/macro-get-names)))
+    (ivy-read message (my/macro-get-names)))
 
   (defun my/macro-get-names ()
     (mapcar (lambda (entry) (interactive) (car entry)) my/macro-store))
@@ -4761,7 +4761,7 @@ TODO: Fix settings, grab them from package site
 
   (defun my/macro-run-prompt (count)
     (interactive "P")
-    (my/macro-run (my/macro-prompt) count)
+    (my/macro-run (my/macro-prompt "Run macro: ") count)
     (evil-force-normal-state))
 
   (defun my/macro-modify-store (var pos)
@@ -4769,7 +4769,7 @@ TODO: Fix settings, grab them from package site
 
   (defun my/macro-modify ()
     (interactive)
-    (let* ((macro-name (my/macro-prompt))
+    (let* ((macro-name (my/macro-prompt "Modify macro: "))
            (pos (cl-position macro-name (my/macro-get-names) :test 'string=)))
       (my/macro-modify-store
        `(,macro-name .
@@ -7954,12 +7954,12 @@ Highlight thing under cursor and all other occurrences
 
 ** Faces
 #+BEGIN_SRC emacs-lisp
-(if window-system
-    (set-face-attribute 'header-line nil
-                        :foreground (face-attribute 'default :foreground)
-                        :background (face-attribute 'default :background)
-                        :family (face-attribute 'default :family)
-                        :height (face-attribute 'default :height)))
+  (if window-system
+      (set-face-attribute 'header-line nil
+                          :foreground (face-attribute 'default :foreground)
+                          :background (face-attribute 'default :background)
+                          :family (face-attribute 'default :family)
+                          :height (face-attribute 'default :height)))
 
   (set-face-attribute 'org-mode-line-clock nil
                       :foreground (face-attribute 'default :foreground)
@@ -8044,7 +8044,7 @@ Set mode line height
 
                   ;; Print mode
                   (:eval (if defining-kbd-macro
-                             "MACRO"))
+                             "[MACRO] "))
 
                   "%m > "
                   ;; Print buffer name
@@ -8117,11 +8117,15 @@ Use lv-line to create a mode line on the top of the screen
     (setq indicate-empty-lines nil)
     (set-window-hscroll my/lv-line-window 0)
     (setq window-size-fixed t)
+    (setq truncate-lines t)
     ;;(setq mode-line-format nil)
 
     (if window-system
         ;; Change to mono face
-        (face-remap-add-relative 'default :family my/mono-font))
+        (face-remap-add-relative 'default :family my/mono-font :height 120))
+
+    ;; Offset by 12 pixels to make text fit
+    (set-window-fringes (selected-window) 12 0)
 
     ;; Disable cursor
     (setq cursor-type nil)
