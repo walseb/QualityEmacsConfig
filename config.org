@@ -1071,16 +1071,12 @@ When changing leader, change =my/leader-map-key=
   (defvar my/window-leader-key "C-=")
   (defvar my/mod-window-leader-key "M-C-=")
 
-  (define-prefix-command 'my/help-map)
-  (define-key my/leader-map (kbd "h") 'my/help-map)
-
   (my/evil-normal-define-key "U" 'undo-tree-visualize)
 
   (my/evil-normal-define-key my/leader-map-key my/leader-map)
   (my/evil-visual-define-key my/leader-map-key my/leader-map)
 
   (my/evil-universal-define-key my/mod-leader-map-key my/leader-map)
-
 #+END_SRC
 
 * Alert
@@ -1509,9 +1505,26 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (define-key my/leader-map (kbd "C-z") 'save-buffers-kill-emacs)
 #+END_SRC
 
+** Bind help key
+#+BEGIN_SRC emacs-lisp
+  (define-key my/leader-map (kbd "h") help-map)
+#+END_SRC
+
 ** Help mode
 #+BEGIN_SRC emacs-lisp
-  ;;(define-key my/leader-map (kbd "C-h") help-map)
+  (define-prefix-command 'my/help-map)
+  (define-key my/leader-map (kbd "H") 'my/help-map)
+
+  (define-key my/help-map (kbd "C-c") 'counsel-colors-emacs)
+  (define-key my/help-map (kbd "C") 'counsel-colors-web)
+
+  (define-key my/help-map (kbd "m") 'which-key-show-major-mode)
+
+  (define-key my/help-map (kbd "c") 'rainbow-mode)
+
+  (define-key my/help-map (kbd "y") 'yas-describe-tables)
+
+  (define-key my/help-map (kbd "d") 'rainbow-delimiters-mode)
 #+END_SRC
 
 *** Disable help mode binds
@@ -1833,6 +1846,17 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 *** Don't save window layout
 #+BEGIN_SRC emacs-lisp
   (add-hook 'org-src-mode-hook '(lambda () (interactive) (setq org-src--saved-temp-window-config nil)))
+#+END_SRC
+
+*** Rebind key
+#+BEGIN_SRC emacs-lisp
+  (define-key my/leader-map (kbd "'") 'my/toggle-org-src)
+
+  (defun my/toggle-org-src ()
+    (interactive)
+    (if (string= major-mode 'org-mode)
+        (org-edit-special)
+      (org-edit-src-exit)))
 #+END_SRC
 
 ** Export
@@ -2487,18 +2511,30 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
 #+END_SRC
 
 ** Folding
-*** Origami
+*** Hideshow
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'origami)
+  (require 'hideshow)
 
-  (global-origami-mode)
+  ;; (define-globalized-minor-mode global-hs-minor-mode
+  ;; hs-minor-mode hs-minor-mode)
+  ;; (hs-minor-mode)
+  ;; (global-hs-minor-mode 1)
 
-  (setq origami-show-fold-header t)
+  (add-hook 'prog-mode-hook '(lambda () (interactive) (hs-minor-mode 1)))
 #+END_SRC
 
-*** Visuals
+*** Origami
 #+BEGIN_SRC emacs-lisp
-  (setq origami-fold-replacement my/fold-ellipsis)
+  ;; (straight-use-package 'origami)
+  ;;
+  ;; (global-origami-mode)
+  ;;
+  ;; (setq origami-show-fold-header t)
+#+END_SRC
+
+**** Visuals
+#+BEGIN_SRC emacs-lisp
+  ;; (setq origami-fold-replacement my/fold-ellipsis)
 #+END_SRC
 
 ** Keys
@@ -2508,23 +2544,24 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
     (outline-show-all)
     (outline-hide-body))
 
-  (my/evil-normal-define-key "g o" 'origami-open-node)
-  (my/evil-normal-define-key "g O" 'origami-open-node-recursively)
+  (my/evil-normal-define-key "g o" 'hs-show-block)
+  (my/evil-normal-define-key "g O" 'hs-show-all)
 
   (my/evil-normal-define-key "g C-o" 'evil-open-fold)
   (my/evil-normal-define-key "g C-O" 'evil-open-fold-rec)
 
-  (my/evil-normal-define-key "g a" 'origami-show-only-node)
-  (my/evil-normal-define-key "g A" 'origami-open-all-nodes)
+  ;; Show only nodes
+  (my/evil-normal-define-key "g a" 'hs-hide-level)
+  (my/evil-normal-define-key "g A" 'hs-show-all)
 
   (my/evil-normal-define-key "g RET" 'my/outline-hide-all-body)
   (my/evil-normal-define-key "g C-a" 'outline-show-all)
 
-  (my/evil-normal-define-key "g k" 'origami-close-node)
-  (my/evil-normal-define-key "g K" 'origami-close-node-recursively)
+  (my/evil-normal-define-key "g h" 'hs-hide-block)
+  (my/evil-normal-define-key "g H" 'hs-hide-all)
 
-  (my/evil-normal-define-key "g C-k" 'evil-close-fold)
-  (my/evil-normal-define-key "g C-K" '(lambda () (interactive) (hide-sublevels 1)))
+  (my/evil-normal-define-key "g C-h" 'evil-close-fold)
+  (my/evil-normal-define-key "g C-H" '(lambda () (interactive) (hide-sublevels 1)))
 
   (defvar-local buffer-has-outline-bullets t)
   (defun my/toggle-outline-bullets ()
@@ -2714,8 +2751,6 @@ Used in ivy occur
 
   (global-set-key (kbd "M-k") 'counsel-yank-pop)
 
-  (define-key my/help-map (kbd "C-c") 'counsel-colors-emacs)
-  (define-key my/help-map (kbd "C") 'counsel-colors-web)
 
   (define-key my/leader-map (kbd "S") 'counsel-imenu)
   (define-key my/leader-map (kbd "TAB") 'counsel-outline)
@@ -3046,11 +3081,6 @@ Flycheck with extra correction for elisp packages
         (set-face-attribute 'which-key-special-key-face nil :family my/mono-font)))
 #+END_SRC
 
-*** Bind
-#+BEGIN_SRC emacs-lisp
-  (define-key my/help-map (kbd "m") 'which-key-show-major-mode)
-#+END_SRC
-
 ** Yasnippet
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'yasnippet)
@@ -3073,8 +3103,6 @@ Flycheck with extra correction for elisp packages
     (call-interactively 'yas-insert-snippet))
 
   (define-key my/leader-map (kbd "i") 'my/yas-insert-snippet)
-
-  (define-key my/help-map (kbd "y") 'yas-describe-tables)
 #+END_SRC
 
 * Movement
@@ -3161,17 +3189,17 @@ https://emacs.stackexchange.com/questions/20900/navigate-by-indentation
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
-  (my/evil-normal-define-key "g n" 'indentation-forward-to-next-sibling)
-  (my/evil-visual-define-key "g n" 'indentation-forward-to-next-sibling)
+  (my/evil-normal-define-key "C-n" 'indentation-forward-to-next-sibling)
+  (my/evil-visual-define-key "C-n" 'indentation-forward-to-next-sibling)
 
-  (my/evil-normal-define-key "g p" 'indentation-backward-to-previous-sibling)
-  (my/evil-visual-define-key "g p" 'indentation-backward-to-previous-sibling)
+  (my/evil-normal-define-key "C-p" 'indentation-backward-to-previous-sibling)
+  (my/evil-visual-define-key "C-p" 'indentation-backward-to-previous-sibling)
 
-  (my/evil-normal-define-key "g h" 'indentation-up-to-parent)
-  (my/evil-visual-define-key "g h" 'indentation-up-to-parent)
+  (my/evil-normal-define-key "C-h" 'indentation-up-to-parent)
+  (my/evil-visual-define-key "C-h" 'indentation-up-to-parent)
 
-  (my/evil-normal-define-key "g l" 'indentation-down-to-child)
-  (my/evil-visual-define-key "g l" 'indentation-down-to-child)
+  (my/evil-normal-define-key "C-l" 'indentation-down-to-child)
+  (my/evil-visual-define-key "C-l" 'indentation-down-to-child)
 #+END_SRC
 
 ** Marks
@@ -7673,9 +7701,9 @@ https://www.emacswiki.org/emacs/ArtistMode
     (set-face-attribute 'spray-accent-face nil :foreground my/foreground-color :background my/background-color :underline t)
 
     ;;; Origami
-    (set-face-attribute 'origami-fold-fringe-face nil :foreground my/foreground-color  :background  my/background-color :underline t :weight 'bold)
-    (set-face-attribute 'origami-fold-header-face nil :foreground my/background-color :background my/foreground-color  :underline t :weight 'bold :height 1.15)
-    (set-face-attribute 'origami-fold-replacement-face nil :foreground my/background-color :background  my/foreground-color :underline t :weight 'bold)
+    ;; (set-face-attribute 'origami-fold-fringe-face nil :foreground my/foreground-color  :background  my/background-color :underline t :weight 'bold)
+    ;; (set-face-attribute 'origami-fold-header-face nil :foreground my/background-color :background my/foreground-color  :underline t :weight 'bold :height 1.15)
+    ;; (set-face-attribute 'origami-fold-replacement-face nil :foreground my/background-color :background  my/foreground-color :underline t :weight 'bold)
 
     ;;; Isearch
     (set-face-attribute 'isearch nil :foreground my/background-color :background my/foreground-color)
@@ -7838,8 +7866,6 @@ Fringe only on the left side
 Changes background of eg. #FF00FF to represent color
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'rainbow-mode)
-
-  (define-key my/help-map (kbd "c") 'rainbow-mode)
 #+END_SRC
 
 ** Rainbow delimiters
@@ -7847,7 +7873,6 @@ Changes colors of delimiters eg. {()}
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'rainbow-delimiters)
 
-  (define-key my/help-map (kbd "d") 'rainbow-delimiters-mode)
   ;;(add-hook 'prog-mode 'rainbow-delimiters-mode)
 #+END_SRC
 
