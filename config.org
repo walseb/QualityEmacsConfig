@@ -8127,6 +8127,9 @@ Use lv-line to create a mode line on the top of the screen
     ;; Offset by 12 pixels to make text fit
     (set-window-fringes (selected-window) 12 0)
 
+    ;; Disable char at end of line
+    (set-display-table-slot standard-display-table 0 ?\ )
+
     ;; Disable cursor
     (setq cursor-type nil)
     (setq cursor-in-non-selected-windows nil)
