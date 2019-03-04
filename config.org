@@ -917,6 +917,20 @@ Allows for using indention as text objects
   ;;
 #+END_SRC
 
+** Goto end of line
+#+BEGIN_SRC emacs-lisp
+  (evil-define-motion evil-goto-line (count)
+    "Go to the first non-blank character of line COUNT.
+  By default the last line."
+    :jump t
+    :type line
+    (if (null count)
+        (with-no-warnings (end-of-buffer))
+      (goto-char (point-min))
+      (forward-line (1- count)))
+    (end-of-line))
+#+END_SRC
+
 ** Keys
 #+BEGIN_SRC emacs-lisp
   ;; Prevent emacs state from being exited with esc, fixes exwm since it uses emacs state and to exit hydra you have to do esc
@@ -4052,7 +4066,7 @@ Shows information in echo area
         (my/auto-eval-region)
       (pcase major-mode
         ('org-mode (call-interactively 'org-babel-execute-src-block))
-        ('scheme-mode (geiser-eval-last-sexp nil))
+        ('scheme-mode (geiser-eval-definition nil))
         ('clojure-mode (cider-eval-last-sexp))
         ('plantuml-mode (plantuml-preview-region 0 (line-beginning-position) (line-end-position)))
         ('fsharp-mode (fsharp-eval-phrase))
