@@ -5375,15 +5375,13 @@ We use class names for all windows expect for Java applications and GIMP (becaus
 #+END_SRC
 
 ** Multi-screen
-
 #+BEGIN_SRC emacs-lisp
-  (require 'exwm-randr)
+  (if my/enable-randr
+      (require 'exwm-randr))
 #+END_SRC
 
 *** Get monitor setup
 #+BEGIN_SRC emacs-lisp
-  (exwm-randr-enable)
-
   (defun my/exwm-randr-auto-get-monitor ()
     (let* ((result)
            (monitors (nth 1 (exwm-randr--get-monitors))))
@@ -5393,20 +5391,19 @@ We use class names for all windows expect for Java applications and GIMP (becaus
       result))
 
   ;; Get monitor setup
-  (if my/device/monitor-setup
-      (progn
-        (setq exwm-workspace-number (/ (length my/device/monitor-setup) 2))
-        (setq exwm-randr-workspace-monitor-plist my/device/monitor-setup)))
+  (if my/enable-randr
+      (if my/device/monitor-setup
+          (progn
+            (setq exwm-workspace-number (/ (length my/device/monitor-setup) 2))
+            (setq exwm-randr-workspace-monitor-plist my/device/monitor-setup))))
   ;;(let ((monitor-setup (my/exwm-randr-auto-get-monitor)))
   ;;(setq exwm-workspace-number (/ (length monitor-setup) 2))
   ;;(setq exwm-randr-workspace-monitor-plist monitor-setup)))
-
-  ;; (exwm-randr-refresh)
 #+END_SRC
 
 *** Enable
 #+BEGIN_SRC emacs-lisp
-  (if (> exwm-workspace-number 1)
+  (if (and my/enable-randr (> exwm-workspace-number 1))
       (progn
         (exwm-randr-enable)))
 #+END_SRC
