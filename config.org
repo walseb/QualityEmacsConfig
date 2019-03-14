@@ -3949,19 +3949,28 @@ Shows information in echo area
   (setq tooltip-resize-echo-area t)
 
   ;; Update function to only show documentation when not in insert mode
-  (el-patch-feature eldoc)
-  (el-patch-defun eldoc-print-current-symbol-info ()
-    "Print the text produced by `eldoc-documentation-function'."
-    ;; This is run from post-command-hook or some idle timer thing,
-    ;; so we need to be careful that errors aren't ignored.
-    (if (not (eq evil-state 'insert))
-        (with-demoted-errors "eldoc error: %s"
-          (and (or (eldoc-display-message-p)
-                   ;; Erase the last message if we won't display a new one.
-                   (when eldoc-last-message
-                     (eldoc-message nil)
-                     nil))
-               (eldoc-message (funcall eldoc-documentation-function))))))
+  ;; (el-patch-feature eldoc)
+  ;; (el-patch-defun eldoc-print-current-symbol-info ()
+    ;; "Print the text produced by `eldoc-documentation-function'."
+    ;;;;  This is run from post-command-hook or some idle timer thing,
+    ;;;;  so we need to be careful that errors aren't ignored.
+    ;; (if (not (eq evil-state 'insert))
+        ;; (with-demoted-errors "eldoc error: %s"
+          ;; (and (or (eldoc-display-message-p)
+                   ;;;;  Erase the last message if we won't display a new one.
+                   ;; (when eldoc-last-message
+                     ;; (eldoc-message nil)
+                     ;; nil))
+               ;; (eldoc-message (funcall eldoc-documentation-function))))))
+#+END_SRC
+
+** Box
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package '(eldoc-box :type git :host github :repo "casouri/eldoc-box"))
+
+  (add-hook 'eldoc-mode-hook '(lambda () (interactive)
+                                (eldoc-box-hover-mode)
+                                (eldoc-box-hover-at-point-mode)))
 #+END_SRC
 
 ** Inline
@@ -4253,8 +4262,15 @@ Shows information in echo area
 ** Emacs-lisp
 *** Litable
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package '(litable :type git :host github :repo "Fuco1/blablabla"))
+  ;;(straight-use-package '(litable :type git :host github :repo "Fuco1/blablabla"))
+  (straight-use-package 'litable)
   ;; (add-hook 'emacs-lisp-mode-hook 'litable-mode)
+#+END_SRC
+
+**** Don't safe check
+#+BEGIN_SRC emacs-lisp
+  ;; (defun litable--safe-eval (form)
+    ;; (eval form))
 #+END_SRC
 
 *** Enable debugging on error
@@ -5855,6 +5871,8 @@ If enabled it auto enables projectile, which has high CPU usage
   (add-hook 'dired-mode-hook 'diff-hl-dired-mode)
 
   (add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh)
+
+  (setq diff-hl-draw-borders nil)
 #+END_SRC
 
 ** Keys
@@ -6774,6 +6792,7 @@ Mode for writing mail
   (define-key my/profiler-map (kbd "s") 'profiler-start)
   (define-key my/profiler-map (kbd "e") 'profiler-stop)
   (define-key my/profiler-map (kbd "r") 'profiler-report)
+  (define-key my/profiler-map (kbd "R") 'profiler-reset)
 #+END_SRC
 
 ** Install software
@@ -7779,6 +7798,10 @@ https://www.emacswiki.org/emacs/ArtistMode
 
     ;;(defvar my/evil-goggles-highlight-color)
 
+    ;;; Yascroll
+    (set-face-attribute 'yascroll:thumb-fringe nil :background "slateblue" :foreground "slateblue")
+    (set-face-attribute 'yascroll:thumb-text-area nil :background "slateblue")
+
     ;;; Term
     (set-face-attribute 'term nil :family my/mono-font)
     (set-face-attribute 'term-bold nil :family my/mono-font)
@@ -7969,9 +7992,38 @@ Highlight thing under cursor and all other occurrences
   (setq highlight-thing-large-buffer-limit 5000)
 #+END_SRC
 
+** Highlight parens
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'highlight-parentheses)
+  (global-highlight-parentheses-mode)
+#+END_SRC
+
+** Highlight changes
+#+BEGIN_SRC emacs-lisp
+  (define-key my/leader-map (kbd "q") 'highlight-changes-mode)
+#+END_SRC
+
+** Scrollbar
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'yascroll)
+  (global-yascroll-bar-mode)
+#+END_SRC
+
+** Hl-Todo
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'hl-todo)
+
+  (global-hl-todo-mode)
+#+END_SRC
+
 ** Hl-anything
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'hl-anything)
+
+  (define-globalized-minor-mode global-hl-highlight-mode
+    hl-highlight-mode hl-highlight-mode)
+  (hl-highlight-mode)
+  (global-hl-highlight-mode 1)
 
   (define-key my/leader-map (kbd "M") 'hl-highlight-thingatpt-local)
 #+END_SRC
@@ -8596,7 +8648,6 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                    (format-mode-line
                     (quote
                      (
-
 
                       ;; If memory is less than 1GB
                       (:eval (if (< my/available-mem 1000000000)
