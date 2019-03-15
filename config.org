@@ -3968,9 +3968,12 @@ Shows information in echo area
 #+BEGIN_SRC emacs-lisp
   (straight-use-package '(eldoc-box :type git :host github :repo "casouri/eldoc-box"))
 
-  (add-hook 'eldoc-mode-hook '(lambda () (interactive)
-                                (eldoc-box-hover-mode)
-                                (eldoc-box-hover-at-point-mode)))
+  (define-globalized-minor-mode global-eldoc-box-mode
+    eldoc-box-hover-mode eldoc-box-hover-mode)
+  (global-eldoc-box-mode)
+
+  ;; eldoc-box-hover-at-point-mode needs to be enabled after eldoc-box-hover-mode is done, otherwise problems can appear
+  (defadvice eldoc-box-hover-mode (after eldoc-box-hover-mode activate) (eldoc-box-hover-at-point-mode 1))
 #+END_SRC
 
 ** Inline
@@ -7624,8 +7627,7 @@ https://www.emacswiki.org/emacs/ArtistMode
           (setq my/background-color-1 (color-lighten-name my/background-color 5))
           (setq my/background-color-2 (color-lighten-name my/background-color 10))
           (setq my/background-color-3 (color-lighten-name my/background-color 15))
-          (setq my/background-color-4 (color-lighten-name my/background-color 20))
-          )
+          (setq my/background-color-4 (color-lighten-name my/background-color 20)))
 
       (setq my/mark-color "yellow")
 
@@ -7781,11 +7783,6 @@ https://www.emacswiki.org/emacs/ArtistMode
     (set-face-attribute 'avy-lead-face-0 nil :foreground my/background-color :background my/foreground-color-2)
     (set-face-attribute 'avy-lead-face-1 nil :foreground my/background-color :background my/foreground-color-4)
     (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background my/foreground-color-6)
-
-    ;;; Eldoc inline
-    ;; If eldoc overlay is in use
-    (if (require 'eldoc-overlay nil 'noerror)
-        (set-face-attribute 'quick-peek-background-face nil :foreground my/foreground-color-6 :background my/background-color))
 
     ;;; Eshell
     (require 'em-prompt)
