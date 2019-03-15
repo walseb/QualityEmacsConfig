@@ -3894,13 +3894,8 @@ Version 2015-07-30"
   (evil-define-key 'insert dired-mode-map (kbd "^") 'dired-up-directory)
   ;; folding
   (evil-define-key 'normal dired-mode-map (kbd "g") nil)
-  (evil-define-key 'normal dired-mode-map (kbd "g a") 'dired-hide-all)
-  (evil-define-key 'normal dired-mode-map (kbd "g A") 'dired-hide-all)
-  (evil-define-key 'normal dired-mode-map (kbd "g f") 'dired-hide-subdir)
-  (evil-define-key 'normal dired-mode-map (kbd "g F") 'dired-hide-subdir)
-  (evil-define-key 'normal dired-mode-map (kbd "g o") 'dired-hide-subdir)
-  (evil-define-key 'normal dired-mode-map (kbd "g O") 'dired-hide-subdir)
   (define-key dired-mode-map  [remap evil-close-fold] 'dired-hide-subdir)
+  (define-key dired-mode-map  [remap evil-open-fold] 'dired-unhide-subdir)
   (define-key dired-mode-map  [remap my/outline-hide-all-body] 'dired-hide-all)
   (define-key dired-mode-map  [remap outline-show-all] 'dired-hide-all)
   ;; misc
@@ -4346,7 +4341,7 @@ or
   (defun my/java-mode ()
     (aggressive-indent-mode -1)
     (lsp)
-    )
+    (lsp-lens-mode))
 
   (add-hook 'java-mode-hook 'my/java-mode)
 #+END_SRC
@@ -4444,17 +4439,15 @@ Windows performance tweaks
 
   (setq ccls-executable "/bin/ccls")
 
-  (add-hook 'c-mode-hook '(lambda () (interactive) (aggressive-indent-mode 0)))
-  (add-hook 'c++-mode-hook '(lambda () (interactive) (aggressive-indent-mode 0)))
-  (add-hook 'objc-mode-hook '(lambda () (interactive) (aggressive-indent-mode 0)))
+  (defun my/c-mode ()
+    (aggressive-indent-mode 0)
+    (lsp)
+    (lsp-lens-mode)
+    (push 'company-lsp company-backends))
 
-  (add-hook 'c-mode-hook 'lsp)
-  (add-hook 'c++-mode-hook 'lsp)
-  (add-hook 'objc-mode-hook 'lsp)
-
-  (add-hook 'c-mode-hook (lambda () (push 'company-lsp company-backends)))
-  (add-hook 'c++-mode-hook (lambda () (push 'company-lsp company-backends)))
-  (add-hook 'objc-mode-hook (lambda () (push 'company-lsp company-backends)))
+  (add-hook 'c-mode-hook 'my/c-mode)
+  (add-hook 'c++-mode-hook 'my/c-mode)
+  (add-hook 'objc-mode-hook 'my/c-mode)
 #+END_SRC
 
 *** Cling
@@ -7755,6 +7748,15 @@ https://www.emacswiki.org/emacs/ArtistMode
     ;; All matching text
     (set-face-attribute 'company-tooltip-common nil :foreground my/background-color :background my/foreground-color :family my/mono-font)
 
+    ;;; Company box
+    (if (require 'company-box nil 'noerror)
+        (progn
+          (set-face-attribute 'company-box-annotation nil :family my/mono-font)
+          (set-face-attribute 'company-box-background nil :family my/mono-font)
+          (set-face-attribute 'company-box-candidate  nil :family my/mono-font)
+          (set-face-attribute 'company-box-scrollbar  nil :family my/mono-font)
+          (set-face-attribute 'company-box-selection  nil :family my/mono-font)))
+
     ;;; Popup menu
     ;; Selected entry
     (require 'popup)
@@ -8108,14 +8110,17 @@ Set mode line height
                   ;;"%p"
 
                   ;;"@"
-                  ;; Print total line number
+                  ;; Print total line number and buffer position
+                  ;; (:eval
+                  ;; (let
+                  ;; ((line-number-count (+ (count-lines (point-min) (point-max)) 1))
+                  ;; (point-pos (count-lines (point) (point-min))))
+                  ;; (let
+                  ;; ((point-in-buffer-percentage (floor (* (/ (float point-pos) line-number-count) 100))))
+                  ;; (concat (int-to-string point-in-buffer-percentage) "% ~" (int-to-string line-number-count)))))
+
                   (:eval
-                   (let
-                       ((line-number-count (+ (count-lines (point-min) (point-max)) 1))
-                        (point-pos (count-lines (point) (point-min))))
-                     (let
-                         ((point-in-buffer-percentage (floor (* (/ (float point-pos) line-number-count) 100))))
-                       (concat (int-to-string point-in-buffer-percentage) "% ~" (int-to-string line-number-count)))))
+                   (int-to-string (+ (count-lines (point-min) (point-max)) 1)))
 
                   ;;"%I"
 
@@ -8156,7 +8161,6 @@ Set mode line height
                   ;; (concat
                   ;; " "
                   ;; which-func))))
-
                   )))
 #+END_SRC
 
