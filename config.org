@@ -2604,13 +2604,13 @@ Used for universal folding
     (interactive)
     (if hs-minor-mode
         (call-interactively 'hs-hide-level)
-      (yafolding-show-all)))
+      (yafolding-hide-all)))
 
   (defun my/fold-hide ()
     (interactive)
     (if hs-minor-mode
         (hs-hide-block)
-      (yafolding-hide-all)))
+      (yafolding-hide-element)))
 
   (defvar-local buffer-has-outline-bullets t)
   (defun my/toggle-outline-bullets ()
