@@ -1645,9 +1645,12 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 
 ** Scratch
 #+BEGIN_SRC emacs-lisp
+  ;; Kill the initial scratch buffer
+  (kill-buffer "*scratch*")
+
   (defun my/switch-to-scratch()
     (interactive)
-    (switch-to-buffer "*scratch*")
+    (find-file (concat user-emacs-directory"*scratch*"))
     (run-hooks 'my/open-map-hook))
 
   (define-key my/open-map (kbd "s") 'my/switch-to-scratch)
@@ -2529,12 +2532,25 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
 #+BEGIN_SRC emacs-lisp
   (require 'hideshow)
 
-  ;; (define-globalized-minor-mode global-hs-minor-mode
-  ;; hs-minor-mode hs-minor-mode)
-  ;; (hs-minor-mode)
-  ;; (global-hs-minor-mode 1)
+  (defvar my/hs-ignore-modes '(fsharp-mode))
 
-  (add-hook 'prog-mode-hook '(lambda () (interactive) (hs-minor-mode 1)))
+  (add-hook 'prog-mode-hook '(lambda () (interactive)
+                               (if (not (member major-mode my/hs-ignore-modes))
+                                   (hs-minor-mode 1))))
+#+END_SRC
+
+*** Yafolding
+Used for universal folding
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'yafolding)
+
+  (define-globalized-minor-mode global-yafolding-mode
+    yafolding-mode yafolding-mode)
+  (yafolding-mode)
+  (global-yafolding-mode 1)
+
+  (setq yafolding-ellipsis-content my/fold-ellipsis)
+  (setq yafolding-show-fringe-marks nil)
 #+END_SRC
 
 *** Origami
@@ -2558,24 +2574,43 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
     (outline-show-all)
     (outline-hide-body))
 
-  (my/evil-normal-define-key "g o" 'hs-show-block)
-  (my/evil-normal-define-key "g O" 'hs-show-all)
+  (my/evil-normal-define-key "g o" 'my/fold-show)
+
+  (my/evil-normal-define-key "g a" 'my/fold-hide-level)
+  (my/evil-normal-define-key "g A" 'my/fold-show-all)
+
+  (my/evil-normal-define-key "g h" 'my/fold-hide)
 
   (my/evil-normal-define-key "g C-o" 'evil-open-fold)
   (my/evil-normal-define-key "g C-O" 'evil-open-fold-rec)
-
-  ;; Show only nodes
-  (my/evil-normal-define-key "g a" 'hs-hide-level)
-  (my/evil-normal-define-key "g A" 'hs-show-all)
-
   (my/evil-normal-define-key "g RET" 'my/outline-hide-all-body)
   (my/evil-normal-define-key "g C-a" 'outline-show-all)
-
-  (my/evil-normal-define-key "g h" 'hs-hide-block)
-  (my/evil-normal-define-key "g H" 'hs-hide-all)
-
   (my/evil-normal-define-key "g C-h" 'evil-close-fold)
   (my/evil-normal-define-key "g C-H" '(lambda () (interactive) (hide-sublevels 1)))
+
+  (defun my/fold-show ()
+    (interactive)
+    (if hs-minor-mode
+        (hs-show-block)
+      (yafolding-show-element)))
+
+  (defun my/fold-show-all ()
+    (interactive)
+    (if hs-minor-mode
+        (hs-show-all)
+      (yafolding-show-all)))
+
+  (defun my/fold-hide-level ()
+    (interactive)
+    (if hs-minor-mode
+        (call-interactively 'hs-hide-level)
+      (yafolding-show-all)))
+
+  (defun my/fold-hide ()
+    (interactive)
+    (if hs-minor-mode
+        (hs-hide-block)
+      (yafolding-hide-all)))
 
   (defvar-local buffer-has-outline-bullets t)
   (defun my/toggle-outline-bullets ()
@@ -3166,7 +3201,6 @@ https://emacs.stackexchange.com/questions/20900/navigate-by-indentation
   (defun indentation-get-child-line ()
     "The line number of the first child, if any."
     (indentation-get-next-good-line +1 'ignore '>))
-
 
   (defun indentation-move-to-line (func preserve-column name)
     "Move the number of lines given by func. If not possible, use `name' to say so."
@@ -3961,14 +3995,14 @@ Shows information in echo area
 
 ** Box
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package '(eldoc-box :type git :host github :repo "casouri/eldoc-box"))
-
-  (define-globalized-minor-mode global-eldoc-box-mode
-    eldoc-box-hover-mode eldoc-box-hover-mode)
-  (global-eldoc-box-mode)
-
-  ;; eldoc-box-hover-at-point-mode needs to be enabled after eldoc-box-hover-mode is done, otherwise problems can appear
-  (defadvice eldoc-box-hover-mode (after eldoc-box-hover-mode activate) (eldoc-box-hover-at-point-mode 1))
+  ;; (straight-use-package '(eldoc-box :type git :host github :repo "casouri/eldoc-box"))
+  ;;
+  ;; (define-globalized-minor-mode global-eldoc-box-mode
+    ;; eldoc-box-hover-mode eldoc-box-hover-mode)
+  ;; (global-eldoc-box-mode)
+  ;;
+  ;;;;  eldoc-box-hover-at-point-mode needs to be enabled after eldoc-box-hover-mode is done, otherwise problems can appear
+  ;; (defadvice eldoc-box-hover-mode (after eldoc-box-hover-mode activate) (eldoc-box-hover-at-point-mode 1))
 #+END_SRC
 
 ** Inline
