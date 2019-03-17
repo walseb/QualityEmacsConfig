@@ -702,7 +702,6 @@ Stop custom from editing init.el
     (interactive
      (define-key evil-visual-state-map (kbd key) command)))
 
-
   (defun my/evil-universal-define-key (key command)
     (interactive)
     (my/evil-insert-define-key key command)
@@ -890,31 +889,80 @@ Allows for using indention as text objects
 
 ** Evil-multiple cursors
 #+BEGIN_SRC emacs-lisp
-  ;; (straight-use-package 'evil-mc)
-  ;;
-  ;; (global-evil-mc-mode 1)
-  ;;
-  ;; (define-prefix-command 'my/evil-mc-map)
-  ;;(define-key my/leader-map (kbd "q") 'my/evil-mc-map)
-  ;; (define-key evil-normal-state-map (kbd "m") 'my/evil-mc-map)
-  ;; (define-key evil-visual-state-map (kbd "m") 'my/evil-mc-map)
-  ;;
-  ;; (define-key my/evil-mc-map (kbd "d") 'evil-mc-undo-all-cursors)
-  ;; (define-key my/evil-mc-map (kbd "v") 'evil-mc-make-cursor-here)
-  ;; (define-key my/evil-mc-map (kbd "V") 'evil-mc-make-all-cursors)
-  ;; (define-key my/evil-mc-map (kbd "s") 'evil-mc-pause-cursors)
-  ;; (define-key my/evil-mc-map (kbd "S") 'evil-mc-resume-cursors)
-  ;; (define-key my/evil-mc-map (kbd "n") 'evil-mc-make-and-goto-next-cursor)
-  ;; (define-key my/evil-mc-map (kbd "p") 'evil-mc-make-and-goto-prev-cursor)
-  ;;
-  ;; (define-key my/evil-mc-map (kbd "g g") 'evil-mc-make-and-goto-first-cursor)
-  ;; (define-key my/evil-mc-map (kbd "G") 'evil-mc-make-and-goto-last-cursor)
+  (straight-use-package 'evil-mc)
+  (global-evil-mc-mode 1)
+#+END_SRC
 
-  ;; (define-key evil-visual-state-map "A" 'evil-append)
-  ;; (define-key evil-visual-state-map "I" 'evil-insert)
-  ;;
-  ;; (define-key evil-visual-state-map "R" 'evil-change)
-  ;;
+*** Create cursors in visual selection
+#+BEGIN_SRC emacs-lisp
+  (defun evil-mc-make-cursor-in-visual-selection-block (column)
+    "Create cursors at COLUMN column."
+    (evil-visual-rotate 'upper-left)
+    (dotimes (num (- (count-lines evil-visual-beginning evil-visual-end) 1))
+      (if (not (= (move-to-column column) column))
+          (progn
+            (indent-to-column column)
+            (move-to-column column)))
+      (evil-mc-run-cursors-before)
+      (evil-mc-make-cursor-at-pos (point))
+      (forward-line))
+    (move-to-column column))
+
+  (defun evil-mc-make-cursor-in-visual-selection (beg)
+    "If BEG is non-nil, create cursors at beginning of line."
+    (evil-visual-rotate 'upper-left)
+    (dotimes (num (- (count-lines evil-visual-beginning evil-visual-end) 1))
+      (evil-mc-run-cursors-before)
+      (evil-mc-make-cursor-at-pos
+       (if beg
+           (line-beginning-position)
+         (line-end-position)))
+      (forward-line))
+    (if beg
+        (beginning-of-line)
+      (end-of-line)))
+
+  (evil-define-command evil-mc-make-cursor-in-visual-selection-beg ()
+    "Create cursor in beginning of every visually selected line.
+  Acts like the I key in evil-visual-state."
+    :repeat ignore
+    :evil-mc t
+    (if (eq (evil-visual-type) 'block)
+        (evil-mc-make-cursor-in-visual-selection-block
+         (min (evil-column evil-visual-beginning)
+              (evil-column evil-visual-end)))
+      (evil-mc-make-cursor-in-visual-selection t))
+    (evil-insert-state))
+
+  (evil-define-command evil-mc-make-cursor-in-visual-selection-end ()
+    "Create cursor at end of every visually selected line.
+  Acts like the A key in evil-visual-state."
+    :repeat ignore
+    :evil-mc t
+    (if (eq (evil-visual-type) 'block)
+        (evil-mc-make-cursor-in-visual-selection-block
+         (max (evil-column evil-visual-beginning)
+              (evil-column evil-visual-end)))
+      (evil-mc-make-cursor-in-visual-selection nil))
+    (evil-insert-state))
+#+END_SRC
+
+
+*** Disable on keybord-quit (C-g)
+#+BEGIN_SRC emacs-lisp
+  (my/evil-universal-define-key "C-g" 'my/evil-mc-keyboard-quit)
+
+  (defun my/evil-mc-keyboard-quit ()
+    (interactive)
+    (if (evil-mc-has-cursors-p)
+        (evil-mc-undo-all-cursors)
+      (call-interactively 'keyboard-escape-quit)))
+#+END_SRC
+
+*** Keys
+#+BEGIN_SRC emacs-lisp
+  (define-key evil-visual-state-map "A" 'evil-mc-make-cursor-in-visual-selection-end)
+  (define-key evil-visual-state-map "I" 'evil-mc-make-cursor-in-visual-selection-beg)
 #+END_SRC
 
 ** Goto end of line
@@ -1120,7 +1168,7 @@ When changing leader, change =my/leader-map-key=
   (defun my/alert-blink-fringe-once (color)
     (setq my/alert-blink-fringe-color color)
     (my/alert-fringe-set-color)
-    (run-with-timer 0.5 nil 'my/alert-fringe-restore))
+    (run-with-timer 0.25 nil 'my/alert-fringe-restore))
 
   (defun my/alert-blink-fringe (color)
     (setq my/alert-blink-fringe-color color)
@@ -3165,15 +3213,28 @@ Flycheck with extra correction for elisp packages
 * Movement
 ** Isearch screen
 #+BEGIN_SRC emacs-lisp
-  (defun my/isearch-current-screen ()
+  (defun my/isearch-current-screen (forward)
     (interactive)
-    (narrow-to-region (window-start) (window-end))
+
     (setq my/current-buffer (current-buffer))
-    (goto-char (point-min))
-    (isearch-forward)
+    ;;(goto-char (point-min))
+    (if forward
+        (progn
+          (narrow-to-region (point) (window-end))
+          (isearch-forward-regexp))
+      (narrow-to-region (window-start) (point))
+      (isearch-backward-regexp))
     ;; FIXME: Currently this resets narrow when done
     (widen)
     (my/alert nil nil t))
+
+  (defun my/isearch-current-screen-forward ()
+    (interactive)
+    (my/isearch-current-screen t))
+
+  (defun my/isearch-current-screen-backward ()
+    (interactive)
+    (my/isearch-current-screen nil))
 #+END_SRC
 
 *** Make isearch end when only one match
@@ -4148,7 +4209,7 @@ Shows information in echo area
         ('c-mode (cling-send-region (line-beginning-position) (line-end-position)))
         ('c++-mode (cling-send-region (line-beginning-position) (line-end-position)))
         ('csharp-mode (my/csharp-run-repl))
-        (_ (litable-refresh)))))
+        (_ (call-interactively 'eval-last-sexp)))))
 
   (defun my/auto-eval-region ()
     (interactive)
@@ -5350,11 +5411,11 @@ Disable rainbow delimiters
   ;;(my/evil-visual-define-key "s" 'my/avy-goto-subword-0-below)
   ;;(my/evil-visual-define-key "S" 'my/avy-goto-subword-0-above)
 
-  (my/evil-normal-define-key "s" 'my/isearch-current-screen)
-  (my/evil-normal-define-key "S" 'my/isearch-current-screen)
+  (my/evil-normal-define-key "s" 'my/isearch-current-screen-forward)
+  (my/evil-normal-define-key "S" 'my/isearch-current-screen-backward)
 
-  (my/evil-visual-define-key "s" 'my/isearch-current-screen)
-  (my/evil-visual-define-key "S" 'my/isearch-current-screen)
+  (my/evil-visual-define-key "s" 'my/isearch-current-screen-forward)
+  (my/evil-visual-define-key "S" 'my/isearch-current-screen-backward)
 
   ;; (my/evil-normal-define-key "/" 'evil-substitute)
   ;; (my/evil-normal-define-key "?" 'evil-change-whole-line)
