@@ -1097,14 +1097,17 @@ When changing leader, change =my/leader-map-key=
 #+BEGIN_SRC emacs-lisp
   (defvar my/past-alerts (list))
 
-  (defun my/alert (&optional str severity)
+  (defun my/alert (&optional str severity flash-once)
     (let ((color
            (pcase severity
              ('low "green")
              ('med  "yellow")
              ('high  "red")
              (_   "blue"))))
-      (my/alert-blink-fringe color)
+
+      (if flash-once
+          (my/alert-blink-fringe-once color)
+        (my/alert-blink-fringe color))
 
       (if str
           (progn
@@ -1114,14 +1117,19 @@ When changing leader, change =my/leader-map-key=
 
   (defvar my/alert-blink-fringe-color "red")
 
+  (defun my/alert-blink-fringe-once (color)
+    (setq my/alert-blink-fringe-color color)
+    (my/alert-fringe-set-color)
+    (run-with-timer 0.5 nil 'my/alert-fringe-restore))
+
   (defun my/alert-blink-fringe (color)
     (setq my/alert-blink-fringe-color color)
-    (run-with-timer 0.25 nil 'my/alert-fringe-set-color)
-    (run-with-timer 0.5 nil 'my/alert-fringe-restore)
-    (run-with-timer 0.75 nil 'my/alert-fringe-set-color)
-    (run-with-timer 1 nil 'my/alert-fringe-restore)
-    (run-with-timer 1.25 nil 'my/alert-fringe-set-color)
-    (run-with-timer 1.5 nil 'my/alert-fringe-restore))
+    (my/alert-fringe-set-color)
+    (run-with-timer 0.25 nil 'my/alert-fringe-restore)
+    (run-with-timer 0.5 nil 'my/alert-fringe-set-color)
+    (run-with-timer 0.75 nil 'my/alert-fringe-restore)
+    (run-with-timer 1.0 nil 'my/alert-fringe-set-color)
+    (run-with-timer 1.25 nil 'my/alert-fringe-restore))
 
   (defun my/alert-fringe-set-color ()
     (set-face-attribute 'fringe nil :foreground my/alert-blink-fringe-color :background my/alert-blink-fringe-color))
@@ -3155,6 +3163,32 @@ Flycheck with extra correction for elisp packages
 #+END_SRC
 
 * Movement
+** Isearch screen
+#+BEGIN_SRC emacs-lisp
+  (defun my/isearch-current-screen ()
+    (interactive)
+    (narrow-to-region (window-start) (window-end))
+    (setq my/current-buffer (current-buffer))
+    (goto-char (point-min))
+    (isearch-forward)
+    ;; FIXME: Currently this resets narrow when done
+    (widen)
+    (my/alert nil nil t))
+#+END_SRC
+
+*** Make isearch end when only one match
+#+BEGIN_SRC emacs-lisp
+  (defun my/ret-if-one-isearch-match ()
+    (interactive)
+    (set-buffer my/current-buffer)
+    (save-excursion
+      (goto-char (point-min))
+      (if (= (count-matches isearch-string) 1)
+          (setq unread-command-events (listify-key-sequence "\C-m")))))
+
+  (add-hook 'isearch-update-post-hook 'my/ret-if-one-isearch-match)
+#+END_SRC
+
 ** Goto middle of line
 #+BEGIN_SRC emacs-lisp
   (defun my/go-to-middle-of-line ()
@@ -4114,7 +4148,7 @@ Shows information in echo area
         ('c-mode (cling-send-region (line-beginning-position) (line-end-position)))
         ('c++-mode (cling-send-region (line-beginning-position) (line-end-position)))
         ('csharp-mode (my/csharp-run-repl))
-        (_ (eval-last-sexp nil)))))
+        (_ (litable-refresh)))))
 
   (defun my/auto-eval-region ()
     (interactive)
@@ -4296,7 +4330,21 @@ Shows information in echo area
 #+BEGIN_SRC emacs-lisp
   ;;(straight-use-package '(litable :type git :host github :repo "Fuco1/blablabla"))
   (straight-use-package 'litable)
-  ;; (add-hook 'emacs-lisp-mode-hook 'litable-mode)
+  (require 'litable)
+
+  ;; Eval everything
+  (defun litable--safe-eval (form)
+    (eval form))
+
+  ;; Make it only eval the parens around cursor
+  (defun litable-update-defs (&optional a b c)
+    (litable-remove-overlays)
+    (when a
+      (ignore-errors
+        (let ((form (save-excursion
+                      (backward-up-list)
+                      (sexp-at-point))))
+          (litable-find-function-subs-arguments form)))))
 #+END_SRC
 
 **** Don't safe check
@@ -5302,11 +5350,11 @@ Disable rainbow delimiters
   ;;(my/evil-visual-define-key "s" 'my/avy-goto-subword-0-below)
   ;;(my/evil-visual-define-key "S" 'my/avy-goto-subword-0-above)
 
-  (my/evil-normal-define-key "s" 'avy-goto-subword-0)
-  (my/evil-normal-define-key "S" 'avy-goto-subword-1)
+  (my/evil-normal-define-key "s" 'my/isearch-current-screen)
+  (my/evil-normal-define-key "S" 'my/isearch-current-screen)
 
-  (my/evil-visual-define-key "s" 'avy-goto-subword-0)
-  (my/evil-visual-define-key "S" 'avy-goto-subword-1)
+  (my/evil-visual-define-key "s" 'my/isearch-current-screen)
+  (my/evil-visual-define-key "S" 'my/isearch-current-screen)
 
   ;; (my/evil-normal-define-key "/" 'evil-substitute)
   ;; (my/evil-normal-define-key "?" 'evil-change-whole-line)
@@ -7848,6 +7896,10 @@ https://www.emacswiki.org/emacs/ArtistMode
     (set-face-attribute 'term-color-red nil :foreground "red" :background "red" :family my/mono-font)
     (set-face-attribute 'term-color-white nil :foreground "white" :background "white" :family my/mono-font)
     (set-face-attribute 'term-color-yellow nil :foreground "yellow" :background "yellow" :family my/mono-font)
+
+    ;;; Litable
+    (set-face-attribute 'litable-result-face nil :foreground my/foreground-color :background my/background-color :weight 'bold)
+    (set-face-attribute 'litable-substitution-face nil :foreground my/foreground-color :background my/background-color :weight 'bold)
 
     ;;; Evil-goggles
     ;;;; 2 color approach
