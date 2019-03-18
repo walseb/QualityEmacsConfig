@@ -2638,11 +2638,11 @@ Used for universal folding
   (my/evil-normal-define-key "g h" 'my/fold-hide)
 
   (my/evil-normal-define-key "g C-o" 'evil-open-fold)
-  (my/evil-normal-define-key "g C-O" 'evil-open-fold-rec)
+  ;;(my/evil-normal-define-key "g C-O" 'evil-open-fold-rec)
   (my/evil-normal-define-key "g RET" 'my/outline-hide-all-body)
   (my/evil-normal-define-key "g C-a" 'outline-show-all)
   (my/evil-normal-define-key "g C-h" 'evil-close-fold)
-  (my/evil-normal-define-key "g C-H" '(lambda () (interactive) (hide-sublevels 1)))
+  ;;(my/evil-normal-define-key "g C-H" '(lambda () (interactive) (hide-sublevels 1)))
 
   (defun my/fold-show ()
     (interactive)
@@ -3213,20 +3213,32 @@ Flycheck with extra correction for elisp packages
 * Movement
 ** Isearch screen
 #+BEGIN_SRC emacs-lisp
+
+  (defvar my/isearch-end-pos)
+
   (defun my/isearch-current-screen (forward)
     (interactive)
-
-    (setq my/current-buffer (current-buffer))
-    ;;(goto-char (point-min))
-    (if forward
-        (progn
-          (narrow-to-region (point) (window-end))
-          (isearch-forward-regexp))
-      (narrow-to-region (window-start) (point))
-      (isearch-backward-regexp))
-    ;; FIXME: Currently this resets narrow when done
-    (widen)
-    (my/alert nil nil t))
+    (let ((window-top (window-start))
+          (narrow-restore
+           (if (buffer-narrowed-p)
+               `(,(point-min) ,(point-max))
+             nil)))
+      (setq my/isearch-current-buffer (current-buffer))
+      (if forward
+          (progn
+            (narrow-to-region (point) (window-end))
+            (isearch-forward-regexp))
+        (narrow-to-region window-top (point))
+        (isearch-backward-regexp))
+      ;; FIXME: Currently this resets narrow when done
+      (widen)
+      (if narrow-restore
+          (narrow-to-region (car narrow-restore) (nth 1 narrow-restore)))
+      (setq my/isearch-end-pos (point))
+      (goto-char window-top)
+      ;;(goto-char end-pos)
+      (run-with-timer 0.01 nil '(lambda () (interactive)  (goto-char my/isearch-end-pos)))
+      (my/alert nil nil t)))
 
   (defun my/isearch-current-screen-forward ()
     (interactive)
@@ -3239,15 +3251,15 @@ Flycheck with extra correction for elisp packages
 
 *** Make isearch end when only one match
 #+BEGIN_SRC emacs-lisp
-  (defun my/ret-if-one-isearch-match ()
-    (interactive)
-    (set-buffer my/current-buffer)
-    (save-excursion
-      (goto-char (point-min))
-      (if (= (count-matches isearch-string) 1)
-          (setq unread-command-events (listify-key-sequence "\C-m")))))
-
-  (add-hook 'isearch-update-post-hook 'my/ret-if-one-isearch-match)
+  ;; (defun my/ret-if-one-isearch-match ()
+  ;;   (interactive)
+  ;;   (set-buffer my/isearch-current-buffer)
+  ;;   (save-excursion
+  ;;     (goto-char (point-min))
+  ;;     (if (= (count-matches isearch-string) 1)
+  ;;         (setq unread-command-events (listify-key-sequence "\C-m")))))
+  ;;
+  ;; (add-hook 'isearch-update-post-hook 'my/ret-if-one-isearch-match)
 #+END_SRC
 
 ** Goto middle of line
@@ -4209,7 +4221,7 @@ Shows information in echo area
         ('c-mode (cling-send-region (line-beginning-position) (line-end-position)))
         ('c++-mode (cling-send-region (line-beginning-position) (line-end-position)))
         ('csharp-mode (my/csharp-run-repl))
-        (_ (call-interactively 'eval-last-sexp)))))
+        (_ (call-interactively 'eros-eval-last-sexp)))))
 
   (defun my/auto-eval-region ()
     (interactive)
@@ -4387,6 +4399,13 @@ Shows information in echo area
 #+END_SRC
 
 ** Emacs-lisp
+*** Eros
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'eros)
+
+  (eros-mode 1)
+#+END_SRC
+
 *** Litable
 #+BEGIN_SRC emacs-lisp
   ;;(straight-use-package '(litable :type git :host github :repo "Fuco1/blablabla"))
@@ -7406,6 +7425,99 @@ https://www.emacswiki.org/emacs/ArtistMode
 
     ;; Add this to not auto exit insert mode after closing the hydra
     ;;("<escape>" nil))
+#+END_SRC
+
+** Evil-lispy
+#+BEGIN_SRC emacs-lisp
+  ;; (defhydra my/lispy-hydra (:hint nil
+  ;;                                 :color red)
+  ;;   "lisp"
+  ;;   ("l" (call-interactively #'lispy-right) nil)
+  ;;   ("h" (call-interactively #'lispy-left) nil)
+  ;;   ("n" (call-interactively #'lispy-down) nil)
+  ;;   ("p" (call-interactively #'lispy-up nil))
+  ;;
+  ;;   ("f" (call-interactively #'lispy-flow nil))
+  ;;   ("b" (call-interactively #'lispy-back nil))
+  ;;
+  ;;   ("d" (call-interactively #'lispy-different nil))
+  ;;   ("o" (call-interactively #'lispy-other-mode nil))
+  ;;   ("k" (call-interactively #'lispy-eval-other-window nil))
+  ;;   ("K" (call-interactively #'lispy-paste nil))
+  ;;   ("y" (call-interactively #'lispy-occur nil))
+  ;;   ("z" (call-interactively #'lh-knight/body nil)))
+
+  ;; ;; navigation
+  ;; (lispy-define-key map "l" 'lispy-right)
+  ;; (lispy-define-key map "h" 'lispy-left)
+  ;; (lispy-define-key map "f" 'lispy-flow)
+  ;; (lispy-define-key map "j" 'lispy-down)
+  ;; (lispy-define-key map "k" 'lispy-up)
+  ;; (lispy-define-key map "d" 'lispy-different)
+  ;; (lispy-define-key map "o" 'lispy-other-mode)
+  ;; (lispy-define-key map "p" 'lispy-eval-other-window)
+  ;; (lispy-define-key map "P" 'lispy-paste)
+  ;; (lispy-define-key map "y" 'lispy-occur)
+  ;; (lispy-define-key map "z" 'lh-knight/body)
+  ;; ;; outline
+  ;; (lispy-define-key map "J" 'lispy-outline-next)
+  ;; (lispy-define-key map "K" 'lispy-outline-prev)
+  ;; (lispy-define-key map "L" 'lispy-outline-goto-child)
+  ;; ;; Paredit transformations
+  ;; (lispy-define-key map ">" 'lispy-slurp)
+  ;; (lispy-define-key map "<" 'lispy-barf)
+  ;; (lispy-define-key map "/" 'lispy-splice)
+  ;; (lispy-define-key map "r" 'lispy-raise)
+  ;; (lispy-define-key map "R" 'lispy-raise-some)
+  ;; (lispy-define-key map "+" 'lispy-join)
+  ;; ;; more transformations
+  ;; (lispy-define-key map "C" 'lispy-convolute)
+  ;; (lispy-define-key map "X" 'lispy-convolute-left)
+  ;; (lispy-define-key map "w" 'lispy-move-up)
+  ;; (lispy-define-key map "s" 'lispy-move-down)
+  ;; (lispy-define-key map "O" 'lispy-oneline)
+  ;; (lispy-define-key map "M" 'lispy-alt-multiline)
+  ;; (lispy-define-key map "S" 'lispy-stringify)
+  ;; ;; marking
+  ;; (lispy-define-key map "a" 'lispy-ace-symbol
+  ;;   :override '(cond ((looking-at lispy-outline)
+  ;;                     (lispy-meta-return))))
+  ;; (lispy-define-key map "H" 'lispy-ace-symbol-replace)
+  ;; (lispy-define-key map "m" 'lispy-mark-list)
+  ;; ;; dialect-specific
+  ;; (lispy-define-key map "e" 'lispy-eval)
+  ;; (lispy-define-key map "E" 'lispy-eval-and-insert)
+  ;; (lispy-define-key map "G" 'lispy-goto-local)
+  ;; (lispy-define-key map "g" 'lispy-goto)
+  ;; (lispy-define-key map "F" 'lispy-follow t)
+  ;; (lispy-define-key map "D" 'pop-tag-mark)
+  ;; (lispy-define-key map "A" 'lispy-beginning-of-defun)
+  ;; (lispy-define-key map "_" 'lispy-underscore)
+  ;; ;; miscellanea
+  ;; (define-key map (kbd "SPC") 'lispy-space)
+  ;; (lispy-define-key map "i" 'lispy-tab)
+  ;; (lispy-define-key map "I" 'lispy-shifttab)
+  ;; (lispy-define-key map "N" 'lispy-narrow)
+  ;; (lispy-define-key map "W" 'lispy-widen)
+  ;; (lispy-define-key map "c" 'lispy-clone)
+  ;; (lispy-define-key map "u" 'lispy-undo)
+  ;; (lispy-define-key map "q" 'lispy-ace-paren
+  ;;   :override '(cond ((bound-and-true-p view-mode)
+  ;;                     (View-quit))))
+  ;; (lispy-define-key map "Q" 'lispy-ace-char)
+  ;; (lispy-define-key map "v" 'lispy-view)
+  ;; (lispy-define-key map "t" 'lispy-teleport
+  ;;   :override '(cond ((looking-at lispy-outline)
+  ;;                     (end-of-line))))
+  ;; (lispy-define-key map "n" 'lispy-new-copy)
+  ;; (lispy-define-key map "b" 'lispy-back)
+  ;; (lispy-define-key map "B" 'lispy-ediff-regions)
+  ;; (lispy-define-key map "x" 'lispy-x)
+  ;; (lispy-define-key map "Z" 'lispy-edebug-stop)
+  ;; (lispy-define-key map "V" 'lispy-visit)
+  ;; (lispy-define-key map "-" 'lispy-ace-subword)
+  ;; (lispy-define-key map "." 'lispy-repeat)
+  ;; (lispy-define-key map "~" 'lispy-tilde)
 #+END_SRC
 
 *** Keys
