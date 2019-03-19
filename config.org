@@ -889,7 +889,9 @@ Allows for using indention as text objects
 
 ** Evil-multiple cursors
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'evil-mc)
+  ;;(straight-use-package 'evil-mc)
+  (straight-use-package '(evil-mc :type git :host github :repo "walseb/evil-mc"))
+
   (global-evil-mc-mode 1)
 #+END_SRC
 
@@ -1652,6 +1654,29 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (evil-define-key 'insert tetris-mode-map (kbd "n") 'tetris-move-down)
   (evil-define-key 'insert tetris-mode-map (kbd "h") 'tetris-move-left)
   (evil-define-key 'insert tetris-mode-map (kbd "l") 'tetris-move-right)
+#+END_SRC
+
+** Redefine keyboard-escape-quit
+#+BEGIN_SRC emacs-lisp
+  (defun keyboard-escape-quit ()
+    "Exit the current \"mode\" (in a generalized sense of the word).
+  This command can exit an interactive command such as `query-replace',
+  can clear out a prefix argument or a region,
+  can get out of the minibuffer or other recursive edit,
+  cancel the use of the current buffer (for special-purpose buffers),
+  or go back to just one window (by deleting all but the selected window)."
+    (interactive)
+    (cond ((eq last-command 'mode-exited) nil)
+          ((region-active-p)
+           (deactivate-mark))
+          ((> (minibuffer-depth) 0)
+           (abort-recursive-edit))
+          (current-prefix-arg
+           nil)
+          ((> (recursion-depth) 0)
+           (exit-recursive-edit))
+          (buffer-quit-function
+           (funcall buffer-quit-function))))
 #+END_SRC
 
 * File options
@@ -3688,6 +3713,12 @@ g-; and g-,
     (setq my/window-configurations (delete (nth (my/get-selected-window-config-position (my/select-window-config "Delete window config ")) my/window-configurations) my/window-configurations)))
 #+END_SRC
 
+** No more window resetting
+#+BEGIN_SRC emacs-lisp
+  (defmacro save-window-excursion (&rest body)
+    )
+#+END_SRC
+
 ** Switch to minibuffer
 #+BEGIN_SRC emacs-lisp
   (defun my/toggle-switch-to-minibuffer ()
@@ -4362,8 +4393,14 @@ Shows information in echo area
   ;; (straight-use-package 'eglot)
 #+END_SRC
 
-** Common lisp
-*** Slime
+** Lisps
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'lispy)
+  (require 'lispy)
+#+END_SRC
+
+*** Common lisp
+**** Slime
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'slime)
 
@@ -4371,14 +4408,14 @@ Shows information in echo area
   (setq slime-contribs '(slime-fancy))
 #+END_SRC
 
-**** Slime comany
+***** Slime comany
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'slime-company)
 
   (slime-setup '(slime-fancy slime-company))
 #+END_SRC
 
-*** Keys
+**** Keys
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/common-lisp-mode-map)
   (evil-define-key 'normal lisp-mode-map (kbd (concat my/leader-map-key " a")) 'my/common-lisp-mode-map)
@@ -4387,7 +4424,7 @@ Shows information in echo area
 
 #+END_SRC
 
-** Scheme
+*** Scheme
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'geiser)
 
@@ -4398,15 +4435,15 @@ Shows information in echo area
   (define-key my/scheme-mode-map (kbd "C-s") 'run-geiser)
 #+END_SRC
 
-** Emacs-lisp
-*** Eros
+*** Emacs-lisp
+**** Eros
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'eros)
 
   (eros-mode 1)
 #+END_SRC
 
-*** Litable
+**** Litable
 #+BEGIN_SRC emacs-lisp
   ;;(straight-use-package '(litable :type git :host github :repo "Fuco1/blablabla"))
   (straight-use-package 'litable)
@@ -4427,33 +4464,33 @@ Shows information in echo area
           (litable-find-function-subs-arguments form)))))
 #+END_SRC
 
-**** Don't safe check
+***** Don't safe check
 #+BEGIN_SRC emacs-lisp
   ;; (defun litable--safe-eval (form)
     ;; (eval form))
 #+END_SRC
 
-*** Enable debugging on error
+**** Enable debugging on error
 #+BEGIN_SRC emacs-lisp
   (setq debug-on-error nil)
 #+END_SRC
 
-*** Debugging
+**** Debugging
 #+BEGIN_SRC emacs-lisp
 #+END_SRC
 
-*** Suggest
+**** Suggest
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'suggest)
 #+END_SRC
 
 
-*** Formatting
+**** Formatting
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'elisp-format)
 #+END_SRC
 
-*** Keys
+**** Keys
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/emacs-lisp-mode-map)
   (evil-define-key 'normal emacs-lisp-mode-map (kbd (concat my/leader-map-key " a")) 'my/emacs-lisp-mode-map)
@@ -4489,6 +4526,30 @@ Shows information in echo area
 
   (define-key my/emacs-lisp-mode-map "i" 'edebug-step-in)
   (define-key my/emacs-lisp-mode-map "o" 'edebug-step-out)
+#+END_SRC
+
+*** Clojure
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'clojure-mode)
+  (require 'clojure-mode)
+#+END_SRC
+
+**** Cider
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'cider)
+#+END_SRC
+
+***** Enlighten
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'clojure-mode-hook 'cider-enlighten-mode)
+#+END_SRC
+
+**** Keys
+#+BEGIN_SRC emacs-lisp
+  (define-prefix-command 'my/clojure-mode-map)
+  (evil-define-key 'normal clojure-mode-map (kbd (concat my/leader-map-key " a")) 'my/clojure-mode-map)
+
+  (define-key my/clojure-mode-map (kbd "C-s") 'cider-jack-in)
 #+END_SRC
 
 ** Java
@@ -4875,30 +4936,6 @@ omnisharp.json should be in ~/.omnisharp on all OSs
 
     ;; Autostart
     (add-hook 'fsharp-mode-hook 'my/fsharp-mode)
-#+END_SRC
-
-** Clojure
-#+BEGIN_SRC emacs-lisp
-  (straight-use-package 'clojure-mode)
-  (require 'clojure-mode)
-#+END_SRC
-
-*** Cider
-#+BEGIN_SRC emacs-lisp
-  (straight-use-package 'cider)
-#+END_SRC
-
-**** Enlighten
-#+BEGIN_SRC emacs-lisp
-  (add-hook 'clojure-mode-hook 'cider-enlighten-mode)
-#+END_SRC
-
-*** Keys
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/clojure-mode-map)
-  (evil-define-key 'normal clojure-mode-map (kbd (concat my/leader-map-key " a")) 'my/clojure-mode-map)
-
-  (define-key my/clojure-mode-map (kbd "C-s") 'cider-jack-in)
 #+END_SRC
 
 ** Markdown
@@ -7429,23 +7466,31 @@ https://www.emacswiki.org/emacs/ArtistMode
 
 ** Evil-lispy
 #+BEGIN_SRC emacs-lisp
-  ;; (defhydra my/lispy-hydra (:hint nil
-  ;;                                 :color red)
-  ;;   "lisp"
-  ;;   ("l" (call-interactively #'lispy-right) nil)
-  ;;   ("h" (call-interactively #'lispy-left) nil)
-  ;;   ("n" (call-interactively #'lispy-down) nil)
-  ;;   ("p" (call-interactively #'lispy-up nil))
-  ;;
-  ;;   ("f" (call-interactively #'lispy-flow nil))
-  ;;   ("b" (call-interactively #'lispy-back nil))
-  ;;
-  ;;   ("d" (call-interactively #'lispy-different nil))
-  ;;   ("o" (call-interactively #'lispy-other-mode nil))
-  ;;   ("k" (call-interactively #'lispy-eval-other-window nil))
-  ;;   ("K" (call-interactively #'lispy-paste nil))
-  ;;   ("y" (call-interactively #'lispy-occur nil))
-  ;;   ("z" (call-interactively #'lh-knight/body nil)))
+  (defhydra my/lispy-hydra (:hint nil
+                                  :color red)
+    "lisp"
+
+    ("L" (call-interactively #'lispy-flow nil))
+    ("l" (call-interactively #'lispy-right) nil)
+    ("h" (call-interactively #'lispy-left) nil)
+
+    ;;   ("l" (call-interactively #'down-list) nil)
+    ;;   ("h" (call-interactively #'up-list) nil)
+
+
+    ("n" (call-interactively #'lispy-down) nil)
+    ("p" (call-interactively #'lispy-up nil))
+
+
+    ("b" (call-interactively #'lispy-back nil))
+    ("i" (call-interactively #'lispy-tab nil))
+
+    ("d" (call-interactively #'lispy-different nil))
+    ("o" (call-interactively #'lispy-other-mode nil))
+    ("k" (call-interactively #'lispy-eval-other-window nil))
+    ("K" (call-interactively #'lispy-paste nil))
+    ("y" (call-interactively #'lispy-occur nil))
+    ("z" (call-interactively #'lh-knight/body nil)))
 
   ;; ;; navigation
   ;; (lispy-define-key map "l" 'lispy-right)
@@ -7524,6 +7569,9 @@ https://www.emacswiki.org/emacs/ArtistMode
 #+BEGIN_SRC emacs-lisp
   (my/evil-universal-define-key my/mod-window-leader-key 'my/window-hydra/body)
   (my/evil-universal-define-key my/window-leader-key 'my/window-hydra/body)
+
+  (my/evil-visual-define-key "z" 'my/lispy-hydra/body)
+  (my/evil-normal-define-key "z" 'my/lispy-hydra/body)
 #+END_SRC
 
 * Image modes
