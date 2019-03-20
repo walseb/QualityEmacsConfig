@@ -850,8 +850,8 @@ Allows for using indention as text objects
 
 *** Evil-surround
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'evil-surround)
-  (global-evil-surround-mode 1)
+  ;; (straight-use-package 'evil-surround)
+  ;; (global-evil-surround-mode 1)
 #+END_SRC
 
 *** Evil-args
@@ -1651,9 +1651,13 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 ** Tetris
 #+BEGIN_SRC emacs-lisp
   (evil-define-key 'insert tetris-mode-map (kbd "p") 'tetris-rotate-next)
+  (evil-define-key 'insert tetris-mode-map (kbd "P") 'tetris-rotate-prev)
   (evil-define-key 'insert tetris-mode-map (kbd "n") 'tetris-move-down)
+  (evil-define-key 'insert tetris-mode-map (kbd "N") 'tetris-move-bottom)
   (evil-define-key 'insert tetris-mode-map (kbd "h") 'tetris-move-left)
   (evil-define-key 'insert tetris-mode-map (kbd "l") 'tetris-move-right)
+
+  (evil-define-key 'insert tetris-mode-map (kbd "SPC") 'tetris-move-bottom)
 #+END_SRC
 
 ** Redefine keyboard-escape-quit
@@ -2086,14 +2090,38 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
   (define-key my/org-export-latex-map (kbd "l") 'org-latex-export-to-latex)
 #+END_SRC
 
+** Present
+#+BEGIN_SRC emacs-lisp
+  (defun my/org-present-next ()
+    (interactive)
+    (widen)
+    (if (string= (string (char-after)) "*")
+        (forward-line))
+    (narrow-to-region
+     (- (re-search-forward "^*") 1)
+     (- (re-search-forward "^*") 1))
+    (evil-open-fold)
+    (goto-char (point-min)))
+
+  (defun my/org-present-prev ()
+    (interactive)
+    (widen)
+    (if (string= (string (char-after)) "*")
+        (forward-line))
+    (narrow-to-region
+     (re-search-backward "^*")
+     (+ (re-search-backward "^*") 1))
+    (evil-open-fold)
+    (goto-char (point-min)))
+#+END_SRC
+
 ** Key
 #+BEGIN_SRC emacs-lisp
   ;;(evil-define-key 'normal org-mode-map (kbd "TAB") 'org-cycle)
   (evil-define-key 'normal org-mode-map (kbd "C-s") 'swiper)
 
   (define-key my/org-mode-map (kbd "i") 'org-toggle-inline-images)
-  (define-key my/org-mode-map (kbd "f") 'org-insert-link)
-  (define-key my/org-mode-map (kbd "e") 'org-babel-execute-src-block)
+  (define-key my/org-mode-map (kbd "e") 'org-insert-link)
 
   (define-key my/org-mode-map (kbd "p") 'org-shiftup)
   (define-key my/org-mode-map (kbd "n") 'org-shiftdown)
@@ -2109,10 +2137,18 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 
   (define-key my/org-mode-map (kbd "z") 'org-shifttab)
 
-  (define-prefix-command 'my/org-show-mode-map)
-  (define-key my/org-mode-map (kbd "s") 'my/org-show-mode-map)
+  (define-key my/org-mode-map (kbd "f") 'my/org-present-next)
+  (define-key my/org-mode-map (kbd "b") 'my/org-present-prev)
 
-  (define-key my/org-show-mode-map (kbd "l") 'org-toggle-link-display)
+  (define-key my/org-mode-map (kbd "i") 'org-toggle-inline-images)
+#+END_SRC
+
+*** Show map
+#+BEGIN_SRC emacs-lisp
+(define-prefix-command 'my/org-show-mode-map)
+(define-key my/org-mode-map (kbd "s") 'my/org-show-mode-map)
+
+(define-key my/org-show-mode-map (kbd "l") 'org-toggle-link-display)
 #+END_SRC
 
 * Outline
@@ -2606,6 +2642,17 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
 
   (define-key my/narrow-map (kbd "p") 'narrow-to-page)
   (define-key my/narrow-map (kbd "d") 'narrow-to-defun)
+
+  (define-key my/narrow-map (kbd "h") 'my/auto-narrow-to-subtree)
+#+END_SRC
+
+*** Narrow to subtree
+#+BEGIN_SRC emacs-lisp
+  (defun my/auto-narrow-to-subtree ()
+    (interactive)
+    (pcase major-mode
+      ('org-mode (org-narrow-to-subtree))
+      (_ (outshine-narrow-to-subtree))))
 #+END_SRC
 
 ** Folding
@@ -3713,10 +3760,19 @@ g-; and g-,
     (setq my/window-configurations (delete (nth (my/get-selected-window-config-position (my/select-window-config "Delete window config ")) my/window-configurations) my/window-configurations)))
 #+END_SRC
 
+** Winner-mode
+#+BEGIN_SRC emacs-lisp
+  (require 'winner)
+
+  (winner-mode)
+;;   (my/evil-normal-define-key "M-u" 'winner-undo)
+;;   (my/evil-normal-define-key "M-r" 'winner-redo)
+#+END_SRC
+
 ** No more window resetting
 #+BEGIN_SRC emacs-lisp
-  (defmacro save-window-excursion (&rest body)
-    )
+;;   (defmacro save-window-excursion (&rest body)
+;;     )
 #+END_SRC
 
 ** Switch to minibuffer
@@ -4445,23 +4501,23 @@ Shows information in echo area
 
 **** Litable
 #+BEGIN_SRC emacs-lisp
-  ;;(straight-use-package '(litable :type git :host github :repo "Fuco1/blablabla"))
+  ;; ;;(straight-use-package '(litable :type git :host github :repo "Fuco1/blablabla"))
   (straight-use-package 'litable)
-  (require 'litable)
-
-  ;; Eval everything
-  (defun litable--safe-eval (form)
-    (eval form))
-
-  ;; Make it only eval the parens around cursor
-  (defun litable-update-defs (&optional a b c)
-    (litable-remove-overlays)
-    (when a
-      (ignore-errors
-        (let ((form (save-excursion
-                      (backward-up-list)
-                      (sexp-at-point))))
-          (litable-find-function-subs-arguments form)))))
+  ;; (require 'litable)
+  ;;
+  ;; ;; Eval everything
+  ;; (defun litable--safe-eval (form)
+  ;;   (eval form))
+  ;;
+  ;; ;; Make it only eval the parens around cursor
+  ;; (defun litable-update-defs (&optional a b c)
+  ;;   (litable-remove-overlays)
+  ;;   (when a
+  ;;     (ignore-errors
+  ;;       (let ((form (save-excursion
+  ;;                     (backward-up-list)
+  ;;                     (sexp-at-point))))
+  ;;         (litable-find-function-subs-arguments form)))))
 #+END_SRC
 
 ***** Don't safe check
@@ -7456,12 +7512,15 @@ https://www.emacswiki.org/emacs/ArtistMode
 
     ("b" counsel-bookmark nil)
     ("B" my/add-bookmark nil)
-    ("C-b" my/delete-bookmark nil))
+    ("C-b" my/delete-bookmark nil)
 
-    ;;  ("SPC" my/leader-map nil)
+  ("u" winner-undo nil)
+  ("r" winner-redo nil))
 
-    ;; Add this to not auto exit insert mode after closing the hydra
-    ;;("<escape>" nil))
+  ;;  ("SPC" my/leader-map nil)
+
+  ;; Add this to not auto exit insert mode after closing the hydra
+  ;;("<escape>" nil))
 #+END_SRC
 
 ** Evil-lispy
