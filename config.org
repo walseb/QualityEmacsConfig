@@ -57,7 +57,7 @@ Set adress in gnus.el
 
 *** Switch Ctrl and Caps
 =xmodmap= =xsession=
-
+ functions
 *** PDF tools
 =poppler= =poppler-glib=
 M-x =pdf-tools-install=
@@ -669,7 +669,7 @@ Stop custom from editing init.el
   (add-hook 'minibuffer-setup-hook 'evil-insert-state)
 #+END_SRC
 
-** Bind evil key
+** Bind evil key functions
 #+BEGIN_SRC emacs-lisp
   (defun my/evil-normal-define-key-in-mode (mode key command)
     (interactive)
@@ -707,6 +707,40 @@ Stop custom from editing init.el
     (my/evil-insert-define-key key command)
     (my/evil-normal-define-key key command)
     (my/evil-visual-define-key key command))
+#+END_SRC
+
+** Evil-multiple cursors
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'evil-mc)
+  ;; (straight-use-package '(evil-mc :type git :host github :repo "walseb/evil-mc"))
+
+  (setq evil-mc-key-map nil)
+
+  (require 'evil-mc)
+  ;;(setq evil-mc-key-map nil)
+
+  (global-evil-mc-mode 1)
+  ;;(setq evil-mc-key-map nil)
+
+  (add-to-list 'evil-mc-custom-known-commands
+               '(delete-char . ((:default . evil-mc-execute-default-call-with-count))))
+#+END_SRC
+
+*** Clear default keys
+#+BEGIN_SRC emacs-lisp
+  (setq evil-mc-key-map nil)
+#+END_SRC
+
+
+*** Disable on keybord-quit (C-g)
+#+BEGIN_SRC emacs-lisp
+  (setq evil-mc-undo-cursors-on-keyboard-quit t)
+#+END_SRC
+
+*** Keys
+#+BEGIN_SRC emacs-lisp
+  (define-key evil-visual-state-map "A" 'evil-mc-make-cursor-in-visual-selection-end)
+  (define-key evil-visual-state-map "I" 'evil-mc-make-cursor-in-visual-selection-beg)
 #+END_SRC
 
 ** Settings
@@ -885,86 +919,6 @@ Allows for using indention as text objects
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'evil-matchit)
   (global-evil-matchit-mode 1)
-#+END_SRC
-
-** Evil-multiple cursors
-#+BEGIN_SRC emacs-lisp
-  ;;(straight-use-package 'evil-mc)
-  (straight-use-package '(evil-mc :type git :host github :repo "walseb/evil-mc"))
-
-  (global-evil-mc-mode 1)
-#+END_SRC
-
-*** Create cursors in visual selection
-#+BEGIN_SRC emacs-lisp
-  (defun evil-mc-make-cursor-in-visual-selection-block (column)
-    "Create cursors at COLUMN column."
-    (evil-visual-rotate 'upper-left)
-    (dotimes (num (- (count-lines evil-visual-beginning evil-visual-end) 1))
-      (if (not (= (move-to-column column) column))
-          (progn
-            (indent-to-column column)
-            (move-to-column column)))
-      (evil-mc-run-cursors-before)
-      (evil-mc-make-cursor-at-pos (point))
-      (forward-line))
-    (move-to-column column))
-
-  (defun evil-mc-make-cursor-in-visual-selection (beg)
-    "If BEG is non-nil, create cursors at beginning of line."
-    (evil-visual-rotate 'upper-left)
-    (dotimes (num (- (count-lines evil-visual-beginning evil-visual-end) 1))
-      (evil-mc-run-cursors-before)
-      (evil-mc-make-cursor-at-pos
-       (if beg
-           (line-beginning-position)
-         (line-end-position)))
-      (forward-line))
-    (if beg
-        (beginning-of-line)
-      (end-of-line)))
-
-  (evil-define-command evil-mc-make-cursor-in-visual-selection-beg ()
-    "Create cursor in beginning of every visually selected line.
-  Acts like the I key in evil-visual-state."
-    :repeat ignore
-    :evil-mc t
-    (if (eq (evil-visual-type) 'block)
-        (evil-mc-make-cursor-in-visual-selection-block
-         (min (evil-column evil-visual-beginning)
-              (evil-column evil-visual-end)))
-      (evil-mc-make-cursor-in-visual-selection t))
-    (evil-insert-state))
-
-  (evil-define-command evil-mc-make-cursor-in-visual-selection-end ()
-    "Create cursor at end of every visually selected line.
-  Acts like the A key in evil-visual-state."
-    :repeat ignore
-    :evil-mc t
-    (if (eq (evil-visual-type) 'block)
-        (evil-mc-make-cursor-in-visual-selection-block
-         (max (evil-column evil-visual-beginning)
-              (evil-column evil-visual-end)))
-      (evil-mc-make-cursor-in-visual-selection nil))
-    (evil-insert-state))
-#+END_SRC
-
-
-*** Disable on keybord-quit (C-g)
-#+BEGIN_SRC emacs-lisp
-  (my/evil-universal-define-key "C-g" 'my/evil-mc-keyboard-quit)
-
-  (defun my/evil-mc-keyboard-quit ()
-    (interactive)
-    (if (evil-mc-has-cursors-p)
-        (evil-mc-undo-all-cursors)
-      (call-interactively 'keyboard-escape-quit)))
-#+END_SRC
-
-*** Keys
-#+BEGIN_SRC emacs-lisp
-  (define-key evil-visual-state-map "A" 'evil-mc-make-cursor-in-visual-selection-end)
-  (define-key evil-visual-state-map "I" 'evil-mc-make-cursor-in-visual-selection-beg)
 #+END_SRC
 
 ** Goto end of line
@@ -3283,7 +3237,31 @@ Flycheck with extra correction for elisp packages
 #+END_SRC
 
 * Movement
-** Isearch screen
+** Isearch
+#+BEGIN_SRC emacs-lisp
+  (require 'isearch)
+  (define-key isearch-mode-map (kbd "C-n") 'isearch-repeat-forward)
+  (define-key isearch-mode-map (kbd "C-p") 'isearch-repeat-backward)
+
+  (setq isearch-lazy-highlight t)
+  (setq lazy-highlight-initial-delay 0)
+#+END_SRC
+
+*** Make isearch end when only one match
+#+BEGIN_SRC emacs-lisp
+  ;; (defun my/ret-if-one-isearch-match ()
+  ;;   (interactive)
+  ;;   (set-buffer my/isearch-current-buffer)
+  ;;   (save-excursion
+  ;;     (goto-char (point-min))
+  ;;     (if (= (count-matches isearch-string) 1)
+  ;;         (setq unread-command-events (listify-key-sequence "\C-m")))))
+  ;;
+  ;; (add-hook 'isearch-update-post-hook 'my/ret-if-one-isearch-match)
+#+END_SRC
+
+
+*** Isearch screen
 #+BEGIN_SRC emacs-lisp
 
   (defvar my/isearch-end-pos)
@@ -3321,18 +3299,6 @@ Flycheck with extra correction for elisp packages
     (my/isearch-current-screen nil))
 #+END_SRC
 
-*** Make isearch end when only one match
-#+BEGIN_SRC emacs-lisp
-  ;; (defun my/ret-if-one-isearch-match ()
-  ;;   (interactive)
-  ;;   (set-buffer my/isearch-current-buffer)
-  ;;   (save-excursion
-  ;;     (goto-char (point-min))
-  ;;     (if (= (count-matches isearch-string) 1)
-  ;;         (setq unread-command-events (listify-key-sequence "\C-m")))))
-  ;;
-  ;; (add-hook 'isearch-update-post-hook 'my/ret-if-one-isearch-match)
-#+END_SRC
 
 ** Goto middle of line
 #+BEGIN_SRC emacs-lisp
@@ -4503,7 +4469,7 @@ Shows information in echo area
 #+BEGIN_SRC emacs-lisp
   ;; ;;(straight-use-package '(litable :type git :host github :repo "Fuco1/blablabla"))
   (straight-use-package 'litable)
-  ;; (require 'litable)
+  (require 'litable)
   ;;
   ;; ;; Eval everything
   ;; (defun litable--safe-eval (form)
@@ -4883,6 +4849,9 @@ https://github.com/brianqq/inferior-cling
 ** C#
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'csharp-mode)
+
+  ;;csharp-maybe-insert-codedoc
+  (setq csharp-mode-map nil)
 #+END_SRC
 
 *** REPL
@@ -8928,24 +8897,30 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 #+BEGIN_SRC emacs-lisp
   (defvar my/mode-line-enable-available-mem nil)
 
-  (if (file-exists-p "/proc/meminfo")
+  (if (and (file-exists-p "/proc/meminfo")
+           (progn
+             (with-temp-buffer
+
+               (insert-file-contents "/proc/meminfo")
+               (setq my/mem-string (buffer-string))
+               (string-match "MemAvailable:.*\s" my/mem-string))))
       (setq my/mode-line-enable-available-mem t))
 
   (defvar my/available-mem-formatted "nil")
   (defvar my/available-mem 0)
 
   (defun my/linux-update-available-mem ()
-    (interactive)
-    (with-temp-buffer
-      (insert-file-contents "/proc/meminfo")
-      (setq my/mem-string (buffer-string))
+  (interactive)
+  (with-temp-buffer
+    (insert-file-contents "/proc/meminfo")
+    (setq my/mem-string (buffer-string))
 
-      (string-match "MemAvailable:.*\s" my/mem-string)
-      (setq my/mem-string (match-string 0 my/mem-string))
+    (string-match "MemAvailable:.*\s" my/mem-string)
+    (setq my/mem-string (match-string 0 my/mem-string))
 
-      ;; Default returns kb, *1000 to get it to bytes
-      (setq my/available-mem (* 1000(string-to-number (substring my/mem-string (string-match "[0-9]" my/mem-string) -1))))
-      (setq my/available-mem-formatted (my/file-size-human-readable my/available-mem nil t))))
+    ;; Default returns kb, *1000 to get it to bytes
+    (setq my/available-mem (* 1000(string-to-number (substring my/mem-string (string-match "[0-9]" my/mem-string) -1))))
+    (setq my/available-mem-formatted (my/file-size-human-readable my/available-mem nil t))))
 
   (if my/mode-line-enable-available-mem
       (my/lv-line-allocate-update-time 'my/linux-update-available-mem))
