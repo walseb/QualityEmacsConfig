@@ -998,7 +998,7 @@ Stop emacs from creating backup files on every save
   (defun my/backup-buffer (backup-path)
   (interactive)
   (if (my/should-backup-buffer)
-      (save-restriction (widen) (write-region (point-min) (point-max) (concat backup-path (number-to-string (floor (float-time))) (my/backup-format-file-path (buffer-file-name))) nil nil nil t))))
+      (save-restriction (widen) (write-region (point-min) (point-max) (concat backup-path (number-to-string (floor (float-time))) (my/backup-format-file-path (buffer-file-name)))))))
 #+END_SRC
 
 ** Make backup on first save
@@ -2668,7 +2668,7 @@ Used for universal folding
   (my/evil-normal-define-key "g RET" 'my/outline-hide-all-body)
   (my/evil-normal-define-key "g C-a" 'outline-show-all)
   (my/evil-normal-define-key "g C-h" 'evil-close-fold)
-  ;;(my/evil-normal-define-key "g C-H" '(lambda () (interactive) (hide-sublevels 1)))
+  ;;(my/evil-normal-define-key "g C-s-h" '(lambda () (interactive) (outline-hide-sublevels 1)))
 
   (defun my/fold-show ()
     (interactive)
@@ -4577,7 +4577,7 @@ Shows information in echo area
   (define-prefix-command 'my/clojure-mode-map)
   (evil-define-key 'normal clojure-mode-map (kbd (concat my/leader-map-key " a")) 'my/clojure-mode-map)
 
-  (define-key my/clojure-mode-map (kbd "C-s") 'cider-jack-in)
+  (define-key my/clojure-mode-map (kbd "C-s") 'cider-connect)
 #+END_SRC
 
 ** Java
