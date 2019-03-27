@@ -3971,10 +3971,6 @@ Version 2015-07-30"
   (evil-define-key 'insert dired-mode-map  (kbd "G") 'dired-do-chgrp)
   (evil-define-key 'insert dired-mode-map  (kbd "H") 'dired-do-hardlink)
   (evil-define-key 'insert dired-mode-map  (kbd "L") 'dired-do-load)
-  (evil-define-key 'normal dired-mode-map  (kbd "M") 'dired-do-chmod)
-  (evil-define-key 'insert dired-mode-map  (kbd "M") 'dired-do-chmod)
-  (evil-define-key 'normal dired-mode-map  (kbd "O") 'dired-do-chown)
-  (evil-define-key 'insert dired-mode-map  (kbd "O") 'dired-do-chown)
   (evil-define-key 'insert dired-mode-map  (kbd "P") 'dired-do-print)
   (evil-define-key 'insert dired-mode-map  (kbd "Q") 'dired-do-find-regexp-and-replace)
   (evil-define-key 'normal dired-mode-map  (kbd "R") 'dired-do-rename)
@@ -4059,6 +4055,7 @@ Version 2015-07-30"
   ;; Maybe bind this??
   (evil-define-key 'insert dired-mode-map (kbd "k") 'dired-do-kill-lines)
   (evil-define-key 'insert dired-mode-map (kbd "l") 'dired-do-redisplay)
+  (evil-define-key 'normal dired-mode-map (kbd "M") 'dired-mark-subdir-files)
   (evil-define-key 'normal dired-mode-map (kbd "m") 'dired-mark)
   (evil-define-key 'insert dired-mode-map (kbd "m") 'dired-mark)
   (evil-define-key 'insert dired-mode-map (kbd "n") 'dired-next-line)
@@ -4068,6 +4065,7 @@ Version 2015-07-30"
   (evil-define-key 'insert dired-mode-map (kbd "p") 'dired-previous-line)
   (evil-define-key 'insert dired-mode-map (kbd "s") 'my/dired-sort-menu)
   (evil-define-key 'insert dired-mode-map (kbd "t") 'dired-toggle-marks)
+  (evil-define-key 'normal dired-mode-map (kbd "u") 'dired-unmark)
   (evil-define-key 'insert dired-mode-map (kbd "u") 'dired-unmark)
   (evil-define-key 'insert dired-mode-map (kbd "v") 'dired-view-file)
   (evil-define-key 'normal dired-mode-map (kbd "y") 'dired-copy-filename-as-kill)
@@ -4097,8 +4095,7 @@ Version 2015-07-30"
   ;; ;; `toggle-read-only' is an obsolete alias for `read-only-mode'
   ;; (evil-define-key 'insert dired-mode-map [remap toggle-read-only] 'dired-toggle-read-only)
   ;; (evil-define-key 'insert dired-mode-map  (kbd "\177") 'dired-unmark-backward)
-  (define-key dired-mode-map  [remap undo] 'dired-undo)
-  (define-key dired-mode-map  [remap undo-tree-undo] 'dired-undo)
+
   ;; thumbnail manipulation (image-dired)
   (evil-define-key 'insert dired-mode-map (kbd "\C-td") 'image-dired-display-thumbs)
   (evil-define-key 'insert dired-mode-map (kbd "\C-tt") 'image-dired-tag-files)
@@ -4215,6 +4212,15 @@ Shows information in echo area
 *** indent guide
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'highlight-indent-guides)
+
+  ;;(add-hook 'prog-mode-hook '(lambda () ()
+  ;;                             (let ((enable 1))
+  ;;                               (pcase major-mode
+  ;;                                 ('emacs-lisp-mode (setq enable -1))
+  ;;                                 ('clojure-mode (setq enable -1))
+  ;;                                 ('scheme-mode (setq enable -1))
+  ;;                                 ('common-lisp-mode (setq enable -1)))
+  ;;                               (highlight-indent-guides-mode enable))))
 
   (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
 
@@ -4851,7 +4857,7 @@ https://github.com/brianqq/inferior-cling
   (straight-use-package 'csharp-mode)
 
   ;;csharp-maybe-insert-codedoc
-  (setq csharp-mode-map nil)
+  (setq csharp-mode-map (make-sparse-keymap))
 #+END_SRC
 
 *** REPL
@@ -5232,7 +5238,6 @@ Enable org mode for .org.gpg files
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
-  ;;(setq term-mode-map nil)
   ;; (my/evil-universal-define-key-in-mode 'term-raw-map "C-," 'term-char-mode)
 #+END_SRC
 
@@ -7495,9 +7500,10 @@ https://www.emacswiki.org/emacs/ArtistMode
 ** Evil-lispy
 #+BEGIN_SRC emacs-lisp
   (defhydra my/lispy-hydra (:hint nil
-                                  :color red)
+                                  :color amaranth)
     "lisp"
 
+    ("H" (call-interactively #'lispy-backward nil))
     ("L" (call-interactively #'lispy-flow nil))
     ("l" (call-interactively #'lispy-right) nil)
     ("h" (call-interactively #'lispy-left) nil)
@@ -7505,20 +7511,21 @@ https://www.emacswiki.org/emacs/ArtistMode
     ;;   ("l" (call-interactively #'down-list) nil)
     ;;   ("h" (call-interactively #'up-list) nil)
 
+    ("u" (call-interactively #'lispy-back nil))
 
     ("n" (call-interactively #'lispy-down) nil)
     ("p" (call-interactively #'lispy-up nil))
 
-
-    ("b" (call-interactively #'lispy-back nil))
     ("i" (call-interactively #'lispy-tab nil))
 
+    ("u" (call-interactively #'lispy-flow nil))
     ("d" (call-interactively #'lispy-different nil))
     ("o" (call-interactively #'lispy-other-mode nil))
     ("k" (call-interactively #'lispy-eval-other-window nil))
     ("K" (call-interactively #'lispy-paste nil))
     ("y" (call-interactively #'lispy-occur nil))
-    ("z" (call-interactively #'lh-knight/body nil)))
+    ("z" (call-interactively #'lh-knight/body nil))
+    ("<escape>" nil nil))
 
   ;; ;; navigation
   ;; (lispy-define-key map "l" 'lispy-right)
@@ -7591,6 +7598,31 @@ https://www.emacswiki.org/emacs/ArtistMode
   ;; (lispy-define-key map "-" 'lispy-ace-subword)
   ;; (lispy-define-key map "." 'lispy-repeat)
   ;; (lispy-define-key map "~" 'lispy-tilde)
+
+  ;; Goto
+  ;; ("d" lispy-goto)
+  ;; ("l" lispy-goto-local)
+  ;; ("r" lispy-goto-recursive)
+  ;; ("p" lispy-goto-projectile)
+  ;; ("f" lispy-follow)
+  ;; ("b" pop-tag-mark)
+  ;; ("q" lispy-quit)
+  ;; ("j" lispy-goto-def-down)
+  ;; ("a" lispy-goto-def-ace)
+  ;; ("e" lispy-goto-elisp-commands)
+
+  ;; Other
+  ;; (("h" lispy-move-left)
+  ;;  ("j" lispy-down-slurp)
+  ;;  ("k" lispy-up-slurp)
+  ;;  ("l" lispy-move-right)
+  ;;  ("SPC" lispy-other-space)
+  ;;  ("g" lispy-goto-mode)))
+
+  ;; Knight
+  ;;   ("j" lispy-knight-down)
+  ;;   ("k" lispy-knight-up)
+  ;;    ("z" nil))
 #+END_SRC
 
 *** Keys
