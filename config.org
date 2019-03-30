@@ -1799,13 +1799,17 @@ In org mode when displaying images pixel scroll mode can be useful maybe
                                  ))
   (defun my/launch-firefox ()
     (interactive)
-    (let* (
-           (search (completing-read "url " my/browser-bookmarks))
-           (adress
-            (if (cl-member search my/browser-bookmarks :test #'string=)
-                search
-              (concat "https://www.google.com/search?q=" search))))
-      (start-process (concat my/gui-browser my/temp-firefox-title-name) nil my/gui-browser "--new-window" adress)))
+    (start-process my/gui-browser nil my/gui-browser "--new-window"))
+
+  ;; (defun my/launch-firefox ()
+  ;;   (interactive)
+  ;;   (let* (
+  ;;          (search (completing-read "url " my/browser-bookmarks))
+  ;;          (adress
+  ;;           (if (cl-member search my/browser-bookmarks :test #'string=)
+  ;;               search
+  ;;             (concat "https://www.google.com/search?q=" search))))
+  ;;     (start-process (concat my/gui-browser my/temp-firefox-title-name) nil my/gui-browser "--new-window" adress)))
 
   (define-key my/leader-map (kbd "C-b") 'my/launch-firefox)
 #+END_SRC
@@ -2820,28 +2824,28 @@ Also ivy-occur-grep
   (define-key my/ivy-occur-map (kbd "w") 'ivy-wgrep-change-to-wgrep-mode)
   (define-key my/ivy-occur-map (kbd "r") 'ivy-occur-revert-buffer)
 
+  (evil-define-key 'insert ivy-occur-mode-map (kbd "RET") 'ivy-occur-press)
+
   (evil-define-key 'normal ivy-occur-mode-map (kbd "RET") 'ivy-occur-press)
   (evil-define-key 'normal ivy-occur-mode-map (kbd "p") 'evil-previous-line)
   (evil-define-key 'normal ivy-occur-mode-map (kbd "n") 'evil-next-line)
-  (evil-define-key 'normal ivy-occur-mode-map (kbd "D") 'ivy-occur-delete-candidate)
   (evil-define-key 'normal ivy-occur-mode-map (kbd "C-h") 'ivy-occur-read-action)
 
   (evil-define-key 'visual ivy-occur-mode-map (kbd "RET") 'ivy-occur-press)
   (evil-define-key 'visual ivy-occur-mode-map (kbd "p") 'evil-previous-line)
   (evil-define-key 'visual ivy-occur-mode-map (kbd "n") 'evil-next-line)
-  (evil-define-key 'visual ivy-occur-mode-map (kbd "D") 'ivy-occur-delete-candidate)
   (evil-define-key 'visual ivy-occur-mode-map (kbd "C-h") 'ivy-occur-read-action)
+
+  (evil-define-key 'insert ivy-occur-grep-mode-map (kbd "RET") 'ivy-occur-press)
 
   (evil-define-key 'normal ivy-occur-grep-mode-map (kbd "RET") 'ivy-occur-press)
   (evil-define-key 'normal ivy-occur-grep-mode-map (kbd "p") 'evil-previous-line)
   (evil-define-key 'normal ivy-occur-grep-mode-map (kbd "n") 'evil-next-line)
-  (evil-define-key 'normal ivy-occur-grep-mode-map (kbd "D") 'ivy-occur-delete-candidate)
   (evil-define-key 'normal ivy-occur-grep-mode-map (kbd "C-h") 'ivy-occur-read-action)
 
   (evil-define-key 'visual ivy-occur-grep-mode-map (kbd "RET") 'ivy-occur-press)
   (evil-define-key 'visual ivy-occur-grep-mode-map (kbd "p") 'evil-previous-line)
   (evil-define-key 'visual ivy-occur-grep-mode-map (kbd "n") 'evil-next-line)
-  (evil-define-key 'visual ivy-occur-grep-mode-map (kbd "D") 'ivy-occur-delete-candidate)
   (evil-define-key 'visual ivy-occur-grep-mode-map (kbd "C-h") 'ivy-occur-read-action)
 
   ;; (define-key map (kbd "a") 'ivy-occur-read-action)
@@ -3263,7 +3267,6 @@ Flycheck with extra correction for elisp packages
 
 *** Isearch screen
 #+BEGIN_SRC emacs-lisp
-
   (defvar my/isearch-end-pos)
 
   (defun my/isearch-current-screen (forward)
@@ -3277,9 +3280,9 @@ Flycheck with extra correction for elisp packages
       (if forward
           (progn
             (narrow-to-region (point) (window-end))
-            (isearch-forward-regexp))
+            (my/isearch-forward-regexp))
         (narrow-to-region window-top (point))
-        (isearch-backward-regexp))
+        (my/isearch-backward-regexp))
       ;; FIXME: Currently this resets narrow when done
       (widen)
       (if narrow-restore
@@ -3288,7 +3291,8 @@ Flycheck with extra correction for elisp packages
       (goto-char window-top)
       ;;(goto-char end-pos)
       (run-with-timer 0.01 nil '(lambda () (interactive)  (goto-char my/isearch-end-pos)))
-      (my/alert nil nil t)))
+      ;;(my/alert nil nil t)
+      ))
 
   (defun my/isearch-current-screen-forward ()
     (interactive)
@@ -3299,6 +3303,19 @@ Flycheck with extra correction for elisp packages
     (my/isearch-current-screen nil))
 #+END_SRC
 
+*** Replace isearch regexp search with ivy-regex-plus
+#+BEGIN_SRC emacs-lisp
+  (defun my/isearch-forward-regexp (&optional not-regexp no-recursive-edit)
+    (interactive "P\np")
+    (isearch-mode t (null not-regexp) nil (not no-recursive-edit) 'my/ivy--regex-plus))
+
+  (defun my/isearch-backward-regexp (&optional not-regexp no-recursive-edit)
+    (interactive "P\np")
+    (isearch-mode nil (null not-regexp) nil (not no-recursive-edit)) 'my/ivy--regex-plus)
+
+  (defun my/ivy--regex-plus (string &optional lax)
+    (ivy--regex-plus string))
+#+END_SRC
 
 ** Goto middle of line
 #+BEGIN_SRC emacs-lisp
@@ -4213,16 +4230,16 @@ Shows information in echo area
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'highlight-indent-guides)
 
-  ;;(add-hook 'prog-mode-hook '(lambda () ()
-  ;;                             (let ((enable 1))
-  ;;                               (pcase major-mode
-  ;;                                 ('emacs-lisp-mode (setq enable -1))
-  ;;                                 ('clojure-mode (setq enable -1))
-  ;;                                 ('scheme-mode (setq enable -1))
-  ;;                                 ('common-lisp-mode (setq enable -1)))
-  ;;                               (highlight-indent-guides-mode enable))))
+  (add-hook 'prog-mode-hook '(lambda () (highlight-indent-guides-mode (my/highlight-indent-guide-should-enable))))
 
-  (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
+  (defun my/highlight-indent-guide-should-enable ()
+    (pcase major-mode
+      ('emacs-lisp-mode -1)
+      ('lisp-interaction-mode -1)
+      ('clojure-mode -1)
+      ('scheme-mode -1)
+      ('common-lisp-mode -1)
+      (_ 1)))
 
   (setq highlight-indent-guides-method 'column)
   ;; (setq highlight-indent-guides-method 'fill)
@@ -5715,7 +5732,7 @@ We use class names for all windows expect for Java applications and GIMP (becaus
           ;;([?\e] . [escape])
 
           ;; Firefox hard-coded open url hotkey
-          ([?\C-o] . [f6])
+          ;;([?\C-o] . [f6])
 
           ;; Redo
           ([?\C-r] . [?\C-y])
@@ -7500,57 +7517,60 @@ https://www.emacswiki.org/emacs/ArtistMode
 ** Evil-lispy
 #+BEGIN_SRC emacs-lisp
   (defhydra my/lispy-hydra (:hint nil
-                                  :color amaranth)
+                                  :color red)
     "lisp"
 
     ("H" (call-interactively #'lispy-backward nil))
     ("L" (call-interactively #'lispy-flow nil))
+
+    ("C-l" (call-interactively #'lispy-knight-down) nil)
+    ("C-h" (call-interactively #'lispy-knight-up) nil)
+
     ("l" (call-interactively #'lispy-right) nil)
     ("h" (call-interactively #'lispy-left) nil)
 
     ;;   ("l" (call-interactively #'down-list) nil)
     ;;   ("h" (call-interactively #'up-list) nil)
 
-    ("u" (call-interactively #'lispy-back nil))
+    ("N" (call-interactively #'lispy-raise) nil)
+    ("P" (call-interactively #'lispy-convolute) nil)
 
     ("n" (call-interactively #'lispy-down) nil)
     ("p" (call-interactively #'lispy-up nil))
 
-    ("i" (call-interactively #'lispy-tab nil))
+    ("u" (call-interactively #'undo nil))
+    ;;("u" (call-interactively #'lispy-back nil))
 
-    ("u" (call-interactively #'lispy-flow nil))
-    ("d" (call-interactively #'lispy-different nil))
-    ("o" (call-interactively #'lispy-other-mode nil))
-    ("k" (call-interactively #'lispy-eval-other-window nil))
-    ("K" (call-interactively #'lispy-paste nil))
-    ("y" (call-interactively #'lispy-occur nil))
-    ("z" (call-interactively #'lh-knight/body nil))
+    ("e" (call-interactively #'my/auto-eval nil))
+
+    ("o" (call-interactively #'lispy-different nil))
+    ("d" (call-interactively #'lispy-kill nil))
+
+    ;;("y" (call-interactively #'lispy-occur nil))
+
+
+    (">" (call-interactively #'lispy-slurp nil))
+    ("<" (call-interactively #'lispy-barf nil))
+    ("/" (call-interactively #'lispy-splice nil))
+
+    ;;  ("r" (call-interactively #'lispy-raise nil))
+    ;;  ("R" (call-interactively #'lispy-raise-some nil))
+
+    ;;("+" (call-interactively #'lispy-join nil))
+
+    ;;  ("C" (call-interactively #'lispy-splice nil))
+    ;;  ("X" (call-interactively #'lispy-splice nil))
+    ;;  ("w" (call-interactively #'lispy-splice nil))
+    ;;  ("s" (call-interactively #'lispy-splice nil))
+    ;;  ("/" (call-interactively #'lispy-splice nil))
+    ;;  ("/" (call-interactively #'lispy-splice nil))
+    ;;  ("/" (call-interactively #'lispy-splice nil))
+    ;;  ("/" (call-interactively #'lispy-splice nil))
+    ;;  ("/" (call-interactively #'lispy-splice nil))
+
     ("<escape>" nil nil))
 
   ;; ;; navigation
-  ;; (lispy-define-key map "l" 'lispy-right)
-  ;; (lispy-define-key map "h" 'lispy-left)
-  ;; (lispy-define-key map "f" 'lispy-flow)
-  ;; (lispy-define-key map "j" 'lispy-down)
-  ;; (lispy-define-key map "k" 'lispy-up)
-  ;; (lispy-define-key map "d" 'lispy-different)
-  ;; (lispy-define-key map "o" 'lispy-other-mode)
-  ;; (lispy-define-key map "p" 'lispy-eval-other-window)
-  ;; (lispy-define-key map "P" 'lispy-paste)
-  ;; (lispy-define-key map "y" 'lispy-occur)
-  ;; (lispy-define-key map "z" 'lh-knight/body)
-  ;; ;; outline
-  ;; (lispy-define-key map "J" 'lispy-outline-next)
-  ;; (lispy-define-key map "K" 'lispy-outline-prev)
-  ;; (lispy-define-key map "L" 'lispy-outline-goto-child)
-  ;; ;; Paredit transformations
-  ;; (lispy-define-key map ">" 'lispy-slurp)
-  ;; (lispy-define-key map "<" 'lispy-barf)
-  ;; (lispy-define-key map "/" 'lispy-splice)
-  ;; (lispy-define-key map "r" 'lispy-raise)
-  ;; (lispy-define-key map "R" 'lispy-raise-some)
-  ;; (lispy-define-key map "+" 'lispy-join)
-  ;; ;; more transformations
   ;; (lispy-define-key map "C" 'lispy-convolute)
   ;; (lispy-define-key map "X" 'lispy-convolute-left)
   ;; (lispy-define-key map "w" 'lispy-move-up)
