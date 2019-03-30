@@ -3311,7 +3311,7 @@ Flycheck with extra correction for elisp packages
 
   (defun my/isearch-backward-regexp (&optional not-regexp no-recursive-edit)
     (interactive "P\np")
-    (isearch-mode nil (null not-regexp) nil (not no-recursive-edit)) 'my/ivy--regex-plus)
+    (isearch-mode nil (null not-regexp) nil (not no-recursive-edit) 'my/ivy--regex-plus))
 
   (defun my/ivy--regex-plus (string &optional lax)
     (ivy--regex-plus string))
