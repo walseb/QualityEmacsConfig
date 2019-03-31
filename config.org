@@ -242,16 +242,6 @@ Makes godot work with old computers
 LIBGL_ALWAYS_SOFTWARE=1 godot-mono
 #+END_SRC
 
-** Stuff todo
-*** Delete around char 'c'
-Need to find how to use the "inside" operator, etc
-#+BEGIN_SRC
-  (evil-define-motion evil-find-char (char)
-    (interactive "<C>")
-    (evil-find-char 1 char)
-    )
-#+END_SRC
-
 ** Sharing folders via virtualbox
 https://wiki.archlinux.org/index.php/VirtualBox#Enable_shared_folders
 1.
@@ -285,6 +275,18 @@ Not like this
 <Compile Include="*.cs" />
 Like this
 <Compile Include="Assets/Script.cs" />
+
+* Todo
+** Always mono spaced fonts
+** Pressing 0 in eshell
+** Delete around char 'c'
+Need to find how to use the "inside" operator, etc
+#+BEGIN_SRC
+  (evil-define-motion evil-find-char (char)
+    (interactive "<C>")
+    (evil-find-char 1 char)
+    )
+#+END_SRC
 
 * Security
 #+BEGIN_SRC emacs-lisp
@@ -724,6 +726,9 @@ Stop custom from editing init.el
 
   (add-to-list 'evil-mc-custom-known-commands
                '(delete-char . ((:default . evil-mc-execute-default-call-with-count))))
+
+  (add-to-list 'evil-mc-custom-known-commands
+               '(org-delete-char . ((:default . evil-mc-execute-default-call-with-count))))
 #+END_SRC
 
 *** Clear default keys
@@ -1635,6 +1640,13 @@ In org mode when displaying images pixel scroll mode can be useful maybe
            (exit-recursive-edit))
           (buffer-quit-function
            (funcall buffer-quit-function))))
+#+END_SRC
+
+** lisp-ls
+ls for systems without ls installed (like windows). Gets used automatically on those systems
+#+BEGIN_SRC emacs-lisp
+  (setq-default ls-lisp-format-time-list  '("%d-%m-%Y %H:%M" "%d-%m-%Y %H:%M")
+                ls-lisp-use-localized-time-format t)
 #+END_SRC
 
 * File options
@@ -3913,22 +3925,24 @@ Make file sizes human readable
   ;;(straight-use-package 'dired-subtree)
 #+END_SRC
 
+** Date format
+#+BEGIN_SRC emacs-lisp
+  (setq my/dired-base-ls-command "-alh --time-style \"+%m-%d-%Y %H:%M\"")
+  (setq dired-listing-switches (concat my/dired-base-ls-command "--group-directories-first"))
+#+END_SRC
+
+
 ** Sorting
-Sort dired dir listing in different ways. Modified to work with ivy
-URL `http://ergoemacs.org/emacs/dired_sort.html'
-Version 2015-07-30"
 #+BEGIN_SRC emacs-lisp
   (defun my/dired-sort-menu ()
     (interactive)
-    (let ($sort-by $arg)
-      (setq $sort-by (completing-read "Sort by:" '( "date" "size" "name" "dir")))
-      (cond
-       ((equal $sort-by "name") (setq $arg "-Al --si --time-style long-iso "))
-       ((equal $sort-by "date") (setq $arg "-Al --si --time-style long-iso -t"))
-       ((equal $sort-by "size") (setq $arg "-Al --si --time-style long-iso -S"))
-       ((equal $sort-by "dir") (setq $arg "-Al --si --time-style long-iso --group-directories-first"))
-       (t (error "logic error 09535" )))
-      (dired-sort-other $arg )))
+    (dired-sort-other
+     (concat my/dired-base-ls-command
+             (pcase (completing-read "Sort by: " '( "date" "size" "name" "dir"))
+               ("name" "")
+               ("date" "-t")
+               ("size" "--sort=size")
+               ("dir" "--group-directories-first")))))
 
   (define-key dired-mode-map (kbd "s") 'my/dired-sort-menu)
 #+END_SRC
