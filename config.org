@@ -290,8 +290,8 @@ Where =bol= is beginning of line, and =space= is anything that has whitespace sy
 For more symbols read =rx= help docs, it has everything
 
 * Todo
-** Fix my/loccur-isearch backspace
-** Always mono spaced fonts
+** Recursive loccur
+** PR evil-mc changes
 ** Pressing 0 in eshell
 ** Delete around char 'c'
 Need to find how to use the "inside" operator, etc
@@ -2624,7 +2624,13 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
   (define-prefix-command 'my/narrow-map)
   (define-key my/leader-map (kbd "n") 'my/narrow-map)
 
-  (define-key my/narrow-map (kbd "w") 'widen)
+  (defun my/narrow-widen ()
+    (interactive)
+    (if loccur-mode
+        (loccur-mode -1)
+      (widen)))
+
+  (define-key my/narrow-map (kbd "w") 'my/narrow-widen)
   (define-key my/narrow-map (kbd "r") 'narrow-to-region)
 
   (define-key my/narrow-map (kbd "p") 'narrow-to-page)
@@ -3284,16 +3290,19 @@ Flycheck with extra correction for elisp packages
     (my/isearch-forward-regexp)
     (setq-local my/loccur-search-running nil))
 
-  (add-hook 'isearch-update-post-hook
-            (lambda ()
-              (if my/loccur-search-running
-                  (let ((loccur-mode nil))
-                    (loccur (ivy--regex-plus isearch-string))))))
+  (add-hook 'isearch-update-post-hook 'my/loccur-isearch-update)
 
-  ;;(add-hook 'isearch-mode-end-hook
-  ;;          (lambda ()
-  ;;            (if my/loccur-search-running
-  ;;                (loccur nil))))
+  (defun my/loccur-isearch-update ()
+    (when my/loccur-search-running
+      (loccur-mode -1)
+      (if (not (string= isearch-string ""))
+          (loccur (ivy--regex-plus isearch-string)))))
+
+  (add-hook 'isearch-mode-end-hook 'my/loccur-isearch-quit)
+
+  (defun my/loccur-isearch-quit ()
+    (if (and my/loccur-search-running isearch-mode-end-hook-quit)
+        (loccur-mode -1)))
 #+END_SRC
 
 *** Keys
