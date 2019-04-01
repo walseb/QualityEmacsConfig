@@ -276,7 +276,21 @@ Not like this
 Like this
 <Compile Include="Assets/Script.cs" />
 
+** Magit
+*** Rename commit
+magit replace (r) in log buffer -> w for reword
+
+** Regexps
+Make regexps easier by using (rx)
+E.g.
+#+BEGIN_SRC emacs-lisp
+  (rx bol "*.$" space)
+#+END_SRC
+Where =bol= is beginning of line, and =space= is anything that has whitespace syntax
+For more symbols read =rx= help docs, it has everything
+
 * Todo
+** Fix my/loccur-isearch backspace
 ** Always mono spaced fonts
 ** Pressing 0 in eshell
 ** Delete around char 'c'
@@ -2953,7 +2967,6 @@ Used in ivy occur
 
   (global-set-key (kbd "C-s") 'my/use-swiper-or-grep)
   (global-set-key (kbd "C-s") 'my/use-swiper-or-grep)
-  (global-set-key (kbd "M-s") 'swiper-all)
   ;;(global-set-key (kbd "M-s") (lambda () (interactive) (my/use-swiper-or-grep nil t)))
 
   ;;  (setq swiper-use-visual-line t)
@@ -3253,6 +3266,38 @@ Flycheck with extra correction for elisp packages
 #+END_SRC
 
 * Movement
+** Loccur
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'loccur)
+  (require 'loccur)
+#+END_SRC
+*** Use isearch to interactively search
+#+BEGIN_SRC emacs-lisp
+  (defvar-local my/loccur-search-running nil)
+
+  (defun my/loccur-isearch ()
+    (interactive)
+    (setq-local my/loccur-search-running t)
+    (my/isearch-forward-regexp)
+    (setq-local my/loccur-search-running nil))
+
+  (add-hook 'isearch-update-post-hook
+            (lambda ()
+              (if my/loccur-search-running
+                  (let ((loccur-mode nil))
+                    (loccur (ivy--regex-plus isearch-string))))))
+
+  ;;(add-hook 'isearch-mode-end-hook
+  ;;          (lambda ()
+  ;;            (if my/loccur-search-running
+  ;;                (loccur nil))))
+#+END_SRC
+
+*** Keys
+#+BEGIN_SRC emacs-lisp
+  (my/evil-normal-define-key "M-s" 'my/loccur-isearch)
+#+END_SRC
+
 ** Isearch
 #+BEGIN_SRC emacs-lisp
   (require 'isearch)
@@ -3865,6 +3910,11 @@ g-; and g-,
   (add-hook 'dired-mode-hook 'my/dired-mode)
 #+END_SRC
 
+** Narrow
+#+BEGIN_SRC emacs-lisp
+  ;;(straight-use-package 'dired-narrow)
+#+END_SRC
+
 ** Move file between windows
 #+BEGIN_SRC emacs-lisp
   (setq dired-dwim-target t)
@@ -3952,6 +4002,11 @@ Make file sizes human readable
   (straight-use-package 'dired-du)
 #+END_SRC
 
+** Dired-single
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'dired-single)
+#+END_SRC
+
 ** Keys
 #+BEGIN_SRC emacs-lisp
   ;; Reset dired mode map
@@ -3983,15 +4038,11 @@ Make file sizes human readable
 #+BEGIN_SRC emacs-lisp
   ;; Bind =Backspace= to go up one directory
   ;;(define-key dired-mode-map [?\d] 'dired-up-directory)
-  (evil-define-key 'normal dired-mode-map (kbd "DEL") 'dired-up-directory)
-  (evil-define-key 'insert dired-mode-map (kbd "DEL") 'dired-up-directory)
+  (evil-define-key 'normal dired-mode-map (kbd "r") 'dired-single-up-directory)
+  (evil-define-key 'insert dired-mode-map (kbd "r") 'dired-single-up-directory)
 
-  (evil-define-key 'insert dired-mode-map (kbd "q") 'quit-window)
-  (evil-define-key 'normal dired-mode-map (kbd "q") 'quit-window)
-
-  ;; Upper case keys (except !) for operating on the marked files
-  (evil-define-key 'normal dired-mode-map (kbd "RET") 'dired-find-file)
-  (evil-define-key 'insert dired-mode-map (kbd "RET") 'dired-find-file)
+  (evil-define-key 'normal dired-mode-map (kbd "RET") 'dired-single-buffer)
+  (evil-define-key 'insert dired-mode-map (kbd "RET") 'dired-single-buffer)
 
   (evil-define-key 'insert dired-mode-map (kbd "A") 'dired-do-find-regexp)
   (evil-define-key 'normal dired-mode-map(kbd "C") 'dired-do-copy)
@@ -4007,7 +4058,7 @@ Make file sizes human readable
   (evil-define-key 'normal dired-mode-map  (kbd "R") 'dired-do-rename)
   (evil-define-key 'insert dired-mode-map  (kbd "R") 'dired-do-rename)
   (evil-define-key 'insert dired-mode-map  (kbd "S") 'dired-do-symlink)
-  (evil-define-key 'Normal dired-mode-map  (kbd "S") 'dired-do-symlink)
+  (evil-define-key 'normal dired-mode-map  (kbd "S") 'dired-do-symlink)
   (evil-define-key 'insert dired-mode-map  (kbd "T") 'dired-do-touch)
   (evil-define-key 'normal dired-mode-map  (kbd "X") 'dired-do-shell-command)
   (evil-define-key 'insert dired-mode-map  (kbd "X") 'dired-do-shell-command)
@@ -5295,6 +5346,18 @@ Enable org mode for .org.gpg files
   ;; (insert (completing-read "Eshell history: "
   ;; (delete-dups
   ;; (ring-elements eshell-history-ring)))))
+#+END_SRC
+
+** Prefer lisp to bash
+#+BEGIN_SRC emacs-lisp
+  (setq eshell-prefer-lisp-functions t)
+  (setq eshell-prefer-lisp-variables t)
+#+END_SRC
+
+** Use tramp for sudo
+#+BEGIN_SRC emacs-lisp
+  (require 'em-tramp)
+  ;;(shell-command "alias sudo 'eshell/sudo $*'")
 #+END_SRC
 
 ** Autocompletion
@@ -7477,6 +7540,9 @@ https://www.emacswiki.org/emacs/ArtistMode
     ("v" split-window-below nil)
     ;; ("i" clone-indirect-buffer-other-window nil)
 
+    ;; Search
+    ("C-s" swiper-all nil)
+
     ;; Close window
     ("s" delete-window nil)
     ;; Focus on window
@@ -7519,8 +7585,8 @@ https://www.emacswiki.org/emacs/ArtistMode
     ("B" my/add-bookmark nil)
     ("C-b" my/delete-bookmark nil)
 
-  ("u" winner-undo nil)
-  ("r" winner-redo nil))
+    ("u" winner-undo nil)
+    ("r" winner-redo nil))
 
   ;;  ("SPC" my/leader-map nil)
 
