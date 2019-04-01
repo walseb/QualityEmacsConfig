@@ -544,8 +544,8 @@ Default file-size-human-readable returns decimal values
 
 ** Set font
 #+BEGIN_SRC emacs-lisp
-  (defvar my/default-face-height 120)
-  (defun my/set-default-font(font)
+  (defvar my/default-face-height 125)
+  (defun my/set-default-font (font)
     (if window-system
         (set-face-attribute 'default nil
                             :family font
@@ -593,8 +593,8 @@ Default file-size-human-readable returns decimal values
             (setq my/font-raw "dejavu sans")
             (setq my/font "DejaVuSans")))))
 
-  (if my/font
-      (my/set-default-font my/font))
+;;  (if my/font
+;;      (my/set-default-font my/font))
 #+END_SRC
 
 ** Mono font
@@ -612,6 +612,9 @@ Default file-size-human-readable returns decimal values
                 "Perfect DOS VGA 437"))))))
 
   (defvar my/mono-font (my/get-best-mono-font))
+
+  (if my/mono-font
+      (my/set-default-font my/mono-font))
 #+END_SRC
 
 * Startup processes
@@ -5357,7 +5360,8 @@ Enable org mode for .org.gpg files
 ** Use tramp for sudo
 #+BEGIN_SRC emacs-lisp
   (require 'em-tramp)
-  ;;(shell-command "alias sudo 'eshell/sudo $*'")
+  ;;  (shell-command "alias sudo 'eshell/sudo $*'")
+  (defalias 'sudo 'eshell/sudo)
 #+END_SRC
 
 ** Autocompletion
@@ -8670,6 +8674,7 @@ Use lv-line to create a mode line on the top of the screen
 #+BEGIN_SRC emacs-lisp
   (defun my/lv-line-set-buffer ()
     (setq truncate-lines nil)
+    (setq-local mode-line-format nil)
     (setq indicate-empty-lines nil)
     (set-window-hscroll my/lv-line-window 0)
     (setq window-size-fixed t)
@@ -8681,7 +8686,7 @@ Use lv-line to create a mode line on the top of the screen
         (face-remap-add-relative 'default :family my/mono-font :height 120))
 
     ;; Offset by 12 pixels to make text fit
-    (set-window-fringes (selected-window) 12 0)
+    (set-window-fringes (selected-window) 7 0)
 
     ;; Disable char at end of line
     (set-display-table-slot standard-display-table 0 ?\ )
