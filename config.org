@@ -2910,6 +2910,13 @@ Used in ivy occur
   (setq counsel-grep-base-command "grep -i -E -n -e %s %s")
 #+END_SRC
 
+*** Always run counsel ag in defalut directory
+#+BEGIN_SRC emacs-lisp
+  (defun my/counsel-ag ()
+    (interactive)
+    (counsel-ag nil default-directory))
+#+END_SRC
+
 *** Keys
 #+BEGIN_SRC emacs-lisp
   (global-set-key (kbd "M-x") 'counsel-M-x)
@@ -7572,7 +7579,7 @@ https://www.emacswiki.org/emacs/ArtistMode
     ("E" my/locate nil)
     ("DEL" dired-jump nil)
 
-    ("f" counsel-ag nil)
+    ("f" my/counsel-ag nil)
 
     ;; Switch buffer
     ("A" next-buffer nil)
