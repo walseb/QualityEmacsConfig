@@ -5715,18 +5715,27 @@ https://emacs.stackexchange.com/questions/33326/how-do-i-cut-and-paste-effective
 *** Auto set buffer name
 We use class names for all windows expect for Java applications and GIMP (because of problems with those).
 #+BEGIN_SRC emacs-lisp
-  (add-hook 'exwm-update-class-hook
-            (lambda ()
-              (unless (or (string-prefix-p "sun-awt-X11-" exwm-instance-name)
-                         (string= "gimp" exwm-instance-name))
-                (exwm-workspace-rename-buffer exwm-class-name))))
-  (add-hook 'exwm-update-title-hook
-            (lambda ()
-              (when (or
-                     (not exwm-instance-name)
-                     (string-prefix-p "sun-awt-X11-" exwm-instance-name)
-                     (string= "gimp" exwm-instance-name))
-                (exwm-workspace-rename-buffer exwm-title))))
+  (defun my/exwm-should-use-title-for-buffer-name ()
+    (or
+     (not exwm-instance-name)
+     (string-prefix-p "sun-awt-X11-" exwm-instance-name)
+     (string= "gimp" exwm-instance-name)
+     ;; Firefox calls itself navigator?
+     (string-prefix-p "Navigator" exwm-instance-name t)
+     ;;(string-prefix-p "Firefox" exwm-instance-name t)
+     ))
+
+  (add-hook 'exwm-update-class-hook 'my/exwm-buffer-give-name-class)
+
+  (defun my/exwm-buffer-give-name-class ()
+    (when (not (my/exwm-should-use-title-for-buffer-name))
+      (exwm-workspace-rename-buffer exwm-class-name)))
+
+  (add-hook 'exwm-update-title-hook 'my/exwm-buffer-give-name-title)
+
+  (defun my/exwm-buffer-give-name-title ()
+    (when (my/exwm-should-use-title-for-buffer-name)
+      (exwm-workspace-rename-buffer exwm-title)))
 #+END_SRC
 
 ** Multi-screen
@@ -6013,6 +6022,14 @@ Redefine function to attempt to open image if link at point wasn't found
       (add-hook 'exwm-firefox-evil-mode-hook 'exwm-firefox-evil-normal)))
 #+END_SRC
 
+*** Open new window macro
+#+BEGIN_SRC emacs-lisp
+  (defun my/exwm-firefox-core-window-new ()
+    (interactive)
+    (exwm-firefox-core-window-new)
+    (run-with-timer 0.5 nil 'exwm-firefox-core-focus-search-bar))
+#+END_SRC
+
 *** Keys
 #+BEGIN_SRC emacs-lisp
   (eval-after-load 'exwm
@@ -6044,6 +6061,7 @@ Redefine function to attempt to open image if link at point wasn't found
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-s" 'exwm-firefox-core-quick-find)
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-y" 'exwm-firefox-core-copy)
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-k" 'exwm-firefox-core-paste)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "t" 'my/exwm-firefox-core-window-new)
 
       ;;; Visual
       (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up-select)
