@@ -302,6 +302,11 @@ Need to find how to use the "inside" operator, etc
     )
 #+END_SRC
 
+** Firefox
+*** Link-hint
+There was a great and fast plugin for this somewhere
+
+*** Always create window instead of tab
 * Security
 #+BEGIN_SRC emacs-lisp
   (setq network-security-level 'high)
