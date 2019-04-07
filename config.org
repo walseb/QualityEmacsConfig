@@ -1671,6 +1671,23 @@ ls for systems without ls installed (like windows). Gets used automatically on t
                 ls-lisp-use-localized-time-format t)
 #+END_SRC
 
+** Fix backward-sexp
+#+BEGIN_SRC emacs-lisp
+  (defun my/backward-sexp (&optional arg)
+    "Fixed backward sexp so you don't have to place cursor 1 char in front of paren you want to go backward on"
+    (interactive "^p")
+    (or arg (setq arg 1))
+    (my/forward-sexp (- arg) 1))
+
+  (defun my/forward-sexp (&optional arg extra-move)
+    (interactive "^p")
+    (or arg (setq arg 1))
+    (if forward-sexp-function
+        (funcall forward-sexp-function arg)
+      (goto-char (or (scan-sexps (+ (point) extra-move) arg) (buffer-end arg)))
+      (if (< arg 0) (backward-prefix-chars))))
+#+END_SRC
+
 * File options
 #+BEGIN_SRC emacs-lisp
   (define-prefix-command 'my/file-options-map)
@@ -2135,6 +2152,8 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
   (define-key my/org-mode-map (kbd "b") 'my/org-present-prev)
 
   (define-key my/org-mode-map (kbd "i") 'org-toggle-inline-images)
+
+  (define-key my/org-mode-map (kbd "d") 'org-deadline)
 #+END_SRC
 
 *** Show map
@@ -4383,6 +4402,7 @@ Shows information in echo area
         ('org-mode (call-interactively 'org-babel-execute-src-block))
         ('scheme-mode (geiser-eval-definition nil))
         ('clojure-mode (cider-eval-last-sexp))
+        ('racket-mode (racket-eval-last-sexp))
         ('plantuml-mode (plantuml-preview-region 0 (line-beginning-position) (line-end-position)))
         ('fsharp-mode (fsharp-eval-phrase))
         ('c-mode (cling-send-region (line-beginning-position) (line-end-position)))
@@ -4562,13 +4582,41 @@ Shows information in echo area
 
 *** Scheme
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'geiser)
+  ;;(straight-use-package 'geiser)
+  ;;
+  ;;(define-prefix-command 'my/scheme-mode-map)
+  ;;(evil-define-key 'normal scheme-mode-map (kbd (concat my/leader-map-key " a")) 'my/scheme-mode-map)
+  ;;
+  ;;(define-key my/scheme-mode-map (kbd "s") 'geiser-set-scheme)
+  ;;(define-key my/scheme-mode-map (kbd "C-s") 'run-geiser)
+#+END_SRC
 
-  (define-prefix-command 'my/scheme-mode-map)
-  (evil-define-key 'normal scheme-mode-map (kbd (concat my/leader-map-key " a")) 'my/scheme-mode-map)
+*** Racket
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'racket-mode)
+#+END_SRC
 
-  (define-key my/scheme-mode-map (kbd "s") 'geiser-set-scheme)
-  (define-key my/scheme-mode-map (kbd "C-s") 'run-geiser)
+**** Fix eval
+#+BEGIN_SRC emacs-lisp
+  (defun racket-eval-last-sexp ()
+    "Eval the previous sexp asynchronously and `message' the result."
+    (interactive)
+    (racket--cmd/async
+     `(eval
+       ,(buffer-substring-no-properties (racket--repl-last-sexp-start)
+                                        (+ 1(point))))
+     (lambda (v)
+       (message "%s" v))))
+
+  (defun racket--repl-last-sexp-start ()
+    (save-excursion
+      (condition-case ()
+          (progn
+            (my/backward-sexp)
+            (if (save-match-data (looking-at "#;"))
+                (+ (point) 2)
+              (point)))
+        (scan-error (user-error "There isn't a complete s-expression before point")))))
 #+END_SRC
 
 *** Emacs-lisp
