@@ -1820,9 +1820,11 @@ ls for systems without ls installed (like windows). Gets used automatically on t
   (defvar my/gui-browser
     (if (my/is-system-package-installed 'icecat)
         "icecat"
-      (if (my/is-system-package-installed 'iceweasel)
-          "iceweasel"
-        "firefox")))
+      (if (my/is-system-package-installed 'firefox-nightly)
+          "firefox-nightly"
+        (if (my/is-system-package-installed 'iceweasel)
+            "iceweasel"
+          "firefox"))))
 
   (defvar my/temp-firefox-title-name "")
   (defvar my/browser-bookmarks '(
@@ -6188,6 +6190,12 @@ If enabled it auto enables projectile, which has high CPU usage
   (straight-use-package 'magit)
 
   (setq git-commit-summary-max-length 50)
+#+END_SRC
+
+*** Performance
+#+BEGIN_SRC emacs-lisp
+  ;; Disable magit in commit view, makes it possible to do large commits
+  (setq magit-commit-show-diff nil)
 #+END_SRC
 
 *** Diff
