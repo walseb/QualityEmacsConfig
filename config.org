@@ -306,6 +306,13 @@ Need to find how to use the "inside" operator, etc
 There was a great and fast plugin for this somewhere
 
 *** Always create window instead of tab
+** Bookmarks
+https://www.reddit.com/r/emacs/comments/9bly3d/linkmarksel_use_orgmode_links_for_bookmarks/
+https://www.emacswiki.org/emacs/BookMarks
+
+** Annotations
+https://github.com/bastibe/annotate.el
+
 * Security
 #+BEGIN_SRC emacs-lisp
   (setq network-security-level 'high)
