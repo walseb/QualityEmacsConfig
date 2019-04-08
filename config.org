@@ -313,6 +313,10 @@ https://www.emacswiki.org/emacs/BookMarks
 ** Annotations
 https://github.com/bastibe/annotate.el
 
+** Find out what is taking so long when opening config
+Does it happen in vanilla?
+Use error on quit, quit when loading is happening then get backtrace.
+** Add selected ivy text to minibuffer
 * Security
 #+BEGIN_SRC emacs-lisp
   (setq network-security-level 'high)
