@@ -317,6 +317,7 @@ https://github.com/bastibe/annotate.el
 Does it happen in vanilla?
 Use error on quit, quit when loading is happening then get backtrace.
 ** Add selected ivy text to minibuffer
+** Make magit-status faster during huge edits, or create new magit-status-fast command
 * Security
 #+BEGIN_SRC emacs-lisp
   (setq network-security-level 'high)
