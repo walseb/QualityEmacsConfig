@@ -292,7 +292,6 @@ For more symbols read =rx= help docs, it has everything
 * Todo
 ** Recursive loccur
 ** PR evil-mc changes
-** Pressing 0 in eshell
 ** Delete around char 'c'
 Need to find how to use the "inside" operator, etc
 #+BEGIN_SRC
@@ -5542,6 +5541,18 @@ Disable rainbow delimiters
                                                                      (message "Eshell command done!")))))
 #+END_SRC
 
+** Custom Goto beg of line
+#+BEGIN_SRC emacs-lisp
+  (defun my/eshell-goto-beg-of-line ()
+    (interactive)
+    (let ((start-point (point)))
+      (if (and
+           (re-search-backward my/eshell-prompt-symbol nil t) (= (line-number-at-pos) (line-number-at-pos start-point)))
+          (evil-forward-char 2)
+        (goto-char start-point)
+        (evil-digit-argument-or-evil-beginning-of-line))))
+#+END_SRC
+
 ** Keys
 #+BEGIN_SRC emacs-lisp
   (define-key my/leader-map (kbd "[") 'my/eshell)
@@ -5555,6 +5566,8 @@ Disable rainbow delimiters
     (define-key eshell-mode-map [remap evil-ret] 'eshell-send-input)
 
     (define-key my/eshell-mode-map (kbd "k") 'counsel-esh-history)
+
+    (evil-define-key 'normal eshell-mode-map (kbd "0") 'my/eshell-goto-beg-of-line)
 
     (evil-define-key 'normal eshell-mode-map (kbd "C-p") 'eshell-previous-matching-input-from-input)
     (evil-define-key 'normal eshell-mode-map (kbd "C-n") 'eshell-next-matching-input-from-input)
