@@ -291,7 +291,6 @@ Where =bol= is beginning of line, and =space= is anything that has whitespace sy
 For more symbols read =rx= help docs, it has everything
 
 * Todo
-** Recursive loccur
 ** PR evil-mc changes
 ** Delete around char 'c'
 Need to find how to use the "inside" operator, etc
@@ -317,7 +316,6 @@ https://github.com/bastibe/annotate.el
 ** Find out what is taking so long when opening config
 Does it happen in vanilla?
 Use error on quit, quit when loading is happening then get backtrace.
-** Add selected ivy text to minibuffer
 ** Make magit-status faster during huge edits, or create new magit-status-fast command
 ** Change dir in eshell using ivy find file
 ** Rename buffer in window hydra
@@ -326,6 +324,9 @@ Also unbind backspace in counsel-find-file
 Command is called: =ivy-backward-delete-char=
 
 Maybe a better option is to bind that to =ivy-backward-delete-word=
+** Should save-window-excursion be disabled?
+** Fix ivy-find-file C-d (insert current to input)
+Currently this doesn't include the slash
 
 * Security
 #+BEGIN_SRC emacs-lisp
@@ -2887,6 +2888,10 @@ Needed by ivy-occur to edit buffers
   (my/evil-insert-define-key-in-mode ivy-minibuffer-map  "DEL" 'ivy-backward-delete-char)
 
   (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "RET" 'ivy-done)
+  (my/evil-insert-define-key-in-mode ivy-minibuffer-map  "RET" 'ivy-done)
+
+  (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "C-d" 'ivy-insert-current)
+  (my/evil-insert-define-key-in-mode ivy-minibuffer-map  "C-d" 'ivy-insert-current)
 
   ;; Clear ivy input
   (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "D" '(lambda () (interactive) (beginning-of-line-text)
@@ -3365,11 +3370,34 @@ Flycheck with extra correction for elisp packages
 ** Isearch
 #+BEGIN_SRC emacs-lisp
   (require 'isearch)
-  (define-key isearch-mode-map (kbd "C-n") 'isearch-repeat-forward)
-  (define-key isearch-mode-map (kbd "C-p") 'isearch-repeat-backward)
+  (define-key isearch-mode-map (kbd "C-n") 'my/isearch-repeat-forward)
+  (define-key isearch-mode-map (kbd "C-p") 'my/isearch-repeat-backward)
 
   (setq isearch-lazy-highlight t)
   (setq lazy-highlight-initial-delay 0)
+#+END_SRC
+
+*** Stop from having to press C-n two times after pressing C-p
+#+BEGIN_SRC emacs-lisp
+  (defvar my/last-isearch-dir nil)
+
+  (defun my/isearch-repeat-forward ()
+    (interactive)
+    (call-interactively 'isearch-repeat-forward)
+
+    (if (string= my/last-isearch-dir 'backward)
+        (call-interactively 'isearch-repeat-forward))
+    (setq my/last-isearch-dir 'forward))
+
+  (defun my/isearch-repeat-backward ()
+    (interactive)
+    (call-interactively 'isearch-repeat-backward)
+
+    (if (string= my/last-isearch-dir 'forward)
+        (call-interactively 'isearch-repeat-backward))
+    (setq my/last-isearch-dir 'backward))
+
+  (add-hook 'isearch-mode-end-hook (lambda () (setq my/last-isearch-dir nil)))
 #+END_SRC
 
 *** Make isearch end when only one match
@@ -3775,6 +3803,15 @@ g-; and g-,
                    (read-file-name "Find file: " default-directory)))))
 #+END_SRC
 
+** Change default directory
+#+BEGIN_SRC emacs-lisp
+  (defun my/change-default-directory ()
+    (interactive)
+    (let ((dir (read-file-name "Dir: ")))
+      (if (f-dir-p dir)
+          (setq default-directory dir))))
+#+END_SRC
+
 ** Keys
 #+BEGIN_SRC emacs-lisp
   ;;(my/evil-normal-define-key "M-f" 'avy-goto-char-in-line)
@@ -3875,8 +3912,8 @@ g-; and g-,
 
 ** No more window resetting
 #+BEGIN_SRC emacs-lisp
-;;   (defmacro save-window-excursion (&rest body)
-;;     )
+  ;;(defmacro save-window-excursion (&rest body)
+  ;;  )
 #+END_SRC
 
 ** Switch to minibuffer
@@ -7689,6 +7726,8 @@ https://www.emacswiki.org/emacs/ArtistMode
     ;; Find file
     ("e" my/find-file nil)
     ("E" my/locate nil)
+    ("M-e" my/change-default-directory nil)
+
     ("DEL" dired-jump nil)
 
     ("f" my/counsel-ag nil)
