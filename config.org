@@ -317,7 +317,6 @@ https://github.com/bastibe/annotate.el
 Does it happen in vanilla?
 Use error on quit, quit when loading is happening then get backtrace.
 ** Make magit-status faster during huge edits, or create new magit-status-fast command
-** Change dir in eshell using ivy find file
 ** Rename buffer in window hydra
 ** C-h to go back in counsel-find-file
 Also unbind backspace in counsel-find-file
