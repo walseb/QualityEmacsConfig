@@ -1,4 +1,4 @@
-(defvar my/default-face-height 120)
+(defvar my/default-face-height 150)
 
 ;;(defvar my/device/resolution '(2560 1440))
 (defvar my/device/resolution '(1920 1080))

@@ -259,6 +259,7 @@ sudo mount -t vboxsf -o uid=1000,gid=1000 SHARED_FOLDER_NAME MOUNT_DIR
 
 ** Omnisharp
 ALWAYS check *omnisharp-log* for errors
+Try building the program atleast once first before trying any of this, it could just fix the problem
 
 *** Errors everywhere
 Probably missing system.dll, etc reference
@@ -318,6 +319,14 @@ Does it happen in vanilla?
 Use error on quit, quit when loading is happening then get backtrace.
 ** Add selected ivy text to minibuffer
 ** Make magit-status faster during huge edits, or create new magit-status-fast command
+** Change dir in eshell using ivy find file
+** Rename buffer in window hydra
+** C-h to go back in counsel-find-file
+Also unbind backspace in counsel-find-file
+Command is called: =ivy-backward-delete-char=
+
+Maybe a better option is to bind that to =ivy-backward-delete-word=
+
 * Security
 #+BEGIN_SRC emacs-lisp
   (setq network-security-level 'high)
@@ -560,7 +569,6 @@ Default file-size-human-readable returns decimal values
 
 ** Set font
 #+BEGIN_SRC emacs-lisp
-  (defvar my/default-face-height 125)
   (defun my/set-default-font (font)
     (if window-system
         (set-face-attribute 'default nil
@@ -609,8 +617,8 @@ Default file-size-human-readable returns decimal values
             (setq my/font-raw "dejavu sans")
             (setq my/font "DejaVuSans")))))
 
-;;  (if my/font
-;;      (my/set-default-font my/font))
+  ;;  (if my/font
+  ;;      (my/set-default-font my/font))
 #+END_SRC
 
 ** Mono font
@@ -8803,10 +8811,10 @@ Use lv-line to create a mode line on the top of the screen
 
     (if window-system
         ;; Change to mono face
-        (face-remap-add-relative 'default :family my/mono-font :height 120))
+        (face-remap-add-relative 'default :family my/mono-font :height my/default-face-height))
 
-    ;; Offset by 12 pixels to make text fit
-    (set-window-fringes (selected-window) 7 0)
+    ;; Offset by 10 pixels to make text fit
+    (set-window-fringes (selected-window) 10 0)
 
     ;; Disable char at end of line
     (set-display-table-slot standard-display-table 0 ?\ )
