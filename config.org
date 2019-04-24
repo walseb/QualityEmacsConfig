@@ -3,7 +3,7 @@
 *** All
 =xorg-server xorg-xrandr xorg-xinit xorg-setxkbmap mlocate atool unzip mono pulseaudio pavucontrol firefox the_silver_searcher imagemagick ttf-inconsolata ttf-opensans ttf-dejavu aspell aspell-en aspell-sv mpd mpc poppler poppler-glib=
 *** All optional
-=msbuild dotnet-sdk godot-mono guile fsharp=
+=msbuild dotnet-sdk godot-mono guile fsharp ghc ghc-static=
 
 *** UTF-8 support
 =ttf-dejavu= fills in the gaps where opensans doesn't have the character
@@ -324,9 +324,7 @@ Command is called: =ivy-backward-delete-char=
 
 Maybe a better option is to bind that to =ivy-backward-delete-word=
 ** Should save-window-excursion be disabled?
-** Fix ivy-find-file C-d (insert current to input)
-Currently this doesn't include the slash
-
+** GPG doesn't remember last password when saving
 * Security
 #+BEGIN_SRC emacs-lisp
   (setq network-security-level 'high)
@@ -4685,8 +4683,8 @@ Shows information in echo area
 **** Litable
 #+BEGIN_SRC emacs-lisp
   ;; ;;(straight-use-package '(litable :type git :host github :repo "Fuco1/blablabla"))
-  (straight-use-package 'litable)
-  (require 'litable)
+  ;;(straight-use-package 'litable)
+  ;;(require 'litable)
   ;;
   ;; ;; Eval everything
   ;; (defun litable--safe-eval (form)
@@ -4840,6 +4838,11 @@ or
   (straight-use-package 'company-jedi)
 
   (add-to-list 'company-backends 'company-jedi)
+#+END_SRC
+
+** Haskell
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'haskell-mode)
 #+END_SRC
 
 ** C/CPP
@@ -7656,8 +7659,7 @@ https://www.emacswiki.org/emacs/ArtistMode
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'hydra)
 
-  ;; Hydra lv generates a lot of garbage, disable it
-  (setq hydra-lv nil)
+  (setq hydra-hint-display-type 'message)
 #+END_SRC
 
 ** Window and buffer management
@@ -8449,8 +8451,8 @@ https://www.emacswiki.org/emacs/ArtistMode
     (set-face-attribute 'term-color-yellow nil :foreground "yellow" :background "yellow" :family my/mono-font)
 
     ;;; Litable
-    (set-face-attribute 'litable-result-face nil :foreground my/foreground-color :background my/background-color :weight 'bold)
-    (set-face-attribute 'litable-substitution-face nil :foreground my/foreground-color :background my/background-color :weight 'bold)
+    ;;  (set-face-attribute 'litable-result-face nil :foreground my/foreground-color :background my/background-color :weight 'bold)
+    ;;  (set-face-attribute 'litable-substitution-face nil :foreground my/foreground-color :background my/background-color :weight 'bold)
 
     ;;; Evil-goggles
     ;;;; 2 color approach
