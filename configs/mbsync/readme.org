@@ -1,2 +1,4 @@
 On arch put in
 ~/
+
+To sync do =mbsync -a=

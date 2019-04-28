@@ -325,6 +325,11 @@ Command is called: =ivy-backward-delete-char=
 Maybe a better option is to bind that to =ivy-backward-delete-word=
 ** Should save-window-excursion be disabled?
 ** GPG doesn't remember last password when saving
+** Automate gnus
+*** Notmuch gnus integration
+*** Dovecot docker process
+Google "email with gnus and docker"
+
 * Security
 #+BEGIN_SRC emacs-lisp
   (setq network-security-level 'high)
