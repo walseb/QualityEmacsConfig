@@ -7731,16 +7731,12 @@ https://www.emacswiki.org/emacs/ArtistMode
     ;; Buffer management
     ;; Find file
     ("e" my/find-file nil)
-    ("E" my/locate nil)
+    ("E" dired-jump nil)
     ("M-e" my/change-default-directory nil)
 
-    ("DEL" dired-jump nil)
-
-    ("f" my/counsel-ag nil)
-
-    ;; Switch buffer
-    ("A" next-buffer nil)
-    ("C-a" previous-buffer nil)
+    ;; Find
+    ("f" my/locate nil)
+    ("F" my/counsel-ag nil)
 
     ;; Switch buffer
     ("a" ivy-switch-buffer nil)
