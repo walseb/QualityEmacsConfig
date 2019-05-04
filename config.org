@@ -291,6 +291,7 @@ Where =bol= is beginning of line, and =space= is anything that has whitespace sy
 For more symbols read =rx= help docs, it has everything
 
 * Todo
+** Fix s key moving around the view when searching down
 ** PR evil-mc changes
 ** Delete around char 'c'
 Need to find how to use the "inside" operator, etc
@@ -8104,14 +8105,23 @@ https://www.emacswiki.org/emacs/ArtistMode
 #+BEGIN_SRC emacs-lisp
   (defvar my/generic-equal-symbols
     '(
+      ("==" . ?≡)
+      ("/=" . ?≢)
       ("!=" . ?≠)
       (">=" . ?≥)
       ("<=" . ?≤)
       ))
 
   (defvar my/generic-arrow-symbols
-    '(("->" . ?→)
+    '(
+      ("-<" . ?↢)
+      (">-" . ?↣)
+      ("~>" . ?⇝)
+      ("<~" . ?⇜)
+      ("->" . ?→)
       ("<-" . ?←)
+      ("=>" . ?⇒)
+      ("<=" . ?⇐)
       ("->>" . ?↠)
       ("<<-" . ?↞)
       ("|>" . ?⊳)
@@ -8121,12 +8131,34 @@ https://www.emacswiki.org/emacs/ArtistMode
 
   (defvar my/generic-greek-symbols
     '(("lambda" . ?λ)))
+
+  (defvar my/generic-logic-symbols
+    '(
+      ("&&" . ?∧)
+      ("||" . ?∨)
+      ("not" . ?¬)))
 #+END_SRC
 
 *** Fsharp
 #+BEGIN_SRC emacs-lisp
   (defvar my/fsharp-symbols
     (list))
+#+END_SRC
+
+*** Haskell
+#+BEGIN_SRC emacs-lisp
+  (setq my/haskell-symbols
+        '(("\\" . ?λ)
+          ("()" . ?∅)
+          ("!!" . ?‼)
+          ("sqrt" . ?√)
+          ("undefined" . ?⊥)
+          ("pi" . ?π)
+          ("::" . ?∷)
+          (" . " . "∘") ; "○"
+          ;; Doesn't work?
+          ;;haskell-font-lock-dot-is-not-composition)
+          ("forall" . ?∀)))
 #+END_SRC
 
 *** C/CPP
@@ -8157,6 +8189,13 @@ https://www.emacswiki.org/emacs/ArtistMode
   (add-hook 'prog-mode-hook (lambda () (interactive)
                               (setq-local prettify-symbols-alist
                                           (pcase major-mode
+                                            ('haskell-mode (append
+                                                            my/haskell-symbols
+                                                            my/generic-greek-symbols
+                                                            my/generic-equal-symbols
+                                                            my/generic-arrow-symbols
+                                                            my/generic-logic-symbols
+                                                            ))
                                             ('fsharp-mode (append
                                                            my/fsharp-symbols
                                                            my/generic-greek-symbols
