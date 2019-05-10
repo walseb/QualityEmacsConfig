@@ -3423,27 +3423,25 @@ Flycheck with extra correction for elisp packages
 
   (defun my/isearch-current-screen (forward)
     (interactive)
-    (let ((window-top (window-start))
-          (narrow-restore
+    (let ((narrow-restore
            (if (buffer-narrowed-p)
                `(,(point-min) ,(point-max))
              nil)))
       (setq my/isearch-current-buffer (current-buffer))
       (if forward
           (progn
-            (narrow-to-region (point) (window-end))
+            (narrow-to-region (window-start) (window-end))
             (my/isearch-forward-regexp))
-        (narrow-to-region window-top (point))
+        (narrow-to-region (window-start) (window-end))
         (my/isearch-backward-regexp))
       ;; FIXME: Currently this resets narrow when done
       (widen)
       (if narrow-restore
           (narrow-to-region (car narrow-restore) (nth 1 narrow-restore)))
-      (setq my/isearch-end-pos (point))
-      (goto-char window-top)
+      ;;(setq my/isearch-end-pos (point))
+      ;;(goto-char window-top)
       ;;(goto-char end-pos)
-      (run-with-timer 0.01 nil '(lambda () (interactive)  (goto-char my/isearch-end-pos)))
-      ;;(my/alert nil nil t)
+      ;;(run-with-timer 0.01 nil '(lambda () (interactive)  (goto-char my/isearch-end-pos)))
       ))
 
   (defun my/isearch-current-screen-forward ()
