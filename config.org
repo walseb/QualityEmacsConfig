@@ -325,6 +325,8 @@ Command is called: =ivy-backward-delete-char=
 
 Maybe a better option is to bind that to =ivy-backward-delete-word=
 ** Should save-window-excursion be disabled?
+Steps to reproduce: open two window split, do M-x, close the window you focused when doing M-x, cancel the M-x with C-g
+
 ** GPG doesn't remember last password when saving
 ** Automate gnus
 *** Notmuch gnus integration
@@ -1410,11 +1412,11 @@ Disable startup message
 
 ** Encoding
 #+BEGIN_SRC emacs-lisp
-  (setq locale-coding-system 'utf-8)
-  (set-terminal-coding-system 'utf-8)
-  (set-keyboard-coding-system 'utf-8)
-  (set-selection-coding-system 'utf-8)
-  (prefer-coding-system 'utf-8)
+  ;;(setq locale-coding-system 'utf-8)
+  ;;(set-terminal-coding-system 'utf-8)
+  ;;(set-keyboard-coding-system 'utf-8)
+  ;;(set-selection-coding-system 'utf-8)
+  ;;(prefer-coding-system 'utf-8)
 #+END_SRC
 
 ** Line wrapping
@@ -4846,7 +4848,10 @@ or
 
 ** Haskell
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'haskell-mode)
+  ;;(straight-use-package 'haskell-mode)
+  (straight-use-package 'lsp-haskell)
+
+  (add-hook 'haskell-mode-hook #'lsp)
 #+END_SRC
 
 ** C/CPP
@@ -5449,6 +5454,11 @@ Enable org mode for .org.gpg files
 #+END_SRC
 
 * Terms
+** Set max lines to a lot
+#+BEGIN_SRC emacs-lisp
+  (setq term-buffer-maximum-size 10000)
+#+END_SRC
+
 ** Ansi term
 #+BEGIN_SRC emacs-lisp
   (add-hook 'term-mode-hook (lambda () (interactive) (setq truncate-lines t)))
@@ -8153,7 +8163,8 @@ https://www.emacswiki.org/emacs/ArtistMode
           ("undefined" . ?⊥)
           ("pi" . ?π)
           ("::" . ?∷)
-          (" . " . "∘") ; "○"
+          ;; Here we construct a custom symbol that has the spaces that are removed when replacing " . " with a single char
+          (" . " . (?\s (Br . Bl) ?\s (Bc . Bc) ?\s (Br . Bl) ?\s (Bc . Bc) ?∘)) ; "○"
           ;; Doesn't work?
           ;;haskell-font-lock-dot-is-not-composition)
           ("forall" . ?∀)))
