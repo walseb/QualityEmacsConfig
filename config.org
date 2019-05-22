@@ -284,7 +284,7 @@ magit replace (r) in log buffer -> w for reword
 ** Regexps
 Make regexps easier by using (rx)
 E.g.
-#+BEGIN_SRC emacs-lisp
+#+BEGIN_SRC
   (rx bol "*.$" space)
 #+END_SRC
 Where =bol= is beginning of line, and =space= is anything that has whitespace syntax
@@ -332,6 +332,15 @@ Steps to reproduce: open two window split, do M-x, close the window you focused 
 *** Notmuch gnus integration
 *** Dovecot docker process
 Google "email with gnus and docker"
+
+** Change with-current-buffer to buffer-local-value
+in section company-doc-buffer and more maybe
+** Use lexical bindings in config
+** Fix paren outside screen preview
+Currently picks paren one left of cursor
+
+** Add more haskell tools
+HIE, etc
 
 * Security
 #+BEGIN_SRC emacs-lisp
@@ -8291,6 +8300,12 @@ https://www.emacswiki.org/emacs/ArtistMode
     (if window-system
         (progn
           (setq my/mark-color my/diff-changed-color)
+          (setq my/mark-color-1 (color-darken-name my/diff-changed-color 5))
+          (setq my/mark-color-2 (color-darken-name my/diff-changed-color 10))
+          (setq my/mark-color-3 (color-darken-name my/diff-changed-color 15))
+          (setq my/mark-color-4 (color-darken-name my/diff-changed-color 20))
+          (setq my/mark-color-5 (color-darken-name my/diff-changed-color 25))
+          (setq my/mark-color-6 (color-darken-name my/diff-changed-color 30))
 
           (setq my/foreground-color "#E6E1DC")
           (setq my/foreground-color-1 (color-darken-name my/foreground-color 5))
@@ -8528,6 +8543,7 @@ https://www.emacswiki.org/emacs/ArtistMode
     (set-face-attribute 'diff-hl-change nil :background (face-attribute 'diff-changed :background))
 
     ;; Paren highlight
+    ;;(set-face-attribute 'show-paren-match nil :foreground my/foreground-color :background my/mark-color-5)
     (set-face-attribute 'show-paren-match nil :foreground my/background-color :background my/foreground-color)
     (set-face-attribute 'show-paren-mismatch nil :background "red")
 
@@ -8646,7 +8662,19 @@ Changes colors of delimiters eg. {()}
 ** Highlight matching delimiters
 #+BEGIN_SRC emacs-lisp
   (show-paren-mode 1)
+  (setq show-paren-style 'paren)
   (setq show-paren-delay 0)
+
+  ;; Put it here for now
+  ;; https://with-emacs.com/posts/editing/show-matching-lines-when-parentheses-go-off-screen/
+  (load-file "~/.emacs.d/lexical.el")
+
+;;  (setq show-paren-style 'paren
+;;        show-paren-delay 0.03
+;;        show-paren-highlight-openparen t
+;;        show-paren-when-point-inside-paren nil
+;;        show-paren-when-point-in-periphery t)
+;;  (show-paren-mode 1)
 #+END_SRC
 
 ** Highlight current line
