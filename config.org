@@ -333,12 +333,7 @@ Steps to reproduce: open two window split, do M-x, close the window you focused 
 *** Dovecot docker process
 Google "email with gnus and docker"
 
-** Change with-current-buffer to buffer-local-value
-in section company-doc-buffer and more maybe
 ** Use lexical bindings in config
-** Fix paren outside screen preview
-Currently picks paren one left of cursor
-
 ** Add more haskell tools
 HIE, etc
 
@@ -3156,8 +3151,7 @@ Company doc mode disables visual line mode for whatever reason, enable it inside
                (doc-buffer (or (company-call-backend 'doc-buffer selected)
                                (user-error "No documentation available")))
                start)
-          (with-current-buffer doc-buffer
-            (setq truncate-lines nil))
+          (setq-local truncate-lines nil)
           (when (consp doc-buffer)
             (setq start (cdr doc-buffer)
                   doc-buffer (car doc-buffer)))
@@ -3175,8 +3169,7 @@ Company doc mode disables visual line mode for whatever reason, enable it inside
              (doc-buffer (or (company-call-backend 'doc-buffer selected)
                              (user-error "No documentation available")))
              start)
-        (with-current-buffer doc-buffer
-          (setq truncate-lines nil))
+        (setq-local truncate-lines nil)
         (when (consp doc-buffer)
           (setq start (cdr doc-buffer)
                 doc-buffer (car doc-buffer)))
@@ -4094,18 +4087,25 @@ Make file sizes human readable
   (setq dired-listing-switches (concat my/dired-base-ls-command "--group-directories-first"))
 #+END_SRC
 
-
 ** Sorting
 #+BEGIN_SRC emacs-lisp
   (defun my/dired-sort-menu ()
     (interactive)
     (dired-sort-other
-     (concat my/dired-base-ls-command
-             (pcase (completing-read "Sort by: " '( "date" "size" "name" "dir"))
-               ("name" "")
-               ("date" "-t")
-               ("size" "--sort=size")
-               ("dir" "--group-directories-first")))))
+     (pcase (completing-read "Sort by: " '( "date" "size" "name" "dir" "du" "~compatibility"))
+       ("name" (progn (my/disable-dired-du-quietly) (concat my/dired-base-ls-command "")))
+       ("date" (progn (my/disable-dired-du-quietly) (concat my/dired-base-ls-command "-t")))
+       ("size" (progn (my/disable-dired-du-quietly) (concat my/dired-base-ls-command "--sort=size")))
+       ("dir" (progn (my/disable-dired-du-quietly) (concat my/dired-base-ls-command "--group-directories-first")))
+       ("~compatibility" (progn (my/disable-dired-du-quietly) "-al"))
+       ("du" (progn (dired-sort-other "-al") (dired-du-mode 1) "-al")))))
+
+  (defun my/disable-dired-du-quietly ()
+    (if dired-du-mode
+        (dired-du-mode -1)))
+
+        ;; STARTUP ON DEFAULT SORT!
+  ;;(add-hook 'dired-mode-hook '(lambda () () ))
 
   (define-key dired-mode-map (kbd "s") 'my/dired-sort-menu)
 #+END_SRC
@@ -4441,6 +4441,7 @@ Shows information in echo area
       ('objc-mode (call-interactively 'xref-find-definitions))
       ('csharp-mode (omnisharp-go-to-definition))
       ('java-mode (call-interactively 'lsp-find-definition))
+      ('haskell-mode (call-interactively 'intero-goto-definition))
       (_ (dumb-jump-go))))
 
   (define-key my/leader-map (kbd "t") 'my/auto-jump-to-definition)
@@ -4574,6 +4575,12 @@ Shows information in echo area
 #+END_SRC
 
 ** Documentation
+*** Compact-docstrings
+#+BEGIN_SRC emacs-lisp
+  ;;(straight-use-package 'compact-docstrings)
+#+END_SRC
+
+*** Zeal
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'zeal-at-point)
 
@@ -4858,9 +4865,9 @@ or
 ** Haskell
 #+BEGIN_SRC emacs-lisp
   ;;(straight-use-package 'haskell-mode)
-  (straight-use-package 'lsp-haskell)
+  (straight-use-package 'intero)
 
-  (add-hook 'haskell-mode-hook #'lsp)
+  (add-hook 'haskell-mode-hook #'intero-mode)
 #+END_SRC
 
 ** C/CPP
@@ -5193,7 +5200,7 @@ omnisharp.json should be in ~/.omnisharp on all OSs
     ;;
     (aggressive-indent-mode 0)
     ;; Fsharp has built in intellisense highlight thing at point
-    (highlight-thing-mode -1)
+    (symbol-overlay-mode -1)
     ;; Visual line mode in fsharp mode is broken, makes swiper take years to start, use truncate lines mode instead
     (visual-line-mode 0))
 
@@ -7542,7 +7549,7 @@ Locate only under current dir
 ** Disable and restore modes aftere entering and exiting artist mode
 https://www.emacswiki.org/emacs/FacesPerBuffer
 #+BEGIN_SRC emacs-lisp
-  (defvar my/artist-mode-highlight-thing-restore nil)
+  (defvar my/artist-mode-symbol-overlay-restore nil)
   (defvar my/artist-mode-aggressive-indent-restore nil)
   (defvar my/artist-mode-display-line-numbers-restore nil)
 
@@ -7552,11 +7559,11 @@ https://www.emacswiki.org/emacs/FacesPerBuffer
     (if (eq major-mode 'picture-mode)
         (progn
           (setq my/artist-mode-restore-buffer (current-buffer))
-          (if highlight-thing-mode
+          (if symbol-overlay-mode
               (progn
-                (highlight-thing-mode -1)
-                (setq my/artist-mode-highlight-thing-restore t))
-            (setq my/artist-mode-highlight-thing-restore nil))
+                (symbol-overlay-mode -1)
+                (setq my/artist-mode-symbol-overlay-restore t))
+            (setq my/artist-mode-symbol-overlay-restore nil))
 
           (if aggressive-indent-mode
               (progn
@@ -7579,10 +7586,10 @@ https://www.emacswiki.org/emacs/FacesPerBuffer
       ;; Turn everything back on
       (if (eq my/artist-mode-restore-buffer (current-buffer))
           (progn
-            (if my/artist-mode-highlight-thing-restore
+            (if my/artist-mode-symbol-overlay-restore
                 (progn
-                  (setq my/artist-mode-highlight-thing-restore nil)
-                  (highlight-thing-mode 1)))
+                  (setq my/artist-mode-symbol-overlay-restore nil)
+                  (symbol-overlay-mode 1)))
 
             (if my/artist-mode-aggressive-indent-restore
                 (progn
@@ -8434,7 +8441,7 @@ https://www.emacswiki.org/emacs/ArtistMode
     (set-face-attribute 'lazy-highlight nil :foreground my/background-color :background my/foreground-color)
 
     ;;; Highlight thing
-    (set-face-attribute 'highlight-thing nil :foreground my/foreground-color :background my/mark-color)
+    ;;(set-face-attribute 'symbol-overlay nil :foreground my/foreground-color :background my/mark-color)
 
     ;;; Company
     (set-face-attribute 'company-scrollbar-bg nil :background my/background-color :family my/mono-font)
@@ -8664,17 +8671,13 @@ Changes colors of delimiters eg. {()}
   (show-paren-mode 1)
   (setq show-paren-style 'paren)
   (setq show-paren-delay 0)
+  (setq show-paren-when-point-inside-paren nil)
+  (setq show-paren-when-point-in-periphery t)
+  ;;(setq show-paren-highlight-openparen t)
 
   ;; Put it here for now
   ;; https://with-emacs.com/posts/editing/show-matching-lines-when-parentheses-go-off-screen/
   (load-file "~/.emacs.d/lexical.el")
-
-;;  (setq show-paren-style 'paren
-;;        show-paren-delay 0.03
-;;        show-paren-highlight-openparen t
-;;        show-paren-when-point-inside-paren nil
-;;        show-paren-when-point-in-periphery t)
-;;  (show-paren-mode 1)
 #+END_SRC
 
 ** Highlight current line
@@ -8682,29 +8685,41 @@ Changes colors of delimiters eg. {()}
   (global-hl-line-mode t)
 #+END_SRC
 
+** Symbol overlay
+Supposed to be faster thang highlight-thing
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'symbol-overlay)
+  (symbol-overlay-mode)
+#+END_SRC
+
 ** Highlight thing
 Highlight thing under cursor and all other occurrences
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'highlight-thing)
-
-  ;; Show hits in all windows
-  (setq highlight-thing-all-visible-buffers-p t)
-
-  ;; Don't highlight the word true or false
-  ;;(setq highlight-thing-ignore-list '("False" "True"))
-
-  ;; Don't highlight thing under cursor, only matches
-  (setq highlight-thing-exclude-thing-under-point 1)
-
-  (setq highlight-thing-case-sensitive-p 1)
-  (global-highlight-thing-mode)
+  ;;(straight-use-package 'highlight-thing)
+  ;;
+  ;;;; Show hits in all windows
+  ;;(setq highlight-thing-all-visible-buffers-p t)
+  ;;
+  ;;;; Don't highlight the word true or false
+  ;;;;(setq highlight-thing-ignore-list '("False" "True"))
+  ;;
+  ;;;; Don't highlight thing under cursor, only matches
+  ;;(setq highlight-thing-exclude-thing-under-point 1)
+  ;;
+  ;;(setq highlight-thing-case-sensitive-p 1)
+  ;;(global-highlight-thing-mode)
+  ;;
+  ;;;; Restrict amount of matches
+  ;;(setq highlight-thing-limit-to-region-in-large-buffers-p t)
+  ;;(setq highlight-thing-narrow-region-lines 30)
+  ;;(setq highlight-thing-large-buffer-limit 5000)
 #+END_SRC
 
 *** Don't highlight huge buffers
 #+BEGIN_SRC emacs-lisp
-  (setq highlight-thing-limit-to-region-in-large-buffers-p nil)
-  (setq highlight-thing-narrow-region-lines 15)
-  (setq highlight-thing-large-buffer-limit 5000)
+;;  (setq highlight-thing-limit-to-region-in-large-buffers-p nil)
+;;  (setq highlight-thing-narrow-region-lines 15)
+;;  (setq highlight-thing-large-buffer-limit 5000)
 #+END_SRC
 
 ** Highlight parens
