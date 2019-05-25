@@ -341,6 +341,10 @@ HIE, etc
 ** Add is wsl/VM in config
 This will disable volume controls for example
 
+** Lisp only locate
+Look into changing from locate to using "directory-files-recursively" to cache all files on the pc
+Problem seems to be that it needs sudo to do this
+
 * Security
 #+BEGIN_SRC emacs-lisp
   (setq network-security-level 'high)
@@ -3838,7 +3842,7 @@ g-; and g-,
 #+BEGIN_SRC emacs-lisp
   (defun my/change-default-directory ()
     (interactive)
-    (let ((dir (read-file-name "Dir: ")))
+    (let ((dir (read-file-name "Change default dir: ")))
       (if (f-dir-p dir)
           (setq default-directory dir))))
 #+END_SRC
