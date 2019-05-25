@@ -337,6 +337,10 @@ Google "email with gnus and docker"
 ** Add more haskell tools
 HIE, etc
 
+** Better folding binds
+** Add is wsl/VM in config
+This will disable volume controls for example
+
 * Security
 #+BEGIN_SRC emacs-lisp
   (setq network-security-level 'high)
@@ -1839,6 +1843,16 @@ ls for systems without ls installed (like windows). Gets used automatically on t
     (run-hooks 'my/open-map-hook))
 
   (define-key my/open-map (kbd "d") 'my/open-downloads)
+#+END_SRC
+
+** Open home
+#+BEGIN_SRC emacs-lisp
+  (defun my/open-home ()
+    (interactive)
+    (find-file "~")
+    (run-hooks 'my/open-map-hook))
+
+  (define-key my/open-map (kbd "r") 'my/open-home)
 #+END_SRC
 
 ** Open password file
@@ -3935,8 +3949,8 @@ g-; and g-,
             (select-window (active-minibuffer-window))))
       (error "Minibuffer is not active")))
 
-  (define-key my/keys-mode-map (kbd "M-TAB") 'my/toggle-switch-to-minibuffer)
-  (my/evil-universal-define-key "M-<tab>" 'my/toggle-switch-to-minibuffer)
+  (define-key my/keys-mode-map (kbd "C-j") 'my/toggle-switch-to-minibuffer)
+  (my/evil-universal-define-key "C-j" 'my/toggle-switch-to-minibuffer)
 #+END_SRC
 
 * Window and buffer settings
@@ -4016,6 +4030,12 @@ g-; and g-,
   (add-hook 'dired-mode-hook 'my/dired-mode)
 #+END_SRC
 
+** Open current dir
+#+BEGIN_SRC emacs-lisp
+  (defun my/dired-curr-dir ()
+    (interactive)
+    (dired default-directory))
+#+END_SRC
 ** Narrow
 #+BEGIN_SRC emacs-lisp
   ;;(straight-use-package 'dired-narrow)
@@ -4104,8 +4124,7 @@ Make file sizes human readable
     (if dired-du-mode
         (dired-du-mode -1)))
 
-        ;; STARTUP ON DEFAULT SORT!
-  ;;(add-hook 'dired-mode-hook '(lambda () () ))
+  (add-hook 'dired-mode-hook '(lambda () (progn (my/disable-dired-du-quietly) (concat my/dired-base-ls-command ""))))
 
   (define-key dired-mode-map (kbd "s") 'my/dired-sort-menu)
 #+END_SRC
@@ -4113,6 +4132,7 @@ Make file sizes human readable
 ** Recursive folder size
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'dired-du)
+  (require 'dired-du)
 #+END_SRC
 
 ** Dired-single
@@ -7756,7 +7776,7 @@ https://www.emacswiki.org/emacs/ArtistMode
     ;; Buffer management
     ;; Find file
     ("e" my/find-file nil)
-    ("E" dired-jump nil)
+    ("E" my/dired-curr-dir nil)
     ("M-e" my/change-default-directory nil)
 
     ;; Find
