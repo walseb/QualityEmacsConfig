@@ -1516,6 +1516,20 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (define-key my/leader-map (kbd "M-s") 'sudo-edit)
 #+END_SRC
 
+*** Dired fix
+#+BEGIN_SRC emacs-lisp
+  (defun my/dired-sudo-edit-setup ()
+    ;; If file is edited with sudo (in this case only works on dired due to hook)
+    (when (string-equal
+           (file-remote-p (or buffer-file-name default-directory) 'user)
+           "root")
+      (dired-sort-other
+       (progn
+         "-alh"))))
+
+  (add-hook 'dired-mode-hook 'my/dired-sudo-edit-setup)
+#+END_SRC
+
 ** With-editor
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'with-editor)
@@ -1609,8 +1623,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (define-key my/help-map (kbd "c") 'rainbow-mode)
 
   (define-key my/help-map (kbd "y") 'yas-describe-tables)
-
-  (define-key my/help-map (kbd "d") 'rainbow-delimiters-mode)
 #+END_SRC
 
 *** Disable help mode binds
@@ -4021,13 +4033,8 @@ g-; and g-,
 * Dired
 #+BEGIN_SRC emacs-lisp
   (require 'dired)
+
   (require 'wdired)
-
-  (defun my/dired-mode ()
-    (rainbow-delimiters-mode-disable)
-    (dired-hide-details-mode))
-
-  (add-hook 'dired-mode-hook 'my/dired-mode)
 #+END_SRC
 
 ** Open current dir
@@ -4036,6 +4043,7 @@ g-; and g-,
     (interactive)
     (dired default-directory))
 #+END_SRC
+
 ** Narrow
 #+BEGIN_SRC emacs-lisp
   ;;(straight-use-package 'dired-narrow)
@@ -4049,12 +4057,6 @@ g-; and g-,
 ** Change permissions in wdired
 #+BEGIN_SRC emacs-lisp
   (setq wdired-allow-to-change-permissions 'advanced)
-#+END_SRC
-
-** Human readable file sizes
-Make file sizes human readable
-#+BEGIN_SRC emacs-lisp
-  (setq dired-listing-switches "-alh")
 #+END_SRC
 
 ** Put deleted files into trash folder
@@ -4103,8 +4105,8 @@ Make file sizes human readable
 
 ** Date format
 #+BEGIN_SRC emacs-lisp
-  (setq my/dired-base-ls-command "-alh --time-style \"+%m-%d-%Y %H:%M\"")
-  (setq dired-listing-switches (concat my/dired-base-ls-command "--group-directories-first"))
+  (setq my/dired-base-ls-command "-alh --time-style \"+%d-%m-%Y %H:%M\"")
+  (setq dired-listing-switches my/dired-base-ls-command)
 #+END_SRC
 
 ** Sorting
@@ -4113,18 +4115,16 @@ Make file sizes human readable
     (interactive)
     (dired-sort-other
      (pcase (completing-read "Sort by: " '( "date" "size" "name" "dir" "du" "~compatibility"))
-       ("name" (progn (my/disable-dired-du-quietly) (concat my/dired-base-ls-command "")))
-       ("date" (progn (my/disable-dired-du-quietly) (concat my/dired-base-ls-command "-t")))
-       ("size" (progn (my/disable-dired-du-quietly) (concat my/dired-base-ls-command "--sort=size")))
-       ("dir" (progn (my/disable-dired-du-quietly) (concat my/dired-base-ls-command "--group-directories-first")))
-       ("~compatibility" (progn (my/disable-dired-du-quietly) "-al"))
-       ("du" (progn (dired-sort-other "-al") (dired-du-mode 1) "-al")))))
+       ("name" (progn (my/dired-du-disable-quietly) my/dired-base-ls-command))
+       ("date" (progn (my/dired-du-disable-quietly) (concat my/dired-base-ls-command "-t")))
+       ("size" (progn (my/dired-du-disable-quietly) (concat my/dired-base-ls-command "--sort=size")))
+       ("dir" (progn (my/dired-du-disable-quietly) (concat my/dired-base-ls-command "--group-directories-first")))
+       ("~compatibility" (progn (my/dired-du-disable-quietly) "-al"))
+       ("du" (progn (dired-sort-other "-alh") (dired-du-mode 1) "-alh")))))
 
-  (defun my/disable-dired-du-quietly ()
+  (defun my/dired-du-disable-quietly ()
     (if dired-du-mode
         (dired-du-mode -1)))
-
-  (add-hook 'dired-mode-hook '(lambda () (progn (my/disable-dired-du-quietly) (concat my/dired-base-ls-command ""))))
 
   (define-key dired-mode-map (kbd "s") 'my/dired-sort-menu)
 #+END_SRC
@@ -4133,6 +4133,11 @@ Make file sizes human readable
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'dired-du)
   (require 'dired-du)
+#+END_SRC
+
+*** Disable on new buffer
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'dired-mode-hook 'my/dired-du-disable-quietly)
 #+END_SRC
 
 ** Dired-single
@@ -5599,12 +5604,6 @@ Default eshell/clear only spams newlines
 ** Term
 #+BEGIN_SRC emacs-lisp
   (define-key my/leader-map (kbd "{") 'ansi-term)
-#+END_SRC
-
-** Disable minor modes
-Disable rainbow delimiters
-#+BEGIN_SRC emacs-lisp
-  (add-hook 'eshell-mode-hook 'rainbow-delimiters-mode-disable)
 #+END_SRC
 
 ** Use ansi term for certain applications
@@ -7309,11 +7308,6 @@ Mode for writing mail
   (define-key my/processes-map (kbd "t") 'proced)
 #+END_SRC
 
-**** Disable rainbow delimiters
-#+BEGIN_SRC emacs-lisp
-  (add-hook 'proced-mode-hook 'rainbow-delimiters-mode-disable)
-#+END_SRC
-
 **** Disable line wrapping
 #+BEGIN_SRC emacs-lisp
   (defun my/proced-mode ()
@@ -8630,14 +8624,6 @@ Fringe only on the left side
 Changes background of eg. #FF00FF to represent color
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'rainbow-mode)
-#+END_SRC
-
-** Rainbow delimiters
-Changes colors of delimiters eg. {()}
-#+BEGIN_SRC emacs-lisp
-  (straight-use-package 'rainbow-delimiters)
-
-  ;;(add-hook 'prog-mode 'rainbow-delimiters-mode)
 #+END_SRC
 
 ** Minimap
