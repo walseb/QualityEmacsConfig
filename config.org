@@ -345,6 +345,20 @@ This will disable volume controls for example
 Look into changing from locate to using "directory-files-recursively" to cache all files on the pc
 Problem seems to be that it needs sudo to do this
 
+** Fix ivy grep/occur
+Colors change when you put your cursor over custom faces
+
+** Fix change defalut directory to change save dir
+** Customize ivy more
+
+** % should go to closest paren if not on one
+* First
+Things to do first
+#+BEGIN_SRC emacs-lisp
+  (setq mode-line-format nil)
+  (setq-default mode-line-format nil)
+#+END_SRC
+
 * Security
 #+BEGIN_SRC emacs-lisp
   (setq network-security-level 'high)
@@ -4305,7 +4319,7 @@ g-; and g-,
   (evil-define-key 'normal dired-mode-map (kbd "u") 'dired-unmark)
   (evil-define-key 'insert dired-mode-map (kbd "u") 'dired-unmark)
   (evil-define-key 'insert dired-mode-map (kbd "v") 'dired-view-file)
-  (evil-define-key 'normal dired-mode-map (kbd "y") 'dired-copy-filename-as-kill)
+  ;;(evil-define-key 'normal dired-mode-map (kbd "y") 'dired-copy-filename-as-kill)
   (evil-define-key 'insert dired-mode-map (kbd "y") 'dired-copy-filename-as-kill)
   (evil-define-key 'insert dired-mode-map (kbd "w") 'browse-url-of-dired-file)
   (evil-define-key 'normal dired-mode-map (kbd "x") 'dired-do-flagged-delete)
@@ -6343,7 +6357,7 @@ https://oremacs.com/2017/03/18/dired-ediff/
   (straight-use-package 'projectile)
 
   ;; Disable projectile mode so that CPU isn't taken by projectile wating to refresh git project directory all the time
-  (projectile-mode 0)
+  (projectile-mode -1)
 #+END_SRC
 
 ** Counsel projectile
@@ -8342,52 +8356,6 @@ Changes background of eg. #FF00FF to represent color
   (straight-use-package 'rainbow-mode)
 #+END_SRC
 
-** Minimap
-#+BEGIN_SRC emacs-lisp
-  (straight-use-package 'minimap)
-
-  (define-key my/leader-map (kbd "]") 'my/toggle-window-config-minimap)
-
-  (setq minimap-window-location 'right)
-#+END_SRC
-
-*** Toggle minimap by window config
-#+BEGIN_SRC emacs-lisp
-  (defvar my/minimap-exists nil)
-
-  (defun my/kill-minimap()
-    (if my/minimap-exists
-        (progn
-          (minimap-kill)
-          (setf my/minimap-exists nil))))
-
-  (defun my/start-minimap()
-    (if (not my/minimap-exists)
-        (progn
-          (minimap-create)
-          (setf my/minimap-exists t))))
-
-  (defvar my/window-configs-with-minimap (list))
-
-  (defun my/has-current-window-config-minimap ()
-    (cl-position my/current-window-configuration my/window-configs-with-minimap :test 'string=))
-
-  (defun my/toggle-window-config-minimap()
-    (interactive)
-    (if (my/has-current-window-config-minimap)
-        (setq my/window-configs-with-minimap (delete my/current-window-configuration my/window-configs-with-minimap))
-      (push my/current-window-configuration my/window-configs-with-minimap))
-    (my/window-config-minimap-refresh))
-
-  (defun my/window-config-minimap-refresh()
-    (if (my/has-current-window-config-minimap)
-        (my/start-minimap)
-      (my/kill-minimap)))
-  (setq my/window-configs-with-minimap nil)
-
-  (add-hook 'my/window-config-name-changed-hook 'my/window-config-minimap-refresh t)
-#+END_SRC
-
 ** Highlight matching delimiters
 #+BEGIN_SRC emacs-lisp
   (show-paren-mode 1)
@@ -8554,10 +8522,17 @@ Highlight thing under cursor and all other occurrences
 ** Modeline
 Make mode line appear in echo area instead of in the mode line area. This saves space and makes it so that the mode line can't be split
 
-*** Mode line
+*** Disable mode line
+#+BEGIN_SRC emacs-lisp
+  (setq mode-line-format nil)
+  (setq-default mode-line-format nil)
+#+END_SRC
+
+*** Mode line contents
+Using header line to display
 Set mode line height
 #+BEGIN_SRC emacs-lisp
-  (setq-default mode-line-format
+  (setq-default header-line-format
                 (quote
                  (
                   ;; Print if recursive editing
@@ -9005,7 +8980,8 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
   (defun my/update-projectile-project-name()
     (interactive)
-    (setq my/projectile-project-name (projectile-project-name)))
+    (if (and buffer-file-name (file-exists-p buffer-file-name))
+        (setq my/projectile-project-name (projectile-project-name))))
 
   (add-hook 'my/switch-buffer-hook 'my/update-projectile-project-name)
 #+END_SRC
@@ -9192,301 +9168,312 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
 * Theme
 #+BEGIN_SRC emacs-lisp
-    (defun my/paper-mode()
-      (interactive)
-      (cl-loop for face in (face-list) do
-               ;; Don't change magit faces
-               (if (not (string-match "magit" (symbol-name face)))
-                   (set-face-attribute face nil :foreground nil :background nil)))
+  (defun my/paper-mode()
+    (interactive)
+    (cl-loop for face in (face-list) do
+             ;; Don't change magit faces
+             (if (not (string-match "magit" (symbol-name face)))
+                 (set-face-attribute face nil :foreground nil :background nil)))
 
-      (setq my/diff-added-color "#335533")
-      (setq my/diff-added-hl-color (color-lighten-name "#335533" 20))
+    (setq my/diff-added-color "#335533")
+    (setq my/diff-added-hl-color (color-lighten-name "#335533" 20))
 
-      (setq my/diff-changed-color "#aaaa22")
-      (setq my/diff-changed-hl-color (color-lighten-name "#aaaa22" 20))
+    (setq my/diff-changed-color "#aaaa22")
+    (setq my/diff-changed-hl-color (color-lighten-name "#aaaa22" 20))
 
-      (setq my/diff-removed-color "#553333")
-      (setq my/diff-removed-hl-color (color-lighten-name "#553333" 20))
+    (setq my/diff-removed-color "#553333")
+    (setq my/diff-removed-hl-color (color-lighten-name "#553333" 20))
 
-      (setq my/diff-ancestor-color "#5f06b26ccd93")
-      (setq my/diff-ancestor-hl-color (color-lighten-name "#5f06b26ccd93" 20))
-
-      (if window-system
-          (progn
-            (setq my/mark-color my/diff-changed-color)
-            (setq my/mark-color-1 (color-darken-name my/diff-changed-color 5))
-            (setq my/mark-color-2 (color-darken-name my/diff-changed-color 10))
-            (setq my/mark-color-3 (color-darken-name my/diff-changed-color 15))
-            (setq my/mark-color-4 (color-darken-name my/diff-changed-color 20))
-            (setq my/mark-color-5 (color-darken-name my/diff-changed-color 25))
-            (setq my/mark-color-6 (color-darken-name my/diff-changed-color 30))
-
-            (setq my/foreground-color "#E6E1DC")
-            (setq my/foreground-color-1 (color-darken-name my/foreground-color 5))
-            (setq my/foreground-color-2 (color-darken-name my/foreground-color 10))
-            (setq my/foreground-color-3 (color-darken-name my/foreground-color 15))
-            (setq my/foreground-color-4 (color-darken-name my/foreground-color 20))
-            (setq my/foreground-color-5 (color-darken-name my/foreground-color 25))
-            (setq my/foreground-color-6 (color-darken-name my/foreground-color 30))
-
-            (setq my/background-color "#232323")
-            (setq my/background-color-1 (color-lighten-name my/background-color 5))
-            (setq my/background-color-2 (color-lighten-name my/background-color 10))
-            (setq my/background-color-3 (color-lighten-name my/background-color 15))
-            (setq my/background-color-4 (color-lighten-name my/background-color 20)))
-
-        (setq my/mark-color "yellow")
-
-        (setq my/foreground-color "white")
-        (setq my/foreground-color-1 "white")
-        (setq my/foreground-color-2 "white")
-        (setq my/foreground-color-3 "white")
-        (setq my/foreground-color-4 "white")
-        (setq my/foreground-color-5 "white")
-        (setq my/foreground-color-6 "white")
-
-        (setq my/background-color "black")
-        (setq my/background-color-1 "black")
-        (setq my/background-color-2 "black")
-        (setq my/background-color-3 "black")
-        (setq my/background-color-4 "black")
-
-        (setq my/diff-added-color "green")
-        (setq my/diff-changed-color "yellow")
-        (setq my/diff-removed-color "red"))
-
-      ;;; Emacs
-      (set-face-attribute 'default nil :foreground my/foreground-color :background my/background-color)
-      (set-face-attribute 'link nil :foreground my/background-color :background my/foreground-color)
-      (set-face-attribute 'highlight nil :foreground my/foreground-color :background my/mark-color)
-      (set-face-attribute 'region nil :foreground my/foreground-color :background my/mark-color)
-      (set-face-attribute 'error nil :foreground "#c6350b" :background)
-      (set-face-attribute 'warning nil :foreground "DarkOrange" :background)
-
-      ;; Syntax
-      (set-face-attribute  'font-lock-doc-face nil :foreground my/foreground-color :background my/background-color-4)
-      (defvar my/comment-face-height (floor (* my/default-face-height 1.15)))
-      (set-face-attribute  'font-lock-comment-face nil :foreground my/foreground-color :background my/background-color-1 :height my/comment-face-height)
-      (set-face-attribute 'font-lock-string-face nil :foreground my/foreground-color :background my/background-color-1)
-      (set-face-attribute 'font-lock-function-name-face nil :weight 'bold)
-
-      ;; (set-face-attribute  'font-lock-keyword-face nil :foreground my/foreground-color :background my/background-color-1)
-      ;; (set-face-attribute  'font-lock-function-name-face nil :foreground my/foreground-color :background my/background-color-2)
-
-      ;; Required by other face
-      (set-face-attribute 'outline-4 nil :foreground my/foreground-color :background my/background-color)
-
-      ;; Line numbers
-      (set-face-attribute 'line-number-current-line nil :foreground my/foreground-color :background my/background-color)
-      (set-face-attribute 'line-number nil :foreground my/foreground-color :background my/background-color)
-
-      ;; Evil
-      (setq evil-emacs-state-cursor '("purple" box))
-      (setq evil-normal-state-cursor '("red" box))
-      (setq evil-visual-state-cursor '("yellow" box))
-      (setq evil-insert-state-cursor '("orange" box))
-      (setq evil-replace-state-cursor '("green" box))
-      (setq evil-operator-state-cursor '("white" hollow))
-
-      ;; On-screen
-      ;;(set-face-attribute 'on-screen-shadow nil :foreground nil :background (color-lighten-name my/background-color 2))
-      ;;(set-face-attribute 'on-screen-fringe nil :foreground my/foreground-color :background my/background-color)
-
-      ;; Hl current line
-      ;; Underlines part of current line
-      ;;(set-face-attribute 'hl-line nil :foreground my/foreground-color :background nil :underline t)
-      (require 'hl-line)
-      (set-face-attribute 'hl-line nil :foreground my/foreground-color :background my/background-color-2 :underline nil)
-
-      ;;;  Org
-      ;; =make this bold=
-      (set-face-attribute 'org-verbatim nil :weight 'bold)
-      (set-face-attribute 'org-code nil :family my/mono-font)
-
-      (set-face-attribute 'org-quote nil :slant 'italic)
-
-      ;;; Diff
-      (set-face-attribute 'diff-added nil  :background my/diff-added-color)
-      (set-face-attribute 'diff-changed nil :background my/diff-changed-color)
-      (set-face-attribute 'diff-removed nil :background my/diff-removed-color)
-
-      (set-face-attribute 'diff-refine-added nil  :background my/diff-added-hl-color)
-      (set-face-attribute 'diff-refine-changed nil :background my/diff-changed-hl-color)
-      (set-face-attribute 'diff-refine-removed nil :background my/diff-removed-hl-color)
-
-    ;;; Ediff
-      (set-face-attribute 'ediff-current-diff-A nil :background my/diff-removed-color)
-      (set-face-attribute 'ediff-current-diff-Ancestor nil :background my/diff-ancestor-color)
-      (set-face-attribute 'ediff-current-diff-B nil :background my/diff-added-color)
-      (set-face-attribute 'ediff-current-diff-C nil :background my/diff-changed-color)
-      (set-face-attribute 'ediff-even-diff-A nil :background (color-darken-name my/diff-removed-color 18))
-      (set-face-attribute 'ediff-even-diff-Ancestor nil :background (color-darken-name my/diff-ancestor-color 30))
-      (set-face-attribute 'ediff-even-diff-B nil :background (color-darken-name my/diff-added-color 18))
-      (set-face-attribute 'ediff-even-diff-C nil :background (color-darken-name my/diff-changed-color 18))
-      (set-face-attribute 'ediff-fine-diff-A nil :background my/diff-removed-hl-color)
-      (set-face-attribute 'ediff-fine-diff-Ancestor nil :background my/diff-ancestor-hl-color)
-      (set-face-attribute 'ediff-fine-diff-B nil :background my/diff-added-hl-color)
-      (set-face-attribute 'ediff-fine-diff-C nil :background my/diff-changed-hl-color)
-      (set-face-attribute 'ediff-odd-diff-A nil :background (color-darken-name my/diff-removed-color 20))
-      (set-face-attribute 'ediff-odd-diff-Ancestor nil :background (color-darken-name my/diff-ancestor-color 50))
-      (set-face-attribute 'ediff-odd-diff-B nil :background (color-darken-name my/diff-added-color 20))
-      (set-face-attribute 'ediff-odd-diff-C nil :background (color-darken-name my/diff-changed-color 20))
-
-      ;;; Symbol overlay
-;;      (if window-system
-;;  (set-face-attribute 'symbol-overlay-default-face nil :foreground my/foreground-color :background my/mark-color-5))
-
-      ;;; Dired
-      (set-face-attribute 'dired-directory nil :foreground my/background-color :background my/foreground-color)
-
-      ;;; Spray
-      ;;  (set-face-attribute 'spray-accent-face nil :foreground "red" :background my/background-color)
-      (set-face-attribute 'spray-accent-face nil :foreground my/foreground-color :background my/background-color :underline t)
-
-      ;;; Origami
-      ;; (set-face-attribute 'origami-fold-fringe-face nil :foreground my/foreground-color  :background  my/background-color :underline t :weight 'bold)
-      ;; (set-face-attribute 'origami-fold-header-face nil :foreground my/background-color :background my/foreground-color  :underline t :weight 'bold :height 1.15)
-      ;; (set-face-attribute 'origami-fold-replacement-face nil :foreground my/background-color :background  my/foreground-color :underline t :weight 'bold)
-
-      ;;; Isearch
-      (set-face-attribute 'isearch nil :foreground my/background-color :background my/foreground-color)
-      (set-face-attribute 'lazy-highlight nil :foreground my/background-color :background my/foreground-color)
-
-      ;;; Highlight thing
-      ;;(set-face-attribute 'symbol-overlay nil :foreground my/foreground-color :background my/mark-color)
-
-      ;;; Company
-      (set-face-attribute 'company-scrollbar-bg nil :background my/background-color :family my/mono-font)
-      (set-face-attribute 'company-scrollbar-fg nil :background my/foreground-color :family my/mono-font)
-
-      ;; Selected entry
-      (set-face-attribute 'company-tooltip-selection nil :background my/foreground-color :foreground my/background-color :family my/mono-font)
-      ;; All unmatching text
-      (set-face-attribute 'company-tooltip nil :foreground my/foreground-color :background my/background-color-1 :family my/mono-font)
-      ;; All matching text
-      (set-face-attribute 'company-tooltip-common nil :foreground my/background-color :background my/foreground-color :family my/mono-font)
-
-      ;;; Company box
-      (if (require 'company-box nil 'noerror)
-          (progn
-            (set-face-attribute 'company-box-annotation nil :family my/mono-font)
-            (set-face-attribute 'company-box-background nil :family my/mono-font)
-            (set-face-attribute 'company-box-candidate  nil :family my/mono-font)
-            (set-face-attribute 'company-box-scrollbar  nil :family my/mono-font)
-            (set-face-attribute 'company-box-selection  nil :family my/mono-font)))
-
-      ;;; Popup menu
-      ;; Selected entry
-      (require 'popup)
-      (set-face-attribute 'popup-menu-selection-face nil :foreground my/background-color :background my/foreground-color)
-      ;; All unmatching text
-      (set-face-attribute 'popup-menu-face nil :foreground my/foreground-color :background my/background-color-1)
-
-      ;;; Ivy
-      (set-face-attribute 'ivy-current-match nil :foreground my/background-color :background my/foreground-color)
-      (set-face-attribute 'ivy-cursor nil :foreground my/background-color :background my/foreground-color)
-      (set-face-attribute 'ivy-minibuffer-match-highlight nil :foreground my/background-color :background my/foreground-color)
-
-      (set-face-attribute 'ivy-minibuffer-match-face-1 nil :foreground my/background-color :background my/foreground-color)
-      (set-face-attribute 'ivy-minibuffer-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
-      (set-face-attribute 'ivy-minibuffer-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
-      (set-face-attribute 'ivy-minibuffer-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
-
-      ;;; Swiper
-      (set-face-attribute 'swiper-match-face-1 nil :foreground my/background-color :background my/foreground-color)
-      (set-face-attribute 'swiper-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
-      (set-face-attribute 'swiper-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
-      (set-face-attribute 'swiper-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
-
-      ;;; Avy
-      (set-face-attribute 'avy-lead-face nil :foreground my/background-color :background my/foreground-color-6)
-      (set-face-attribute 'avy-lead-face-0 nil :foreground my/background-color :background my/foreground-color-2)
-      (set-face-attribute 'avy-lead-face-1 nil :foreground my/background-color :background my/foreground-color-4)
-      (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background my/foreground-color-6)
-
-      ;;; Eshell
-      (require 'em-prompt)
-      (if window-system
-          (set-face-attribute 'eshell-prompt nil :foreground "purple" :background my/background-color)
-        (set-face-attribute 'eshell-prompt nil :foreground "magenta" :background my/background-color))
-
-      ;;; Eww
-      (set-face-attribute 'my/eww-code-face nil :foreground my/foreground-color :background my/background-color-2 :family my/mono-font)
-
-      ;;(defvar my/evil-goggles-highlight-color)
-
-      ;;; Yascroll
-      (set-face-attribute 'yascroll:thumb-fringe nil :background "slateblue" :foreground "slateblue")
-      (set-face-attribute 'yascroll:thumb-text-area nil :background "slateblue")
-
-      ;;; Term
-      (set-face-attribute 'term nil :family my/mono-font)
-      (set-face-attribute 'term-bold nil :family my/mono-font)
-      (set-face-attribute 'term-underline nil :family my/mono-font)
-
-      (set-face-attribute 'term-color-black nil :foreground "black" :background "black" :family my/mono-font)
-      (set-face-attribute 'term-color-blue nil :foreground "blue" :background "blue" :family my/mono-font)
-      (set-face-attribute 'term-color-cyan nil :foreground "cyan" :background "cyan" :family my/mono-font)
-      (set-face-attribute 'term-color-green nil :foreground "green" :background "green" :family my/mono-font)
-      (set-face-attribute 'term-color-magenta nil :foreground "magenta" :background "magenta" :family my/mono-font)
-      (set-face-attribute 'term-color-red nil :foreground "red" :background "red" :family my/mono-font)
-      (set-face-attribute 'term-color-white nil :foreground "white" :background "white" :family my/mono-font)
-      (set-face-attribute 'term-color-yellow nil :foreground "yellow" :background "yellow" :family my/mono-font)
-
-      ;;; Litable
-      ;;  (set-face-attribute 'litable-result-face nil :foreground my/foreground-color :background my/background-color :weight 'bold)
-      ;;  (set-face-attribute 'litable-substitution-face nil :foreground my/foreground-color :background my/background-color :weight 'bold)
-
-      ;;; Evil-goggles
-      ;;;; 2 color approach
-      ;; (set-face-attribute 'evil-goggles-change-face nil :foreground my/background-color :background my/foreground-color)
-      ;; (set-face-attribute 'evil-goggles-commentary-face nil :foreground my/background-color :background my/foreground-color)
-      ;; (set-face-attribute 'evil-goggles-delete-face nil :foreground my/background-color :background my/foreground-color)
-      ;; (set-face-attribute 'evil-goggles-fill-and-move-face nil :foreground my/background-color :background my/foreground-color)
-      ;; (set-face-attribute 'evil-goggles-indent-face nil :foreground my/background-color :background my/foreground-color)
-      ;; (set-face-attribute 'evil-goggles-join-face nil :foreground my/background-color :background my/foreground-color)
-      ;; (set-face-attribute 'evil-goggles-paste-face nil :foreground my/background-color :background my/foreground-color)
-      ;; (set-face-attribute 'evil-goggles-record-macro-face nil :foreground my/background-color :background my/foreground-color)
-      ;; (set-face-attribute 'evil-goggles-replace-with-register-face nil :foreground my/background-color :background my/foreground-color)
-      ;; (set-face-attribute 'evil-goggles-set-marker-face nil :foreground my/background-color :background my/foreground-color)
-      ;; (set-face-attribute 'evil-goggles-shift-face nil :foreground my/background-color :background my/foreground-color)
-      ;; (set-face-attribute 'evil-goggles-surround-face nil :foreground my/background-color :background my/foreground-color)
-      ;; (set-face-attribute 'evil-goggles-yank-face nil :foreground my/background-color :background my/foreground-color)
-
-
-      ;; (set-face-attribute 'diff-added nil  :background "green")
-      ;; (set-face-attribute 'diff-changed nil :background "yellow")
-      ;; (set-face-attribute 'diff-removed nil :background "red")
-
-      ;; Diff-hl
-      (set-face-attribute 'diff-hl-change nil :background (face-attribute 'diff-changed :background))
-
-      ;; Paren highlight
-      ;;(set-face-attribute 'show-paren-match nil :foreground my/foreground-color :background my/mark-color-5)
-      (set-face-attribute 'show-paren-match nil :foreground my/background-color :background my/foreground-color)
-      (set-face-attribute 'show-paren-mismatch nil :background "red")
-
-      ;; Mode line separator
-      ;; Set mode line height
-      (set-face-attribute 'mode-line nil
-                          :foreground my/foreground-color
-                          :background my/background-color-1)
-
-      (set-face-attribute 'mode-line-inactive nil
-                          :foreground my/foreground-color
-                          :background my/background-color)
-
-      ;; Highlight faces
-      ;;(highlight-indent-guides-auto-set-faces)
-      )
+    (setq my/diff-ancestor-color "#5f06b26ccd93")
+    (setq my/diff-ancestor-hl-color (color-lighten-name "#5f06b26ccd93" 20))
 
     (if window-system
-        (add-hook 'exwm-init-hook 'my/paper-mode)
-      (add-hook 'after-init-hook 'my/paper-mode))
+        (progn
+          (setq my/mark-color my/diff-changed-color)
+          (setq my/mark-color-1 (color-darken-name my/diff-changed-color 5))
+          (setq my/mark-color-2 (color-darken-name my/diff-changed-color 10))
+          (setq my/mark-color-3 (color-darken-name my/diff-changed-color 15))
+          (setq my/mark-color-4 (color-darken-name my/diff-changed-color 20))
+          (setq my/mark-color-5 (color-darken-name my/diff-changed-color 25))
+          (setq my/mark-color-6 (color-darken-name my/diff-changed-color 30))
 
-    ;; (counsel-faces)
+          (setq my/foreground-color "#E6E1DC")
+          (setq my/foreground-color-1 (color-darken-name my/foreground-color 5))
+          (setq my/foreground-color-2 (color-darken-name my/foreground-color 10))
+          (setq my/foreground-color-3 (color-darken-name my/foreground-color 15))
+          (setq my/foreground-color-4 (color-darken-name my/foreground-color 20))
+          (setq my/foreground-color-5 (color-darken-name my/foreground-color 25))
+          (setq my/foreground-color-6 (color-darken-name my/foreground-color 30))
 
-    (define-key my/leader-map (kbd "M-c") 'my/paper-mode)
+          (setq my/background-color "#232323")
+          (setq my/background-color-1 (color-lighten-name my/background-color 5))
+          (setq my/background-color-2 (color-lighten-name my/background-color 10))
+          (setq my/background-color-3 (color-lighten-name my/background-color 15))
+          (setq my/background-color-4 (color-lighten-name my/background-color 20)))
+
+      (setq my/mark-color "yellow")
+
+      (setq my/foreground-color "white")
+      (setq my/foreground-color-1 "white")
+      (setq my/foreground-color-2 "white")
+      (setq my/foreground-color-3 "white")
+      (setq my/foreground-color-4 "white")
+      (setq my/foreground-color-5 "white")
+      (setq my/foreground-color-6 "white")
+
+      (setq my/background-color "black")
+      (setq my/background-color-1 "black")
+      (setq my/background-color-2 "black")
+      (setq my/background-color-3 "black")
+      (setq my/background-color-4 "black")
+
+      (setq my/diff-added-color "green")
+      (setq my/diff-changed-color "yellow")
+      (setq my/diff-removed-color "red"))
+
+        ;;; Emacs
+    (set-face-attribute 'default nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'link nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'highlight nil :foreground my/foreground-color :background my/mark-color)
+    (set-face-attribute 'region nil :foreground my/foreground-color :background my/mark-color)
+    (set-face-attribute 'error nil :foreground "#c6350b" :background)
+    (set-face-attribute 'warning nil :foreground "DarkOrange" :background)
+
+    ;; Syntax
+    (set-face-attribute  'font-lock-doc-face nil :foreground my/foreground-color :background my/background-color-4)
+    (defvar my/comment-face-height (floor (* my/default-face-height 1.15)))
+    (set-face-attribute  'font-lock-comment-face nil :foreground my/foreground-color :background my/background-color-1) ;;:height my/comment-face-height)
+    (set-face-attribute 'font-lock-string-face nil :foreground my/foreground-color :background my/background-color-1)
+    (set-face-attribute 'font-lock-function-name-face nil :weight 'bold)
+
+    ;; (set-face-attribute  'font-lock-keyword-face nil :foreground my/foreground-color :background my/background-color-1)
+    ;; (set-face-attribute  'font-lock-function-name-face nil :foreground my/foreground-color :background my/background-color-2)
+
+    ;; Required by other face
+    (set-face-attribute 'outline-4 nil :foreground my/foreground-color :background my/background-color)
+
+    ;; Line numbers
+    (set-face-attribute 'line-number-current-line nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'line-number nil :foreground my/foreground-color :background my/background-color)
+
+    ;; Evil
+    (setq evil-emacs-state-cursor '("purple" box))
+    (setq evil-normal-state-cursor '("red" box))
+    (setq evil-visual-state-cursor '("yellow" box))
+    (setq evil-insert-state-cursor '("orange" box))
+    (setq evil-replace-state-cursor '("green" box))
+    (setq evil-operator-state-cursor '("white" hollow))
+
+    ;; On-screen
+    ;;(set-face-attribute 'on-screen-shadow nil :foreground nil :background (color-lighten-name my/background-color 2))
+    ;;(set-face-attribute 'on-screen-fringe nil :foreground my/foreground-color :background my/background-color)
+
+    ;; Hl current line
+    ;; Underlines part of current line
+    ;;(set-face-attribute 'hl-line nil :foreground my/foreground-color :background nil :underline t)
+    (require 'hl-line)
+    (set-face-attribute 'hl-line nil :foreground my/foreground-color :background my/background-color-2 :underline nil)
+
+        ;;;  Org
+    ;; =make this bold=
+    (set-face-attribute 'org-verbatim nil :weight 'bold)
+    (set-face-attribute 'org-code nil :family my/mono-font)
+
+    (set-face-attribute 'org-quote nil :slant 'italic)
+
+        ;;; Diff
+    (set-face-attribute 'diff-added nil  :background my/diff-added-color)
+    (set-face-attribute 'diff-changed nil :background my/diff-changed-color)
+    (set-face-attribute 'diff-removed nil :background my/diff-removed-color)
+
+    (set-face-attribute 'diff-refine-added nil  :background my/diff-added-hl-color)
+    (set-face-attribute 'diff-refine-changed nil :background my/diff-changed-hl-color)
+    (set-face-attribute 'diff-refine-removed nil :background my/diff-removed-hl-color)
+
+      ;;; Ediff
+    (set-face-attribute 'ediff-current-diff-A nil :background my/diff-removed-color)
+    (set-face-attribute 'ediff-current-diff-Ancestor nil :background my/diff-ancestor-color)
+    (set-face-attribute 'ediff-current-diff-B nil :background my/diff-added-color)
+    (set-face-attribute 'ediff-current-diff-C nil :background my/diff-changed-color)
+    (set-face-attribute 'ediff-even-diff-A nil :background (color-darken-name my/diff-removed-color 18))
+    (set-face-attribute 'ediff-even-diff-Ancestor nil :background (color-darken-name my/diff-ancestor-color 30))
+    (set-face-attribute 'ediff-even-diff-B nil :background (color-darken-name my/diff-added-color 18))
+    (set-face-attribute 'ediff-even-diff-C nil :background (color-darken-name my/diff-changed-color 18))
+    (set-face-attribute 'ediff-fine-diff-A nil :background my/diff-removed-hl-color)
+    (set-face-attribute 'ediff-fine-diff-Ancestor nil :background my/diff-ancestor-hl-color)
+    (set-face-attribute 'ediff-fine-diff-B nil :background my/diff-added-hl-color)
+    (set-face-attribute 'ediff-fine-diff-C nil :background my/diff-changed-hl-color)
+    (set-face-attribute 'ediff-odd-diff-A nil :background (color-darken-name my/diff-removed-color 20))
+    (set-face-attribute 'ediff-odd-diff-Ancestor nil :background (color-darken-name my/diff-ancestor-color 50))
+    (set-face-attribute 'ediff-odd-diff-B nil :background (color-darken-name my/diff-added-color 20))
+    (set-face-attribute 'ediff-odd-diff-C nil :background (color-darken-name my/diff-changed-color 20))
+
+    ;;; Wgrep
+    (set-face-attribute 'wgrep-file-face nil :background my/foreground-color-6 :foreground my/background-color)
+
+    ;;; Ivy grep
+    (set-face-attribute 'ivy-grep-info nil :background my/foreground-color-6 :foreground my/background-color)
+
+        ;;; Symbol overlay
+    ;;      (if window-system
+    ;;  (set-face-attribute 'symbol-overlay-default-face nil :foreground my/foreground-color :background my/mark-color-5))
+
+        ;;; Dired
+    (set-face-attribute 'dired-directory nil :foreground my/background-color :background my/foreground-color)
+
+        ;;; Spray
+    ;;  (set-face-attribute 'spray-accent-face nil :foreground "red" :background my/background-color)
+    (set-face-attribute 'spray-accent-face nil :foreground my/foreground-color :background my/background-color :underline t)
+
+        ;;; Origami
+    ;; (set-face-attribute 'origami-fold-fringe-face nil :foreground my/foreground-color  :background  my/background-color :underline t :weight 'bold)
+    ;; (set-face-attribute 'origami-fold-header-face nil :foreground my/background-color :background my/foreground-color  :underline t :weight 'bold :height 1.15)
+    ;; (set-face-attribute 'origami-fold-replacement-face nil :foreground my/background-color :background  my/foreground-color :underline t :weight 'bold)
+
+        ;;; Isearch
+    (set-face-attribute 'isearch nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'lazy-highlight nil :foreground my/background-color :background my/foreground-color)
+
+        ;;; Highlight thing
+    ;;(set-face-attribute 'symbol-overlay nil :foreground my/foreground-color :background my/mark-color)
+
+        ;;; Company
+    (set-face-attribute 'company-scrollbar-bg nil :background my/background-color :family my/mono-font)
+    (set-face-attribute 'company-scrollbar-fg nil :background my/foreground-color :family my/mono-font)
+
+    ;; Selected entry
+    (set-face-attribute 'company-tooltip-selection nil :background my/foreground-color :foreground my/background-color :family my/mono-font)
+    ;; All unmatching text
+    (set-face-attribute 'company-tooltip nil :foreground my/foreground-color :background my/background-color-1 :family my/mono-font)
+    ;; All matching text
+    (set-face-attribute 'company-tooltip-common nil :foreground my/background-color :background my/foreground-color :family my/mono-font)
+
+        ;;; Company box
+    (if (require 'company-box nil 'noerror)
+        (progn
+          (set-face-attribute 'company-box-annotation nil :family my/mono-font)
+          (set-face-attribute 'company-box-background nil :family my/mono-font)
+          (set-face-attribute 'company-box-candidate  nil :family my/mono-font)
+          (set-face-attribute 'company-box-scrollbar  nil :family my/mono-font)
+          (set-face-attribute 'company-box-selection  nil :family my/mono-font)))
+
+        ;;; Popup menu
+    ;; Selected entry
+    (require 'popup)
+    (set-face-attribute 'popup-menu-selection-face nil :foreground my/background-color :background my/foreground-color)
+    ;; All unmatching text
+    (set-face-attribute 'popup-menu-face nil :foreground my/foreground-color :background my/background-color-1)
+
+        ;;; Ivy
+    (set-face-attribute 'ivy-current-match nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'ivy-cursor nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'ivy-minibuffer-match-highlight nil :foreground my/background-color :background my/foreground-color)
+
+    (set-face-attribute 'ivy-minibuffer-match-face-1 nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'ivy-minibuffer-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
+    (set-face-attribute 'ivy-minibuffer-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
+    (set-face-attribute 'ivy-minibuffer-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
+
+        ;;; Swiper
+    (set-face-attribute 'swiper-match-face-1 nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'swiper-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
+    (set-face-attribute 'swiper-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
+    (set-face-attribute 'swiper-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
+
+        ;;; Avy
+    (set-face-attribute 'avy-lead-face nil :foreground my/background-color :background my/foreground-color-6)
+    (set-face-attribute 'avy-lead-face-0 nil :foreground my/background-color :background my/foreground-color-2)
+    (set-face-attribute 'avy-lead-face-1 nil :foreground my/background-color :background my/foreground-color-4)
+    (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background my/foreground-color-6)
+
+        ;;; Eshell
+    (require 'em-prompt)
+    (if window-system
+        (set-face-attribute 'eshell-prompt nil :foreground "purple" :background my/background-color)
+      (set-face-attribute 'eshell-prompt nil :foreground "magenta" :background my/background-color))
+
+        ;;; Eww
+    (set-face-attribute 'my/eww-code-face nil :foreground my/foreground-color :background my/background-color-2 :family my/mono-font)
+
+    ;;(defvar my/evil-goggles-highlight-color)
+
+        ;;; Yascroll
+    (set-face-attribute 'yascroll:thumb-fringe nil :background "slateblue" :foreground "slateblue")
+    (set-face-attribute 'yascroll:thumb-text-area nil :background "slateblue")
+
+        ;;; Term
+    (set-face-attribute 'term nil :family my/mono-font)
+    (set-face-attribute 'term-bold nil :family my/mono-font)
+    (set-face-attribute 'term-underline nil :family my/mono-font)
+
+    (set-face-attribute 'term-color-black nil :foreground "black" :background "black" :family my/mono-font)
+    (set-face-attribute 'term-color-blue nil :foreground "blue" :background "blue" :family my/mono-font)
+    (set-face-attribute 'term-color-cyan nil :foreground "cyan" :background "cyan" :family my/mono-font)
+    (set-face-attribute 'term-color-green nil :foreground "green" :background "green" :family my/mono-font)
+    (set-face-attribute 'term-color-magenta nil :foreground "magenta" :background "magenta" :family my/mono-font)
+    (set-face-attribute 'term-color-red nil :foreground "red" :background "red" :family my/mono-font)
+    (set-face-attribute 'term-color-white nil :foreground "white" :background "white" :family my/mono-font)
+    (set-face-attribute 'term-color-yellow nil :foreground "yellow" :background "yellow" :family my/mono-font)
+
+        ;;; Litable
+    ;;  (set-face-attribute 'litable-result-face nil :foreground my/foreground-color :background my/background-color :weight 'bold)
+    ;;  (set-face-attribute 'litable-substitution-face nil :foreground my/foreground-color :background my/background-color :weight 'bold)
+
+        ;;; Evil-goggles
+        ;;;; 2 color approach
+    ;; (set-face-attribute 'evil-goggles-change-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-commentary-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-delete-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-fill-and-move-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-indent-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-join-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-paste-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-record-macro-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-replace-with-register-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-set-marker-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-shift-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-surround-face nil :foreground my/background-color :background my/foreground-color)
+    ;; (set-face-attribute 'evil-goggles-yank-face nil :foreground my/background-color :background my/foreground-color)
+
+
+    ;; (set-face-attribute 'diff-added nil  :background "green")
+    ;; (set-face-attribute 'diff-changed nil :background "yellow")
+    ;; (set-face-attribute 'diff-removed nil :background "red")
+
+    ;; Diff-hl
+    (set-face-attribute 'diff-hl-change nil :background (face-attribute 'diff-changed :background))
+
+    ;; Paren highlight
+    ;;(set-face-attribute 'show-paren-match nil :foreground my/foreground-color :background my/mark-color-5)
+    (set-face-attribute 'show-paren-match nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'show-paren-mismatch nil :background "red")
+
+  ;;; Mode line
+    (set-face-attribute 'header-line nil
+                        :foreground my/foreground-color
+                        :background my/background-color-2)
+
+    ;; Mode line separator
+    ;; Set mode line height
+    ;;  (set-face-attribute 'mode-line nil
+    ;;                      :foreground my/foreground-color
+    ;;                      :background my/background-color-1)
+    ;;
+    ;;  (set-face-attribute 'mode-line-inactive nil
+    ;;                      :foreground my/foreground-color
+    ;;                      :background my/background-color)
+
+    ;; Highlight faces
+    ;;(highlight-indent-guides-auto-set-faces)
+    )
+
+  (if window-system
+      (add-hook 'exwm-init-hook 'my/paper-mode)
+    (add-hook 'after-init-hook 'my/paper-mode))
+
+  ;; (counsel-faces)
+
+  (define-key my/leader-map (kbd "M-c") 'my/paper-mode)
 #+END_SRC
 
 * Restore gc mem
