@@ -634,6 +634,13 @@ Default file-size-human-readable returns decimal values
 ;; (my/inline-overlay-print "test")
 #+END_SRC
 
+** Freeze
+Holds up the main thread
+#+BEGIN_SRC emacs-lisp
+  (defun my/freeze-emacs ()
+    (while t))
+#+END_SRC
+
 * Fonts
 ** Normal fonts
 #+BEGIN_SRC emacs-lisp
@@ -1762,6 +1769,11 @@ ls for systems without ls installed (like windows). Gets used automatically on t
 (defun my/switch-to-last-buffer ()
   (interactive)
   (switch-to-buffer (car (cdr (ivy--buffer-list "")))))
+#+END_SRC
+
+** Echo keypresses instantly
+#+BEGIN_SRC emacs-lisp
+(setq echo-keystrokes 0.01)
 #+END_SRC
 
 * File options
@@ -3044,6 +3056,8 @@ Used in ivy occur
 
   (global-set-key (kbd "M-k") 'counsel-yank-pop)
 
+  (advice-add #'counsel-yank-pop :before (lambda (&optional arg) (if (string= evil-state 'visual)
+                                                                (delete-region (point) (mark)))))
 
   (define-key my/leader-map (kbd "S") 'counsel-imenu)
   (define-key my/leader-map (kbd "TAB") 'counsel-outline)
@@ -3357,18 +3371,6 @@ Flycheck with extra correction for elisp packages
   (which-key-mode)
 
   (setq which-key-idle-delay 1)
-
-  (if window-system
-      (progn
-        (set-face-attribute 'which-key-command-description-face nil :family my/mono-font)
-        (set-face-attribute 'which-key-docstring-face nil :family my/mono-font)
-        (set-face-attribute 'which-key-group-description-face nil :family my/mono-font)
-        (set-face-attribute 'which-key-highlighted-command-face nil :family my/mono-font)
-        (set-face-attribute 'which-key-key-face nil :family my/mono-font)
-        (set-face-attribute 'which-key-local-map-description-face nil :family my/mono-font)
-        (set-face-attribute 'which-key-note-face nil :family my/mono-font)
-        (set-face-attribute 'which-key-separator-face nil :family my/mono-font)
-        (set-face-attribute 'which-key-special-key-face nil :family my/mono-font)))
 #+END_SRC
 
 ** Yasnippet
@@ -3775,7 +3777,6 @@ https://emacs.stackexchange.com/questions/20900/navigate-by-indentation
 #+BEGIN_SRC emacs-lisp
   (defun my/avy-goto-word-0-in-line(&optional arg)
     (interactive "p")
-
     (if (not (eq evil-state 'visual))
         (my/evil-normal-state arg))
 
@@ -4464,16 +4465,17 @@ Shows information in echo area
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'highlight-indent-guides)
 
-  (add-hook 'prog-mode-hook '(lambda () (highlight-indent-guides-mode (my/highlight-indent-guide-should-enable))))
+  (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
+  ;;(add-hook 'prog-mode-hook '(lambda () (highlight-indent-guides-mode (my/highlight-indent-guide-should-enable))))
 
-  (defun my/highlight-indent-guide-should-enable ()
-    (pcase major-mode
-      ('emacs-lisp-mode -1)
-      ('lisp-interaction-mode -1)
-      ('clojure-mode -1)
-      ('scheme-mode -1)
-      ('common-lisp-mode -1)
-      (_ 1)))
+  ;;(defun my/highlight-indent-guide-should-enable ()
+  ;;  (pcase major-mode
+  ;;    ('emacs-lisp-mode -1)
+  ;;    ('lisp-interaction-mode -1)
+  ;;    ('clojure-mode -1)
+  ;;    ('scheme-mode -1)
+  ;;    ('common-lisp-mode -1)
+  ;;    (_ 1)))
 
   (setq highlight-indent-guides-method 'column)
   ;; (setq highlight-indent-guides-method 'fill)
@@ -7402,11 +7404,9 @@ You need llvm
   (define-key my/system-commands-map (kbd "n") 'my/net-utils-map)
 #+END_SRC
 
-TODO counsel-tramp
-
 ** Tramp
 #+BEGIN_SRC emacs-lisp
-(setq tramp-default-method "ssh")
+  ;;(setq tramp-default-method "scpx")
 #+END_SRC
 
 ** Netstat
@@ -7570,7 +7570,7 @@ Locate only under current dir
 
 * Calc
 #+BEGIN_SRC emacs-lisp
-  (define-key my/leader-map (kbd "c") 'calc)
+  ;;(define-key my/leader-map (kbd "c") 'calc)
 
   (defun my/calc-kill-current-line ()
     (interactive)
@@ -8386,19 +8386,16 @@ Supposed to be faster thang highlight-thing
     symbol-overlay-mode symbol-overlay-mode)
   (symbol-overlay-mode)
   (global-symbol-overlay)
-
 #+END_SRC
 
-*** Only do in normal mode
+*** Disable in insert mode
 #+BEGIN_SRC emacs-lisp
   (defun symbol-overlay-post-command ()
     "Installed on `post-command-hook'."
     (unless (string= (symbol-overlay-get-symbol nil t) symbol-overlay-temp-symbol)
       (symbol-overlay-remove-temp)
-      (when (and (eq evil-state 'normal-mode) (not (symbol-overlay-idle-time))
-                 (symbol-overlay-maybe-put-temp)))))
-
-  ;;(eq evil-state 'normal-mode)
+      (when (and (eq evil-state 'normal) (not symbol-overlay-idle-time))
+        (symbol-overlay-maybe-put-temp))))
 #+END_SRC
 
 ** Highlight thing
@@ -8477,6 +8474,29 @@ Highlight thing under cursor and all other occurrences
   (tool-bar-mode -1)
   (menu-bar-mode -1)
   (scroll-bar-mode -1)
+#+END_SRC
+
+** Disable comments with toggle
+#+BEGIN_SRC emacs-lisp
+  (define-key my/leader-map (kbd "c") 'my/comments-toggle)
+  (defvar my/comment-hide nil)
+
+  (defconst my/comment-default-face-foreground nil)
+  (defconst my/comment-default-face-background nil)
+
+  (defun my/comments-store-faces()
+    (setq my/comment-default-face-foreground (face-attribute 'font-lock-comment-face :foreground))
+    (setq my/comment-default-face-background (face-attribute 'font-lock-comment-face :background)))
+
+  (defun my/comments-toggle ()
+    (interactive)
+    (unless my/comment-default-face-foreground
+      (my/comments-store-faces))
+
+    (setq my/comment-hide (not my/comment-hide))
+    (if my/comment-hide
+        (set-face-attribute 'font-lock-comment-face nil :foreground my/background-color :background my/background-color)
+      (set-face-attribute 'font-lock-comment-face nil :foreground my/comment-default-face-foreground :background my/comment-default-face-background)))
 #+END_SRC
 
 ** Faces
@@ -9069,7 +9089,9 @@ When projectile-mode is on, project name is updated on every keypress, here it i
   (defvar my/eye-timer-break-every (* 21 60))
 
   (defun my/eye-timer-add ()
-    (my/alert "Eye timer" 'high)
+    (message "$$$$$$$$$$$$$BREAK 20 sec$$$$$$$$$$$$$$")
+    (my/freeze-emacs)
+    ;;(my/alert "Eye timer" 'high)
     (setq my/eye-timer-last-break (float-time)))
 
   (defun my/eye-timer-update ()
@@ -9104,11 +9126,6 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                    (format-mode-line
                     (quote
                      (
-
-                      ;; If memory is less than 1GB
-                      (:eval (if (< my/available-mem 1000000000)
-                                 "GC FULL! JUMP SHIP!"))
-
                       (:eval my/past-alerts)
                       )))
 
@@ -9129,10 +9146,15 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                                   my/tx-delta-formatted " ↑ "
                                   my/rx-delta-formatted " ↓ |")))
 
-                      (:eval (if my/mode-line-enable-available-mem
-                                 (concat " MEM: "
-                                         my/available-mem-formatted
-                                         " | ")))
+                      (:eval
+                       (when my/mode-line-enable-available-mem
+                         (concat
+                          " MEM: "
+                          ;; If < 100 mb mem, make text red
+                          (if (< my/available-mem 1000000000)
+                              (propertize my/available-mem-formatted 'face `(:background "red"))
+                            my/available-mem-formatted)
+                          " | ")))
 
                       ;;(:eval (concat "Org:" org-mode-line-string))
                       (:eval (if (boundp 'org-mode-line-string)
@@ -9162,7 +9184,6 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                       " - "
 
                       (:eval my/date)
-
                       ))))))
 #+END_SRC
 
@@ -9240,9 +9261,9 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     (set-face-attribute 'warning nil :foreground "DarkOrange" :background)
 
     ;; Syntax
-    (set-face-attribute  'font-lock-doc-face nil :foreground my/foreground-color :background my/background-color-4)
-    (defvar my/comment-face-height (floor (* my/default-face-height 1.15)))
-    (set-face-attribute  'font-lock-comment-face nil :foreground my/foreground-color :background my/background-color-1) ;;:height my/comment-face-height)
+    (set-face-attribute 'font-lock-doc-face nil :foreground my/foreground-color :background my/background-color-4)
+    ;;(defvar my/comment-face-height (floor (* my/default-face-height 1.15)))
+    (set-face-attribute 'font-lock-comment-face nil :foreground my/foreground-color :background my/background-color-1) ;;:height my/comment-face-height)
     (set-face-attribute 'font-lock-string-face nil :foreground my/foreground-color :background my/background-color-1)
     (set-face-attribute 'font-lock-function-name-face nil :weight 'bold)
 
@@ -9451,7 +9472,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
   ;;; Mode line
     (set-face-attribute 'header-line nil
                         :foreground my/foreground-color
-                        :background my/background-color-2)
+                        :background my/background-color)
 
     ;; Mode line separator
     ;; Set mode line height
@@ -9465,7 +9486,17 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
     ;; Highlight faces
     ;;(highlight-indent-guides-auto-set-faces)
-    )
+
+  ;;; Which-key
+    (set-face-attribute 'which-key-command-description-face nil :family my/mono-font)
+    (set-face-attribute 'which-key-docstring-face nil :family my/mono-font)
+    (set-face-attribute 'which-key-group-description-face nil :family my/mono-font)
+    (set-face-attribute 'which-key-highlighted-command-face nil :family my/mono-font)
+    (set-face-attribute 'which-key-key-face nil :family my/mono-font)
+    (set-face-attribute 'which-key-local-map-description-face nil :family my/mono-font)
+    (set-face-attribute 'which-key-note-face nil :family my/mono-font)
+    (set-face-attribute 'which-key-separator-face nil :family my/mono-font)
+    (set-face-attribute 'which-key-special-key-face nil :family my/mono-font))
 
   (if window-system
       (add-hook 'exwm-init-hook 'my/paper-mode)
