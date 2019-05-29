@@ -634,13 +634,6 @@ Default file-size-human-readable returns decimal values
 ;; (my/inline-overlay-print "test")
 #+END_SRC
 
-** Freeze
-Holds up the main thread
-#+BEGIN_SRC emacs-lisp
-  (defun my/freeze-emacs ()
-    (while t))
-#+END_SRC
-
 * Fonts
 ** Normal fonts
 #+BEGIN_SRC emacs-lisp
@@ -9088,9 +9081,13 @@ When projectile-mode is on, project name is updated on every keypress, here it i
   ;; In seconds
   (defvar my/eye-timer-break-every (* 21 60))
 
+  (defun my/eye-timer-break-screen ()
+    (switch-to-buffer "Break")
+    (insert "Break!"))
+
   (defun my/eye-timer-add ()
     (message "$$$$$$$$$$$$$BREAK 20 sec$$$$$$$$$$$$$$")
-    (my/freeze-emacs)
+    (my/eye-timer-break-screen)
     ;;(my/alert "Eye timer" 'high)
     (setq my/eye-timer-last-break (float-time)))
 
