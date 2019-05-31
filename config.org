@@ -7509,26 +7509,31 @@ You need llvm
 ** Custom locate
 Locate only under current dir
 #+BEGIN_SRC emacs-lisp
-  (defvar locate-cache nil)
+  (defvar my/locate-cache nil)
 
   (defun my/locate-update-cache ()
-    (setq locate-cache (split-string
-                        (shell-command-to-string "locate -r .")
-                        "\n")))
+    (setq my/locate-cache (split-string
+                           (shell-command-to-string "locate -r .")
+                           "\n")))
+
+  (defun my/locate-list-remove-outside-curr-dir ()
+    "Return locate cache with irrelevant entries removed."
+    (let ((dir (expand-file-name default-directory)))
+      (seq-filter (lambda (string) (s-starts-with-p dir string)) my/locate-cache)))
+
   (defun my/locate ()
     (interactive)
-    (let
-        ((original-gc gc-cons-threshold))
+    (let ((original-gc gc-cons-threshold))
       (setq gc-cons-threshold 80000000)
       ;; Check if cache is empty
-      (when (not locate-cache)
+      (when (not my/locate-cache)
         (my/locate-update-cache)
         ;; If still nothing in cache
-        (when (not locate-cache)
+        (when (not my/locate-cache)
           (message "Locate command returned nothing")))
 
-      (ivy-read "Locate: " locate-cache
-                :initial-input default-directory
+      (ivy-read "Locate: " (my/locate-list-remove-outside-curr-dir)
+                :initial-input (expand-file-name default-directory)
                 :action (lambda (file)
                           (when file
                             (with-ivy-window
