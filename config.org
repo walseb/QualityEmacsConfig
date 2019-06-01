@@ -7516,10 +7516,15 @@ Locate only under current dir
                            (shell-command-to-string "locate -r .")
                            "\n")))
 
+  ;; Would be nice if we could remove the initial file path, but it's too slow with pure map
+  ;;  (map 'list (lambda (string) (substring string (length dir))))
+  ;; And using mapc doesn't work because substring is a pure function
+  ;;  (mapc (lambda (string) (substring string (length dir))))
   (defun my/locate-list-remove-outside-curr-dir ()
     "Return locate cache with irrelevant entries removed."
     (let ((dir (expand-file-name default-directory)))
-      (seq-filter (lambda (string) (s-starts-with-p dir string)) my/locate-cache)))
+      (seq-filter
+       (lambda (string) (s-starts-with-p dir string)) my/locate-cache)))
 
   (defun my/locate ()
     (interactive)
