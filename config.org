@@ -290,6 +290,13 @@ E.g.
 Where =bol= is beginning of line, and =space= is anything that has whitespace syntax
 For more symbols read =rx= help docs, it has everything
 
+** WSL
+*** When typing citation mark an @ is pasted using X11 passthrough
+X11 probably uses UK language layout. Fix it with
+#+BEGIN_SRC shell
+  setxkbmap us
+#+END_SRC
+
 * Todo
 ** Fix s key moving around the view when searching down
 ** PR evil-mc changes
@@ -5550,9 +5557,12 @@ Enable org mode for .org.gpg files
 
 ** Use tramp for sudo
 #+BEGIN_SRC emacs-lisp
-  (require 'em-tramp)
+  ;; em-tramp is broken in wsl-1
+  (unless my/running-wsl-1
+    (require 'em-tramp)
+    (defalias 'sudo 'eshell/sudo))
+
   ;;  (shell-command "alias sudo 'eshell/sudo $*'")
-  (defalias 'sudo 'eshell/sudo)
 #+END_SRC
 
 ** Autocompletion
@@ -8835,7 +8845,7 @@ http://www.holgerschurig.de/en/emacs-tayloring-the-built-in-mode-line/
 
 **** CPU heat
 #+BEGIN_SRC emacs-lisp
-  (defvar my/mode-line-enable-cpu-temp t)
+  (defvar my/mode-line-enable-cpu-temp nil)
 
   (if (and
        ;; If lm_sensors is not installed
@@ -8843,14 +8853,12 @@ http://www.holgerschurig.de/en/emacs-tayloring-the-built-in-mode-line/
        ;; If there aren't any cpu heat sensors (eg. virtual machine)
        (= 0 (string-match-p ""
                             (shell-command-to-string "sensors | grep \"Core 0:\""))))
-      (setq my/mode-line-enable-cpu-temp nil))
+      (setq my/mode-line-enable-cpu-temp t))
 
   (defvar my/cpu-temp "")
 
   (defun my/update-cpu-temp ()
     (interactive)
-    ;;(if my/mode-line-enable-cpu-temp))
-
     ;; FIXME emacs regexes are wierd, use position of temp in print insead
     (string-match "\+.*C\s" (shell-command-to-string "sensors | grep \"Core 0:\""))
     (setq my/cpu-temp (substring (match-string 0 (shell-command-to-string "sensors | grep \"Core 0:\"")) 0 -3)))
@@ -9512,6 +9520,12 @@ When projectile-mode is on, project name is updated on every keypress, here it i
   ;; (counsel-faces)
 
   (define-key my/leader-map (kbd "M-c") 'my/paper-mode)
+#+END_SRC
+
+* Run command on boot
+#+BEGIN_SRC emacs-lisp
+  (if my/on-boot-run
+      (async-shell-command my/on-boot-run))
 #+END_SRC
 
 * Restore gc mem

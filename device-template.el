@@ -15,3 +15,7 @@
 (defvar my/ivy-youtube-key nil)
 
 (defvar my/enable-randr t)
+
+(defvar my/running-wsl-1 nil)
+
+(defvar my/on-boot-run nil)
