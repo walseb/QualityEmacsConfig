@@ -361,7 +361,6 @@ Colors change when you put your cursor over custom faces
 ** Customize ivy more
 
 ** % should go to closest paren if not on one
-** Different face for strings and comments
 ** Dedicated auto comment key?
 * First
 Things to do first
@@ -1011,13 +1010,19 @@ Allows for using indention as text objects
   (evil-goggles-use-diff-faces)
 #+END_SRC
 
-** Evil-matchit
+** Match paren
+The normal evil-jump-item gives up easily. This tries to get to a paren more
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'evil-matchit)
-  (global-evil-matchit-mode 1)
+  (defun my/match-paren ()
+    (interactive)
+    (when (not (ignore-errors (call-interactively #'evil-jump-item)))
+      (backward-up-list)))
+
+  (my/evil-normal-define-key "%" 'my/match-paren)
 #+END_SRC
 
 ** Goto end of line
+By default evil goes to the last line, first char. This goes to the very last char in the buffer
 #+BEGIN_SRC emacs-lisp
   (evil-define-motion evil-goto-line (count)
     "Go to the first non-blank character of line COUNT.
@@ -9229,7 +9234,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     (set-face-attribute 'font-lock-doc-face nil :foreground my/foreground-color :background my/background-color-4)
     ;;(defvar my/comment-face-height (floor (* my/default-face-height 1.15)))
     (set-face-attribute 'font-lock-comment-face nil :foreground my/foreground-color :background my/background-color-1) ;;:height my/comment-face-height)
-    (set-face-attribute 'font-lock-string-face nil :foreground my/foreground-color :background my/background-color-1)
+    (set-face-attribute 'font-lock-string-face nil :foreground my/foreground-color :background my/background-color-2)
     (set-face-attribute 'font-lock-function-name-face nil :weight 'bold)
 
     ;; (set-face-attribute  'font-lock-keyword-face nil :foreground my/foreground-color :background my/background-color-1)
@@ -9301,8 +9306,8 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     (set-face-attribute 'ivy-grep-info nil :background my/foreground-color-6 :foreground my/background-color)
 
         ;;; Symbol overlay
-    ;;      (if window-system
-    ;;  (set-face-attribute 'symbol-overlay-default-face nil :foreground my/foreground-color :background my/mark-color-5))
+    (if window-system
+        (set-face-attribute 'symbol-overlay-default-face nil :foreground my/foreground-color :background my/mark-color-5))
 
         ;;; Dired
     (set-face-attribute 'dired-directory nil :foreground my/background-color :background my/foreground-color)
@@ -9437,7 +9442,7 @@ When projectile-mode is on, project name is updated on every keypress, here it i
   ;;; Mode line
     (set-face-attribute 'header-line nil
                         :foreground my/foreground-color
-                        :background my/background-color)
+                        :background "#063000")
 
     ;; Mode line separator
     ;; Set mode line height
