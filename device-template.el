@@ -16,6 +16,6 @@
 
 (defvar my/enable-randr t)
 
-(defvar my/running-wsl-1 nil)
+(defvar my/running-vm nil)
 
 (defvar my/on-boot-run nil)

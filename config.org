@@ -670,14 +670,16 @@ Default file-size-human-readable returns decimal values
   (defun my/get-best-mono-font ()
     (if my/is-font-mono
         my/font
-      (if (my/font-installed "Inconsolata")
-          "Inconsolata"
-        (if (my/font-installed "dejavu sans mono")
-            "DejaVuSansMono"
-          (if (my/font-installed "Noto Sans Mono")
-              "NotoSansMono"
-            (if (my/font-installed "Perfect DOS VGA 437")
-                "Perfect DOS VGA 437"))))))
+      (if (my/font-installed "Inconsolata LGC")
+          "Inconsolata LGC"
+        (if (my/font-installed "Inconsolata")
+            "Inconsolata"
+          (if (my/font-installed "dejavu sans mono")
+              "DejaVuSansMono"
+            (if (my/font-installed "Noto Sans Mono")
+                "NotoSansMono"
+              (if (my/font-installed "Perfect DOS VGA 437")
+                  "Perfect DOS VGA 437")))))))
 
   (defvar my/mono-font (my/get-best-mono-font))
 
@@ -1127,7 +1129,7 @@ Stop emacs from creating backup files on every save
 
 ** Delete per-session backups on startup
 #+BEGIN_SRC emacs-lisp
-  (shell-command (concat "rm " my/backup-per-session-directory "*" ))
+  (async-shell-command (concat "rm " my/backup-per-session-directory "*" ))
 #+END_SRC
 
 ** Undo tree
@@ -4928,6 +4930,11 @@ or
   (add-hook 'haskell-mode-hook #'intero-mode)
 #+END_SRC
 
+** Nix
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'nix-mode)
+#+END_SRC
+
 ** C/CPP
 *** Irony
 #+BEGIN_SRC emacs-lisp
@@ -5557,8 +5564,8 @@ Enable org mode for .org.gpg files
 
 ** Use tramp for sudo
 #+BEGIN_SRC emacs-lisp
-  ;; em-tramp is broken in wsl-1
-  (unless my/running-wsl-1
+  ;; em-tramp is broken in wsl-1 and vms it seems
+  (unless my/running-vm
     (require 'em-tramp)
     (defalias 'sudo 'eshell/sudo))
 
@@ -6464,57 +6471,6 @@ If enabled it auto enables projectile, which has high CPU usage
 #+END_SRC
 
 * Media
-** Videos
-*** Ivy-youtube
-#+BEGIN_SRC emacs-lisp
-  (straight-use-package 'ivy-youtube)
-  ;; Need to require to be able to set `ivy-yoube-key'
-  (require 'ivy-youtube)
-
-  (setq ivy-youtube-key my/ivy-youtube-key)
-
-  (setq ivy-youtube-play-at "mpv")
-
-  (setq ivy-youtube-max-results 50)
-  (setq ivy-youtube-history-file nil)
-
-  (define-key my/leader-map (kbd "y") 'ivy-youtube)
-#+END_SRC
-
-**** Play video at max audio quality
-#+BEGIN_SRC emacs-lisp
-  (setq mpv-youtube-dl-parameters
-        (concat
-         ;; Video
-         "--ytdl-format="
-         ;; Prefer free format and my resolution
-         "((bestvideo[height<=?" (int-to-string (car (cdr my/device/resolution))) "][vcodec^=vp9]"
-         ;; Then just my resolution
-         "/bestvideo[height<=?" (int-to-string (car (cdr my/device/resolution))) "]"
-         ;; Then just any video
-         "/bestvideo)"
-
-         ;; Audio
-         ;; Prefer free formats
-         "+(bestaudio[acodec=opus]"
-         "/bestaudio[acodec=vorbis]"
-         "/bestaudio[acodec=aac]"
-         ;; Then just any audio format
-         "/bestaudio))"
-         "/best"))
-
-  (el-patch-feature ivy-youtube)
-  (el-patch-defun ivy-youtube-play-on-process (video-url)
-    "Start a process based on ivy-youtube-play-at variable passing VIDEO-URL."
-    (message (format "Starting a process with: [%s %s] with youtube-dl parameters: %s" ivy-youtube-play-at video-url mpv-youtube-dl-parameters))
-    (make-process :name "Ivy Youtube"
-                  :buffer "*Ivy Youtube Output*"
-                  :sentinel (lambda (process event)
-                              (message
-                               (format "Ivy Youtube: Process %s (Check buffer *Ivy Youtube Output*)" event)))
-                  :command `(,ivy-youtube-play-at ,mpv-youtube-dl-parameters ,video-url)))
-#+END_SRC
-
 ** Volume keys
 #+BEGIN_SRC emacs-lisp
   (defvar my/audio-sink nil)
@@ -7522,6 +7478,7 @@ Locate only under current dir
   (defvar my/locate-cache nil)
 
   (defun my/locate-update-cache ()
+    (interactive)
     (setq my/locate-cache (split-string
                            (shell-command-to-string "locate -r .")
                            "\n")))
