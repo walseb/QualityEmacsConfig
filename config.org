@@ -348,7 +348,9 @@ HIE, etc
 ** Add is wsl/VM in config
 This will disable volume controls for example
 
-** Lisp only locate
+** Locate
+*** Locate should cut out the default directory from the prompt
+*** Lisp only locate
 Look into changing from locate to using "directory-files-recursively" to cache all files on the pc
 Problem seems to be that it needs sudo to do this
 
@@ -359,6 +361,8 @@ Colors change when you put your cursor over custom faces
 ** Customize ivy more
 
 ** % should go to closest paren if not on one
+** Different face for strings and comments
+** Dedicated auto comment key?
 * First
 Things to do first
 #+BEGIN_SRC emacs-lisp
@@ -1041,6 +1045,11 @@ Allows for using indention as text objects
 #+BEGIN_SRC emacs-lisp
   (my/evil-normal-define-key "g u" 'evil-downcase)
   (my/evil-normal-define-key "g U" 'evil-upcase)
+#+END_SRC
+
+*** RET in normal mode should insert enter
+#+BEGIN_SRC emacs-lisp
+  (my/evil-normal-define-key "RET" #'newline)
 #+END_SRC
 
 *** Add perspective movement to g
@@ -8448,25 +8457,9 @@ Highlight thing under cursor and all other occurrences
 
 ** Disable comments with toggle
 #+BEGIN_SRC emacs-lisp
-  (define-key my/leader-map (kbd "c") 'my/comments-toggle)
-  (defvar my/comment-hide nil)
-
-  (defconst my/comment-default-face-foreground nil)
-  (defconst my/comment-default-face-background nil)
-
-  (defun my/comments-store-faces()
-    (setq my/comment-default-face-foreground (face-attribute 'font-lock-comment-face :foreground))
-    (setq my/comment-default-face-background (face-attribute 'font-lock-comment-face :background)))
-
-  (defun my/comments-toggle ()
-    (interactive)
-    (unless my/comment-default-face-foreground
-      (my/comments-store-faces))
-
-    (setq my/comment-hide (not my/comment-hide))
-    (if my/comment-hide
-        (set-face-attribute 'font-lock-comment-face nil :foreground my/background-color :background my/background-color)
-      (set-face-attribute 'font-lock-comment-face nil :foreground my/comment-default-face-foreground :background my/comment-default-face-background)))
+  (straight-use-package 'hide-comnt)
+  (require 'hide-comnt)
+  (define-key my/leader-map (kbd "c") 'hide/show-comments-toggle)
 #+END_SRC
 
 ** Faces
