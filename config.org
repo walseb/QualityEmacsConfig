@@ -776,6 +776,11 @@ Stop custom from editing init.el
   (add-hook 'minibuffer-setup-hook 'evil-insert-state)
 #+END_SRC
 
+*** Set max minibuffer height
+#+BEGIN_SRC emacs-lisp
+  ;;(setq max-mini-window-height 1)
+#+END_SRC
+
 ** Bind evil key functions
 #+BEGIN_SRC emacs-lisp
   (defun my/evil-normal-define-key-in-mode (mode key command)
@@ -3381,9 +3386,6 @@ Doesn't work with my setup right now
 ** Flycheck
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'flycheck)
-
-  ;; Use new buffer if message is longer than 1 line, can't get it to expand the minibuffer instead
-  (setq max-mini-window-height 1)
 
   ;; Decrease delay
   (setq flycheck-display-errors-delay 0.1)
