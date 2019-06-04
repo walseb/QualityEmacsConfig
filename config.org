@@ -362,6 +362,21 @@ Colors change when you put your cursor over custom faces
 
 ** % should go to closest paren if not on one
 ** Dedicated auto comment key?
+** g-n g-p highlighting stays
+** Pressing e in dired insert mode should kill the older buffer
+** Make macros faster
+Temporarily disable "global-hl-line-mode" while running macro (takes like 70% cpu in worst cases)
+Disable symbol-overlay while in macro (takes little cpu, but you can still gain speed)
+
+** C-h in ivy-find-file
+** When hiding comments make comment face same as background
+Seems like the comment background color is still left when hiding comments
+
+** Eldoc doesn't resize
+Checkout eldoc-echo-area-use-multiline-p
+Might be a problem with the exwm minibuffer stuff
+Resize-mini-windows?
+
 * First
 Things to do first
 #+BEGIN_SRC emacs-lisp
@@ -1074,6 +1089,21 @@ By default evil goes to the last line, first char. This goes to the very last ch
 (setq evil-kill-on-visual-paste nil)
 #+END_SRC
 
+*** Go down visual line with M-p, M-n
+#+BEGIN_SRC emacs-lisp
+  (my/evil-universal-define-key "M-n" #'evil-next-visual-line)
+  (my/evil-universal-define-key "M-p" #'evil-previous-visual-line)
+#+END_SRC
+
+*** Move by paragraph easier
+#+BEGIN_SRC emacs-lisp
+  (my/evil-normal-define-key "j" 'evil-forward-paragraph)
+  (my/evil-visual-define-key "j" 'evil-forward-paragraph)
+
+  (my/evil-normal-define-key "J" 'evil-backward-paragraph)
+  (my/evil-visual-define-key "J" 'evil-backward-paragraph)
+#+END_SRC
+
 * Backups
 Stop emacs from creating backup files on every save
 #+BEGIN_SRC emacs-lisp
@@ -1498,7 +1528,6 @@ Disable startup message
 
 ** Disable useless functionallity
 #+BEGIN_SRC emacs-lisp
-  (mouse-wheel-mode -1)
   (tooltip-mode -1)
 #+END_SRC
 
@@ -1790,6 +1819,18 @@ ls for systems without ls installed (like windows). Gets used automatically on t
 ** Echo keypresses instantly
 #+BEGIN_SRC emacs-lisp
 (setq echo-keystrokes 0.01)
+#+END_SRC
+
+** Disable mouse features
+#+BEGIN_SRC emacs-lisp
+  (define-key minibuffer-inactive-mode-map [mouse-1] #'ignore)
+#+END_SRC
+
+** Minibuffer-depth
+Enable and show minibuffer recursive depth
+#+BEGIN_SRC emacs-lisp
+  (setq enable-recursive-minibuffers t)
+  (minibuffer-depth-indicate-mode 1)
 #+END_SRC
 
 * File options
@@ -2894,24 +2935,13 @@ Used for universal folding
 * Completion
 ** Ivy
 #+BEGIN_SRC emacs-lisp
-    (straight-use-package 'ivy)
+  (straight-use-package 'ivy)
+  (ivy-mode 1)
 
-    (ivy-mode 1)
+  (setq ivy-use-virtual-buffers nil)
 
-    ;; Buffer history
-  ;;  (setq ivy-use-virtual-buffers t)
-    (setq ivy-use-virtual-buffers nil)
-
-    ;; Allows calling new minibuffer commands while in the minibuffer. So for example C-s M-x works
-    (setq enable-recursive-minibuffers t)
-
-    ;; Make user intput selectable
-    (setq ivy-use-selectable-prompt t)
-
-    ;;Disable fuzzy search for swiper
-    ;;(setq ivy-re-builders-alist
-    ;;      '((swiper . ivy--regex-plus)
-    ;;       (t      . ivy--regex-fuzzy)))
+  ;; Make user intput selectable
+  (setq ivy-use-selectable-prompt t)
 #+END_SRC
 
 *** Visuals
@@ -3509,14 +3539,14 @@ Flycheck with extra correction for elisp packages
       (setq my/isearch-current-buffer (current-buffer))
       (if forward
           (progn
-            (narrow-to-region (window-start) (window-end))
+            ;;(narrow-to-region (window-start) (window-end))
             (my/isearch-forward-regexp))
-        (narrow-to-region (window-start) (window-end))
+        ;;(narrow-to-region (window-start) (window-end))
         (my/isearch-backward-regexp))
-      ;; FIXME: Currently this resets narrow when done
-      (widen)
-      (if narrow-restore
-          (narrow-to-region (car narrow-restore) (nth 1 narrow-restore)))
+      ;; FIXME: Currently this resets narrow when done, fix this with save-restriction
+      ;;(widen)
+  ;;    (if narrow-restore
+  ;;        (narrow-to-region (car narrow-restore) (nth 1 narrow-restore)))
       ;;(setq my/isearch-end-pos (point))
       ;;(goto-char window-top)
       ;;(goto-char end-pos)
@@ -4312,7 +4342,7 @@ g-; and g-,
   (evil-define-key 'insert dired-mode-map (kbd "a") 'dired-find-alternate-file)
   (evil-define-key 'normal dired-mode-map (kbd "d") 'dired-flag-file-deletion)
   (evil-define-key 'insert dired-mode-map (kbd "d") 'dired-flag-file-deletion)
-  (evil-define-key 'insert dired-mode-map (kbd "e") 'dired-find-file)
+  (evil-define-key 'insert dired-mode-map (kbd "e") 'my/find-file)
   (evil-define-key 'insert dired-mode-map (kbd "f") 'dired-find-file)
   (evil-define-key 'insert dired-mode-map (kbd "\C-m") 'dired-find-file)
   ;; (put 'dired-find-file :advertised-binding (kbd "\C-m"))
@@ -5371,37 +5401,38 @@ TODO: Fix settings, grab them from package site
 
 ** Simple search
 Search useful for making macros because it's fast
+But is it really faster than isearch?
 #+BEGIN_SRC emacs-lisp
-  (defvar my/last-search)
-  (defun my/search-forward ()
-    (interactive)
-    (setq my/last-search (completing-read "Search: " nil))
-    (search-forward-regexp my/last-search))
-
-  (defun my/search-backward ()
-    (interactive)
-    (setq my/last-search (completing-read "Search: " nil))
-    (search-backward-regexp my/last-search))
-
-  (defun my/repeat-search-forward ()
-    (interactive)
-    (search-forward-regexp my/last-search))
-
-  (defun my/repeat-search-backward ()
-    (interactive)
-    (search-backward-regexp my/last-search))
-
-  (my/evil-normal-define-key "/" 'my/search-forward)
-  (my/evil-visual-define-key "/" 'my/search-forward)
-
-  (my/evil-normal-define-key "?" 'my/search-backward)
-  (my/evil-visual-define-key "?" 'my/search-backward)
-
-  (my/evil-normal-define-key "j" 'my/repeat-search-forward)
-  (my/evil-visual-define-key "j" 'my/repeat-search-forward)
-
-  (my/evil-normal-define-key "J" 'my/repeat-search-backward)
-  (my/evil-visual-define-key "J" 'my/repeat-search-backward)
+  ;;(defvar my/last-search)
+  ;;(defun my/search-forward ()
+  ;;  (interactive)
+  ;;  (setq my/last-search (completing-read "Search: " nil))
+  ;;  (search-forward-regexp my/last-search))
+  ;;
+  ;;(defun my/search-backward ()
+  ;;  (interactive)
+  ;;  (setq my/last-search (completing-read "Search: " nil))
+  ;;  (search-backward-regexp my/last-search))
+  ;;
+  ;;(defun my/repeat-search-forward ()
+  ;;  (interactive)
+  ;;  (search-forward-regexp my/last-search))
+  ;;
+  ;;(defun my/repeat-search-backward ()
+  ;;  (interactive)
+  ;;  (search-backward-regexp my/last-search))
+  ;;
+  ;;(my/evil-normal-define-key "/" 'my/search-forward)
+  ;;(my/evil-visual-define-key "/" 'my/search-forward)
+  ;;
+  ;;(my/evil-normal-define-key "?" 'my/search-backward)
+  ;;(my/evil-visual-define-key "?" 'my/search-backward)
+  ;;
+  ;;;;(my/evil-normal-define-key "j" 'my/repeat-search-forward)
+  ;;;;(my/evil-visual-define-key "j" 'my/repeat-search-forward)
+  ;;;;
+  ;;;;(my/evil-normal-define-key "J" 'my/repeat-search-backward)
+  ;;;;(my/evil-visual-define-key "J" 'my/repeat-search-backward)
 #+END_SRC
 
 ** Elmacro
@@ -5830,6 +5861,13 @@ Default eshell/clear only spams newlines
 
   (my/evil-visual-define-key "s" 'my/isearch-current-screen-forward)
   (my/evil-visual-define-key "S" 'my/isearch-current-screen-backward)
+
+
+  (my/evil-normal-define-key "g n" 'isearch-repeat-forward)
+  (my/evil-normal-define-key "g p" 'isearch-repeat-backward)
+
+  (my/evil-visual-define-key "g n" 'isearch-repeat-forward)
+  (my/evil-visual-define-key "g p" 'isearch-repeat-backward)
 
   ;; (my/evil-normal-define-key "/" 'evil-substitute)
   ;; (my/evil-normal-define-key "?" 'evil-change-whole-line)
@@ -8807,7 +8845,10 @@ http://www.holgerschurig.de/en/emacs-tayloring-the-built-in-mode-line/
        (my/is-system-package-installed 'sensors)
        ;; If there aren't any cpu heat sensors (eg. virtual machine)
        (= 0 (string-match-p ""
-                            (shell-command-to-string "sensors | grep \"Core 0:\""))))
+                            (shell-command-to-string "sensors | grep \"Core 0:\"")))
+       ;; If it returns "no sensors found"
+       (not (= 0 (string-match-p "No sensors found"
+                                 (shell-command-to-string "sensors | grep \"Core 0:\"")))))
       (setq my/mode-line-enable-cpu-temp t))
 
   (defvar my/cpu-temp "")
@@ -9114,12 +9155,12 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                       (:eval (if my/mode-line-enable-network-traffic
                                  (concat
                                   my/tx-delta-formatted " ↑ "
-                                  my/rx-delta-formatted " ↓ |")))
+                                  my/rx-delta-formatted " ↓ | ")))
 
                       (:eval
                        (when my/mode-line-enable-available-mem
                          (concat
-                          " MEM: "
+                          "MEM: "
                           ;; If < 100 mb mem, make text red
                           (if (< my/available-mem 1000000000)
                               (propertize my/available-mem-formatted 'face `(:background "red"))
