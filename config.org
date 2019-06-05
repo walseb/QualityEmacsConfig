@@ -372,10 +372,11 @@ Disable symbol-overlay while in macro (takes little cpu, but you can still gain 
 ** When hiding comments make comment face same as background
 Seems like the comment background color is still left when hiding comments
 
-** Eldoc doesn't resize
-Checkout eldoc-echo-area-use-multiline-p
-Might be a problem with the exwm minibuffer stuff
-Resize-mini-windows?
+** Should org mode indent source blocks by 2 spaces?
+Checkout heading: Disable code block indent
+
+** Read large files package
+There is one for dired too
 
 * First
 Things to do first
@@ -1611,11 +1612,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
   (add-hook 'dired-mode-hook 'my/dired-sudo-edit-setup)
 #+END_SRC
 
-** With-editor
-#+BEGIN_SRC emacs-lisp
-  (straight-use-package 'with-editor)
-#+END_SRC
-
 ** Enable disabled commands
 #+BEGIN_SRC emacs-lisp
   (put 'narrow-to-region 'disabled nil)
@@ -2069,6 +2065,11 @@ Enable and show minibuffer recursive depth
      ;; (sql . nil)
      ;; (sqlite . t)))
 
+*** Disable warnings in org mode before evaluating source block
+#+BEGIN_SRC emacs-lisp
+  (setq org-confirm-babel-evaluate nil)
+#+END_SRC
+
 ** Bullets
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'org-bullets)
@@ -2081,6 +2082,23 @@ Enable and show minibuffer recursive depth
 #+END_SRC
 
 ** Visuals
+*** Hide emphasis markers
+The equal signs =here= to make it bold should not be visible
+#+BEGIN_SRC emacs-lisp
+  (setq org-hide-emphasis-markers t)
+#+END_SRC
+
+*** Disable edit-src help header
+#+BEGIN_SRC emacs-lisp
+(setq org-edit-src-persistent-message nil)
+#+END_SRC
+
+*** Disable code block indent
+Should I change this??
+#+BEGIN_SRC emacs-lisp
+  ;;(setq org-edit-src-content-indentation 0)
+#+END_SRC
+
 *** Change face of levels
 #+BEGIN_SRC emacs-lisp
   (set-face-attribute 'org-level-1 nil :inherit 'outline-1 :height 1.9)
@@ -2318,10 +2336,10 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 
 *** Show map
 #+BEGIN_SRC emacs-lisp
-(define-prefix-command 'my/org-show-mode-map)
-(define-key my/org-mode-map (kbd "s") 'my/org-show-mode-map)
+  (define-prefix-command 'my/org-show-mode-map)
+  ;;(define-key my/org-mode-map (kbd "s") 'my/org-show-mode-map)
 
-(define-key my/org-show-mode-map (kbd "l") 'org-toggle-link-display)
+  (define-key my/org-mode-map (kbd "s") 'org-toggle-link-display)
 #+END_SRC
 
 * Outline
@@ -4574,7 +4592,8 @@ Shows information in echo area
     (if (eq evil-state 'visual)
         (my/auto-eval-region)
       (pcase major-mode
-        ('org-mode (call-interactively 'org-babel-execute-src-block))
+        ;; Silent result
+        ('org-mode (org-babel-execute-src-block nil nil '((:result-params . ("none")))))
         ('scheme-mode (geiser-eval-definition nil))
         ('clojure-mode (cider-eval-last-sexp))
         ('racket-mode (racket-eval-last-sexp))
@@ -4611,6 +4630,7 @@ Shows information in echo area
   (defun my/auto-eval-print ()
     (interactive)
     (pcase major-mode
+      ('org-mode (call-interactively #'org-babel-execute-src-block))
       ('scheme-mode (geiser-eval-last-sexp t))
       ('clojure-mode (cider-eval-print-last-sexp))
       ('csharp-mode (my/csharp-run-repl))
@@ -5590,17 +5610,11 @@ Enable org mode for .org.gpg files
   (setq eshell-history-size 10000)
 
   (setq-default eshell-status-in-mode-line nil)
+
   (defun my/eshell ()
     (interactive)
     (eshell)
     (my/give-buffer-unique-name "*eshell*"))
-
-  ;; Use `counsel-esh-history' instead
-  ;; (defun my/eshell-insert-history ()
-  ;; (interactive)
-  ;; (insert (completing-read "Eshell history: "
-  ;; (delete-dups
-  ;; (ring-elements eshell-history-ring)))))
 #+END_SRC
 
 ** Prefer lisp to bash
@@ -5730,6 +5744,13 @@ Default eshell/clear only spams newlines
           (evil-forward-char 2)
         (goto-char start-point)
         (evil-digit-argument-or-evil-beginning-of-line))))
+#+END_SRC
+
+** With-editor
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'with-editor)
+
+  (add-hook 'eshell-mode 'with-editor-export-editor)
 #+END_SRC
 
 ** Keys
