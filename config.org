@@ -1936,6 +1936,16 @@ Enable and show minibuffer recursive depth
   (define-key my/open-map (kbd "B") 'my/backups-visit)
 #+END_SRC
 
+** Visit nixos config
+#+BEGIN_SRC emacs-lisp
+  (defun my/nixos-config-visit ()
+    (interactive)
+    (find-file "/etc/nixos/configuration.nix")
+    (run-hooks 'my/open-map-hook))
+
+  (define-key my/open-map (kbd "n") 'my/nixos-config-visit)
+#+END_SRC
+
 ** Visit config
 #+BEGIN_SRC emacs-lisp
   (defun my/config-visit ()
