@@ -338,7 +338,7 @@ Steps to reproduce: open two window split, do M-x, close the window you focused 
 ** Automate gnus
 *** Notmuch gnus integration
 *** Dovecot docker process
-Google "email with gnus and docker"
+Add to and configure in nixos config
 
 ** Use lexical bindings in config
 ** Add more haskell tools
@@ -401,6 +401,7 @@ Great for referencing to source code
 Read
 https://github.com/emacs-lsp/lsp-mode/issues/377
 
+** M-n and M-p to move visual line
 * First
 Things to do first
 #+BEGIN_SRC emacs-lisp
@@ -1137,6 +1138,15 @@ By default evil goes to the last line, first char. This goes to the very last ch
   (my/evil-visual-define-key "J" 'evil-replace-state)
 #+END_SRC
 
+*** Don't save chars deleted with x to clipboard
+#+BEGIN_SRC emacs-lisp
+  (my/evil-normal-define-key "x" 'delete-char)
+  (my/evil-normal-define-key "X"
+                             '(lambda () (interactive)
+                                (backward-char)
+                                (call-interactively #'delete-char)))
+#+END_SRC
+
 * Backups
 Stop emacs from creating backup files on every save
 #+BEGIN_SRC emacs-lisp
@@ -1375,38 +1385,45 @@ When changing leader, change =my/leader-map-key=
   (add-to-list 'load-path (expand-file-name (concat user-emacs-directory "local-packages")))
 #+END_SRC
 
-* Write config map
+* Write configs
 #+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/write-config-map)
-  (define-key my/leader-map (kbd "C-c") 'my/write-config-map)
+  (defun my/write-configs ()
+    (pcase (completing-read "Which config to write"
+                            '("gnus" "xdefaults" "xinit" "xmodmap" "mpd" "gpg-agent" "cabal"))
+      ("gnus" (my/write-gnus))
+      ("xdefaults" (my/write-xdefaults))
+      ("xinit" (my/write-xinitrc))
+      ("xmodmap" (my/write-xmodmap))
+      ("mpd" (my/write-mpd-config))
+      ("gpg-agent" (my/write-gpg-agent-config))
+      ("cabal" (my/write-cabal-config))))
+
+  (define-key my/leader-map (kbd "C-c") 'my/write-configs)
 #+END_SRC
 
 ** Write .gnus.el
 Create =.gnus.el=, which gnus reads from
 #+BEGIN_SRC emacs-lisp
-  (defun my/write-gnus ()
-    (interactive)
-    (if(eq fully-compatible-system t)
-        (my/create-file-with-content-if-not-exist "~/.gnus.el" "
+  (defconst my/gnus-config-text "
   AddYourEmailHereThenDeleteThis
   (setq mail-host-address \"MyAdress\")
-  ")))
+  ")
 
-  (define-key my/write-config-map (kbd "g") 'my/write-gnus)
+  (defun my/write-gnus ()
+    (my/create-file-with-content-if-not-exist
+    "~/.gnus.el" my/gnus-config-text))
 #+END_SRC
 
 ** Write .Xdefaults
 emacs. commands to disable scrollbar, etc before launching emacs, improving startup time
 #+BEGIN_SRC emacs-lisp
-  (defun my/write-xdefaults ()
-    (interactive)
-    (if(eq fully-compatible-system t)
-        (my/create-file-with-content-if-not-exist "~/.Xdefaults" "
+  (defconst my/xdefaults-config-text "
   emacs.toolBar: 0
   emacs.menuBar: 0
-  emacs.verticalScrollBars: off" )))
+  emacs.verticalScrollBars: off")
 
-  (define-key my/write-config-map (kbd "d") 'my/write-xdefaults)
+  (defun my/write-xdefaults ()
+    (my/create-file-with-content-if-not-exist "~/.Xdefaults" my/xdefaults-config-text))
 #+END_SRC
 
 ** Write .xinitrc
@@ -1414,10 +1431,7 @@ emacs. commands to disable scrollbar, etc before launching emacs, improving star
 setxkbmap to select keyboard layout
 
 #+BEGIN_SRC emacs-lisp
-  (defun my/write-xinitrc ()
-    (interactive)
-    (if(eq fully-compatible-system t)
-        (my/create-file-with-content-if-not-exist "~/.xinitrc" "
+  (defconst my/xinit-config-text "
   xset s off
   xset s noblank
   xset s off
@@ -1426,23 +1440,21 @@ setxkbmap to select keyboard layout
   setxkbmap -layout us -variant altgr-intl
   # setxkbmap -layout carpalx -variant qgmlwy
 
-  xmodmap ~./xmodmap
+  # xmodmap ~./xmodmap
 
   # Fix java windows in exwm
   export _JAVA_AWT_WM_NONREPARENTING=1
 
-  exec emacs")))
+  exec emacs")
 
-  (define-key my/write-config-map (kbd "i") 'my/write-xinitrc)
+  (defun my/write-xinitrc ()
+    (my/create-file-with-content-if-not-exist "~/.xinitrc" my/xinit-config-text))
 #+END_SRC
 
 ** Write .xmodmap
 This swaps capslock and ctrl
 #+BEGIN_SRC emacs-lisp
-  (defun my/write-xmodmap ()
-    (interactive)
-    (if(eq fully-compatible-system t)
-        (my/create-file-with-content-if-not-exist "~/.xmodmap" "
+  (defconst my/xmodmap-config-text "
   ! Swap Caps_Lock and Control_L
   remove Lock = Caps_Lock
   remove Control = Control_L
@@ -1450,23 +1462,15 @@ This swaps capslock and ctrl
   keysym Caps_Lock = Control_L
   add Lock = Caps_Lock
   add Control = Control_L
-  ")))
+  ")
 
-  (define-key my/write-config-map (kbd "m") 'my/write-xmodmap)
+  (defun my/write-xmodmap ()
+    (my/create-file-with-content-if-not-exist "~/.xmodmap" my/xmodmap-config-text))
 #+END_SRC
 
 ** Write mpd
 #+BEGIN_SRC emacs-lisp
-  (defun my/write-mpd-config ()
-    (interactive)
-    (setq my/config-directory "~/.config/")
-    (my/create-dir-if-not-exist my/config-directory)
-
-    (setq my/mpd-directory (concat my/config-directory "mpd/"))
-    (my/create-dir-if-not-exist my/mpd-directory)
-
-    (setq my/mpd-conf-file (concat my/mpd-directory "mpd.conf"))
-    (my/create-file-with-content-if-not-exist my/mpd-conf-file "
+  (defconst my/mpd-config-text "
   music_directory \"~/Music\"
   playlist_directory  \"~/.config/mpd/playlists\"
   db_file \"~/.config/mpd/mpd.db\"
@@ -1478,40 +1482,43 @@ This swaps capslock and ctrl
   audio_output {
   type \"pulse\"
   name \"pulse audio\"
-  }
-                   ")
+  }")
 
-    (my/create-file-if-not-exist (concat my/mpd-directory "mpd.log"))
-    (my/create-file-if-not-exist (concat my/mpd-directory "mpd.db"))
-    (my/create-dir-if-not-exist (concat my/mpd-directory "playlists/")))
+  (defun my/write-mpd-config ()
+    (let* ((config-dir "~/.config/")
+           (mpd-dir (concat config-dir "mpd/"))
+           (mpd-config (concat mpd-dir "mpd.conf")))
+      (my/create-dir-if-not-exist config-dir)
 
-  (define-key my/write-config-map (kbd "m") 'my/write-mpd-config)
+      (my/create-dir-if-not-exist mpd-dir)
+
+      (my/create-file-with-content-if-not-exist mpd-config my/mpd-config-text)
+
+      (my/create-file-if-not-exist (concat mpd-dir "mpd.log"))
+      (my/create-file-if-not-exist (concat mpd-dir "mpd.db"))
+      (my/create-dir-if-not-exist (concat mpd-dir "playlists/"))))
 #+END_SRC
 
 ** Write GPG pinentry
 #+BEGIN_SRC emacs-lisp
-  (defun my/setup-gpg-agent ()
-    (interactive)
-    (setq my/gpg-directory "~/.gnupg/")
-    (my/create-dir-if-not-exist my/gpg-directory)
-
-    (setq my/gpg-agent-conf-file (concat my/gpg-directory "gpg-agent.conf"))
-    (my/create-file-with-content-if-not-exist my/gpg-agent-conf-file "allow-emacs-pinentry")
-    (shell-command "gpgconf --reload gpg-agent"))
-
-  (define-key my/write-config-map (kbd "G") 'my/setup-gpg-agent)
+  (defun my/write-gpg-agent-config ()
+    (let* ((gpg-dir "~/.gnupg/")
+           (gpg-file (concat gpg-dir "gpg-agent.conf")))
+      (my/create-dir-if-not-exist gpg-dir)
+      (my/create-file-with-content-if-not-exist gpg-file "allow-emacs-pinentry")
+      (shell-command "gpgconf --reload gpg-agent")))
 #+END_SRC
 
-** Write all configs
+** Write cabal config
 #+BEGIN_SRC emacs-lisp
-  (defun my/write-all-config ()
-    (interactive)
-    (my/write-xdefaults)
-    (my/write-xinitrc)
-    (my/write-gnus)
-    (my/write-mpd-config))
+  (defconst my/nix-config-text "nix: true
+  documentation: True")
 
-  (define-key my/write-config-map (kbd "a") 'my/write-all-config)
+  (defun my/write-cabal-config ()
+    (let* ((cabal-dir "~/.cabal/")
+           (cabal-file (concat cabal-dir "config")))
+      (my/create-dir-if-not-exist cabal-dir)
+      (my/create-file-with-content-if-not-exist cabal-file my/nix-config-text)))
 #+END_SRC
 
 * Minor
@@ -4359,7 +4366,6 @@ g-; and g-,
   (evil-define-key 'normal dired-mode-map  (kbd "R") 'dired-do-rename)
   (evil-define-key 'insert dired-mode-map  (kbd "R") 'dired-do-rename)
   (evil-define-key 'insert dired-mode-map  (kbd "S") 'dired-do-symlink)
-  (evil-define-key 'normal dired-mode-map  (kbd "S") 'dired-do-symlink)
   (evil-define-key 'insert dired-mode-map  (kbd "T") 'dired-do-touch)
   (evil-define-key 'normal dired-mode-map  (kbd "X") 'dired-do-shell-command)
   (evil-define-key 'insert dired-mode-map  (kbd "X") 'dired-do-shell-command)
@@ -5054,11 +5060,22 @@ or
 #+END_SRC
 
 ** Haskell
+*** intero
 #+BEGIN_SRC emacs-lisp
-  ;;(straight-use-package 'haskell-mode)
-  (straight-use-package 'intero)
+  ;;(straight-use-package 'intero)
+  ;;
+  ;;(add-hook 'haskell-mode-hook 'intero-mode)
 
-  (add-hook 'haskell-mode-hook #'intero-mode)
+  ;; Enabble hlint
+  ;;(flycheck-add-next-checker 'intero '(warning . haskell-hlint))
+#+END_SRC
+
+*** lsp-haskell
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'lsp-haskell)
+  (require 'lsp-haskell)
+
+  (add-hook 'haskell-mode-hook 'lsp)
 #+END_SRC
 
 ** Nix
@@ -5470,7 +5487,7 @@ TODO: Fix settings, grab them from package site
   (defun my/macro-modify (&optional prefix)
     (interactive "P")
     (let
-        ((chosen-macro (completing-read "Run macro: " my/macro-store)))
+        ((chosen-macro (completing-read "Modify macro: " my/macro-store)))
       ;; Just simulate the keypresses collected
       (setq unread-command-events (listify-key-sequence (concat chosen-macro "\C-a")))
       ;;            Anything other than this and nil is not accepted it seems
