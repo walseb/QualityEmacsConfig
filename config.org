@@ -402,6 +402,24 @@ Read
 https://github.com/emacs-lsp/lsp-mode/issues/377
 
 ** M-n and M-p to move visual line
+** Fix swiper in man mode
+** Easier way of accesing nix docs
+man 5 configuration.nix
+??
+man configuration.nix
+
+** Bake xdefaults into nix config
+
+** Improve nix config
+https://github.com/magnetophon/nixosConfig/blob/master/common.nix
+
+** Fix lsp-ui
+eldoc-doesn't work so i have to use  lsp-ui-sideline-show-hover
+
+** Overhaul imenu
+imenu-anywhere
+imenu-list
+
 * First
 Things to do first
 #+BEGIN_SRC emacs-lisp
@@ -2361,7 +2379,7 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'org-plus-contrib)
   (require 'org-src)
-  (org-eldoc-load)
+  (add-hook 'org-mode-hook #'org-eldoc-load)
 #+END_SRC
 
 ** Key
@@ -3043,8 +3061,9 @@ Used for universal folding
   ;; Height of minibuffer
   ;; (setq ivy-height 10)
 
-  ;; Highlight whole row in minibuffer
-  (setq ivy-format-function 'ivy-format-function-line)
+  ;; Change the default emacs formatter to highlight whole row in minibuffer
+  (delete '(t . ivy-format-function-default) ivy-format-functions-alist)
+  (add-to-list 'ivy-format-functions-alist '(t . ivy-format-function-line))
 #+END_SRC
 
 *** Wgrep
@@ -4635,9 +4654,12 @@ Shows information in echo area
       ('c++-mode (call-interactively 'xref-find-definitions))
       ('objc-mode (call-interactively 'xref-find-definitions))
       ('csharp-mode (omnisharp-go-to-definition))
-      ('java-mode (call-interactively 'lsp-find-definition))
-      ('haskell-mode (call-interactively 'intero-goto-definition))
-      (_ (dumb-jump-go))))
+      ;; No idea why but supplying a empty string makes it work
+      ('haskell-mode (xref-find-definitions ""))
+      (_
+       (if lsp-mode
+           (lsp-find-definition)
+         (dumb-jump-go)))))
 
   (define-key my/leader-map (kbd "t") 'my/auto-jump-to-definition)
 
@@ -4650,7 +4672,6 @@ Shows information in echo area
     (interactive)
     (pcase major-mode
       ('csharp-mode (omnisharp-find-usages-with-ido))
-      ('java-mode (lsp-find-references))
       (_ (call-interactively 'xref-find-references))))
 
   (define-key my/leader-map (kbd "u") 'my/auto-find-usages)
@@ -4673,18 +4694,22 @@ Shows information in echo area
         ('c-mode (cling-send-region (line-beginning-position) (line-end-position)))
         ('c++-mode (cling-send-region (line-beginning-position) (line-end-position)))
         ('csharp-mode (my/csharp-run-repl))
+        ('haskell-mode (intero-repl-eval-region (line-end-position) (save-excursion (re-search-backward (rx bol (or (any alpha) (any lower))))) ))
         (_ (call-interactively 'eros-eval-last-sexp)))))
 
   (defun my/auto-eval-region ()
     (interactive)
     (pcase major-mode
-      ('clojure-mode (cider-eval-region (point) (mark t)))
-      ('plantuml-mode (plantuml-preview-region 0 (point) (mark t)))
-      ('fsharp-mode (fsharp-eval-region (point) (mark t)))
-      ('c-mode (cling-send-region (point) (mark t)))
-      ('c++-mode (cling-send-region (point) (mark t)))
+      ('clojure-mode (cider-eval-region (point) (mark)))
+      ('plantuml-mode (plantuml-preview-region 0 (point) (mark)))
+      ('fsharp-mode (fsharp-eval-region (point) (mark)))
+      ('c-mode (cling-send-region (point) (mark)))
+      ('c++-mode (cling-send-region (point) (mark)))
       ('csharp-mode (my/csharp-run-repl))
-      (_ (eval-region (point) (mark t) t))))
+      ('haskell-mode (intero-repl-eval-region (point) (mark)))
+      (_ (eros--eval-overlay
+          (eval-region (point) (mark) t)
+          (point)))))
 
   (defun my/auto-eval-buffer ()
     (interactive)
@@ -4696,6 +4721,7 @@ Shows information in echo area
       ('c-mode (cling-send-buffer))
       ('c++-mode (cling-send-buffer))
       ('csharp-mode (my/csharp-run-repl))
+      ('haskell-mode (intero-repl-load))
       (_ (eval-buffer nil))))
 
   (defun my/auto-eval-print ()
@@ -4804,16 +4830,43 @@ Shows information in echo area
 
   ;; Normally lsp-mode starts up flymake mode automaticall which breaks ccls
   (setq lsp-prefer-flymake nil)
+
+  (setq lsp-document-highlight-delay nil)
 #+END_SRC
 
 *** Company LSP
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'company-lsp)
+  (push 'company-lsp company-backends)
 #+END_SRC
 
 *** LSP-ui
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'lsp-ui)
+
+  (setq lsp-ui-doc-enable nil
+        lsp-ui-peek-enable t
+        lsp-ui-sideline-enable t
+        lsp-ui-imenu-enable t
+        lsp-ui-flycheck-enable nil)
+  ;; (setq lsp-ui-sideline-ignore-duplicate t)
+
+  (setq lsp-ui-sideline-show-code-actions t
+        ;; Errors i think
+        lsp-ui-sideline-show-diagnostics nil
+
+        ;; someFunc :: IO ()
+        lsp-ui-sideline-show-hover t
+
+        ;; [someFunc]
+        lsp-ui-sideline-show-symbol t)
+
+  (setq lsp-ui-sideline-delay 0)
+#+END_SRC
+
+*** Keys
+#+BEGIN_SRC emacs-lisp
+  (define-key my/leader-map (kbd "RET") 'lsp-ui-sideline-apply-code-actions)
 #+END_SRC
 
 ** Elgot
@@ -5062,12 +5115,30 @@ or
 ** Haskell
 *** intero
 #+BEGIN_SRC emacs-lisp
-  ;;(straight-use-package 'intero)
-  ;;
+  (straight-use-package 'intero)
+  (require 'intero)
+
   ;;(add-hook 'haskell-mode-hook 'intero-mode)
 
   ;; Enabble hlint
   ;;(flycheck-add-next-checker 'intero '(warning . haskell-hlint))
+
+  (setq intero-pop-to-repl nil)
+#+END_SRC
+
+**** Redefine eval-region
+The current one ignores any beg and end if you are not in visual line mode
+#+BEGIN_SRC emacs-lisp
+  (defun intero-repl-eval-region (begin end &optional prompt-options)
+    "Evaluate the code in region from BEGIN to END in the REPL.
+  If the region is unset, the current line will be used.
+  PROMPT-OPTIONS are passed to `intero-repl-buffer' if supplied."
+    (interactive "r")
+    (let ((text (buffer-substring-no-properties begin end)))
+      (intero-with-repl-buffer prompt-options
+        (comint-simple-send
+         (get-buffer-process (current-buffer))
+         text))))
 #+END_SRC
 
 *** lsp-haskell
@@ -5267,7 +5338,10 @@ https://github.com/brianqq/inferior-cling
     (interactive)
     (pcase major-mode
       ('csharp-mode (omnisharp-current-type-documentation))
-      (_ (find-function-at-point))))
+      (_
+       (if lsp-mode
+           (lsp-describe-thing-at-point)
+         (find-function-at-point)))))
 
   (define-key my/leader-map (kbd "d") 'my/auto-view-docs)
 #+END_SRC
@@ -7624,11 +7698,6 @@ You need llvm
 #+END_SRC
 
 * Find
-#+BEGIN_SRC emacs-lisp
-  (define-prefix-command 'my/find-map)
-  (define-key my/leader-map (kbd "f") 'my/find-map)
-#+END_SRC
-
 ** Custom locate
 Locate only under current dir
 #+BEGIN_SRC emacs-lisp
@@ -7820,7 +7889,7 @@ https://www.emacswiki.org/emacs/ArtistMode
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-key my/leader-map (kbd "A") 'artist-mode)
+  (define-key my/leader-map (kbd "f") 'artist-mode)
 
   (define-prefix-command 'my/artist-mode-map)
   (evil-define-key 'normal artist-mode-map (kbd (concat my/leader-map-key " a")) 'my/artist-mode-map)
@@ -9609,6 +9678,26 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
     ;; Highlight faces
     ;;(highlight-indent-guides-auto-set-faces)
+
+    ;;; lsp
+    (set-face-attribute 'lsp-ui-doc-background nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'lsp-ui-doc-header nil :foreground my/foreground-color :background my/background-color-4)
+    (set-face-attribute 'lsp-ui-doc-url nil :foreground my/background-color :background my/foreground-color)
+
+    (set-face-attribute 'lsp-ui-peek-filename nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'lsp-ui-peek-footer nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'lsp-ui-peek-header nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'lsp-ui-peek-highlight nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'lsp-ui-peek-line-number nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'lsp-ui-peek-list nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'lsp-ui-peek-peek nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'lsp-ui-peek-selection nil :foreground my/foreground-color :background my/background-color)
+
+    (set-face-attribute 'lsp-ui-sideline-code-action nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'lsp-ui-sideline-current-symbol nil :foreground my/foreground-color :background my/background-color)
+    (set-face-attribute 'lsp-ui-sideline-global nil :foreground nil :background nil)
+    (set-face-attribute 'lsp-ui-sideline-symbol nil :foreground my/background-color :background my/foreground-color)
+    (set-face-attribute 'lsp-ui-sideline-symbol-info nil :foreground my/mark-color :background my/background-color)
 
   ;;; Which-key
     (set-face-attribute 'which-key-command-description-face nil :family my/mono-font)
