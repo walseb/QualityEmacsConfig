@@ -4834,6 +4834,12 @@ Shows information in echo area
   (setq lsp-document-highlight-delay nil)
 #+END_SRC
 
+*** Eldoc
+Eldoc support is broken in lsp and only eats up cpu, disable it
+#+BEGIN_SRC emacs-lisp
+  (setq lsp-eldoc-enable-hover nil)
+#+END_SRC
+
 *** Company LSP
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'company-lsp)
