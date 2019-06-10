@@ -2401,6 +2401,25 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
   (add-hook 'org-mode-hook #'org-eldoc-load)
 #+END_SRC
 
+*** Fix error
+The function =org-src-get-lang-mode= doesn't exist, but the function =org-src--get-lang-mode= does
+#+BEGIN_SRC emacs-lisp
+  (defun org-eldoc-get-mode-local-documentation-function (lang)
+    "Check if LANG-mode sets eldoc-documentation-function and return its value."
+    (let ((cached-func (gethash lang org-eldoc-local-functions-cache 'empty))
+          (mode-func (org-src--get-lang-mode lang))
+          doc-func)
+      (if (eq 'empty cached-func)
+          (when (fboundp mode-func)
+            (with-temp-buffer
+              (funcall mode-func)
+              (setq doc-func (and eldoc-documentation-function
+                                  (symbol-value 'eldoc-documentation-function)))
+              (puthash lang doc-func org-eldoc-local-functions-cache))
+            doc-func)
+        cached-func)))
+#+END_SRC
+
 ** Key
 #+BEGIN_SRC emacs-lisp
   ;;(evil-define-key 'normal org-mode-map (kbd "TAB") 'org-cycle)
@@ -8465,7 +8484,7 @@ Use lv-line to create a mode line on the top of the screen
 
     (if window-system
         ;; Change to mono face
-        (face-remap-add-relative 'default :family my/mono-font :height my/default-face-height))
+        (face-remap-add-relative 'default :family my/mono-font)) ;;:height my/default-face-height))
 
     ;; Offset by 10 pixels to make text fit
     (set-window-fringes (selected-window) 10 0)
@@ -9136,11 +9155,6 @@ When projectile-mode is on, project name is updated on every keypress, here it i
         ;;; Spray
     ;;  (set-face-attribute 'spray-accent-face nil :foreground "red" :background my/background-color)
     (set-face-attribute 'spray-accent-face nil :foreground my/foreground-color :background my/background-color :underline t)
-
-        ;;; Origami
-    ;; (set-face-attribute 'origami-fold-fringe-face nil :foreground my/foreground-color  :background  my/background-color :underline t :weight 'bold)
-    ;; (set-face-attribute 'origami-fold-header-face nil :foreground my/background-color :background my/foreground-color  :underline t :weight 'bold :height 1.15)
-    ;; (set-face-attribute 'origami-fold-replacement-face nil :foreground my/background-color :background  my/foreground-color :underline t :weight 'bold)
 
         ;;; Isearch
     (set-face-attribute 'isearch nil :foreground my/background-color :background my/foreground-color)
