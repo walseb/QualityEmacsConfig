@@ -897,6 +897,9 @@ Stop custom from editing init.el
 
   (add-to-list 'evil-mc-custom-known-commands
                '(org-delete-char . ((:default . evil-mc-execute-default-call-with-count))))
+
+  (add-to-list 'evil-mc-custom-known-commands
+               '(csharp-maybe-insert-codedoc . ((:default . evil-mc-execute-default-call-with-count))))
 #+END_SRC
 
 *** Clear default keys
@@ -1421,6 +1424,7 @@ When changing leader, change =my/leader-map-key=
 * Write configs
 #+BEGIN_SRC emacs-lisp
   (defun my/write-configs ()
+    (interactive)
     (pcase (completing-read "Which config to write"
                             '("gnus" "xdefaults" "xinit" "xmodmap" "mpd" "gpg-agent" "cabal"))
       ("gnus" (my/write-gnus))
@@ -3982,8 +3986,8 @@ g-; and g-,
 #+BEGIN_SRC emacs-lisp
   ;; Bind =Backspace= to go up one directory
   ;;(define-key dired-mode-map [?\d] 'dired-up-directory)
-  (evil-define-key 'normal dired-mode-map (kbd "r") 'dired-single-up-directory)
-  (evil-define-key 'insert dired-mode-map (kbd "r") 'dired-single-up-directory)
+  (evil-define-key 'normal dired-mode-map (kbd "k") 'dired-single-up-directory)
+  (evil-define-key 'insert dired-mode-map (kbd "k") 'dired-single-up-directory)
 
   (evil-define-key 'normal dired-mode-map (kbd "RET") 'dired-single-buffer)
   (evil-define-key 'insert dired-mode-map (kbd "RET") 'dired-single-buffer)
