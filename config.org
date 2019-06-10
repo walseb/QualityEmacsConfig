@@ -298,6 +298,9 @@ X11 probably uses UK language layout. Fix it with
 #+END_SRC
 
 * Todo
+** Packages to try
+nix-buffer
+
 ** Fix s key moving around the view when searching down
 ** PR evil-mc changes
 ** Delete around char 'c'
@@ -419,6 +422,9 @@ eldoc-doesn't work so i have to use  lsp-ui-sideline-show-hover
 ** Overhaul imenu
 imenu-anywhere
 imenu-list
+
+** I shouldn't have one function that modifies all faces
+Since then i have to load every package i want to modify the faces of before running the function
 
 * First
 Things to do first
@@ -702,6 +708,15 @@ Default file-size-human-readable returns decimal values
 ;; (my/inline-overlay-print "test")
 #+END_SRC
 
+** Repeat char
+#+BEGIN_SRC emacs-lisp
+  (defun my/repeat-char (char initial-string n)
+    (setq initial-string (concat char initial-string))
+    (if (> n 1)
+        (my/repeat-char char initial-string (- n 1))
+      initial-string))
+#+END_SRC
+
 * Fonts
 ** Normal fonts
 #+BEGIN_SRC emacs-lisp
@@ -854,8 +869,8 @@ Stop custom from editing init.el
     (define-key evil-motion-state-map (kbd key) command))
 
   (defun my/evil-visual-define-key (key command)
-    (interactive
-     (define-key evil-visual-state-map (kbd key) command)))
+    (interactive)
+    (define-key evil-visual-state-map (kbd key) command))
 
   (defun my/evil-universal-define-key (key command)
     (interactive)
@@ -2421,13 +2436,13 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 #+END_SRC
 
 * Outline
-http://www.modernemacs.com/post/outline-ivy/
 #+BEGIN_SRC emacs-lisp
   ;; Must be set before outline is loaded
   ;; Required by outorg
   (defvar outline-minor-mode-prefix "\M-#")
 
   (straight-use-package 'outline)
+  ;;(require 'outorg)
 
   (add-hook 'prog-mode-hook 'outline-minor-mode)
 #+END_SRC
@@ -2456,7 +2471,15 @@ http://www.modernemacs.com/post/outline-ivy/
 
 ** Outorg
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'outorg)
+  (require 'outorg)
+
+  (define-key my/leader-map (kbd "f") 'my/outorg-toggle)
+
+  (defun my/outorg-toggle ()
+    (interactive)
+    (if (string= major-mode 'org-mode)
+        (outorg-copy-edits-and-exit)
+      (outorg-edit-as-org '(4))))
 #+END_SRC
 
 ** Visuals
@@ -2476,440 +2499,6 @@ http://www.modernemacs.com/post/outline-ivy/
 ** Java outline
 #+BEGIN_SRC emacs-lisp
 ;; (setq outline-regexp "\\(?:\\([ \t]*.*\\(class\\|interface\\)[ \t]+[a-zA-Z0-9_]+[ \t\n]*\\({\\|extends\\|implements\\)\\)\\|[ \t]*\\(public\\|private\\|static\\|final\\|native\\|synchronized\\|transient\\|volatile\\|strictfp\\| \\|\t\\)*[ \t]+\\(\\([a-zA-Z0-9_]\\|\\( *\t*< *\t*\\)\\|\\( *\t*> *\t*\\)\\|\\( *\t*, *\t*\\)\\|\\( *\t*\\[ *\t*\\)\\|\\(]\\)\\)+\\)[ \t]+[a-zA-Z0-9_]+[ \t]*(\\(.*\\))[ \t]*\\(throws[ \t]+\\([a-zA-Z0-9_, \t\n]*\\)\\)?[ \t\n]*{\\)" )
-#+END_SRC
-
-** Allow indented outlines
-use "^\s*" instead of "^"
-#+BEGIN_SRC emacs-lisp
-  (setq outline-regexp  "[*\^L]+")
-
-  (el-patch-feature outline)
-  (el-patch-feature outshine)
-
-  (el-patch-defun outshine-chomp (str)
-    "Chomp leading and trailing whitespace from STR."
-    (save-excursion
-      (save-match-data
-        (while (string-match
-                "\\`\n+\\|^\s*\\s-+\\|\\s-+$\\|\n+\\'"
-                str)
-          (setq str (replace-match "" t t str)))
-        str)))
-
-  (el-patch-defun outshine-change-level (delta)
-    "Workhorse for `outline-demote' and `outline-promote'."
-    (let* ((headlist (outshine-headings-list))
-           (atom (outshine-headings-atom headlist))
-           (re (concat "^\s*" outline-regexp))
-           (transmode (and transient-mark-mode mark-active))
-           beg end)
-
-      ;; Find the boundaries for this operation
-      (save-excursion
-        (if transmode
-            (setq beg (min (point) (mark))
-                  end (max (point) (mark)))
-          (outline-back-to-heading)
-          (setq beg (point))
-          (outline-end-of-heading)
-          (outline-end-of-subtree)
-          (setq end (point)))
-        (setq beg (move-marker (make-marker) beg)
-              end (move-marker (make-marker) end))
-
-        (let (head newhead level newlevel static)
-
-          ;; First a dry run to test if there is any trouble ahead.
-          (goto-char beg)
-          (while (re-search-forward re end t)
-            (outshine-change-heading headlist delta atom 'test))
-
-          ;; Now really do replace the headings
-          (goto-char beg)
-          (while (re-search-forward re end t)
-            (outshine-change-heading headlist delta atom))))))
-
-  (el-patch-defun outshine-headings-list ()
-    "Return a list of relevant headings, either a user/mode defined
-  list, or an alist derived from scanning the buffer."
-    (let (headlist)
-      (cond
-       (outshine-promotion-headings
-        ;; configured by the user or the mode
-        (setq headlist outshine-promotion-headings))
-
-       ((and (eq major-mode 'outline-mode) (string= outline-regexp "[*\^L]+"))
-        ;; default outline mode with original regexp
-        ;; this need special treatment because of the \f in the regexp
-        (setq headlist '(("*" . 1) ("**" . 2))))  ; will be extrapolated
-
-       (t ;; Check if the buffer contains a complete set of headings
-        (let ((re (concat "^\s*" outline-regexp)) head level)
-          (save-excursion
-            (goto-char (point-min))
-            (while (re-search-forward re nil t)
-              (save-excursion
-                (beginning-of-line 1)
-                (setq head (outshine-cleanup-match (match-string 0))
-                      level (funcall outline-level))
-                (add-to-list  'headlist (cons head level))))))
-        ;; Check for uniqueness of levels in the list
-        (let* ((hl headlist) entry level seen nonunique)
-          (while (setq entry (car hl))
-            (setq hl (cdr hl)
-                  level (cdr entry))
-            (if (and (not (outshine-static-level-p level))
-                     (member level seen))
-                ;; We have two entries for the same level.
-                (add-to-list 'nonunique level))
-            (add-to-list 'seen level))
-          (if nonunique
-              (error "Cannot promote/demote: non-unique headings at level %s\nYou may want to configure `outline-promotion-headings'."
-                     (mapconcat 'int-to-string nonunique ","))))))
-      ;; OK, return the list
-      headlist))
-
-  (el-patch-defun outshine-calc-outline-level ()
-    "Calculate the right outline level for the
-    outshine-regexp"
-    (save-excursion
-      ;; THIS FIXED IT
-      (back-to-indentation)
-      (save-match-data
-        (and
-         (looking-at (outshine-calc-outline-regexp))
-         ;; ;; FIXME this works?
-         ;; (looking-at outline-regexp)
-         (let ((m-strg (match-string-no-properties 0)))
-           (if outshine-enforce-no-comment-padding-p
-               ;; deal with oldschool elisp headings (;;;+)
-               (setq m-strg
-                     (split-string
-                      (substring m-strg 2)
-                      nil
-                      'OMIT-NULLS))
-             ;; orgmode style elisp heading (;; *+)
-             (setq m-strg
-                   (split-string
-                    m-strg
-                    (format "%s" outshine-normalized-comment-start)
-                    'OMIT-NULLS)))
-           (length
-            (mapconcat
-             (lambda (str)
-               (car
-                (split-string
-                 str
-                 " "
-                 'OMIT-NULLS)))
-             m-strg
-             "")))
-         ))))
-
-  ;; (advice-add 'outshine-calc-outline-level :before (lambda () (interactive) (back-to-indentation)))
-#+END_SRC
-
-** Allow indented outlines - outline mode
-#+BEGIN_SRC emacs-lisp
-  (el-patch-defvar outline-font-lock-keywords
-    '(
-      ;; Highlight headings according to the level.
-      (eval . (list (concat "^\s*\\(?:" outline-regexp "\\).+")
-                    0 '(outline-font-lock-face) nil t)))
-    "Additional expressions to highlight in Outline mode.")
-
-  ;; `el-patch-define-minor-mode' doesn't work properly on this??
-  (define-derived-mode outline-mode text-mode "Outline"
-    "Set major mode for editing outlines with selective display.
-  Headings are lines which start with asterisks: one for major headings,
-  two for subheadings, etc.  Lines not starting with asterisks are body lines.
-
-  Body text or subheadings under a heading can be made temporarily
-  invisible, or visible again.  Invisible lines are attached to the end
-  of the heading, so they move with it, if the line is killed and yanked
-  back.  A heading with text hidden under it is marked with an ellipsis (...).
-
-  \\{outline-mode-map}
-  The commands `outline-hide-subtree', `outline-show-subtree',
-  `outline-show-children', `outline-hide-entry',
-  `outline-show-entry', `outline-hide-leaves', and `outline-show-branches'
-  are used when point is on a heading line.
-
-  The variable `outline-regexp' can be changed to control what is a heading.
-  A line is a heading if `outline-regexp' matches something at the
-  beginning of the line.  The longer the match, the deeper the level.
-
-  Turning on outline mode calls the value of `text-mode-hook' and then of
-  `outline-mode-hook', if they are non-nil."
-    (make-local-variable 'line-move-ignore-invisible)
-    (setq line-move-ignore-invisible t)
-    ;; Cause use of ellipses for invisible text.
-    (add-to-invisibility-spec '(outline . t))
-    (set (make-local-variable 'paragraph-start)
-         (concat paragraph-start "\\|\\(?:" outline-regexp "\\)"))
-    ;; Inhibit auto-filling of header lines.
-    (set (make-local-variable 'auto-fill-inhibit-regexp) outline-regexp)
-    (set (make-local-variable 'paragraph-separate)
-         (concat paragraph-separate "\\|\\(?:" outline-regexp "\\)"))
-    (set (make-local-variable 'font-lock-defaults)
-         '(outline-font-lock-keywords t nil nil backward-paragraph))
-    (setq imenu-generic-expression
-          (list (list nil (concat "^\s*\\(?:" outline-regexp "\\).*$") 0)))
-    (add-hook 'change-major-mode-hook 'outline-show-all nil t))
-
-  (el-patch-defun outline-next-heading ()
-    "Move to the next (possibly invisible) heading line."
-    (interactive)
-    ;; Make sure we don't match the heading we're at.
-    (if (and (bolp) (not (eobp))) (forward-char 1))
-    (if (re-search-forward (concat "^\s*\\(?:" outline-regexp "\\)")
-                           nil 'move)
-        (goto-char (match-beginning 0))))
-
-
-  (el-patch-defun outline-previous-heading ()
-    "Move to the previous (possibly invisible) heading line."
-    (interactive)
-    (re-search-backward (concat "^\s*\\(?:" outline-regexp "\\)")
-                        nil 'move))
-
-  (el-patch-defun outline-back-to-heading (&optional invisible-ok)
-    (interactive)
-    "Move to previous heading line, or beg of this line if it's a heading.
-  Only visible heading lines are considered, unless INVISIBLE-OK is non-nil."
-    (beginning-of-line)
-    ;; Hack, doesn't work otherwise
-    ;;(next-line)
-    (or (outline-on-heading-p invisible-ok)
-        (let (found)
-          (save-excursion
-            (while (not found)
-              (or (progn
-                    (back-to-indentation)
-                    (let ((result (looking-at outline-regexp)))
-                      (beginning-of-line)
-                      result))
-                  (re-search-backward (concat "^\s*\\(?:" outline-regexp "\\)")
-                                      nil t)
-                  (error "Before first heading"))
-              (setq found (and (or invisible-ok (not (outline-invisible-p)))
-                               (point)))))
-          (goto-char found)
-          (back-to-indentation)
-          found)))
-
-  (el-patch-defun outline-map-region (fun beg end)
-    "Call FUN for every heading between BEG and END.
-  When FUN is called, point is at the beginning of the heading and
-  the match data is set appropriately."
-    (save-excursion
-      (setq end (copy-marker end))
-      (goto-char beg)
-      (when (re-search-forward (concat "^\s*\\(?:" outline-regexp "\\)") end t)
-        (goto-char (match-beginning 0))
-        (funcall fun)
-        (while (and (progn
-                      (outline-next-heading)
-                      (< (point) end))
-                    (not (eobp)))
-          (funcall fun)))))
-
-  (el-patch-defun outline-next-visible-heading (arg)
-    "Move to the next visible heading line.
-  With ARG, repeats or can move backward if negative.
-  A heading line is one that starts with a `*' (or that
-  `outline-regexp' matches)."
-    (interactive "p")
-    (if (< arg 0)
-        (beginning-of-line)
-      (end-of-line))
-    (let (found-heading-p)
-      (while (and (not (bobp)) (< arg 0))
-        (while (and (not (bobp))
-                    (setq found-heading-p
-                          (re-search-backward
-                           (concat "^\s*\\(?:" outline-regexp "\\)")
-                           nil 'move))
-                    (outline-invisible-p)))
-        (setq arg (1+ arg)))
-      (while (and (not (eobp)) (> arg 0))
-        (while (and (not (eobp))
-                    (setq found-heading-p
-                          (re-search-forward
-                           (concat "^\s*\\(?:" outline-regexp "\\)")
-                           nil 'move))
-                    (outline-invisible-p (match-beginning 0))))
-        (setq arg (1- arg)))
-      (if found-heading-p (beginning-of-line))))
-
-  ;; Fixes `(outline-next-preface)' used in `(outline-hide-body)'
-  (el-patch-defun outline-next-preface ()
-    "Skip forward to just before the next heading line.
-  If there's no following heading line, stop before the newline
-  at the end of the buffer."
-    (if (re-search-forward (concat "\n\s*\\(?:" outline-regexp "\\)")
-                           nil 'move)
-        (goto-char (match-beginning 0)))
-    (if (and (bolp) (or outline-blank-line (eobp)) (not (bobp)))
-        (forward-char -1)))
-#+END_SRC
-
-** Fix counsel-outline
-#+BEGIN_SRC emacs-lisp
-  (defun counsel-outline-candidates (&optional settings)
-    "Return an alist of outline heading completion candidates.
-  Each element is a pair (HEADING . MARKER), where the string
-  HEADING is located at the position of MARKER.  SETTINGS is a
-  plist entry from `counsel-outline-settings', which see."
-    (let ((bol-regex (concat "^\s*\\(?:"
-                             (or (plist-get settings :outline-regexp)
-                                 outline-regexp)
-                             "\\)"))
-          (outline-title-fn (or (plist-get settings :outline-title)
-                                #'counsel-outline-title))
-          (outline-level-fn (or (plist-get settings :outline-level)
-                                outline-level))
-          (display-style (or (plist-get settings :display-style)
-                             counsel-outline-display-style))
-          (path-separator (or (plist-get settings :path-separator)
-                              counsel-outline-path-separator))
-          (face-style (or (plist-get settings :face-style)
-                          counsel-outline-face-style))
-          (custom-faces (or (plist-get settings :custom-faces)
-                            counsel-outline-custom-faces))
-          (stack-level 0)
-          (orig-point (point))
-          cands name level marker stack)
-      (save-excursion
-        (setq counsel-outline--preselect 0)
-        (goto-char (point-min))
-        (while (re-search-forward bol-regex nil t)
-          (save-excursion
-            (setq name (or (save-match-data
-                             (funcall outline-title-fn))
-                           ""))
-            (goto-char (match-beginning 0))
-            (setq marker (point-marker))
-            (setq level (funcall outline-level-fn))
-            (cond ((eq display-style 'path)
-                   ;; Update stack.  The empty entry guards against incorrect
-                   ;; headline hierarchies, e.g. a level 3 headline
-                   ;; immediately following a level 1 entry.
-                   (while (<= level stack-level)
-                     (pop stack)
-                     (cl-decf stack-level))
-                   (while (> level stack-level)
-                     (push "" stack)
-                     (cl-incf stack-level))
-                   (setf (car stack)
-                         (counsel-outline--add-face
-                          name level face-style custom-faces))
-                   (setq name (mapconcat #'identity
-                                         (reverse stack)
-                                         path-separator)))
-                  (t
-                   (when (eq display-style 'headline)
-                     (setq name (concat (make-string level ?*) " " name)))
-                   (setq name (counsel-outline--add-face
-                               name level face-style custom-faces))))
-            (push (cons name marker) cands))
-          (unless (or (string= name "")
-                      (< orig-point marker))
-            (cl-incf counsel-outline--preselect))))
-      (nreverse cands)))
-#+END_SRC
-
-** Outline bullets
-http://www.modernemacs.com/post/outline-ivy/
-http://www.modernemacs.com/post/outline-bullets/
-https://github.com/ekaschalk/.spacemacs.d/blob/master/layers/display/local/pretty-outlines/pretty-outlines.el
-https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
-#+BEGIN_SRC emacs-lisp
-  (defmacro with-face (STR &rest PROPS)
-    "Return STR propertized with PROPS."
-    `(propertize ,STR 'face (list ,@PROPS)))
-
-  (defvar pretty-outlines-bullets-bullet-list org-bullets-bullet-list
-    "An implemention of `org-bullets-bullet-list' for outlines.")
-
-  (defvar-local pretty-outlines-buffer-font-lock-keyword nil)
-
-  (defun pretty-outlines--add-font-locks (font-lock-alist)
-    "Put text property for FONT-LOCK-ALIST for var-width replacements."
-    (setq pretty-outlines-buffer-font-lock-keyword
-          (-map (-lambda ((rgx outline-str))
-                  `(,rgx (0 (prog1 nil
-                              (put-text-property (match-beginning 1) (match-end 1)
-                                                 'display ,outline-str)))))
-                font-lock-alist))
-    (font-lock-add-keywords nil pretty-outlines-buffer-font-lock-keyword))
-
-  (defun pretty-outlines-remove-font-locks ()
-    (interactive)
-    (font-lock-remove-keywords nil pretty-outlines-buffer-font-lock-keyword))
-
-  (defun pretty-outlines--bullets-rgx-at-level (level)
-    "Calculate regex or outline-bullets at LEVEL."
-    ;; In buffers like org, `outshine-calc-outline-string-at-level 1' always returns "  ", check for this
-    (if (not (string= (s-trim (outshine-calc-outline-string-at-level 1)) ""))
-        (concat "\\(^\s*"
-                (->> level
-                     1+
-                     outshine-calc-outline-string-at-level
-                     s-trim-right
-                     (s-replace "*" "\\*"))
-                "\\) ")))
-
-  (defun pretty-outlines--propertize-bullet (level bullet)
-    "Add LEVEL-dependent face to BULLET."
-    (with-face bullet
-               (pcase level
-                 (0 '(:inherit outline-1 :underline nil)) ;;:height my/org-level-1-height))
-                 (1 '(:inherit outline-2 :underline nil)) ;;:height my/org-level-2-height))
-                 (2 '(:inherit outline-3 :underline nil)) ;;:height my/org-level-3-height))
-                 (3 '(:inherit outline-4 :underline nil)) ;;:height my/org-level-4-height))
-                 (4 '(:inherit outline-5 :underline nil)) ;;:height my/org-level-5-height))
-                 (5 '(:inherit outline-6 :underline nil)) ;;:height my/org-level-6-height))
-                 (6 '(:inherit outline-7 :underline nil)) ;;:height my/org-level-7-height))
-                 (7 '(:inherit outline-8 :underline nil)) ;;:height my/org-level-8-height))
-                 (_ nil))))
-
-  (defun pretty-outlines--bullets-cycle ()
-    "Cycle through `pretty-outlines-bullets-bullet-list'"
-    (-let [max-outline-depth 8]
-      (->> pretty-outlines-bullets-bullet-list -cycle (-take max-outline-depth))))
-
-  (defun pretty-outlines--format-bullet (level bullet)
-    "Propertize and perform all other styling for BULLET at LEVEL."
-    (concat (s-repeat level " ")
-            (pretty-outlines--propertize-bullet level bullet)))
-
-  (defun pretty-outlines-add-bullets ()
-    "Use with `add-hook' to enable pretty-outlines-bullets-bullet-list for mode."
-    (interactive)
-    ;; Not sure why, but org mode headers are small otherwise
-    (if (not (string= major-mode "org-mode"))
-        (->>
-         (pretty-outlines--bullets-cycle)
-         (-map-indexed (-lambda (level bullet)
-                         (list (pretty-outlines--bullets-rgx-at-level level)
-                               (pretty-outlines--format-bullet level bullet))))
-         pretty-outlines--add-font-locks)))
-
-  (add-hook 'outline-mode-hook 'pretty-outlines-add-bullets t)
-  (add-hook 'outline-minor-mode-hook 'pretty-outlines-add-bullets t)
-#+END_SRC
-
-** Outline ellipsis
-#+BEGIN_SRC emacs-lisp
-  (defvar outline-display-table (make-display-table))
-  (set-display-table-slot outline-display-table 'selective-display
-                          (vector (make-glyph-code my/fold-ellipsis-char 'escape-glyph)))
-  (defun set-outline-display-table ()
-    (setf buffer-display-table outline-display-table))
-
-  (add-hook 'outline-mode-hook 'set-outline-display-table)
-  (add-hook 'outline-minor-mode-hook 'set-outline-display-table)
 #+END_SRC
 
 ** Narrowing
@@ -2938,7 +2527,68 @@ https://github.com/ekaschalk/.spacemacs.d/tree/master/layers/display
     (interactive)
     (pcase major-mode
       ('org-mode (org-narrow-to-subtree))
-      (_ (outshine-narrow-to-subtree))))
+      (_
+       (outline-previous-visible-heading 1)
+       (outshine-narrow-to-subtree))))
+#+END_SRC
+
+** Outline ellipsis
+#+BEGIN_SRC emacs-lisp
+  (defvar outline-display-table (make-display-table))
+  (set-display-table-slot outline-display-table 'selective-display
+                          (vector (make-glyph-code my/fold-ellipsis-char 'escape-glyph)))
+  (defun set-outline-display-table ()
+    (setf buffer-display-table outline-display-table))
+
+  (add-hook 'outline-mode-hook 'set-outline-display-table)
+  (add-hook 'outline-minor-mode-hook 'set-outline-display-table)
+#+END_SRC
+
+** Keys
+*** Outline fold
+#+BEGIN_SRC emacs-lisp
+  (my/evil-normal-define-key "g i" 'outline-previous-visible-heading)
+
+  (my/evil-normal-define-key "g o" 'outline-toggle-children)
+  (my/evil-normal-define-key "g O" 'outline-show-subtree)
+  (my/evil-normal-define-key "g h" 'my/outline-hide-all-headings)
+  (my/evil-normal-define-key "g H" 'my/outline-hide-all)
+
+  (my/evil-normal-define-key "g a" 'outline-show-all)
+
+  (defun my/outline-hide-all ()
+    (interactive)
+    (outline-hide-sublevels 1))
+
+  (defun my/outline-hide-all-headings ()
+    (interactive)
+    (outline-show-all)
+    (outline-hide-body))
+#+END_SRC
+
+*** Code fold
+#+BEGIN_SRC emacs-lisp
+  (my/evil-normal-define-key "g C-o" 'my/code-fold-show)
+  (my/evil-normal-define-key "g RET" 'my/code-fold-show-all)
+  (my/evil-normal-define-key "g C-h" 'my/code-fold-hide-level)
+
+  (defun my/code-fold-show ()
+    (interactive)
+    (if hs-minor-mode
+        (hs-toggle-hiding)
+      (yafolding-toggle-element)))
+
+  (defun my/code-fold-show-all ()
+    (interactive)
+    (if hs-minor-mode
+        (hs-show-all)
+      (yafolding-show-all)))
+
+  (defun my/code-fold-hide-level ()
+    (interactive)
+    (if hs-minor-mode
+        (call-interactively 'hs-hide-level)
+      (yafolding-hide-all)))
 #+END_SRC
 
 ** Folding
@@ -2981,69 +2631,36 @@ Used for universal folding
   ;; (setq origami-fold-replacement my/fold-ellipsis)
 #+END_SRC
 
-** Keys
-#+BEGIN_SRC emacs-lisp
-  (defun my/outline-hide-all-body ()
-    (interactive)
-    (outline-show-all)
-    (outline-hide-body))
+  (my/evil-normal-define-key "g C-o" 'my/code-fold-show)
 
-  (my/evil-normal-define-key "g o" 'my/fold-show)
+  (my/evil-normal-define-key "g C-a" 'my/code-fold-hide-level)
+  (my/evil-normal-define-key "g C-A" 'my/code-fold-show-all)
 
-  (my/evil-normal-define-key "g a" 'my/fold-hide-level)
-  (my/evil-normal-define-key "g A" 'my/fold-show-all)
+  (my/evil-normal-define-key "g C-h" 'my/code-fold-hide)
 
-  (my/evil-normal-define-key "g h" 'my/fold-hide)
-
-  (my/evil-normal-define-key "g C-o" 'evil-open-fold)
-  ;;(my/evil-normal-define-key "g C-O" 'evil-open-fold-rec)
-  (my/evil-normal-define-key "g RET" 'my/outline-hide-all-body)
-  (my/evil-normal-define-key "g C-a" 'outline-show-all)
-  (my/evil-normal-define-key "g C-h" 'evil-close-fold)
-  ;;(my/evil-normal-define-key "g C-s-h" '(lambda () (interactive) (outline-hide-sublevels 1)))
-
-  (defun my/fold-show ()
+  (defun my/code-fold-show ()
     (interactive)
     (if hs-minor-mode
         (hs-show-block)
       (yafolding-show-element)))
 
-  (defun my/fold-show-all ()
+  (defun my/code-fold-show-all ()
     (interactive)
     (if hs-minor-mode
         (hs-show-all)
       (yafolding-show-all)))
 
-  (defun my/fold-hide-level ()
+  (defun my/code-fold-hide-level ()
     (interactive)
     (if hs-minor-mode
         (call-interactively 'hs-hide-level)
       (yafolding-hide-all)))
 
-  (defun my/fold-hide ()
+  (defun my/code-fold-hide ()
     (interactive)
     (if hs-minor-mode
         (hs-hide-block)
       (yafolding-hide-element)))
-
-  (defvar-local buffer-has-outline-bullets t)
-  (defun my/toggle-outline-bullets ()
-    (interactive)
-    (if (not (string= major-mode "org-mode"))
-        (progn
-          (if buffer-has-outline-bullets
-              (progn
-                (setq buffer-has-outline-bullets nil)
-                (pretty-outlines-remove-font-locks))
-            (setq buffer-has-outline-bullets t)
-            (pretty-outlines-add-bullets))
-
-          ;; Completely refresh font-lock
-          (set-text-properties (point-min) (point-max) nil))))
-
-  (define-key my/leader-map (kbd "C-h") 'my/toggle-outline-bullets)
-#+END_SRC
-
 * Completion
 ** Ivy
 #+BEGIN_SRC emacs-lisp
@@ -4655,7 +4272,7 @@ Shows information in echo area
       ('objc-mode (call-interactively 'xref-find-definitions))
       ('csharp-mode (omnisharp-go-to-definition))
       ;; No idea why but supplying a empty string makes it work
-      ('haskell-mode (xref-find-definitions ""))
+      ('haskell-mode (intero-goto-definition))
       (_
        (if lsp-mode
            (lsp-find-definition)
@@ -4672,6 +4289,7 @@ Shows information in echo area
     (interactive)
     (pcase major-mode
       ('csharp-mode (omnisharp-find-usages-with-ido))
+      ('haskell-mode (intero-uses-at))
       (_ (call-interactively 'xref-find-references))))
 
   (define-key my/leader-map (kbd "u") 'my/auto-find-usages)
@@ -4834,12 +4452,6 @@ Shows information in echo area
   (setq lsp-document-highlight-delay nil)
 #+END_SRC
 
-*** Eldoc
-Eldoc support is broken in lsp and only eats up cpu, disable it
-#+BEGIN_SRC emacs-lisp
-  (setq lsp-eldoc-enable-hover nil)
-#+END_SRC
-
 *** Company LSP
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'company-lsp)
@@ -4849,6 +4461,8 @@ Eldoc support is broken in lsp and only eats up cpu, disable it
 *** LSP-ui
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'lsp-ui)
+  ;; TODO I have to load the package fully here to set the fonts later
+  (require 'lsp-ui)
 
   (setq lsp-ui-doc-enable nil
         lsp-ui-peek-enable t
@@ -5119,17 +4733,24 @@ or
 #+END_SRC
 
 ** Haskell
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package '(haskell-mode :type git :host github :repo "walseb/haskell-mode"))
+#+END_SRC
+
 *** intero
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'intero)
   (require 'intero)
 
-  ;;(add-hook 'haskell-mode-hook 'intero-mode)
+  (add-hook 'haskell-mode-hook 'intero-mode)
 
   ;; Enabble hlint
-  ;;(flycheck-add-next-checker 'intero '(warning . haskell-hlint))
+  (flycheck-add-next-checker 'intero '(warning . haskell-hlint))
 
   (setq intero-pop-to-repl nil)
+
+  ;; Start repl mode in insert mode
+  (add-to-list 'evil-insert-state-modes 'intero-repl-mode)
 #+END_SRC
 
 **** Redefine eval-region
@@ -5153,11 +4774,6 @@ The current one ignores any beg and end if you are not in visual line mode
   (require 'lsp-haskell)
 
   (add-hook 'haskell-mode-hook 'lsp)
-#+END_SRC
-
-** Nix
-#+BEGIN_SRC emacs-lisp
-  (straight-use-package 'nix-mode)
 #+END_SRC
 
 ** C/CPP
@@ -5781,7 +5397,7 @@ Enable org mode for .org.gpg files
 
 ** Prefer lisp to bash
 #+BEGIN_SRC emacs-lisp
-  (setq eshell-prefer-lisp-functions t)
+  (setq eshell-prefer-lisp-functions nil)
   (setq eshell-prefer-lisp-variables t)
 #+END_SRC
 
@@ -5845,7 +5461,9 @@ Default eshell/clear only spams newlines
     "Clear the eshell buffer."
     (let ((inhibit-read-only t))
       (erase-buffer)
-      (eshell-send-input)))
+      ;; Probably not needed
+      ;;(eshell-send-input)
+      ))
 #+END_SRC
 
 ** Term
@@ -6116,6 +5734,35 @@ Use C-i instead
   ;; (define-key key-translation-map (kbd "M-C-i") (kbd "C-TAB"))
 #+END_SRC
 
+* nix
+** Direnv
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'direnv)
+  (direnv-mode)
+#+END_SRC
+
+** Nix-mode
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'nix-mode)
+#+END_SRC
+
+** Nix-options company
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'company-nixos-options)
+  ;; I can't find a pure add-to-list so i have to copy it so that company-backends isn't modified
+  (add-hook 'nix-mode-hook '(lambda () (interactive)
+                              (let ((list company-backends))
+                                (add-to-list 'list 'company-nixos-options)
+                                (setq-local company-backends list))))
+#+END_SRC
+
+** Pretty sha paths
+#+BEGIN_SRC emacs-lisp
+;;  (straight-use-package 'pretty-sha-path)
+;;
+;;  (add-hook 'eshell-mode-hook 'pretty-sha-path-mode)
+#+END_SRC
+
 * exwm
 https://emacs.stackexchange.com/questions/33326/how-do-i-cut-and-paste-effectively-between-applications-while-using-exwm
 #+BEGIN_SRC emacs-lisp
@@ -6348,31 +5995,6 @@ We use class names for all windows expect for Java applications and GIMP (becaus
   (require 'shr)
 #+END_SRC
 
-*** Highlight code
-#+BEGIN_SRC emacs-lisp
-  (defface my/eww-code-face
-    '((t
-       :family my/mono-font
-       ))
-    "Eww code face"
-    :group 'eww-mode)
-
-  (defun my/eww-tag-code (dom)
-    (let ((start (point))
-          (text (dom-text dom)))
-      (insert text)
-      (message text)
-      (add-face-text-property start (point) 'my/eww-code-face)
-      (insert " ")))
-  (setq shr-external-rendering-functions '((code . my/eww-tag-code)))
-
-  (defun my/eww-toggle-code-highlighting ()
-    (interactive)
-    (if (member '(code . my/eww-tag-code) shr-external-rendering-functions)
-        (setq shr-external-rendering-functions (remove '(code . my/eww-tag-code) shr-external-rendering-functions))
-      (add-to-list 'shr-external-rendering-functions '(code . my/eww-tag-code))))
-#+END_SRC
-
 *** Fix background colors shr
 #+BEGIN_SRC emacs-lisp
   ;; Try fixing colors
@@ -6441,7 +6063,7 @@ Redefine function to attempt to open image if link at point wasn't found
   (define-key my/eww-mode-map (kbd "o") 'eww-open-in-new-buffer)
   (define-key my/eww-mode-map (kbd "r") 'eww-reload)
   (define-key my/eww-mode-map (kbd "f") 'eww-open-file)
-  (define-key my/eww-mode-map (kbd "C-c") 'my/eww-toggle-code-highlighting)
+  ;;(define-key my/eww-mode-map (kbd "C-c") 'my/eww-toggle-code-highlighting)
 #+END_SRC
 
 ** Firefox exwm integration
@@ -7716,7 +7338,6 @@ Locate only under current dir
     (my/locate-update-cache))
 
   (defun my/locate-update-cache ()
-    (interactive)
     (setq my/locate-cache (split-string
                            (shell-command-to-string
                             (concat "locate --database=" my/locate-database-dir " -r ."))
@@ -7790,72 +7411,6 @@ Locate only under current dir
 #+END_SRC
 
 * Artist mode
-** Disable and restore modes aftere entering and exiting artist mode
-https://www.emacswiki.org/emacs/FacesPerBuffer
-#+BEGIN_SRC emacs-lisp
-  (defvar my/artist-mode-symbol-overlay-restore nil)
-  (defvar my/artist-mode-aggressive-indent-restore nil)
-  (defvar my/artist-mode-display-line-numbers-restore nil)
-
-  (defvar my/artist-mode-restore-buffer nil)
-
-  (defun my/artist-mode ()
-    (if (eq major-mode 'picture-mode)
-        (progn
-          (setq my/artist-mode-restore-buffer (current-buffer))
-          (if symbol-overlay-mode
-              (progn
-                (symbol-overlay-mode -1)
-                (setq my/artist-mode-symbol-overlay-restore t))
-            (setq my/artist-mode-symbol-overlay-restore nil))
-
-          (if aggressive-indent-mode
-              (progn
-                (aggressive-indent-mode -1)
-                (setq my/artist-mode-aggressive-indent-restore t))
-            (setq my/artist-mode-aggressive-indent-restore nil))
-
-          (if display-line-numbers
-              (progn
-                (display-line-numbers-mode -1)
-                (setq my/artist-mode-display-line-numbers-restore t))
-            (setq my/artist-mode-display-line-numbers-restore nil))
-
-          (evil-emacs-state)
-
-          (if (not my/is-font-mono)
-              (set-face-attribute 'default nil
-                                  :family my/mono-font)))
-
-      ;; Turn everything back on
-      (if (eq my/artist-mode-restore-buffer (current-buffer))
-          (progn
-            (if my/artist-mode-symbol-overlay-restore
-                (progn
-                  (setq my/artist-mode-symbol-overlay-restore nil)
-                  (symbol-overlay-mode 1)))
-
-            (if my/artist-mode-aggressive-indent-restore
-                (progn
-                  (setq my/artist-mode-aggressive-indent-restore nil)
-                  (aggressive-indent-mode 1)))
-
-            (if my/artist-mode-display-line-numbers-restore
-                (progn
-                  (setq my/artist-mode-display-line-numbers-restore nil)
-                  (display-line-numbers-mode 1)))
-
-            (evil-exit-emacs-state)
-
-            (if (and (not my/is-font-mono) window-system)
-                (set-face-attribute 'default nil
-                                    :family my/font))))
-      (setq my/artist-mode-restore-buffer nil)))
-
-  (add-hook 'artist-mode-hook 'my/artist-mode)
-#+END_SRC
-
-
 ** Completing read
 https://www.emacswiki.org/emacs/ArtistMode
 #+BEGIN_SRC emacs-lisp
@@ -7895,7 +7450,7 @@ https://www.emacswiki.org/emacs/ArtistMode
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-key my/leader-map (kbd "f") 'artist-mode)
+  (define-key my/leader-map (kbd "k") 'artist-mode)
 
   (define-prefix-command 'my/artist-mode-map)
   (evil-define-key 'normal artist-mode-map (kbd (concat my/leader-map-key " a")) 'my/artist-mode-map)
@@ -8408,6 +7963,44 @@ https://www.emacswiki.org/emacs/ArtistMode
       ("&&" . ?∧)
       ("||" . ?∨)
       ("not" . ?¬)))
+
+  (defvar my/pretty-comment-symbol ?|)
+
+  ;;(defun my/prettify-comment-lisp ()
+  ;;  `(,((my/repeat-char (string-trim comment-start) "" 2) . ,my/pretty-comment-symbol)))
+
+  (defun my/prettify-comment ()
+    `((,(string-trim comment-start) . ,my/pretty-comment-symbol)))
+
+  (defun my/prettify-outline-heading ()
+    `((,(concat (string-trim comment-start) " *") . ?◉)
+      (,(concat (string-trim comment-start) " **") . ?○)
+      (,(concat (string-trim comment-start) " ***") . ?✸)
+      (,(concat (string-trim comment-start) " ****") . ?✿)
+      (,(concat (string-trim comment-start) " *****") . ?◉)
+      (,(concat (string-trim comment-start) " ******") . ?○)
+      (,(concat (string-trim comment-start) " *******") . ?✸)
+      (,(concat (string-trim comment-start) " ********") . ?✿)))
+
+  (defun my/prettify-outline-heading-lisp ()
+    `((,(concat (string-trim comment-start) (string-trim comment-start) " *") . ?◉)
+      (,(concat (string-trim comment-start) (string-trim comment-start) " **") . ?○)
+      (,(concat (string-trim comment-start) (string-trim comment-start) " ***") . ?✸)
+      (,(concat (string-trim comment-start) (string-trim comment-start) " ****") . ?✿)
+      (,(concat (string-trim comment-start) (string-trim comment-start) " *****") . ?◉)
+      (,(concat (string-trim comment-start) (string-trim comment-start) " ******") . ?○)
+      (,(concat (string-trim comment-start) (string-trim comment-start) " *******") . ?✸)
+      (,(concat (string-trim comment-start) (string-trim comment-start) " ********") . ?✿)))
+
+  (defun my/prettify-outline-heading-lisp-classic ()
+    `((,(my/repeat-char (string-trim comment-start) "" 3) . ?◉)
+      (,(my/repeat-char (string-trim comment-start) "" 4) . ?○)
+      (,(my/repeat-char (string-trim comment-start) "" 5) . ?✸)
+      (,(my/repeat-char (string-trim comment-start) "" 6) . ?✿)
+      (,(my/repeat-char (string-trim comment-start) "" 7) . ?◉)
+      (,(my/repeat-char (string-trim comment-start) "" 8) . ?○)
+      (,(my/repeat-char (string-trim comment-start) "" 9) . ?✸)
+      (,(my/repeat-char (string-trim comment-start) "" 10) . ?✿)))
 #+END_SRC
 
 *** Fsharp
@@ -8451,66 +8044,62 @@ https://www.emacswiki.org/emacs/ArtistMode
 
 *** Set symbol by mode
 #+BEGIN_SRC emacs-lisp
-  ;; (setq-default prettify-symbols-alist
-                ;; (append
-                 ;; my/generic-greek-symbols
-                 ;; my/generic-equal-symbols
-                 ;; my/generic-arrow-symbols
-                 ;; ))
+  (defun my/get-pretty-symbols-by-mode (mode)
+    (pcase mode
+      ('haskell-mode (append
+                      (my/prettify-comment)
+                      my/haskell-symbols
+                      my/generic-greek-symbols
+                      my/generic-equal-symbols
+                      my/generic-arrow-symbols
+                      my/generic-logic-symbols
+                      (my/prettify-outline-heading)
+                      ))
+      ('fsharp-mode (append
+                     (my/prettify-comment)
+                     my/fsharp-symbols
+                     my/generic-greek-symbols
+                     my/generic-equal-symbols
+                     my/generic-arrow-symbols
+                     (my/prettify-outline-heading)
+                     ))
+      ('emacs-lisp-mode (append
+                         (my/prettify-comment)
+                         ;;(my/prettify-comment-lisp)
+                         my/elisp-symbols
+                         my/generic-greek-symbols
+                         my/generic-equal-symbols
+                         my/generic-arrow-symbols
+                         (my/prettify-outline-heading-lisp)
+                         (my/prettify-outline-heading-lisp-classic)
+                         ))
+      ('lisp-interaction-mode (append
+                               (my/prettify-comment)
+                               ;;(my/prettify-comment-lisp)
+                               my/elisp-symbols
+                               my/generic-greek-symbols
+                               my/generic-equal-symbols
+                               my/generic-arrow-symbols
+                               (my/prettify-outline-heading-lisp)
+                               (my/prettify-outline-heading-lisp-classic)
+                               ))
 
-  (add-hook 'prog-mode-hook (lambda () (interactive)
-                              (setq-local prettify-symbols-alist
-                                          (pcase major-mode
-                                            ('haskell-mode (append
-                                                            my/haskell-symbols
-                                                            my/generic-greek-symbols
-                                                            my/generic-equal-symbols
-                                                            my/generic-arrow-symbols
-                                                            my/generic-logic-symbols
-                                                            ))
-                                            ('fsharp-mode (append
-                                                           my/fsharp-symbols
-                                                           my/generic-greek-symbols
-                                                           my/generic-equal-symbols
-                                                           my/generic-arrow-symbols
-                                                           ))
-                                            ('emacs-lisp-mode (append
-                                                               my/elisp-symbols
-                                                               my/generic-greek-symbols
-                                                               my/generic-equal-symbols
-                                                               my/generic-arrow-symbols
-                                                               ))
-                                            ('lisp-interaction-mode (append
-                                                                     my/elisp-symbols
-                                                                     my/generic-greek-symbols
-                                                                     my/generic-equal-symbols
-                                                                     my/generic-arrow-symbols
-                                                                     ))
-                                            ))))
+      (_ (append
+          (my/prettify-comment)
+          my/generic-greek-symbols
+          my/generic-equal-symbols
+          my/generic-arrow-symbols
+          my/generic-logic-symbols
+          (my/prettify-outline-heading)
+          ))))
 
-  ;; (add-hook 'prog-mode-hook
-  ;; (lambda ()
-  ;; (setq-local prettify-symbols-alist
-  ;; (pcase major-mode
-  ;; ('emacs-lisp-mode
-  ;; (append
-  ;; my/generic-arrow-symbols
-  ;; my/generic-equal-symbols))))))
-
-  ;; (add-hook 'emacs-lisp-mode-hook
-  ;; (lambda ()
-  ;; (push '(">=" . ?≥) prettify-symbols-alist)))
+  (add-hook 'prog-mode-hook '(lambda () (interactive)
+                               (setq-local prettify-symbols-alist
+                                           (my/get-pretty-symbols-by-mode major-mode))))
 #+END_SRC
 
-** Comment to symbols
+** Enable modify symbols inside comment blocks
 #+BEGIN_SRC emacs-lisp
-  (defvar my/comment-symbol ?|)
-  (add-hook 'prog-mode-hook (lambda () (interactive)
-                              (setq-local prettify-symbols-alist
-                                          (append
-                                           prettify-symbols-alist
-                                           `((,(string-trim comment-start) . ,my/comment-symbol))))) t)
-
   (defun my/prettify-symbols-default-compose-p (start end _match)
     "Return true iff the symbol MATCH should be composed.
   The symbol starts at position START and ends at position END.
@@ -9610,11 +9199,6 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     (if window-system
         (set-face-attribute 'eshell-prompt nil :foreground "purple" :background my/background-color)
       (set-face-attribute 'eshell-prompt nil :foreground "magenta" :background my/background-color))
-
-        ;;; Eww
-    (set-face-attribute 'my/eww-code-face nil :foreground my/foreground-color :background my/background-color-2 :family my/mono-font)
-
-    ;;(defvar my/evil-goggles-highlight-color)
 
         ;;; Yascroll
     (set-face-attribute 'yascroll:thumb-fringe nil :background "slateblue" :foreground "slateblue")
