@@ -216,9 +216,6 @@ keycode 29 = Caps_Lock # Makes ctrl act as caps
 ** Color picking
 Get =gpick=
 
-** Todo
-https://potassco.org/doc/start/
-
 ** C libraries not imported
 Add a .ccls file and format it like this
 #+BEGIN_SRC
@@ -425,6 +422,10 @@ imenu-list
 
 ** I shouldn't have one function that modifies all faces
 Since then i have to load every package i want to modify the faces of before running the function
+
+** Bind recenter screen to singe key in normal mode
+** Better habbits
+Enable jammer, disable number row
 
 * First
 Things to do first
@@ -1143,6 +1144,7 @@ By default evil goes to the last line, first char. This goes to the very last ch
   (my/evil-normal-define-key "gb" 'evil-scroll-line-to-bottom)
   (my/evil-normal-define-key "gf" 'evil-scroll-line-to-top)
   (my/evil-normal-define-key "ge" 'evil-scroll-line-to-center)
+  ;;(my/evil-normal-define-key "/" 'evil-scroll-line-to-center)
 #+END_SRC
 
 *** Don't complete from all buffers
@@ -4259,25 +4261,26 @@ Shows information in echo area
 
 *** indent guide
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'highlight-indent-guides)
+  ;; (straight-use-package 'highlight-indent-guides)
 
-  (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
+  ;;(add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
+
   ;;(add-hook 'prog-mode-hook '(lambda () (highlight-indent-guides-mode (my/highlight-indent-guide-should-enable))))
 
-  ;;(defun my/highlight-indent-guide-should-enable ()
-  ;;  (pcase major-mode
-  ;;    ('emacs-lisp-mode -1)
-  ;;    ('lisp-interaction-mode -1)
-  ;;    ('clojure-mode -1)
-  ;;    ('scheme-mode -1)
-  ;;    ('common-lisp-mode -1)
-  ;;    (_ 1)))
+  ;; ;;(defun my/highlight-indent-guide-should-enable ()
+  ;; ;;  (pcase major-mode
+  ;; ;;    ('emacs-lisp-mode -1)
+  ;; ;;    ('lisp-interaction-mode -1)
+  ;; ;;    ('clojure-mode -1)
+  ;; ;;    ('scheme-mode -1)
+  ;; ;;    ('common-lisp-mode -1)
+  ;; ;;    (_ 1)))
 
-  (setq highlight-indent-guides-method 'column)
-  ;; (setq highlight-indent-guides-method 'fill)
-
-  (setq highlight-indent-guides-responsive 'top)
-  (setq highlight-indent-guides-delay 0)
+  ;; (setq highlight-indent-guides-method 'column)
+  ;; ;; (setq highlight-indent-guides-method 'fill)
+  ;;
+  ;; (setq highlight-indent-guides-responsive 'top)
+  ;; (setq highlight-indent-guides-delay 0)
 #+END_SRC
 
 *** Auto jump to definition
@@ -5093,7 +5096,15 @@ omnisharp.json should be in ~/.omnisharp on all OSs
   (defun my/csharp-mode ()
     (omnisharp-mode)
     (company-mode)
-    (flycheck-mode))
+    (flycheck-mode)
+
+    (setq indent-tabs-mode nil)
+    (setq c-syntactic-indentation t)
+    (c-set-style "ellemtel")
+    (setq c-basic-offset 4)
+    (setq truncate-lines t)
+    (setq tab-width 4)
+    (setq evil-shift-width 4))
 
   (add-hook 'csharp-mode-hook 'my/csharp-mode)
 #+END_SRC
@@ -9073,9 +9084,13 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     ;; Syntax
     (set-face-attribute 'font-lock-doc-face nil :foreground my/foreground-color :background my/background-color-4)
     ;;(defvar my/comment-face-height (floor (* my/default-face-height 1.15)))
-    (set-face-attribute 'font-lock-comment-face nil :foreground my/foreground-color :background my/background-color-1) ;;:height my/comment-face-height)
-    (set-face-attribute 'font-lock-string-face nil :foreground my/foreground-color :background my/background-color-2)
-    (set-face-attribute 'font-lock-function-name-face nil :weight 'bold)
+    ;;(set-face-attribute 'font-lock-comment-face nil :foreground my/foreground-color :background my/background-color-1) ;;:height my/comment-face-height)
+    (set-face-attribute 'font-lock-comment-face nil :foreground (color-lighten-name my/background-color 30) :background my/background-color) ;;:height my/comment-face-height)
+
+    ;;(set-face-attribute 'font-lock-string-face nil :foreground my/foreground-color :background my/background-color-2)
+    (set-face-attribute 'font-lock-string-face nil :foreground my/foreground-color :background my/background-color)
+    ;;(set-face-attribute 'font-lock-function-name-face nil :weight 'bold)
+    (set-face-attribute 'font-lock-function-name-face nil)
 
     ;; (set-face-attribute  'font-lock-keyword-face nil :foreground my/foreground-color :background my/background-color-1)
     ;; (set-face-attribute  'font-lock-function-name-face nil :foreground my/foreground-color :background my/background-color-2)
