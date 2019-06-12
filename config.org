@@ -325,7 +325,6 @@ https://github.com/bastibe/annotate.el
 Does it happen in vanilla?
 Use error on quit, quit when loading is happening then get backtrace.
 ** Make magit-status faster during huge edits, or create new magit-status-fast command
-** Rename buffer in window hydra
 ** C-h to go back in counsel-find-file
 Also unbind backspace in counsel-find-file
 Command is called: =ivy-backward-delete-char=
@@ -424,9 +423,6 @@ imenu-list
 Since then i have to load every package i want to modify the faces of before running the function
 
 ** Bind recenter screen to singe key in normal mode
-** Better habbits
-Enable jammer, disable number row
-
 * First
 Things to do first
 #+BEGIN_SRC emacs-lisp
@@ -1635,7 +1631,7 @@ Disable bell
 
 ** Change max killring size
 #+BEGIN_SRC emacs-lisp
-  (setq kill-ring-max 100)
+  (setq kill-ring-max 500)
 #+END_SRC
 
 ** Pixel scroll mode
@@ -1905,6 +1901,19 @@ Enable and show minibuffer recursive depth
 #+BEGIN_SRC emacs-lisp
   (setq enable-recursive-minibuffers t)
   (minibuffer-depth-indicate-mode 1)
+#+END_SRC
+
+** Clone indirect buffer name
+#+BEGIN_SRC emacs-lisp
+  (defun my/clone-indirect-buffer-name ()
+    (interactive)
+    (clone-indirect-buffer-other-window
+     (concat
+      (buffer-name)
+      " | "
+      (completing-read "Buffer name: " nil))
+     t
+     ))
 #+END_SRC
 
 * File options
@@ -2754,8 +2763,9 @@ Needed by ivy-occur to edit buffers
   (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "C-o" 'ivy-occur)
   (my/evil-insert-define-key-in-mode ivy-minibuffer-map  "C-o" 'ivy-occur)
 
-  (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "C-h" 'ivy-dispatching-done)
-  (my/evil-insert-define-key-in-mode ivy-minibuffer-map  "C-h" 'ivy-dispatching-done)
+  ;; Doesn't work with dedicated minibuffer window?
+  ;;(my/evil-normal-define-key-in-mode ivy-minibuffer-map  "C-y" 'ivy-dispatching-done)
+  ;;(my/evil-insert-define-key-in-mode ivy-minibuffer-map  "C-y" 'ivy-dispatching-done)
 
   (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "C-s" 'ivy-next-line-or-history)
   (my/evil-insert-define-key-in-mode ivy-minibuffer-map  "C-s" 'ivy-next-line-or-history)
@@ -2771,6 +2781,9 @@ Needed by ivy-occur to edit buffers
 
   (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "C-d" 'ivy-insert-current)
   (my/evil-insert-define-key-in-mode ivy-minibuffer-map  "C-d" 'ivy-insert-current)
+
+  (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "C-f" 'ivy-backward-delete-char)
+  (my/evil-insert-define-key-in-mode ivy-minibuffer-map  "C-f" 'ivy-backward-delete-char)
 
   ;; Clear ivy input
   (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "D" '(lambda () (interactive) (beginning-of-line-text)
@@ -2793,24 +2806,24 @@ Also ivy-occur-grep
   (evil-define-key 'normal ivy-occur-mode-map (kbd "RET") 'ivy-occur-press)
   (evil-define-key 'normal ivy-occur-mode-map (kbd "p") 'evil-previous-line)
   (evil-define-key 'normal ivy-occur-mode-map (kbd "n") 'evil-next-line)
-  (evil-define-key 'normal ivy-occur-mode-map (kbd "C-h") 'ivy-occur-read-action)
+  (evil-define-key 'normal ivy-occur-mode-map (kbd "C-y") 'ivy-occur-read-action)
 
   (evil-define-key 'visual ivy-occur-mode-map (kbd "RET") 'ivy-occur-press)
   (evil-define-key 'visual ivy-occur-mode-map (kbd "p") 'evil-previous-line)
   (evil-define-key 'visual ivy-occur-mode-map (kbd "n") 'evil-next-line)
-  (evil-define-key 'visual ivy-occur-mode-map (kbd "C-h") 'ivy-occur-read-action)
+  (evil-define-key 'visual ivy-occur-mode-map (kbd "C-y") 'ivy-occur-read-action)
 
   (evil-define-key 'insert ivy-occur-grep-mode-map (kbd "RET") 'ivy-occur-press)
 
   (evil-define-key 'normal ivy-occur-grep-mode-map (kbd "RET") 'ivy-occur-press)
   (evil-define-key 'normal ivy-occur-grep-mode-map (kbd "p") 'evil-previous-line)
   (evil-define-key 'normal ivy-occur-grep-mode-map (kbd "n") 'evil-next-line)
-  (evil-define-key 'normal ivy-occur-grep-mode-map (kbd "C-h") 'ivy-occur-read-action)
+  (evil-define-key 'normal ivy-occur-grep-mode-map (kbd "C-y") 'ivy-occur-read-action)
 
   (evil-define-key 'visual ivy-occur-grep-mode-map (kbd "RET") 'ivy-occur-press)
   (evil-define-key 'visual ivy-occur-grep-mode-map (kbd "p") 'evil-previous-line)
   (evil-define-key 'visual ivy-occur-grep-mode-map (kbd "n") 'evil-next-line)
-  (evil-define-key 'visual ivy-occur-grep-mode-map (kbd "C-h") 'ivy-occur-read-action)
+  (evil-define-key 'visual ivy-occur-grep-mode-map (kbd "C-y") 'ivy-occur-read-action)
 
   ;; (define-key map (kbd "a") 'ivy-occur-read-action)
   ;; (define-key map (kbd "o") 'ivy-occur-dispatch)
@@ -3032,7 +3045,7 @@ Company doc mode disables visual line mode for whatever reason, enable it inside
           (let ((win (display-buffer doc-buffer t)))
             (set-window-start win (if start start (point-min))))))))
 
-  (define-key company-active-map (kbd "C-h") 'my/company-show-doc-buffer)
+  (define-key company-active-map (kbd "C-o") 'my/company-show-doc-buffer)
 
   (defun my/company-show-doc-buffer-keep-open ()
     "Temporarily show the documentation buffer for the selection."
@@ -3050,7 +3063,7 @@ Company doc mode disables visual line mode for whatever reason, enable it inside
         (let ((win (display-buffer doc-buffer t)))
           (set-window-start win (if start start (point-min)))))))
 
-  (define-key company-active-map (kbd "M-h") 'my/company-show-doc-buffer-keep-open)
+  (define-key company-active-map (kbd "M-o") 'my/company-show-doc-buffer-keep-open)
 #+END_SRC
 
 *** Company-show-numbers but with letters
@@ -3101,6 +3114,8 @@ Make company mode inherit colors from theme, change later maybe
 
 *** Keys
 #+BEGIN_SRC emacs-lisp
+  (define-key company-active-map (kbd "C-f") nil)
+
   (define-key company-active-map (kbd "M-n") nil)
   (define-key company-active-map (kbd "M-p") nil)
   (define-key company-active-map (kbd "C-n") 'company-select-next)
@@ -3279,42 +3294,6 @@ Flycheck with extra correction for elisp packages
 #+END_SRC
 
 
-*** Isearch screen
-#+BEGIN_SRC emacs-lisp
-  (defvar my/isearch-end-pos)
-
-  (defun my/isearch-current-screen (forward)
-    (interactive)
-    (let ((narrow-restore
-           (if (buffer-narrowed-p)
-               `(,(point-min) ,(point-max))
-             nil)))
-      (setq my/isearch-current-buffer (current-buffer))
-      (if forward
-          (progn
-            ;;(narrow-to-region (window-start) (window-end))
-            (my/isearch-forward-regexp))
-        ;;(narrow-to-region (window-start) (window-end))
-        (my/isearch-backward-regexp))
-      ;; FIXME: Currently this resets narrow when done, fix this with save-restriction
-      ;;(widen)
-  ;;    (if narrow-restore
-  ;;        (narrow-to-region (car narrow-restore) (nth 1 narrow-restore)))
-      ;;(setq my/isearch-end-pos (point))
-      ;;(goto-char window-top)
-      ;;(goto-char end-pos)
-      ;;(run-with-timer 0.01 nil '(lambda () (interactive)  (goto-char my/isearch-end-pos)))
-      ))
-
-  (defun my/isearch-current-screen-forward ()
-    (interactive)
-    (my/isearch-current-screen t))
-
-  (defun my/isearch-current-screen-backward ()
-    (interactive)
-    (my/isearch-current-screen nil))
-#+END_SRC
-
 *** Replace isearch regexp search with ivy-regex-plus
 #+BEGIN_SRC emacs-lisp
   (defun my/isearch-forward-regexp (&optional not-regexp no-recursive-edit)
@@ -3327,6 +3306,12 @@ Flycheck with extra correction for elisp packages
 
   (defun my/ivy--regex-plus (string &optional lax)
     (ivy--regex-plus string))
+#+END_SRC
+
+*** Keys
+#+BEGIN_SRC emacs-lisp
+  ;; Disable custom C-f key
+  (define-key isearch-mode-map (kbd "C-f") 'isearch-delete-char)
 #+END_SRC
 
 ** Goto middle of line
@@ -3426,48 +3411,45 @@ https://emacs.stackexchange.com/questions/20900/navigate-by-indentation
 
 ** Marks
 #+BEGIN_SRC emacs-lisp
-  (setq mark-ring-max 100)
+    (setq mark-ring-max 100)
 
-  (defvar my/current-mark 0)
-  (defvar my/current-mark-reference nil)
+    (defvar my/current-mark 0)
+    (defvar my/current-mark-reference nil)
 
-  (defun my/reset-current-marks-if-mark-ring-change ()
-    (if (and my/current-mark-reference (ignore-errors (= my/current-mark-reference (car mark-ring))))
-        nil
-      ;; Reset all mark counters
-      (setq my/current-mark-reference (car mark-ring))
-      (setq my/current-mark 0)
-      ;;(push-mark)
-      t))
+    (defun my/reset-current-marks-if-mark-ring-change ()
+      (if (and my/current-mark-reference (ignore-errors (= my/current-mark-reference (car mark-ring))))
+          nil
+        ;; Reset all mark counters
+        (setq my/current-mark-reference (car mark-ring))
+        (setq my/current-mark 0)
+        ;;(push-mark)
+        t))
 
-  (defun my/mark-move (jump-distance)
-    "Moves between marks"
-    (interactive)
-    (or mark-ring
-        (error "No mark set"))
-    (or (my/reset-current-marks-if-mark-ring-change)
-        (setq my/current-mark
-              (if (and (>= (+ my/current-mark jump-distance) 0) (< (+ my/current-mark jump-distance) (length mark-ring)))
-                  (+ my/current-mark jump-distance)
-                my/current-mark)))
-    (let* ((marker (nth my/current-mark mark-ring))
-           (position (marker-position marker)))
-      ;; (if (and (= my/current-mark 1) (not (= position (point))))
-      ;; (progn (push-mark)
-      ;; (setq my/current-mark-reference (car mark-ring))))
-      (message (concat "At mark: " (number-to-string my/current-mark)))
-      (or (and (>= position (point-min))
-               (<= position (point-max)))
-          (if widen-automatically
-              (widen)
-            (error "Global mark position is outside accessible part of buffer")))
-      (goto-char position)))
+    (defun my/mark-move (jump-distance)
+      "Moves between marks"
+      (interactive)
+      (or mark-ring
+          (error "No mark set"))
+      (or (my/reset-current-marks-if-mark-ring-change)
+          (setq my/current-mark
+                (if (and (>= (+ my/current-mark jump-distance) 0) (< (+ my/current-mark jump-distance) (length mark-ring)))
+                    (+ my/current-mark jump-distance)
+                  my/current-mark)))
+      (let* ((marker (nth my/current-mark mark-ring))
+             (position (marker-position marker)))
+        ;; (if (and (= my/current-mark 1) (not (= position (point))))
+        ;; (progn (push-mark)
+        ;; (setq my/current-mark-reference (car mark-ring))))
+        (message (concat "At mark: " (number-to-string my/current-mark)))
+        (or (and (>= position (point-min))
+                 (<= position (point-max)))
+            (if widen-automatically
+                (widen)
+              (error "Global mark position is outside accessible part of buffer")))
+        (goto-char position)))
 
-(my/evil-normal-define-key "C-b" '(lambda () (interactive) (my/mark-move 1)))
-(my/evil-normal-define-key "C-f" '(lambda () (interactive) (my/mark-move -1)))
-
-  ;; (define-key my/keys-mode-map (kbd "M-h") 'previous-buffer)
-  ;; (define-key my/keys-mode-map (kbd "M-l") 'next-buffer)
+  ;;(my/evil-normal-define-key "C-b" '(lambda () (interactive) (my/mark-move 1)))
+  ;;(my/evil-normal-define-key "C-f" '(lambda () (interactive) (my/mark-move -1)))
 #+END_SRC
 
 ** Relative line numbers
@@ -3677,26 +3659,26 @@ g-; and g-,
 ** Keys
 #+BEGIN_SRC emacs-lisp
   ;;(my/evil-normal-define-key "M-f" 'avy-goto-char-in-line)
-    ;;(define-key my/leader-map (kbd "f") 'avy-goto-char-in-line)
+  ;;(define-key my/leader-map (kbd "f") 'avy-goto-char-in-line)
 
   (my/evil-normal-define-key "M-w" 'my/avy-goto-word-0-in-line)
-    (define-key my/leader-map (kbd "w") 'my/avy-goto-word-0-in-line)
+  (define-key my/leader-map (kbd "w") 'my/avy-goto-word-0-in-line)
 
   (my/evil-normal-define-key "M-g" 'avy-goto-char-2)
-    (define-key my/leader-map (kbd "g") 'avy-goto-char-2)
+  (define-key my/leader-map (kbd "g") 'avy-goto-char-2)
 
   (my/evil-normal-define-key "M-g" 'avy-goto-char-2)
-    (define-key my/leader-map (kbd "g") 'avy-goto-char-2)
+  (define-key my/leader-map (kbd "g") 'avy-goto-char-2)
 
-  (my/evil-normal-define-key "M-n" 'avy-goto-word-0-below)
-    (define-key evil-normal-state-map (kbd "M-p") 'avy-goto-word-0-above)
+  ;; (my/evil-normal-define-key "M-n" 'avy-goto-word-0-below)
+  ;;   (define-key evil-normal-state-map (kbd "M-p") 'avy-goto-word-0-above)
 
-    ;; (define-key my/leader-map (kbd "n") 'my/avy-goto-line-below-keep-horizontal-position)
-    ;; (define-key my/leader-map (kbd "p") 'my/avy-goto-line-above-keep-horizontal-position)
+  ;; (define-key my/leader-map (kbd "n") 'my/avy-goto-line-below-keep-horizontal-position)
+  ;; (define-key my/leader-map (kbd "p") 'my/avy-goto-line-above-keep-horizontal-position)
 
-    ;;(define-key my/keys-mode-map (kbd "M-l") 'link-hint-open-link)
-    (define-key my/leader-map (kbd "l") 'link-hint-open-link)
-    ;;(define-key my/keys-mode-map (kbd "M-???") 'link-hint-copy-link)
+  ;;(define-key my/keys-mode-map (kbd "M-l") 'link-hint-open-link)
+  (define-key my/leader-map (kbd "l") 'link-hint-open-link)
+  ;;(define-key my/keys-mode-map (kbd "M-???") 'link-hint-copy-link)
 #+END_SRC
 
 * Bookmark management
@@ -5102,7 +5084,6 @@ omnisharp.json should be in ~/.omnisharp on all OSs
     (setq c-syntactic-indentation t)
     (c-set-style "ellemtel")
     (setq c-basic-offset 4)
-    (setq truncate-lines t)
     (setq tab-width 4)
     (setq evil-shift-width 4))
 
@@ -5617,11 +5598,16 @@ Default eshell/clear only spams newlines
 
 *** Backspace/delete C-h, C-l
 #+BEGIN_SRC emacs-lisp
-  (define-key evil-insert-state-map (kbd "C-h") 'backward-delete-char-untabify)
+  (define-key evil-insert-state-map (kbd "C-f") 'backward-delete-char-untabify)
   (define-key evil-insert-state-map (kbd "C-l") 'delete-char)
 
-  (define-key evil-replace-state-map (kbd "C-h") 'backward-delete-char-untabify)
+  (define-key evil-replace-state-map (kbd "C-f") 'backward-delete-char-untabify)
   (define-key evil-replace-state-map (kbd "C-l") 'delete-char)
+
+  (define-key evil-normal-state-map (kbd "<backspace>") 'my/alert)
+  (define-key evil-insert-state-map (kbd "<backspace>") 'my/alert)
+
+  (define-key evil-replace-state-map (kbd "DEL") 'my/alert)
 #+END_SRC
 
 *** k(Move up) <--> p(Paste)
@@ -5693,12 +5679,11 @@ Default eshell/clear only spams newlines
   ;;(my/evil-visual-define-key "s" 'my/avy-goto-subword-0-below)
   ;;(my/evil-visual-define-key "S" 'my/avy-goto-subword-0-above)
 
-  (my/evil-normal-define-key "s" 'my/isearch-current-screen-forward)
-  (my/evil-normal-define-key "S" 'my/isearch-current-screen-backward)
+  (my/evil-normal-define-key "s" 'my/isearch-forward-regexp)
+  (my/evil-normal-define-key "S" 'my/isearch-backward-regexp)
 
-  (my/evil-visual-define-key "s" 'my/isearch-current-screen-forward)
-  (my/evil-visual-define-key "S" 'my/isearch-current-screen-backward)
-
+  (my/evil-visual-define-key "s" 'my/isearch-forward-regexp)
+  (my/evil-visual-define-key "S" 'my/isearch-backward-regexp)
 
   (my/evil-normal-define-key "g n" 'isearch-repeat-forward)
   (my/evil-normal-define-key "g p" 'isearch-repeat-backward)
@@ -5752,17 +5737,25 @@ Default eshell/clear only spams newlines
 #+END_SRC
 
 *** Rebind tab
-Use C-i instead
 #+BEGIN_SRC emacs-lisp
   ;;(define-key my/keys-mode-map (kbd "C-e") 'my/simulate-esc)
   ;;(define-key key-translation-map (kbd "?\\t") (kbd "C-="))
+
+  ;; If window system, unbind tab key and not C-=
+
   (define-key key-translation-map (kbd "TAB") (kbd "C-="))
   (define-key key-translation-map (kbd "<tab>") (kbd "C-="))
   (define-key key-translation-map (kbd "C-t") (kbd "TAB"))
   (define-key key-translation-map (kbd "M-C-t") (kbd "C-TAB"))
+
+  ;;(when window-system
+  ;;  (define-key key-translation-map (kbd "TAB") (kbd "C--"))
+  ;;  (define-key key-translation-map (kbd "<tab>") (kbd "C--"))
+  ;;
+  ;;  (define-key key-translation-map (kbd "C-i") (kbd "C-~")))
 #+END_SRC
 
-*** Rebind backspace
+*** Disable backspace
 #+BEGIN_SRC emacs-lisp
   ;; (define-key key-translation-map (kbd "C-e") (kbd "TAB"))
   ;; (define-key key-translation-map (kbd "M-C-i") (kbd "C-TAB"))
@@ -5930,7 +5923,7 @@ We use class names for all windows expect for Java applications and GIMP (becaus
   (setq exwm-input-simulation-keys
         '(
           ;; Delete char
-          ([?\C-h] . [delete])
+          ([?\C-f] . [delete])
           ([?\C-l] . [backspace])
           ;; movement
           ([?\C-p] . [up])
@@ -6006,10 +5999,8 @@ We use class names for all windows expect for Java applications and GIMP (becaus
   (exwm-input-set-key (kbd "C-e") 'keyboard-quit)
   (exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
   (exwm-input-set-key (kbd "C-=") 'my/window-hydra/body)
-  (exwm-input-set-key (kbd "M-x") 'counsel-M-x)
 
-  (exwm-input-set-key (kbd "M-h") 'previous-buffer)
-  (exwm-input-set-key (kbd "M-l") 'next-buffer)
+  (exwm-input-set-key (kbd "M-x") 'counsel-M-x)
 
   ;; Enter and exit char mode
   ;; (exwm-input-set-key (kbd "M-a") 'exwm-input-grab-keyboard)
@@ -6140,7 +6131,7 @@ Redefine function to attempt to open image if link at point wasn't found
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "p" 'exwm-firefox-core-up)
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "n" 'exwm-firefox-core-down)
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-l" 'exwm-firefox-core-right)
-      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-h" 'exwm-firefox-core-left)
+      (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-f" 'exwm-firefox-core-left)
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "p" 'exwm-firefox-core-up)
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "n" 'exwm-firefox-core-down)
       (my/evil-normal-define-key-in-mode exwm-firefox-evil-mode-map "C-p" 'exwm-firefox-core-up)
@@ -6186,7 +6177,7 @@ Redefine function to attempt to open image if link at point wasn't found
       (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)))
 
   (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-l") '(lambda () (interactive) (exwm-input--fake-key 'delete)))
-  (evil-define-key 'insert  exwm-firefox-evil-mode-map (kbd "C-h") '(lambda () (interactive) (exwm-input--fake-key 'backspace)))
+  (evil-define-key 'insert  exwm-firefox-evil-mode-map (kbd "C-f") '(lambda () (interactive) (exwm-input--fake-key 'backspace)))
 
 #+END_SRC
 
@@ -7571,7 +7562,8 @@ https://www.emacswiki.org/emacs/ArtistMode
     ;; Split
     ("o" split-window-right nil)
     ("v" split-window-below nil)
-    ;; ("i" clone-indirect-buffer-other-window nil)
+
+    ("i" my/clone-indirect-buffer-name nil)
 
     ;; Search
     ("C-s" swiper-all nil)
@@ -7620,7 +7612,9 @@ https://www.emacswiki.org/emacs/ArtistMode
     ("C-b" my/delete-bookmark nil)
 
     ("u" winner-undo nil)
-    ("r" winner-redo nil))
+    ("r" winner-redo nil)
+
+    ("R" rename-buffer nil))
 
   ;;  ("SPC" my/leader-map nil)
 
