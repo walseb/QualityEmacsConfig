@@ -2746,6 +2746,8 @@ Needed by ivy-occur to edit buffers
   (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "n" 'ivy-next-line)
   (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "p" 'ivy-previous-line)
 
+  (my/evil-normal-define-key-in-mode ivy-minibuffer-map  "<escape>" 'ivy-call)
+
   (define-key ivy-minibuffer-map [remap evil-ret] 'ivy-done)
   (define-key ivy-minibuffer-map [remap newline] 'ivy-done)
 
@@ -9002,9 +9004,16 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                       ))))))
 #+END_SRC
 
-* Theme
+* Set theme
 #+BEGIN_SRC emacs-lisp
-  (defun my/paper-mode()
+  ;; (defvar my/default-face-list '())
+  ;; (defun my/set-face-to-default (face-name)
+  ;;   (add-to-list 'my/default-face-list face-name)
+  ;;
+  ;;   ;; Reset face
+  ;;   (set-face-attribute face-name nil :family 'unspecified :foundry 'unspecified :width 'unspecified :height 'unspecified :weight 'unspecified :slant 'unspecified :foreground 'unspecified :background 'unspecified :underline 'unspecified :overline 'unspecified :strike-through 'unspecified :box 'unspecified :stipple 'unspecified :font 'unspecified :inherit 'default))
+
+  (defun my/theme ()
     (interactive)
     (cl-loop for face in (face-list) do
              ;; Don't change magit faces
@@ -9090,7 +9099,8 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     ;; (set-face-attribute  'font-lock-function-name-face nil :foreground my/foreground-color :background my/background-color-2)
 
     ;; Required by other face
-    (set-face-attribute 'outline-4 nil :foreground my/foreground-color :background my/background-color)
+    ;;(my/set-face-to-default 'outline-4)
+    (set-face-attribute 'outline-4 nil :foreground 'unspecified :foreground 'background :inherit 'default)
 
     ;; Line numbers
     (set-face-attribute 'line-number-current-line nil :foreground my/foreground-color :background my/background-color)
@@ -9328,12 +9338,12 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     (set-face-attribute 'which-key-special-key-face nil :family my/mono-font))
 
   (if window-system
-      (add-hook 'exwm-init-hook 'my/paper-mode)
-    (add-hook 'after-init-hook 'my/paper-mode))
+      (add-hook 'exwm-init-hook 'my/theme)
+    (add-hook 'after-init-hook 'my/theme))
 
   ;; (counsel-faces)
 
-  (define-key my/leader-map (kbd "M-c") 'my/paper-mode)
+  (define-key my/leader-map (kbd "M-c") 'my/theme)
 #+END_SRC
 
 * Run command on boot
