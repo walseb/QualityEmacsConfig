@@ -3153,6 +3153,7 @@ Doesn't work with my setup right now
 
 ** Flycheck
 #+BEGIN_SRC emacs-lisp
+  (setq flycheck-mode-map (make-sparse-keymap))
   (straight-use-package 'flycheck)
 
   ;; Decrease delay
@@ -3191,6 +3192,8 @@ Flycheck with extra correction for elisp packages
 
 ** Yasnippet
 #+BEGIN_SRC emacs-lisp
+  (setq yas-minor-mode-map (make-sparse-keymap))
+
   (straight-use-package 'yasnippet)
   (require 'yasnippet)
 
@@ -3749,11 +3752,12 @@ g-; and g-,
 
 ** Winner-mode
 #+BEGIN_SRC emacs-lisp
+  ;; Remove default keys
+  (setq winner-mode-map (make-sparse-keymap))
+
   (require 'winner)
 
   (winner-mode)
-;;   (my/evil-normal-define-key "M-u" 'winner-undo)
-;;   (my/evil-normal-define-key "M-r" 'winner-redo)
 #+END_SRC
 
 ** No more window resetting
@@ -5575,6 +5579,11 @@ Default eshell/clear only spams newlines
 #+END_SRC
 
 * Keys
+** Clean default maps
+*** Clean global keys
+#+BEGIN_SRC emacs-lisp
+#+END_SRC
+
 ** Key rebinds
 #+BEGIN_SRC emacs-lisp
   (require 'evil-maps)
@@ -5793,6 +5802,88 @@ Default eshell/clear only spams newlines
 #+END_SRC
 
 * exwm
+** Keys before exwm init
+#+BEGIN_SRC emacs-lisp
+  ;; Reset exwm-mode map
+  (setq exwm-mode-map (make-sparse-keymap))
+
+  (define-key evil-emacs-state-map (kbd "TAB") nil)
+  (global-unset-key (kbd "TAB"))
+
+  ;; Rebind keys in exwm bufffers
+  (setq exwm-input-simulation-keys
+        '(
+          ;; Delete char
+          ([?\C-f] . [delete])
+          ([?\C-l] . [backspace])
+          ;; movement
+          ([?\C-p] . [up])
+          ([?\C-n] . [down])
+
+          ;; ([?\C-u] . [prior])
+          ;; ([?\C-w] . [next])
+          ([?\C-w] . [?\C-d])
+
+          ([?\C-s] . [?\C-f])
+
+          ([?\C-a] . [return])
+          ([?\r] . [return])
+
+          ;;([?\C-e] . [?\C-[])
+          ;; ([?\C-e] . [escape])
+          ;; ([?\e] . [escape])
+
+          ([?\C-t] . [tab])
+          ([?\t] . [tab])
+
+          ([?\C-g] . [escape])
+          ;;([?\e] . [escape])
+
+          ;; Firefox hard-coded open url hotkey
+          ;;([?\C-o] . [f6])
+
+          ;; Redo
+          ([?\C-r] . [?\C-y])
+          ;; Undo
+          ([?\M-u] . [?\C-z])
+
+          ;; cut/paste.
+          ([?\C-y] . [?\C-c])
+          ([?\C-k] . [?\C-v])
+
+          ([?\M-a] . [?\C-å])
+          ([?\M-e] . [?\C-ä])
+          ([?\M-o] . [?\C-ö])
+
+          ([?\M-A] . [?\C-Å])
+          ([?\M-E] . [?\C-Ä])
+          ([?\M-O] . [?\C-Ö])
+
+          ([?\C-c] . [?\C-c])))
+
+  (setq exwm-input-prefix-keys nil)
+  ;; Exwm don't send back these keys
+  (dolist (k '(
+               XF86AudioLowerVolume
+               XF86AudioRaiseVolume
+               XF86PowerOff
+               XF86AudioMute
+               XF86AudioPlay
+               XF86AudioStop
+               XF86AudioPrev
+               XF86AudioNext
+               XF86ScreenSaver
+               XF68Back
+               XF86Forward
+               Scroll_Lock
+               print
+               ))
+    (cl-pushnew k exwm-input-prefix-keys))
+
+  (setq exwm-input-global-keys nil)
+#+END_SRC
+
+** Core
 https://emacs.stackexchange.com/questions/33326/how-do-i-cut-and-paste-effectively-between-applications-while-using-exwm
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'exwm)
@@ -5803,15 +5894,16 @@ https://emacs.stackexchange.com/questions/33326/how-do-i-cut-and-paste-effective
   ;; enable exwm
   (exwm-enable)
 
-  (add-hook 'exwm-manage-finish-hook 'my/exwm-mode)
-  (defun my/exwm-mode ()
-    (interactive)
-    ())
+  ;;(add-hook 'exwm-manage-finish-hook 'my/exwm-mode)
+  ;;(defun my/exwm-mode ()
+  ;;  (interactive)
+  ;;  ())
 #+END_SRC
 
 ** Exwm-edit
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'exwm-edit)
+  (setq exwm-edit-bind-default-keys nil)
+  (straight-use-package '(exwm-edit :type git :host github :repo "walseb/exwm-edit"))
   (require 'exwm-edit)
 #+END_SRC
 
@@ -5919,102 +6011,15 @@ We use class names for all windows expect for Java applications and GIMP (becaus
 
 ** Keys
 #+BEGIN_SRC emacs-lisp
-  (define-key evil-emacs-state-map (kbd "TAB") 'nil)
-  (global-unset-key (kbd "TAB"))
-  ;; Rebind keys in exwm bufffers
-  (setq exwm-input-simulation-keys
-        '(
-          ;; Delete char
-          ([?\C-f] . [delete])
-          ([?\C-l] . [backspace])
-          ;; movement
-          ([?\C-p] . [up])
-          ([?\C-n] . [down])
-
-          ;; ([?\C-u] . [prior])
-          ;; ([?\C-w] . [next])
-          ([?\C-w] . [?\C-d])
-
-          ([?\C-s] . [?\C-f])
-
-          ([?\C-a] . [return])
-          ([?\r] . [return])
-
-          ;;([?\C-e] . [?\C-[])
-          ;; ([?\C-e] . [escape])
-          ;; ([?\e] . [escape])
-
-          ([?\C-t] . [tab])
-          ([?\t] . [tab])
-
-          ([?\C-g] . [escape])
-          ;;([?\e] . [escape])
-
-          ;; Firefox hard-coded open url hotkey
-          ;;([?\C-o] . [f6])
-
-          ;; Redo
-          ([?\C-r] . [?\C-y])
-          ;; Undo
-          ([?\M-u] . [?\C-z])
-
-          ;; cut/paste.
-          ([?\C-y] . [?\C-c])
-          ([?\C-k] . [?\C-v])
-
-          ([?\M-a] . [?\C-å])
-          ([?\M-e] . [?\C-ä])
-          ([?\M-o] . [?\C-ö])
-
-          ([?\M-A] . [?\C-Å])
-          ([?\M-E] . [?\C-Ä])
-          ([?\M-O] . [?\C-Ö])
-          ))
-
-  (setq exwm-input-prefix-keys nil)
-  ;; Exwm don't send back these keys
-  (dolist (k '(
-               XF86AudioLowerVolume
-               XF86AudioRaiseVolume
-               XF86PowerOff
-               XF86AudioMute
-               XF86AudioPlay
-               XF86AudioStop
-               XF86AudioPrev
-               XF86AudioNext
-               XF86ScreenSaver
-               XF68Back
-               XF86Forward
-               Scroll_Lock
-               print
-               ))
-    (cl-pushnew k exwm-input-prefix-keys))
-
-  ;; Some keys have to be defined using "exwm-input-set-key" in order to be usable if they are in "exwm-input-prefix-keys"
   (exwm-input-set-key (kbd my/mod-leader-map-key) 'my/leader-map)
 
   (exwm-input-set-key (kbd "M-<tab>") 'my/toggle-switch-to-minibuffer)
-  ;;(exwm-input-set-key (kbd "C-M-=") 'my/toggle-switch-to-minibuffer)
-
-  ;;(exwm-input-set-key (kbd "C-M-i") 'my/toggle-switch-to-minibuffer)
 
   (exwm-input-set-key (kbd "C-e") 'keyboard-quit)
   (exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
   (exwm-input-set-key (kbd "C-=") 'my/window-hydra/body)
 
   (exwm-input-set-key (kbd "M-x") 'counsel-M-x)
-
-  ;; Enter and exit char mode
-  ;; (exwm-input-set-key (kbd "M-a") 'exwm-input-grab-keyboard)
-  ;; (exwm-input-set-key (kbd "M-i") 'exwm-input-release-keyboard)
-
-  ;; Notes
-  ;; (defun my/send-key(event)
-  ;; (interactive "e")
-  ;; (exwm-input--fake-key event))
-  ;; (define-key 'my/leader-map (kbd "C-q") 'my/send-key)
-  ;;
-  ;; (exwm-input--fake-key (event-basic-type ?\C-a))
 #+END_SRC
 
 * Shr
@@ -9006,12 +9011,21 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
 * Set theme
 #+BEGIN_SRC emacs-lisp
-  ;; (defvar my/default-face-list '())
-  ;; (defun my/set-face-to-default (face-name)
-  ;;   (add-to-list 'my/default-face-list face-name)
+  (defvar my/default-face-list '())
+
+  (defun my/set-face-to-default (face-name is-syntax)
+    (add-to-list 'my/default-face-list face-name)
+    ;; Reset face
+    (set-face-attribute face-name nil :family 'unspecified :foundry 'unspecified :width 'unspecified :height 'unspecified :weight 'unspecified :slant 'unspecified :foreground 'unspecified :background 'unspecified :underline 'unspecified :overline 'unspecified :strike-through 'unspecified :box 'unspecified :stipple 'unspecified :font 'unspecified :inherit 'default))
   ;;
-  ;;   ;; Reset face
-  ;;   (set-face-attribute face-name nil :family 'unspecified :foundry 'unspecified :width 'unspecified :height 'unspecified :weight 'unspecified :slant 'unspecified :foreground 'unspecified :background 'unspecified :underline 'unspecified :overline 'unspecified :strike-through 'unspecified :box 'unspecified :stipple 'unspecified :font 'unspecified :inherit 'default))
+  ;;(defun my/clean-font-lock-keywords ()
+  ;;  (interactive)
+  ;;  (mapc 'my/count font-lock-keywords-alist)
+  ;;  )
+  ;;(setq my/counter 0)
+  ;;(defun my/count (&optional rest)
+  ;;  (setq my/counter (+ 1 my/counter))
+  ;;  )
 
   (defun my/theme ()
     (interactive)
@@ -9085,26 +9099,34 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     (set-face-attribute 'warning nil :foreground "DarkOrange" :background)
 
     ;; Syntax
+
+    ;;font-lock-builtin-face
+    ;;  font-lock-comment-delimiter-face
+    ;;  font-lock-comment-face
+    ;;  font-lock-constant-face
+    ;;  font-lock-doc-face
+    ;;  font-lock-function-name-face
+    ;;  font-lock-keyword-face
+    ;;  font-lock-negation-char-face
+    ;;  font-lock-preprocessor-face
+    ;;  font-lock-regexp-grouping-backslash
+    ;;  font-lock-regexp-grouping-construct
+    ;;  font-lock-string-face
+    ;;  font-lock-type-face
+    ;;  font-lock-variable-name-face
+    ;;  font-lock-warning-face
+
+
     (set-face-attribute 'font-lock-doc-face nil :foreground my/foreground-color :background my/background-color-4)
-    ;;(defvar my/comment-face-height (floor (* my/default-face-height 1.15)))
-    ;;(set-face-attribute 'font-lock-comment-face nil :foreground my/foreground-color :background my/background-color-1) ;;:height my/comment-face-height)
+
     (set-face-attribute 'font-lock-comment-face nil :foreground (color-lighten-name my/background-color 30) :background my/background-color) ;;:height my/comment-face-height)
 
-    ;;(set-face-attribute 'font-lock-string-face nil :foreground my/foreground-color :background my/background-color-2)
-    (set-face-attribute 'font-lock-string-face nil :foreground my/foreground-color :background my/background-color)
-    ;;(set-face-attribute 'font-lock-function-name-face nil :weight 'bold)
-    (set-face-attribute 'font-lock-function-name-face nil)
+    (my/set-face-to-default 'font-lock-string-face t)
 
-    ;; (set-face-attribute  'font-lock-keyword-face nil :foreground my/foreground-color :background my/background-color-1)
-    ;; (set-face-attribute  'font-lock-function-name-face nil :foreground my/foreground-color :background my/background-color-2)
+    (my/set-face-to-default 'font-lock-function-name-face t)
 
     ;; Required by other face
-    ;;(my/set-face-to-default 'outline-4)
-    (set-face-attribute 'outline-4 nil :foreground 'unspecified :foreground 'background :inherit 'default)
-
-    ;; Line numbers
-    (set-face-attribute 'line-number-current-line nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'line-number nil :foreground my/foreground-color :background my/background-color)
+    (my/set-face-to-default 'outline-4 t)
 
     ;; Evil
     (setq evil-emacs-state-cursor '("purple" box))
@@ -9193,14 +9215,14 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     ;; All matching text
     (set-face-attribute 'company-tooltip-common nil :foreground my/background-color :background my/foreground-color :family my/mono-font)
 
-        ;;; Company box
-    (if (require 'company-box nil 'noerror)
-        (progn
-          (set-face-attribute 'company-box-annotation nil :family my/mono-font)
-          (set-face-attribute 'company-box-background nil :family my/mono-font)
-          (set-face-attribute 'company-box-candidate  nil :family my/mono-font)
-          (set-face-attribute 'company-box-scrollbar  nil :family my/mono-font)
-          (set-face-attribute 'company-box-selection  nil :family my/mono-font)))
+    ;;      ;;; Company box
+    ;;  (if (require 'company-box nil 'noerror)
+    ;;      (progn
+    ;;        (set-face-attribute 'company-box-annotation nil :family my/mono-font)
+    ;;        (set-face-attribute 'company-box-background nil :family my/mono-font)
+    ;;        (set-face-attribute 'company-box-candidate nil :family my/mono-font)
+    ;;        (set-face-attribute 'company-box-scrollbar nil :family my/mono-font)
+    ;;        (set-face-attribute 'company-box-selection nil :family my/mono-font)))
 
         ;;; Popup menu
     ;; Selected entry
@@ -9307,21 +9329,33 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     ;;(highlight-indent-guides-auto-set-faces)
 
     ;;; lsp
-    (set-face-attribute 'lsp-ui-doc-background nil :foreground my/foreground-color :background my/background-color)
+    (my/set-face-to-default 'lsp-ui-doc-background nil)
+    ;;(set-face-attribute 'lsp-ui-doc-background nil :foreground my/foreground-color :background my/background-color)
     (set-face-attribute 'lsp-ui-doc-header nil :foreground my/foreground-color :background my/background-color-4)
     (set-face-attribute 'lsp-ui-doc-url nil :foreground my/background-color :background my/foreground-color)
 
-    (set-face-attribute 'lsp-ui-peek-filename nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'lsp-ui-peek-footer nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'lsp-ui-peek-header nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'lsp-ui-peek-highlight nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'lsp-ui-peek-line-number nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'lsp-ui-peek-list nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'lsp-ui-peek-peek nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'lsp-ui-peek-selection nil :foreground my/foreground-color :background my/background-color)
+    (my/set-face-to-default 'lsp-ui-peek-filename nil)
+    (my/set-face-to-default 'lsp-ui-peek-footer nil)
+    (my/set-face-to-default 'lsp-ui-peek-header nil)
+    (my/set-face-to-default 'lsp-ui-peek-highlight nil)
+    (my/set-face-to-default 'lsp-ui-peek-line-number nil)
+    (my/set-face-to-default 'lsp-ui-peek-list nil)
+    (my/set-face-to-default 'lsp-ui-peek-peek nil)
+    (my/set-face-to-default 'lsp-ui-peek-selection nil)
+    (my/set-face-to-default 'lsp-ui-sideline-code-action nil)
+    (my/set-face-to-default 'lsp-ui-sideline-current-symbol nil)
 
-    (set-face-attribute 'lsp-ui-sideline-code-action nil :foreground my/foreground-color :background my/background-color)
-    (set-face-attribute 'lsp-ui-sideline-current-symbol nil :foreground my/foreground-color :background my/background-color)
+    ;;  (set-face-attribute 'lsp-ui-peek-filename nil :foreground my/foreground-color :background my/background-color)
+    ;;  (set-face-attribute 'lsp-ui-peek-footer nil :foreground my/foreground-color :background my/background-color)
+    ;;  (set-face-attribute 'lsp-ui-peek-header nil :foreground my/foreground-color :background my/background-color)
+    ;;  (set-face-attribute 'lsp-ui-peek-highlight nil :foreground my/foreground-color :background my/background-color)
+    ;;  (set-face-attribute 'lsp-ui-peek-line-number nil :foreground my/foreground-color :background my/background-color)
+    ;;  (set-face-attribute 'lsp-ui-peek-list nil :foreground my/foreground-color :background my/background-color)
+    ;;  (set-face-attribute 'lsp-ui-peek-peek nil :foreground my/foreground-color :background my/background-color)
+    ;;  (set-face-attribute 'lsp-ui-peek-selection nil :foreground my/foreground-color :background my/background-color)
+    ;;  (set-face-attribute 'lsp-ui-sideline-code-action nil :foreground my/foreground-color :background my/background-color)
+    ;;  (set-face-attribute 'lsp-ui-sideline-current-symbol nil :foreground my/foreground-color :background my/background-color)
+
     (set-face-attribute 'lsp-ui-sideline-global nil :foreground nil :background nil)
     (set-face-attribute 'lsp-ui-sideline-symbol nil :foreground my/background-color :background my/foreground-color)
     (set-face-attribute 'lsp-ui-sideline-symbol-info nil :foreground my/mark-color :background my/background-color)
