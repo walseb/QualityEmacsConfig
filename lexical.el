@@ -143,9 +143,8 @@
 		  (lambda (msg &rest args)
 		    (let ((msg (apply #'format-message msg args)))
 		      (setq ov (display-line-overlay+
-				(window-start) msg ))))))
+				(window-start) msg 'show-paren-offscreen-face))))))
 	 (blink-matching-open))))))
-
 
 (defun display-line-overlay+ (pos str &optional face)
   "Display line at POS as STR with FACE.

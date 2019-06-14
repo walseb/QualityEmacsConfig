@@ -1569,6 +1569,11 @@ Disable startup message
   (setq initial-scratch-message nil)
 #+END_SRC
 
+*** Set default mode
+#+BEGIN_SRC emacs-lisp
+  (setq initial-major-mode 'org-mode)
+#+END_SRC
+
 ** Encoding
 #+BEGIN_SRC emacs-lisp
   ;;(setq locale-coding-system 'utf-8)
@@ -2409,6 +2414,7 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'org-plus-contrib)
   (require 'org-src)
+  (require 'org-eldoc)
   (add-hook 'org-mode-hook #'org-eldoc-load)
 #+END_SRC
 
@@ -7366,7 +7372,10 @@ Locate only under current dir
 
   (defun my/locate-updatedb ()
     (interactive)
-    (shell-command (concat "updatedb --localpaths=/home/admin --output=" my/locate-database-dir))
+    (if my/using-gnu-mlocate
+        (shell-command (concat "updatedb --localpaths=/home/admin --output=" my/locate-database-dir))
+      (shell-command (concat "updatedb --database-root=/home/admin --output=" my/locate-database-dir)))
+
     (my/locate-update-cache))
 
   (defun my/locate-update-cache ()
@@ -8189,20 +8198,6 @@ Changes background of eg. #FF00FF to represent color
   (straight-use-package 'rainbow-mode)
 #+END_SRC
 
-** Highlight matching delimiters
-#+BEGIN_SRC emacs-lisp
-  (show-paren-mode 1)
-  (setq show-paren-style 'paren)
-  (setq show-paren-delay 0)
-  (setq show-paren-when-point-inside-paren nil)
-  (setq show-paren-when-point-in-periphery t)
-  ;;(setq show-paren-highlight-openparen t)
-
-  ;; Put it here for now
-  ;; https://with-emacs.com/posts/editing/show-matching-lines-when-parentheses-go-off-screen/
-  (load-file "~/.emacs.d/lexical.el")
-#+END_SRC
-
 ** Highlight current line
 #+BEGIN_SRC emacs-lisp
   (global-hl-line-mode t)
@@ -8231,40 +8226,47 @@ Supposed to be faster thang highlight-thing
         (symbol-overlay-maybe-put-temp))))
 #+END_SRC
 
-** Highlight thing
-Highlight thing under cursor and all other occurrences
+** Show paren
+Highlights matching paren under cursor
+
+*** Delay
 #+BEGIN_SRC emacs-lisp
-  ;;(straight-use-package 'highlight-thing)
-  ;;
-  ;;;; Show hits in all windows
-  ;;(setq highlight-thing-all-visible-buffers-p t)
-  ;;
-  ;;;; Don't highlight the word true or false
-  ;;;;(setq highlight-thing-ignore-list '("False" "True"))
-  ;;
-  ;;;; Don't highlight thing under cursor, only matches
-  ;;(setq highlight-thing-exclude-thing-under-point 1)
-  ;;
-  ;;(setq highlight-thing-case-sensitive-p 1)
-  ;;(global-highlight-thing-mode)
-  ;;
-  ;;;; Restrict amount of matches
-  ;;(setq highlight-thing-limit-to-region-in-large-buffers-p t)
-  ;;(setq highlight-thing-narrow-region-lines 30)
-  ;;(setq highlight-thing-large-buffer-limit 5000)
+  (setq show-paren-delay 0)
 #+END_SRC
 
-*** Don't highlight huge buffers
+*** Set paren style
 #+BEGIN_SRC emacs-lisp
-;;  (setq highlight-thing-limit-to-region-in-large-buffers-p nil)
-;;  (setq highlight-thing-narrow-region-lines 15)
-;;  (setq highlight-thing-large-buffer-limit 5000)
+  (setq show-paren-style 'paren)
+#+END_SRC
+
+*** Show offscreen expression
+Define face to use
+#+BEGIN_SRC emacs-lisp
+  (defface my/show-paren-offscreen-face
+    '((t :inherit highlight))
+    "Face for showing function names offscreen")
+#+END_SRC
+
+https://with-emacs.com/posts/editing/show-matching-lines-when-parentheses-go-off-screen/
+#+BEGIN_SRC emacs-lisp
+  (setq show-paren-highlight-openparen t)
+  (setq show-paren-when-point-inside-paren nil)
+  (setq show-paren-when-point-in-periphery t)
+
+  (load-file "~/.emacs.d/lexical.el")
+  (show-paren-mode 1)
 #+END_SRC
 
 ** Highlight parens
+Highlights surrounding parens
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'highlight-parentheses)
   (global-highlight-parentheses-mode)
+#+END_SRC
+
+*** Set delay
+#+BEGIN_SRC emacs-lisp
+  (setq hl-paren-delay 0)
 #+END_SRC
 
 ** Highlight changes
@@ -9179,6 +9181,11 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     (set-face-attribute 'ediff-odd-diff-Ancestor nil :background (color-darken-name my/diff-ancestor-color 50))
     (set-face-attribute 'ediff-odd-diff-B nil :background (color-darken-name my/diff-added-color 20))
     (set-face-attribute 'ediff-odd-diff-C nil :background (color-darken-name my/diff-changed-color 20))
+
+    ;;;  Show-paren
+    (set-face-attribute 'show-paren-match nil :background my/background-color :foreground my/foreground-color)
+    (set-face-attribute 'show-paren-match-expression nil :background my/foreground-color :foreground my/background-color)
+    (set-face-attribute 'my/show-paren-offscreen-face nil :inherit 'highlight)
 
     ;;; Wgrep
     (set-face-attribute 'wgrep-file-face nil :background my/foreground-color-6 :foreground my/background-color)
