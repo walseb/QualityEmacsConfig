@@ -2413,28 +2413,16 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 ** Eldoc
 #+BEGIN_SRC emacs-lisp
   (straight-use-package 'org-plus-contrib)
-  (require 'org-src)
   (require 'org-eldoc)
+  (require 'org-src)
   (add-hook 'org-mode-hook #'org-eldoc-load)
 #+END_SRC
 
 *** Fix error
 The function =org-src-get-lang-mode= doesn't exist, but the function =org-src--get-lang-mode= does
 #+BEGIN_SRC emacs-lisp
-  (defun org-eldoc-get-mode-local-documentation-function (lang)
-    "Check if LANG-mode sets eldoc-documentation-function and return its value."
-    (let ((cached-func (gethash lang org-eldoc-local-functions-cache 'empty))
-          (mode-func (org-src--get-lang-mode lang))
-          doc-func)
-      (if (eq 'empty cached-func)
-          (when (fboundp mode-func)
-            (with-temp-buffer
-              (funcall mode-func)
-              (setq doc-func (and eldoc-documentation-function
-                                  (symbol-value 'eldoc-documentation-function)))
-              (puthash lang doc-func org-eldoc-local-functions-cache))
-            doc-func)
-        cached-func)))
+  (defun org-src-get-lang-mode (LANG)
+    (org-src--get-lang-mode LANG))
 #+END_SRC
 
 ** Key
@@ -4790,10 +4778,10 @@ The current one ignores any beg and end if you are not in visual line mode
 
 *** lsp-haskell
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'lsp-haskell)
-  (require 'lsp-haskell)
-
-  (add-hook 'haskell-mode-hook 'lsp)
+  ;;(straight-use-package 'lsp-haskell)
+  ;;(require 'lsp-haskell)
+  ;;
+  ;;(add-hook 'haskell-mode-hook 'lsp)
 #+END_SRC
 
 ** C/CPP
