@@ -423,6 +423,7 @@ imenu-list
 Since then i have to load every package i want to modify the faces of before running the function
 
 ** Bind recenter screen to singe key in normal mode
+** Structured-haskell-mode
 * First
 Things to do first
 #+BEGIN_SRC emacs-lisp
@@ -2412,17 +2413,17 @@ Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
 
 ** Eldoc
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'org-plus-contrib)
-  (require 'org-eldoc)
-  (require 'org-src)
-  (add-hook 'org-mode-hook #'org-eldoc-load)
+;;  (straight-use-package 'org-plus-contrib)
+;;  (require 'org-eldoc)
+;;  (require 'org-src)
+;;  (add-hook 'org-mode-hook #'org-eldoc-load)
 #+END_SRC
 
 *** Fix error
 The function =org-src-get-lang-mode= doesn't exist, but the function =org-src--get-lang-mode= does
 #+BEGIN_SRC emacs-lisp
-  (defun org-src-get-lang-mode (LANG)
-    (org-src--get-lang-mode LANG))
+;;  (defun org-src-get-lang-mode (LANG)
+;;    (org-src--get-lang-mode LANG))
 #+END_SRC
 
 ** Key
@@ -2453,6 +2454,9 @@ The function =org-src-get-lang-mode= doesn't exist, but the function =org-src--g
   (define-key my/org-mode-map (kbd "i") 'org-toggle-inline-images)
 
   (define-key my/org-mode-map (kbd "d") 'org-deadline)
+
+  ;; Rebind tab to be yas-expand due to bugs with org-cycle when expanding snippets
+  (define-key org-mode-map "\t" 'yas-expand)
 #+END_SRC
 
 *** Show map
@@ -4743,6 +4747,40 @@ or
 ** Haskell
 #+BEGIN_SRC emacs-lisp
   (straight-use-package '(haskell-mode :type git :host github :repo "walseb/haskell-mode"))
+#+END_SRC
+
+*** Project management
+**** Stack
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'hasky-stack)
+#+END_SRC
+
+**** Cabal
+#+BEGIN_SRC emacs-lisp
+  ;;(straight-use-package 'hasky-cabal)
+#+END_SRC
+
+**** Nix cabal
+Use nix-haskell-mode for automatic project management
+#+BEGIN_SRC emacs-lisp
+  ;;(straight-use-package 'nix-haskell-mode)
+#+END_SRC
+
+*** Indentation
+Haskell-indentation-mode seems better?? or hi2 or hindent
+#+BEGIN_SRC emacs-lisp
+  ;;(straight-use-package 'hyai)
+  ;;(straight-use-package 'hindent)
+#+END_SRC
+
+*** Extension management
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'hasky-extensions)
+#+END_SRC
+
+*** Haskell-cabal
+#+BEGIN_SRC emacs-lisp
+(straight-use-package 'company-cabal)
 #+END_SRC
 
 *** intero
@@ -8241,7 +8279,7 @@ https://with-emacs.com/posts/editing/show-matching-lines-when-parentheses-go-off
   (setq show-paren-when-point-inside-paren nil)
   (setq show-paren-when-point-in-periphery t)
 
-  (load-file "~/.emacs.d/lexical.el")
+  ;;(load-file "~/.emacs.d/lexical.el")
   (show-paren-mode 1)
 #+END_SRC
 
