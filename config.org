@@ -424,6 +424,20 @@ Since then i have to load every package i want to modify the faces of before run
 
 ** Bind recenter screen to singe key in normal mode
 ** Structured-haskell-mode
+** Navigate headers like parens
+** Make locate work on all harddrives
+Save the database on the main c drive under name of the drive though
+
+** Eshell status in modeline
+Checkout
+(setq-default eshell-status-in-mode-line nil)
+
+Then you can have a number like how many processes are running
+
+** C-k in dired should go back dir
+
+** Indicator in modeline for when loccur is narrowing the buffer
+
 * First
 Things to do first
 #+BEGIN_SRC emacs-lisp
@@ -3160,14 +3174,34 @@ Doesn't work with my setup right now
   (global-flycheck-mode)
 #+END_SRC
 
-*** Flycheck inline
+*** Disable flycheck fringe
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'flycheck-inline)
+  (setq flycheck-indication-mode nil)
+#+END_SRC
 
-  (require 'flycheck-inline)
+*** Flycheck at cursor
+**** Flycheck posframe
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'flycheck-posframe)
 
   (with-eval-after-load 'flycheck
-    (add-hook 'flycheck-mode-hook #'turn-on-flycheck-inline))
+    (require 'flycheck-posframe)
+    (add-hook 'flycheck-mode-hook #'flycheck-posframe-mode))
+
+  (setq-default flycheck-posframe-prefix ">")
+  (setq-default flycheck-posframe-warning-prefix ">")
+  (setq-default flycheck-posframe-info-prefix ">")
+  (setq-default flycheck-posframe-error-prefix ">")
+#+END_SRC
+
+**** Flycheck inline
+#+BEGIN_SRC emacs-lisp
+  ;;(straight-use-package 'flycheck-inline)
+  ;;
+  ;;(require 'flycheck-inline)
+  ;;
+  ;;(with-eval-after-load 'flycheck
+  ;;  (add-hook 'flycheck-mode-hook #'turn-on-flycheck-inline))
 #+END_SRC
 
 *** Flycheck-package
@@ -5456,12 +5490,8 @@ Enable org mode for .org.gpg files
 
 ** Use tramp for sudo
 #+BEGIN_SRC emacs-lisp
-  ;; em-tramp is broken in wsl-1 and vms it seems
-  (unless my/running-vm
-    (require 'em-tramp)
-    (defalias 'sudo 'eshell/sudo))
-
-  ;;  (shell-command "alias sudo 'eshell/sudo $*'")
+  (require 'em-tramp)
+  (defalias 'sudo 'eshell/sudo)
 #+END_SRC
 
 ** Autocompletion
@@ -5545,26 +5575,27 @@ Default eshell/clear only spams newlines
 
 ** Custom prompt
 #+BEGIN_SRC emacs-lisp
-(defvar my/eshell-prompt-symbol)
+  (defvar my/eshell-prompt-symbol)
   (if window-system
-    (setq my/eshell-prompt-symbol "λ")
-   (setq my/eshell-prompt-symbol "$"))
+      (setq my/eshell-prompt-symbol "λ")
+    (setq my/eshell-prompt-symbol "$"))
 
-(setq eshell-prompt-function
-             (lambda ()
-     (concat (abbreviate-file-name (eshell/pwd))
-             (if (= (user-uid) 0) " # " (concat " " my/eshell-prompt-symbol " ")))))
+  (setq eshell-prompt-function
+        (lambda ()
+          (concat (abbreviate-file-name (eshell/pwd))
+                  (if (= (user-uid) 0) " # " (concat " " my/eshell-prompt-symbol " ")))))
 
-        (setq eshell-prompt-regexp
-             (concat "^[^#$\n]* [#" my/eshell-prompt-symbol "] "))
+  (setq eshell-prompt-regexp
+        (concat "^[^#$\n]* [#" my/eshell-prompt-symbol "] "))
 #+END_SRC
 
 ** Alert when task is done
 #+BEGIN_SRC emacs-lisp
-  (add-hook 'eshell-after-prompt-hook (lambda () (interactive) (if (not (= 1 (line-number-at-pos (point))))
-                                                                   (progn
-                                                                     (my/alert nil 'low)
-                                                                     (message "Eshell command done!")))))
+  (add-hook 'eshell-post-command-hook (lambda () (interactive)
+                                        (if (not (= 1 (line-number-at-pos (point))))
+                                            (progn
+                                              (my/alert nil 'low)
+                                              (message "Eshell command done!")))))
 #+END_SRC
 
 ** Custom Goto beg of line

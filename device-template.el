@@ -16,8 +16,6 @@
 
 (defvar my/enable-randr t)
 
-(defvar my/running-vm nil)
-
 (defvar my/on-boot-run nil)
 
 (defvar my/using-gnu-mlocate t)
