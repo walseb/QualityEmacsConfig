@@ -438,6 +438,13 @@ Then you can have a number like how many processes are running
 
 ** Indicator in modeline for when loccur is narrowing the buffer
 
+** Flycheck posframe should be in top right
+Atleast not at point
+
+** Add heading face to my/theme function
+Make them bold?
+Maybe different background color
+
 * First
 Things to do first
 #+BEGIN_SRC emacs-lisp
@@ -3993,7 +4000,7 @@ g-; and g-,
 
 ** Dired-single
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'dired-single)
+  ;;(straight-use-package 'dired-single)
 #+END_SRC
 
 ** Keys
@@ -4023,15 +4030,27 @@ g-; and g-,
   (define-key my/dired-mode-map (kbd "h") 'dired-hide-details-mode)
 #+END_SRC
 
+*** Dired close buffer and go down level
+#+BEGIN_SRC emacs-lisp
+  (defun my/dired-kill-and-go-down ()
+    (interactive)
+    (let ((dired-buffer (buffer-name)))
+      (dired-up-directory)
+      (kill-buffer dired-buffer)))
+#+END_SRC
+
 *** Dired keys
 #+BEGIN_SRC emacs-lisp
   ;; Bind =Backspace= to go up one directory
   ;;(define-key dired-mode-map [?\d] 'dired-up-directory)
-  (evil-define-key 'normal dired-mode-map (kbd "k") 'dired-single-up-directory)
-  (evil-define-key 'insert dired-mode-map (kbd "k") 'dired-single-up-directory)
+  (evil-define-key 'normal dired-mode-map (kbd "k") 'dired-up-directory)
+  (evil-define-key 'insert dired-mode-map (kbd "k") 'dired-up-directory)
 
-  (evil-define-key 'normal dired-mode-map (kbd "RET") 'dired-single-buffer)
-  (evil-define-key 'insert dired-mode-map (kbd "RET") 'dired-single-buffer)
+  (evil-define-key 'normal dired-mode-map (kbd "K") 'my/dired-kill-and-go-down)
+  (evil-define-key 'insert dired-mode-map (kbd "K") 'my/dired-kill-and-go-down)
+
+  (evil-define-key 'normal dired-mode-map (kbd "RET") 'dired-find-file)
+  (evil-define-key 'insert dired-mode-map (kbd "RET") 'dired-find-file)
 
   (evil-define-key 'insert dired-mode-map (kbd "A") 'dired-do-find-regexp)
   (evil-define-key 'normal dired-mode-map(kbd "C") 'dired-do-copy)
@@ -4123,9 +4142,8 @@ g-; and g-,
   (evil-define-key 'normal dired-mode-map (kbd "j") 'dired-goto-file)
   (evil-define-key 'insert dired-mode-map (kbd "j") 'dired-goto-file)
   ;; Maybe bind this??
-  (evil-define-key 'insert dired-mode-map (kbd "k") 'dired-do-kill-lines)
   (evil-define-key 'insert dired-mode-map (kbd "l") 'dired-do-redisplay)
-  (evil-define-key 'normal dired-mode-map (kbd "M") 'dired-mark-subdir-files)
+  (evil-define-key 'normal dired-mode-map (kbd "M-m") 'dired-mark-subdir-files)
   (evil-define-key 'normal dired-mode-map (kbd "m") 'dired-mark)
   (evil-define-key 'insert dired-mode-map (kbd "m") 'dired-mark)
   (evil-define-key 'insert dired-mode-map (kbd "n") 'dired-next-line)
@@ -4919,7 +4937,12 @@ Windows performance tweaks
     (aggressive-indent-mode 0)
     (lsp)
     (lsp-lens-mode)
-    (push 'company-lsp company-backends))
+    (push 'company-lsp company-backends)
+
+    (setq indent-tabs-mode t)
+    (setq tab-width 4)
+    (setq c-basic-offset 4)
+    (setq evil-shift-width 4))
 
   (add-hook 'c-mode-hook 'my/c-mode)
   (add-hook 'c++-mode-hook 'my/c-mode)
@@ -8030,7 +8053,7 @@ https://www.emacswiki.org/emacs/ArtistMode
 ** Symbols
 *** Generic
 #+BEGIN_SRC emacs-lisp
-  (defvar my/generic-equal-symbols
+  (defconst my/generic-equal-symbols
     '(
       ("==" . ?≡)
       ("/=" . ?≢)
@@ -8039,7 +8062,7 @@ https://www.emacswiki.org/emacs/ArtistMode
       ("<=" . ?≤)
       ))
 
-  (defvar my/generic-arrow-symbols
+  (defconst my/generic-arrow-symbols
     '(
       ("-<" . ?↢)
       (">-" . ?↣)
@@ -8056,16 +8079,15 @@ https://www.emacswiki.org/emacs/ArtistMode
       ("<<" . ?≪)
       (">>" . ?≫)))
 
-  (defvar my/generic-greek-symbols
+  (defconst my/generic-greek-symbols
     '(("lambda" . ?λ)))
 
-  (defvar my/generic-logic-symbols
+  (defconst my/generic-logic-symbols
     '(
       ("&&" . ?∧)
-      ("||" . ?∨)
-      ("not" . ?¬)))
+      ("||" . ?∨)))
 
-  (defvar my/pretty-comment-symbol ?|)
+  (defconst my/pretty-comment-symbol ?|)
 
   ;;(defun my/prettify-comment-lisp ()
   ;;  `(,((my/repeat-char (string-trim comment-start) "" 2) . ,my/pretty-comment-symbol)))
@@ -8106,13 +8128,13 @@ https://www.emacswiki.org/emacs/ArtistMode
 
 *** Fsharp
 #+BEGIN_SRC emacs-lisp
-  (defvar my/fsharp-symbols
+  (defconst my/fsharp-symbols
     (list))
 #+END_SRC
 
 *** Haskell
 #+BEGIN_SRC emacs-lisp
-  (setq my/haskell-symbols
+  (defconst my/haskell-symbols
         '(("\\" . ?λ)
           ("()" . ?∅)
           ("!!" . ?‼)
@@ -8127,20 +8149,11 @@ https://www.emacswiki.org/emacs/ArtistMode
           ("forall" . ?∀)))
 #+END_SRC
 
-*** C/CPP
-#+BEGIN_SRC emacs-lisp
-  (defvar my/fsharp-symbols
-    '(
-      ("!=" . ?≠)
-      ))
-#+END_SRC
-
 *** Elisp
 #+BEGIN_SRC emacs-lisp
-  (setq my/elisp-symbols
-        '(
-          ("defun" . ?λ)
-          ))
+  (defconst my/elisp-symbols
+    '(("defun" . ?λ)
+      ("not" . ?¬)))
 #+END_SRC
 
 *** Set symbol by mode
@@ -9395,9 +9408,11 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     ;;; lsp
     (my/set-face-to-default 'lsp-ui-doc-background nil)
     ;;(set-face-attribute 'lsp-ui-doc-background nil :foreground my/foreground-color :background my/background-color)
+    ;;;; Doc
     (set-face-attribute 'lsp-ui-doc-header nil :foreground my/foreground-color :background my/background-color-4)
     (set-face-attribute 'lsp-ui-doc-url nil :foreground my/background-color :background my/foreground-color)
 
+    ;;;; Sideline
     (my/set-face-to-default 'lsp-ui-peek-filename nil)
     (my/set-face-to-default 'lsp-ui-peek-footer nil)
     (my/set-face-to-default 'lsp-ui-peek-header nil)
@@ -9423,6 +9438,9 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     (set-face-attribute 'lsp-ui-sideline-global nil :foreground nil :background nil)
     (set-face-attribute 'lsp-ui-sideline-symbol nil :foreground my/background-color :background my/foreground-color)
     (set-face-attribute 'lsp-ui-sideline-symbol-info nil :foreground my/mark-color :background my/background-color)
+
+    ;;;; Lens
+    (set-face-attribute 'lsp-lens-face nil :foreground my/foreground-color :background my/mark-color-4 :height 0.8)
 
   ;;; Which-key
     (set-face-attribute 'which-key-command-description-face nil :family my/mono-font)

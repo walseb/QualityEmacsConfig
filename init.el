@@ -1,5 +1,7 @@
 (setq debug-on-error t)
 
+(set-face-attribute 'default nil :foreground "white" :background "black")
+
 ;; Config locations
 (defvar my/config-location (expand-file-name (concat user-emacs-directory "config.org")))
 (defvar my/config-exported-location (expand-file-name (concat user-emacs-directory "config.el")))
