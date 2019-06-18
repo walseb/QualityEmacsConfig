@@ -5507,7 +5507,7 @@ Enable org mode for .org.gpg files
 
 ** Prefer lisp to bash
 #+BEGIN_SRC emacs-lisp
-  (setq eshell-prefer-lisp-functions nil)
+  (setq eshell-prefer-lisp-functions t)
   (setq eshell-prefer-lisp-variables t)
 #+END_SRC
 
