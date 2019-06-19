@@ -353,6 +353,18 @@ This will disable volume controls for example
 Look into changing from locate to using "directory-files-recursively" to cache all files on the pc
 Problem seems to be that it needs sudo to do this
 
+*** Use find instead
+You can have a lisp list with all the dirs that you want scanned in a variable
+#+BEGIN_SRC example
+'(
+  ("~" '("file1" "file2"))
+
+  ("/mnt/c" '("file3" "file4")))
+#+END_SRC
+
+When function first runs, find gets everything in directories and caches that in emacs to variable
+If you want you can dump those variables to disk
+
 ** Fix ivy grep/occur
 Colors change when you put your cursor over custom faces
 
@@ -2486,6 +2498,11 @@ The function =org-src-get-lang-mode= doesn't exist, but the function =org-src--g
   ;;(define-key my/org-mode-map (kbd "s") 'my/org-show-mode-map)
 
   (define-key my/org-mode-map (kbd "s") 'org-toggle-link-display)
+#+END_SRC
+
+*** Disable syntax highlighting in source code blocks
+#+BEGIN_SRC emacs-lisp
+  (setq org-src-fontify-natively nil)
 #+END_SRC
 
 * Outline
@@ -8388,44 +8405,36 @@ Highlights surrounding parens
   (define-key my/leader-map (kbd "c") 'hide/show-comments-toggle)
 #+END_SRC
 
-** Faces
+** Font lock
+*** Font lock profiler
+Use font-lock-profiler-buffer
 #+BEGIN_SRC emacs-lisp
-  (if window-system
-      (set-face-attribute 'header-line nil
-                          :foreground (face-attribute 'default :foreground)
-                          :background (face-attribute 'default :background)
-                          :family (face-attribute 'default :family)
-                          :height (face-attribute 'default :height)))
+  (straight-use-package 'font-lock-profiler)
+#+END_SRC
 
-  (set-face-attribute 'org-mode-line-clock nil
-                      :foreground (face-attribute 'default :foreground)
-                      :background (face-attribute 'default :background)
-                      :height (face-attribute 'default :height))
+*** Remove unnecessary font-locks
+**** Haskell
+#+BEGIN_SRC emacs-lisp
+  (setq haskell-font-lock-keywords '())
 
-  (set-face-attribute 'org-mode-line-clock-overrun nil
-                      :foreground (face-attribute 'default :foreground)
-                      :background "red"
-                      :height (face-attribute 'default :height))
+  (defun haskell-font-lock-keywords ()
+    '())
+#+END_SRC
 
-  (set-face-attribute 'org-agenda-filter-effort nil
-                      :foreground (face-attribute 'default :foreground)
-                      :background (face-attribute 'default :background)
-                      :height (face-attribute 'default :height))
+**** Elisp
+#+BEGIN_SRC emacs-lisp
+  (setq lisp-el-font-lock-keywords '())
+  (setq lisp-el-font-lock-keywords-1 '())
+  (setq lisp-el-font-lock-keywords-2 '())
+#+END_SRC
 
-  (set-face-attribute 'org-agenda-filter-regexp nil
-                      :foreground (face-attribute 'default :foreground)
-                      :background (face-attribute 'default :background)
-                      :height (face-attribute 'default :height))
-
-  (set-face-attribute 'org-agenda-filter-tags nil
-                      :foreground (face-attribute 'default :foreground)
-                      :background (face-attribute 'default :background)
-                      :height (face-attribute 'default :height))
-
-  (set-face-attribute 'org-agenda-filter-category nil
-                      :foreground (face-attribute 'default :foreground)
-                      :background (face-attribute 'default :background)
-                      :height (face-attribute 'default :height))
+**** Csharp
+Doesn't seem to work fully, there are still lots of keywords left
+#+BEGIN_SRC emacs-lisp
+  (setq csharp-font-lock-keywords '())
+  (setq csharp-font-lock-keywords-1 '())
+  (setq csharp-font-lock-keywords-2 '())
+  (setq csharp-font-lock-keywords-3 '())
 #+END_SRC
 
 ** Modeline
@@ -9081,6 +9090,28 @@ When projectile-mode is on, project name is updated on every keypress, here it i
                       ))))))
 #+END_SRC
 
+**** Csharp
+#+BEGIN_SRC emacs-lisp
+  (setq csharp-font-lock-keywords '())
+  (setq csharp-font-lock-keywords-1 '())
+  (setq csharp-font-lock-keywords-2 '())
+  (setq csharp-font-lock-keywords-3 '())
+#+END_SRC
+
+**** C
+#+BEGIN_SRC emacs-lisp
+  (setq cpp-font-lock-keywords '())
+  (setq c++-font-lock-keywords '())
+  (setq c++-font-lock-keywords-1 '())
+  (setq c++-font-lock-keywords-2 '())
+  (setq c++-font-lock-keywords-3 '())
+  (setq c-font-lock-keywords '())
+  (setq c-font-lock-keywords-1 '())
+  (setq c-font-lock-keywords-2 '())
+  (setq c-font-lock-keywords-3 '())
+
+#+END_SRC
+
 * Set theme
 #+BEGIN_SRC emacs-lisp
   (defvar my/default-face-list '())
@@ -9224,6 +9255,18 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     (set-face-attribute 'org-code nil :family my/mono-font)
 
     (set-face-attribute 'org-quote nil :slant 'italic)
+
+    (set-face-attribute 'org-mode-line-clock nil :foreground my/foreground-color :background my/foreground-color :height 'unspecified)
+
+    (set-face-attribute 'org-mode-line-clock-overrun nil :foreground my/foreground-color :background "red" :height 'unspecified)
+
+    (set-face-attribute 'org-agenda-filter-effort nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
+
+    (set-face-attribute 'org-agenda-filter-regexp nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
+
+    (set-face-attribute 'org-agenda-filter-tags nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
+
+    (set-face-attribute 'org-agenda-filter-category nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
 
         ;;; Diff
     (set-face-attribute 'diff-added nil  :background my/diff-added-color)
