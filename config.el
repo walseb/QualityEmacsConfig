@@ -461,6 +461,10 @@
 ;; ** Maybe remove bold font from ivy match faces
 ;; I think bold fonts are slightly higher than normal fonts, which I think causes the minibuffer to not match ivy fully sometimes
 
+;; ** Make org-indent work with outlines
+;; 1. (setq org-outline-regexp "^;;\s\\*+")
+;; 2. Modify =org-indent--compute-prefixes= so that =org-indent--heading-line-prefixes= and maybe other variables are correct
+
 ;; * First
 ;; Things to do first
 (setq mode-line-format nil)
@@ -2152,13 +2156,28 @@
 (add-hook 'prog-mode-hook 'outline-minor-mode)
 
 ;; ** Imenu
-(defun my/auto-imenu ()
-  (interactive)
-  (pcase major-mode
-    ('org-mode (counsel-outline))
-    (_ (counsel-imenu))))
+(define-key my/leader-map (kbd "I") 'counsel-imenu)
 
-(define-key my/leader-map (kbd "TAB") 'my/auto-imenu)
+;; ** Counsel-outline
+(define-key my/leader-map (kbd "TAB") 'counsel-outline)
+
+;; *** Fix counsel-outline in elisp mode
+;; Elisp mode uses the classic lisp outline syntax
+(setq counsel-outline-settings
+      '((emacs-lisp-mode
+	 :outline-regexp ";; [*]\\{1,8\\} "
+	 :outline-level counsel-outline-level-emacs-lisp)
+	(org-mode
+	 :outline-title counsel-outline-title-org
+	 :action counsel-org-goto-action
+	 :history counsel-org-goto-history
+	 :caller counsel-org-goto)
+	;; markdown-mode package
+	(markdown-mode
+	 :outline-title counsel-outline-title-markdown)
+	;; Built-in mode or AUCTeX package
+	(latex-mode
+	 :outline-title counsel-outline-title-latex)))
 
 ;; ** Outshine
 (straight-use-package 'outshine)
@@ -3973,8 +3992,8 @@
 	(progn
 	  (my/backward-sexp)
 	  (if (save-match-data (looking-at "#;"))
-  (+ (point) 2)
-  (point)))
+	      (+ (point) 2)
+	    (point)))
       (scan-error (user-error "There isn't a complete s-expression before point")))))
 
 ;; *** Emacs-lisp
@@ -6438,7 +6457,7 @@
 
 ;; * Spelling
 (define-prefix-command 'my/spell-map)
-(define-key my/leader-map (kbd "I") 'my/spell-map)
+(define-key my/leader-map (kbd "S") 'my/spell-map)
 
 (define-key my/spell-map (kbd "d") 'ispell-change-dictionary)
 (define-key my/spell-map (kbd "s") 'flyspell-mode)
@@ -6950,6 +6969,8 @@
 (add-hook 'magit-mode-hook '(lambda () (interactive) (prettify-symbols-mode -1)))
 
 ;; ** Symbols
+;; Read =reference-point-alist= to understand how to merge characters and add spaces to characters
+
 ;; *** Generic
 (defconst my/generic-equal-symbols
   '(
@@ -6993,34 +7014,35 @@
   `((,(concat (string-trim comment-start) (string-trim comment-start)) . ,my/pretty-comment-symbol)))
 
 (defun my/prettify-outline-heading ()
-  `((,(concat (string-trim comment-start) " *") . ?◉)
-    (,(concat (string-trim comment-start) " **") . ?○)
-    (,(concat (string-trim comment-start) " ***") . ?✸)
-    (,(concat (string-trim comment-start) " ****") . ?✿)
-    (,(concat (string-trim comment-start) " *****") . ?◉)
-    (,(concat (string-trim comment-start) " ******") . ?○)
-    (,(concat (string-trim comment-start) " *******") . ?✸)
-    (,(concat (string-trim comment-start) " ********") . ?✿)))
+  `(
+    (,(concat (string-trim comment-start) " *") . ?◉)
+    (,(concat (string-trim comment-start) " **") . (?\s (Br . Bl) ?○))
+    (,(concat (string-trim comment-start) " ***") . (?\s (Br . Bl) ?\s (Br . Bl) ?✸))
+    (,(concat (string-trim comment-start) " ****") . (?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?✿))
+    (,(concat (string-trim comment-start) " *****") . (?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?◉))
+    (,(concat (string-trim comment-start) " ******") . (?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?○))
+    (,(concat (string-trim comment-start) " *******") . (?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?✸))
+    (,(concat (string-trim comment-start) " ********") . (?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?✿))))
 
 (defun my/prettify-outline-heading-lisp ()
   `((,(concat (string-trim comment-start) (string-trim comment-start) " *") . ?◉)
-    (,(concat (string-trim comment-start) (string-trim comment-start) " **") . ?○)
-    (,(concat (string-trim comment-start) (string-trim comment-start) " ***") . ?✸)
-    (,(concat (string-trim comment-start) (string-trim comment-start) " ****") . ?✿)
-    (,(concat (string-trim comment-start) (string-trim comment-start) " *****") . ?◉)
-    (,(concat (string-trim comment-start) (string-trim comment-start) " ******") . ?○)
-    (,(concat (string-trim comment-start) (string-trim comment-start) " *******") . ?✸)
-    (,(concat (string-trim comment-start) (string-trim comment-start) " ********") . ?✿)))
+    (,(concat (string-trim comment-start) (string-trim comment-start) " **") . (?\s (Br . Bl) ?○))
+    (,(concat (string-trim comment-start) (string-trim comment-start) " ***") . (?\s (Br . Bl) ?\s (Br . Bl) ?✸))
+    (,(concat (string-trim comment-start) (string-trim comment-start) " ****") . (?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?✿))
+    (,(concat (string-trim comment-start) (string-trim comment-start) " *****") . (?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?◉))
+    (,(concat (string-trim comment-start) (string-trim comment-start) " ******") . (?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?○))
+    (,(concat (string-trim comment-start) (string-trim comment-start) " *******") . (?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?✸))
+    (,(concat (string-trim comment-start) (string-trim comment-start) " ********") . (?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?✿))))
 
 (defun my/prettify-outline-heading-lisp-classic ()
   `((,(my/repeat-char (string-trim comment-start) "" 3) . ?◉)
-    (,(my/repeat-char (string-trim comment-start) "" 4) . ?○)
-    (,(my/repeat-char (string-trim comment-start) "" 5) . ?✸)
-    (,(my/repeat-char (string-trim comment-start) "" 6) . ?✿)
-    (,(my/repeat-char (string-trim comment-start) "" 7) . ?◉)
-    (,(my/repeat-char (string-trim comment-start) "" 8) . ?○)
-    (,(my/repeat-char (string-trim comment-start) "" 9) . ?✸)
-    (,(my/repeat-char (string-trim comment-start) "" 10) . ?✿)))
+    (,(my/repeat-char (string-trim comment-start) "" 4) . (?\s (Br . Bl) ?○))
+    (,(my/repeat-char (string-trim comment-start) "" 5) . (?\s (Br . Bl) ?\s (Br . Bl) ?✸))
+    (,(my/repeat-char (string-trim comment-start) "" 6) . (?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?✿))
+    (,(my/repeat-char (string-trim comment-start) "" 7) . (?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?◉))
+    (,(my/repeat-char (string-trim comment-start) "" 8) . (?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?○))
+    (,(my/repeat-char (string-trim comment-start) "" 9) . (?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?✸))
+    (,(my/repeat-char (string-trim comment-start) "" 10) . (?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?\s (Br . Bl) ?✿))))
 
 ;; *** Fsharp
 (defconst my/fsharp-symbols
@@ -7034,7 +7056,7 @@
     ("sqrt" . ?√)
     ("undefined" . ?⊥)
     ("pi" . ?π)
-    ("::" . ?∷)
+    ;;("::" . ?∷)
     ;; Here we construct a custom symbol that has the spaces that are removed when replacing " . " with a single char
     (" . " . (?\s (Br . Bl) ?\s (Bc . Bc) ?\s (Br . Bl) ?\s (Bc . Bc) ?∘)) ; "○"
     ;; Doesn't work?
