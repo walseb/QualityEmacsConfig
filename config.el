@@ -326,11 +326,6 @@
 ;; Does it happen in vanilla?
 ;; Use error on quit, quit when loading is happening then get backtrace.
 ;; ** Make magit-status faster during huge edits, or create new magit-status-fast command
-;; ** C-h to go back in counsel-find-file
-;; Also unbind backspace in counsel-find-file
-;; Command is called: =ivy-backward-delete-char=
-
-;; Maybe a better option is to bind that to =ivy-backward-delete-word=
 ;; ** Should save-window-excursion be disabled?
 ;; Steps to reproduce: open two window split, do M-x, close the window you focused when doing M-x, cancel the M-x with C-g
 
@@ -1417,6 +1412,10 @@
 (setq inhibit-startup-message t)
 
 ;; ** Scratch buffer
+;; *** Disable scratch buffer on startup
+;; We need to do this because the scratch buffer created by emacs is temporary, the one in this config is a file
+;;(kill-buffer "*scratch*")
+
 ;; *** Disable initial scratch buffer message
 (setq initial-scratch-message nil)
 
@@ -1780,6 +1779,7 @@
   (find-file (expand-file-name (concat user-emacs-directory "config.el")))
   ;; Emacs lags if flycheck runs on config
   (flycheck-mode -1)
+  (my/outline-hide-all)
   (run-hooks 'my/open-map-hook))
 
 (define-key my/open-map (kbd "c") 'my/config-visit)
@@ -2161,6 +2161,12 @@
 ;; ** Counsel-outline
 (define-key my/leader-map (kbd "TAB") 'counsel-outline)
 
+;; ***  Fix so that counsel-outline can unfold to the line it needs to go to
+(defun counsel-outline-action (x)
+  "Go to outline X."
+  (goto-char (cdr x))
+  (outline-show-entry))
+
 ;; *** Fix counsel-outline in elisp mode
 ;; Elisp mode uses the classic lisp outline syntax
 (setq counsel-outline-settings
@@ -2256,7 +2262,7 @@
 (define-key my/narrow-map (kbd "p") 'narrow-to-page)
 (define-key my/narrow-map (kbd "d") 'narrow-to-defun)
 
-(define-key my/narrow-map (kbd "h") 'my/auto-narrow-to-subtree)
+(define-key my/narrow-map (kbd "i") 'my/auto-narrow-to-subtree)
 
 ;; *** Narrow to subtree
 (defun my/auto-narrow-to-subtree ()
