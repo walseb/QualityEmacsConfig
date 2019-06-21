@@ -2566,9 +2566,20 @@ Required by outorg
 (setq outorg-unindent-active-source-blocks-p nil)
 #+end_src
 
-*** Toggle
+*** Toggle current heading
 #+begin_src emacs-lisp
-(define-key my/leader-map (kbd "f") 'my/outorg-toggle)
+(define-key my/leader-map (kbd "f") 'my/outorg-toggle-heading)
+
+(defun my/outorg-toggle-heading ()
+  (interactive)
+  (if (string= major-mode 'org-mode)
+      (outorg-copy-edits-and-exit)
+    (outorg-edit-as-org)))
+#+end_src
+
+*** Toggle entire buffer
+#+begin_src emacs-lisp
+(define-key my/leader-map (kbd "F") 'my/outorg-toggle)
 
 (defun my/outorg-toggle ()
   (interactive)

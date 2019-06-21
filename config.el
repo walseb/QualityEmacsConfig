@@ -2174,8 +2174,17 @@
 (setq outorg-edit-buffer-persistent-message nil)
 (setq outorg-unindent-active-source-blocks-p nil)
 
-;; *** Toggle
-(define-key my/leader-map (kbd "f") 'my/outorg-toggle)
+;; *** Toggle current heading
+(define-key my/leader-map (kbd "f") 'my/outorg-toggle-heading)
+
+(defun my/outorg-toggle-heading ()
+  (interactive)
+  (if (string= major-mode 'org-mode)
+      (outorg-copy-edits-and-exit)
+    (outorg-edit-as-org)))
+
+;; *** Toggle entire buffer
+(define-key my/leader-map (kbd "F") 'my/outorg-toggle)
 
 (defun my/outorg-toggle ()
   (interactive)
