@@ -460,6 +460,13 @@
 ;; 1. (setq org-outline-regexp "^;;\s\\*+")
 ;; 2. Modify =org-indent--compute-prefixes= so that =org-indent--heading-line-prefixes= and maybe other variables are correct
 
+;; ** Fix config compile errors
+
+;; ** Compile before loading config for faster start times after modifying config
+;; This gives me an error which seems to be related to straight.el where it can't require basic libraries
+;; It might be related to the lexical bindings?
+;; Right now I put a compilation step at the end of the config
+
 ;; * First
 ;; Things to do first
 (setq mode-line-format nil)
@@ -1698,9 +1705,8 @@
    ))
 
 ;; ** Build config
-(defun my/build-config ()
+(defun my/build-config-docs ()
   (interactive)
-  (byte-compile-file "~/.emacs.d/config.el")
   (my/config-visit)
   (my/outorg-export-to-org-file "~/.emacs.d/readme.org"))
 
@@ -1779,7 +1785,6 @@
   (find-file (expand-file-name (concat user-emacs-directory "config.el")))
   ;; Emacs lags if flycheck runs on config
   (flycheck-mode -1)
-  (my/outline-hide-all)
   (run-hooks 'my/open-map-hook))
 
 (define-key my/open-map (kbd "c") 'my/config-visit)
@@ -6605,6 +6610,16 @@
   ("C-l" (evil-window-decrease-width 10) nil)
   ;; Resize left
   ("C-h" (evil-window-increase-width 10) nil)
+
+  ;; Resize up
+  ("C-S-p" (evil-window-increase-height 40) nil)
+  ;; Resize down
+  ("C-S-n" (evil-window-decrease-height 40) nil)
+  ;; Resize right
+  ("C-S-l" (evil-window-decrease-width 40) nil)
+  ;; Resize left
+  ("C-S-h" (evil-window-increase-width 40) nil)
+  
   
   ;; Split
   ("o" split-window-right nil)
@@ -7353,15 +7368,19 @@
 		"%m"
 		
 		;; Git branch and project name
-		(:eval (if (not (string= my/projectile-project-name "-"))
-			   (progn
-			     (concat
-			      " > "
-			      my/buffer-git-branch
-			      "@"
-			      "["
-			      my/projectile-project-name
-			      "]"))))
+		(:eval
+		 (if (and (string= my/projectile-project-curr-buffer buffer-file-name) (not (string= my/projectile-project-name "-")))
+		     (progn
+		       (setq-local my/projectile-project-last-name-cache
+				   (concat
+				    " > "
+				    my/buffer-git-branch
+				    "@"
+				    "["
+				    my/projectile-project-name
+				    "]"))
+		       my/projectile-project-last-name-cache)
+		   my/projectile-project-last-name-cache))
 		
 		
 		;;which-func-current
@@ -7702,11 +7721,17 @@
 ;; **** Git project name
 ;; When projectile-mode is on, project name is updated on every keypress, here it is fixed
 (defvar my/projectile-project-name "")
+(defvar my/projectile-project-curr-buffer "")
+
+;; Used by mode line to remember lasts git repo it had
+(defvar-local my/projectile-project-last-name-cache "")
 
 (defun my/update-projectile-project-name()
   (interactive)
-  (if (and buffer-file-name (file-exists-p buffer-file-name))
-      (setq my/projectile-project-name (projectile-project-name))))
+  ;; Some virtual buffers don't work, but dired-mode does
+  (when (or (string= major-mode 'dired-mode) (and buffer-file-name (file-exists-p buffer-file-name)))
+    (setq my/projectile-project-name (projectile-project-name))
+    (setq my/projectile-project-curr-buffer buffer-file-name)))
 
 (add-hook 'my/switch-buffer-hook 'my/update-projectile-project-name)
 
@@ -8295,3 +8320,10 @@
 
 ;; * Report start time
 (run-with-timer 4 nil (lambda () (interactive) (message (concat "Booted in " (emacs-init-time)))))
+
+
+;; * Byte-compile the config
+;; Byte compilation doesn't work before loading everything because of some reason, so do it now
+(unless (and (file-exists-p my/config-compiled-location) (my/is-file-more-up-to-date my/config-compiled-location my/config-location))
+  (byte-compile-file "~/.emacs.d/config.el")
+  (message "Config is now byte compiled, restart to run it"))

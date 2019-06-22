@@ -326,11 +326,6 @@ https://github.com/bastibe/annotate.el
 Does it happen in vanilla?
 Use error on quit, quit when loading is happening then get backtrace.
 ** Make magit-status faster during huge edits, or create new magit-status-fast command
-** C-h to go back in counsel-find-file
-Also unbind backspace in counsel-find-file
-Command is called: =ivy-backward-delete-char=
-
-Maybe a better option is to bind that to =ivy-backward-delete-word=
 ** Should save-window-excursion be disabled?
 Steps to reproduce: open two window split, do M-x, close the window you focused when doing M-x, cancel the M-x with C-g
 
@@ -464,6 +459,13 @@ I think bold fonts are slightly higher than normal fonts, which I think causes t
 ** Make org-indent work with outlines
 1. (setq org-outline-regexp "^;;\s\\*+")
 2. Modify =org-indent--compute-prefixes= so that =org-indent--heading-line-prefixes= and maybe other variables are correct
+
+** Fix config compile errors
+
+** Compile before loading config for faster start times after modifying config
+This gives me an error which seems to be related to straight.el where it can't require basic libraries
+It might be related to the lexical bindings?
+Right now I put a compilation step at the end of the config
 
 * First
 Things to do first
@@ -1611,6 +1613,10 @@ Disable startup message
 #+end_src
 
 ** Scratch buffer
+*** Disable scratch buffer on startup
+We need to do this because the scratch buffer created by emacs is temporary, the one in this config is a file
+(kill-buffer "*scratch*")
+
 *** Disable initial scratch buffer message
 #+begin_src emacs-lisp
 (setq initial-scratch-message nil)
@@ -1970,9 +1976,8 @@ Enable and show minibuffer recursive depth
 
 ** Build config
 #+begin_src emacs-lisp
-(defun my/build-config ()
+(defun my/build-config-docs ()
   (interactive)
-  (byte-compile-file "~/.emacs.d/config.el")
   (my/config-visit)
   (my/outorg-export-to-org-file "~/.emacs.d/readme.org"))
 #+end_src
@@ -2549,6 +2554,14 @@ Required by outorg
 (define-key my/leader-map (kbd "TAB") 'counsel-outline)
 #+end_src
 
+***  Fix so that counsel-outline can unfold to the line it needs to go to
+#+begin_src emacs-lisp
+(defun counsel-outline-action (x)
+  "Go to outline X."
+  (goto-char (cdr x))
+  (outline-show-entry))
+#+end_src
+
 *** Fix counsel-outline in elisp mode
 Elisp mode uses the classic lisp outline syntax
 #+begin_src emacs-lisp
@@ -2661,7 +2674,7 @@ Elisp mode uses the classic lisp outline syntax
 (define-key my/narrow-map (kbd "p") 'narrow-to-page)
 (define-key my/narrow-map (kbd "d") 'narrow-to-defun)
 
-(define-key my/narrow-map (kbd "h") 'my/auto-narrow-to-subtree)
+(define-key my/narrow-map (kbd "i") 'my/auto-narrow-to-subtree)
 #+end_src
 
 *** Narrow to subtree
@@ -7730,6 +7743,16 @@ https://www.emacswiki.org/emacs/ArtistMode
   ("C-l" (evil-window-decrease-width 10) nil)
   ;; Resize left
   ("C-h" (evil-window-increase-width 10) nil)
+
+  ;; Resize up
+  ("C-S-p" (evil-window-increase-height 40) nil)
+  ;; Resize down
+  ("C-S-n" (evil-window-decrease-height 40) nil)
+  ;; Resize right
+  ("C-S-l" (evil-window-decrease-width 40) nil)
+  ;; Resize left
+  ("C-S-h" (evil-window-increase-width 40) nil)
+  
   
   ;; Split
   ("o" split-window-right nil)
@@ -8588,15 +8611,19 @@ Set mode line height
 		"%m"
 		
 		;; Git branch and project name
-		(:eval (if (not (string= my/projectile-project-name "-"))
-			   (progn
-			     (concat
-			      " > "
-			      my/buffer-git-branch
-			      "@"
-			      "["
-			      my/projectile-project-name
-			      "]"))))
+		(:eval
+		 (if (and (string= my/projectile-project-curr-buffer buffer-file-name) (not (string= my/projectile-project-name "-")))
+		     (progn
+		       (setq-local my/projectile-project-last-name-cache
+				   (concat
+				    " > "
+				    my/buffer-git-branch
+				    "@"
+				    "["
+				    my/projectile-project-name
+				    "]"))
+		       my/projectile-project-last-name-cache)
+		   my/projectile-project-last-name-cache))
 		
 		
 		;;which-func-current
@@ -8977,11 +9004,19 @@ Update date now
 When projectile-mode is on, project name is updated on every keypress, here it is fixed
 #+begin_src emacs-lisp
 (defvar my/projectile-project-name "")
+(defvar my/projectile-project-curr-buffer "")
+#+end_src
+
+Used by mode line to remember lasts git repo it had
+#+begin_src emacs-lisp
+(defvar-local my/projectile-project-last-name-cache "")
 
 (defun my/update-projectile-project-name()
   (interactive)
-  (if (and buffer-file-name (file-exists-p buffer-file-name))
-      (setq my/projectile-project-name (projectile-project-name))))
+  ;; Some virtual buffers don't work, but dired-mode does
+  (when (or (string= major-mode 'dired-mode) (and buffer-file-name (file-exists-p buffer-file-name)))
+    (setq my/projectile-project-name (projectile-project-name))
+    (setq my/projectile-project-curr-buffer buffer-file-name)))
 
 (add-hook 'my/switch-buffer-hook 'my/update-projectile-project-name)
 #+end_src
@@ -9604,4 +9639,13 @@ mode-line-format
 * Report start time
 #+begin_src emacs-lisp
 (run-with-timer 4 nil (lambda () (interactive) (message (concat "Booted in " (emacs-init-time)))))
+#+end_src
+
+
+* Byte-compile the config
+Byte compilation doesn't work before loading everything because of some reason, so do it now
+#+begin_src emacs-lisp
+(unless (and (file-exists-p my/config-compiled-location) (my/is-file-more-up-to-date my/config-compiled-location my/config-location))
+  (byte-compile-file "~/.emacs.d/config.el")
+  (message "Config is now byte compiled, restart to run it"))
 #+end_src
