@@ -2404,9 +2404,13 @@
 (setq ivy-use-selectable-prompt t)
 
 ;; *** Visuals
-;; Height of minibuffer
-;; (setq ivy-height 10)
+;;;;;; Ivy height
+(setq ivy-height 20)
 
+;; Make counsel-yank-pop use default height
+(delete `(counsel-yank-pop . ,ivy-height) ivy-height-alist)
+
+;; **** Highlight whole row in minibuffer
 ;; Change the default emacs formatter to highlight whole row in minibuffer
 (delete '(t . ivy-format-function-default) ivy-format-functions-alist)
 (add-to-list 'ivy-format-functions-alist '(t . ivy-format-function-line))
@@ -3029,43 +3033,10 @@
 ;; ** Marks
 (setq mark-ring-max 100)
 
-(defvar my/current-mark 0)
-(defvar my/current-mark-reference nil)
-
-(defun my/reset-current-marks-if-mark-ring-change ()
-  (if (and my/current-mark-reference (ignore-errors (= my/current-mark-reference (car mark-ring))))
-      nil
-    ;; Reset all mark counters
-    (setq my/current-mark-reference (car mark-ring))
-    (setq my/current-mark 0)
-    ;;(push-mark)
-    t))
-
-(defun my/mark-move (jump-distance)
-  "Moves between marks"
-  (interactive)
-  (or mark-ring
-      (error "No mark set"))
-  (or (my/reset-current-marks-if-mark-ring-change)
-      (setq my/current-mark
-	    (if (and (>= (+ my/current-mark jump-distance) 0) (< (+ my/current-mark jump-distance) (length mark-ring)))
-		(+ my/current-mark jump-distance)
-	      my/current-mark)))
-  (let* ((marker (nth my/current-mark mark-ring))
-	 (position (marker-position marker)))
-    ;; (if (and (= my/current-mark 1) (not (= position (point))))
-    ;; (progn (push-mark)
-    ;; (setq my/current-mark-reference (car mark-ring))))
-    (message (concat "At mark: " (number-to-string my/current-mark)))
-    (or (and (>= position (point-min))
-	     (<= position (point-max)))
-	(if widen-automatically
-	    (widen)
-	  (error "Global mark position is outside accessible part of buffer")))
-    (goto-char position)))
-
-;; (my/evil-normal-define-key "C-b" '(lambda () (interactive) (my/mark-move 1)))
-;; (my/evil-normal-define-key "C-f" '(lambda () (interactive) (my/mark-move -1)))
+;; *** Bind counsel-mark-ring
+(my/evil-universal-define-key "C-o" 'counsel-mark-ring)
+(my/evil-universal-define-key "C-b" 'evil-jump-backward)
+(my/evil-universal-define-key "M-b" 'evil-jump-forward)
 
 ;; ** Relative line numbers
 ;; (when (version<= "26.0.50" emacs-version )
@@ -5374,7 +5345,8 @@
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-s") 'exwm-firefox-core-quick-find)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "t") 'my/exwm-firefox-core-window-new)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "t") 'exwm-firefox-core-tab-new)
+    ;;(evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "t") 'my/exwm-firefox-core-window-new)
     
        ;;; Visual
     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up-select)
