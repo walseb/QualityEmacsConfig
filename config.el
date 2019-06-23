@@ -467,6 +467,18 @@
 ;; It might be related to the lexical bindings?
 ;; Right now I put a compilation step at the end of the config
 
+;; ** clone-indirect-buffer shouldn't make the new buffer appear in a different window than the selected one
+
+;; ** Make use of global mode map
+;; evil-universal-define-key overwrites the evil mode map, this should use global-mode-map instead
+
+
+;; ** Fix keys
+;; Exwm keys are really messy, remove 'my/keys-mode-map'
+;; *** Clean global mode map
+;; It's currently full of unused keys
+;; *** Maybe only use evil-edit instead
+
 ;; * First
 ;; Things to do first
 (setq mode-line-format nil)
@@ -605,6 +617,7 @@
     nil))
 
 ;; ** Fake key
+;; *** Normal emacs buffers 
 ;; Doesn't work on keys that are not english
 ;; (defun my/fake-key (key key-symbol)
 ;;  (interactive)
@@ -621,6 +634,12 @@
   (setq unread-command-events
 	(mapcar (lambda (e) `(t . ,e))
 		(listify-key-sequence (kbd key)))))
+
+;; *** Exwm
+(defun my/exwm-fake-key (key)
+  "Key is a string"
+  (interactive)
+  (exwm-input--fake-key (string-to-char key)))
 
 ;; ** Fold ellipsis
 (defvar my/fold-ellipsis)
@@ -796,23 +815,9 @@
 ;; (setq max-mini-window-height 1)
 
 ;; ** Bind evil key functions
-;; Doesn't seem like these "define-key-in-mode" functions work with lexical binds
-;; (defun my/evil-normal-define-key-in-mode (mode key command)
-;;  (interactive)
-;;  (evil-define-key '(motion normal) mode (kbd key) command))
-
-;; (defun my/evil-insert-define-key-in-mode (mode key command)
-;;  (interactive)
-;;  (evil-define-key 'insert mode (kbd key) command))
-
-;; (defun my/evil-visual-define-key-in-mode (mode key command)
-;;  (evil-define-key 'visual mode (kbd key) command))
-
-;; (defun my/evil-universal-define-key-in-mode (mode key command)
-;;  (interactive)
-;;  (my/evil-normal-define-key-in-mode mode key command)
-;;  (my/evil-visual-define-key-in-mode mode key command)
-;;  (my/evil-insert-define-key-in-mode mode key command))
+(defun my/evil-emacs-define-key (key command)
+  (interactive)
+  (define-key evil-emacs-state-map (kbd key) command))
 
 (defun my/evil-insert-define-key (key command)
   (interactive)
@@ -823,6 +828,10 @@
   (define-key evil-normal-state-map (kbd key) command)
   (define-key evil-motion-state-map (kbd key) command))
 
+(defun my/evil-replace-define-key (key command)
+  (interactive)
+  (define-key evil-replace-state-map (kbd key) command))
+
 (defun my/evil-visual-define-key (key command)
   (interactive)
   (define-key evil-visual-state-map (kbd key) command))
@@ -831,7 +840,8 @@
   (interactive)
   (my/evil-insert-define-key key command)
   (my/evil-normal-define-key key command)
-  (my/evil-visual-define-key key command))
+  (my/evil-visual-define-key key command)
+  (my/evil-replace-define-key key command))
 
 ;; ** Evil-multiple cursors
 (straight-use-package 'evil-mc)
@@ -1694,7 +1704,19 @@
 (minibuffer-depth-indicate-mode 1)
 
 ;; ** Clone indirect buffer name
+;; *** Clone indirect buffer this window
 (defun my/clone-indirect-buffer-name ()
+  (interactive)
+  (clone-indirect-buffer
+   (concat
+    (buffer-name)
+    " | "
+    (completing-read "Buffer name: " nil))
+   t
+   ))
+
+;; *** Clone indirect buffer other window
+(defun my/clone-indirect-buffer-name-other-window ()
   (interactive)
   (clone-indirect-buffer-other-window
    (concat
@@ -4865,9 +4887,19 @@
 (general-evil-setup)
 
 ;; *** Language specific symbols
+;; **** Lower
+(my/evil-emacs-define-key "M-a" '(lambda () (interactive) (my/exwm-fake-key "å")))
+(my/evil-emacs-define-key "M-e" '(lambda () (interactive) (my/exwm-fake-key "ä")))
+(my/evil-emacs-define-key "M-o" '(lambda () (interactive) (my/exwm-fake-key "ö")))
+
 (my/evil-universal-define-key "M-a" '(lambda () (interactive) (my/fake-key "å" ?\å)))
 (my/evil-universal-define-key "M-e" '(lambda () (interactive) (my/fake-key "ä" ?\ä)))
 (my/evil-universal-define-key "M-o" '(lambda () (interactive) (my/fake-key "ö" ?\ö)))
+
+;; **** Capital
+(my/evil-emacs-define-key "M-A" '(lambda () (interactive) (my/exwm-fake-key "Å")))
+(my/evil-emacs-define-key "M-E" '(lambda () (interactive) (my/exwm-fake-key "Ä")))
+(my/evil-emacs-define-key "M-O" '(lambda () (interactive) (my/exwm-fake-key "Ö")))
 
 (my/evil-universal-define-key "M-A" '(lambda () (interactive) (my/fake-key "Å" ?\Å)))
 (my/evil-universal-define-key "M-E" '(lambda () (interactive) (my/fake-key "Ä" ?\Ä)))
@@ -5234,6 +5266,10 @@
 
 (exwm-input-set-key (kbd "M-x") 'counsel-M-x)
 
+;;(exwm-input-set-key (kbd "M-w") '(lambda () (interactive) (exwm-input--fake-key ?\å)))
+;;(exwm-input-set-key (kbd "M-r") '(lambda () (interactive) (exwm-input--fake-key ?\ä)))
+;;(exwm-input-set-key (kbd "M-j") '(lambda () (interactive) (exwm-input--fake-key ?\ö)))
+
 ;; * Shr
 (require 'shr)
 
@@ -5372,15 +5408,18 @@
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-u") 'exwm-firefox-core-half-page-up)
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
     
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-w") '(lambda () (interactive) (exwm-input--fake-key ?\å)))
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-r") '(lambda () (interactive) (exwm-input--fake-key ?\ä)))
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-j") '(lambda () (interactive) (exwm-input--fake-key ?\ö)))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-w") '(lambda () (interactive) (my/exwm-fake-key "å")))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-r") '(lambda () (interactive) (my/exwm-fake-key "ä")))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-j") '(lambda () (interactive) (my/exwm-fake-key "ö")))
+
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-W") '(lambda () (interactive) (my/exwm-fake-key "Å")))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-R") '(lambda () (interactive) (my/exwm-fake-key "Ä")))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-J") '(lambda () (interactive) (my/exwm-fake-key "Ö")))
     
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)))
-
-(evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-l") '(lambda () (interactive) (exwm-input--fake-key 'delete)))
-(evil-define-key 'insert  exwm-firefox-evil-mode-map (kbd "C-f") '(lambda () (interactive) (exwm-input--fake-key 'backspace)))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-l") '(lambda () (interactive) (exwm-input--fake-key 'delete)))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-f") '(lambda () (interactive) (exwm-input--fake-key 'backspace)))))
 
 
 ;; ** Next browser
@@ -6600,6 +6639,7 @@
   ("v" split-window-below nil)
   
   ("i" my/clone-indirect-buffer-name nil)
+  ("I" my/clone-indirect-buffer-name-other-window nil)
   
   ;; Search
   ("C-s" swiper-all nil)
