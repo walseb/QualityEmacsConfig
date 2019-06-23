@@ -4844,6 +4844,8 @@
   (define-key my/eshell-mode-map (kbd "k") 'counsel-esh-history)
   
   (evil-define-key 'normal eshell-mode-map (kbd "0") 'my/eshell-goto-beg-of-line)
+
+  (evil-define-key '(normal insert visual replace) eshell-mode-map (kbd "C-c") 'eshell-kill-process)
   
   (evil-define-key '(normal insert) eshell-mode-map (kbd "C-p") 'eshell-previous-matching-input-from-input)
   (evil-define-key '(normal insert) eshell-mode-map (kbd "C-n") 'eshell-next-matching-input-from-input))
@@ -6646,7 +6648,7 @@
   ("C-b" my/delete-bookmark nil)
   
   ("u" winner-undo nil)
-  ("r" winner-redo nil)
+  ("C-r" winner-redo nil)
   
   ("R" rename-buffer nil))
 
