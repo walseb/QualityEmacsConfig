@@ -620,6 +620,7 @@
 
 ;; ** Is font installed
 (defvar my/font-family-list (font-family-list))
+
 (defun my/font-installed (font)
   (if (member font my/font-family-list)
       t
@@ -733,46 +734,26 @@
     initial-string))
 
 ;; * Fonts
-;; ** Normal fonts
-(defvar my/is-font-mono nil)
-(defvar my/font nil)
-(defvar my/font-raw nil)
+(defun my/get-best-font ()
+  (if (my/font-installed "Inconsolata LGC")
+      "Inconsolata LGC"
+    (if (my/font-installed "Inconsolata")
+	"Inconsolata"
+      (if (my/font-installed "DejaVu Sans Mono")
+	  "DejaVu Sans Mono"
+	(if (my/font-installed "Fira Mono")
+	    "Fira Mono"
+	  (if (my/font-installed "dejavu sans mono")
+	      "DejaVuSansMono"
+	    (if (my/font-installed "Noto Sans Mono")
+		"NotoSansMono"
+	      (if (my/font-installed "Perfect DOS VGA 437")
+		  "Perfect DOS VGA 437"))))))))
 
-(if (my/font-installed "FreeSans")
-    (progn
-      (setq my/font-raw "FreeSans")
-      (setq my/font "FreeSans"))
-  (if (my/font-installed "Open Sans")
-      (progn
-	(setq my/font-raw "Open Sans")
-	(setq my/font "opensans"))
-    (if (my/font-installed "dejavu sans")
-	(progn
-	  (setq my/font-raw "dejavu sans")
-	  (setq my/font "DejaVuSans")))))
+(setq my/font (my/get-best-font))
 
-;;  (if my/font
-;;      (my/set-default-font my/font))
-
-;; ** Mono font
-(defun my/get-best-mono-font ()
-  (if my/is-font-mono
-      my/font
-    (if (my/font-installed "Inconsolata LGC")
-	"Inconsolata LGC"
-      (if (my/font-installed "Inconsolata")
-	  "Inconsolata"
-	(if (my/font-installed "dejavu sans mono")
-	    "DejaVuSansMono"
-	  (if (my/font-installed "Noto Sans Mono")
-	      "NotoSansMono"
-	    (if (my/font-installed "Perfect DOS VGA 437")
-		"Perfect DOS VGA 437")))))))
-
-(defvar my/mono-font (my/get-best-mono-font))
-
-(if my/mono-font
-    (my/set-default-font my/mono-font))
+(if my/font
+    (my/set-default-font my/font))
 
 ;; * Startup processes
 ;; ** Prevent async command from opening new window
@@ -1067,13 +1048,13 @@ If the scroll count is zero the command scrolls half the screen."
       (setq count (/ (window-body-height) 2)))
     (let ((xy (evil-posn-x-y (posn-at-point))))
       (condition-case nil
-          (progn
-            (scroll-down count)
-            (goto-char (posn-point (posn-at-x-y (car xy) (cdr xy)))))
-        (beginning-of-buffer
-         (condition-case nil
-             (with-no-warnings (previous-line count))
-           (beginning-of-buffer)))))))
+	  (progn
+	    (scroll-down count)
+	    (goto-char (posn-point (posn-at-x-y (car xy) (cdr xy)))))
+	(beginning-of-buffer
+	 (condition-case nil
+	     (with-no-warnings (previous-line count))
+	   (beginning-of-buffer)))))))
 
 (evil-define-command evil-scroll-down (count)
   "Scrolls the window and the cursor COUNT lines downwards.
@@ -1140,9 +1121,9 @@ Borrowed from mozc.el."
   (let ((xy (posn-x-y position)))
     (when (and (> emacs-major-version 24) header-line-format)
       (setcdr xy (+ (cdr xy)
-                    (or evil-cached-header-line-height
-                        (setq evil-cached-header-line-height (evil-header-line-height))
-                        0))))
+		    (or evil-cached-header-line-height
+			(setq evil-cached-header-line-height (evil-header-line-height))
+			0))))
     xy))
 
 ;; ** Keys
@@ -1658,31 +1639,6 @@ Borrowed from mozc.el."
 
 (define-key my/leader-map (kbd "+") '(lambda () (interactive) (text-scale-mode 0)))
 (define-key my/leader-map (kbd "_") '(lambda () (interactive) (text-scale-mode 0)))
-
-;; ** Toggle mono-font
-;; (font-get "opensans" :spacing)
-(defun my/toggle-mono-font(&optional arg)
-  "If ARG is non-nil enable monofont, otherwise toggle it."
-  (interactive)
-  (if window-system
-      (if (not my/is-font-mono)
-	  (if  (or arg (string= (face-attribute 'default :family) my/font-raw))
-	      (my/set-default-font my/mono-font)
-	    (my/set-default-font my/font)))))
-
-(define-key my/leader-map (kbd "C-f") 'my/toggle-mono-font)
-
-;; *** Toggle local mono font
-(defun my/toggle-local-mono-font(&optional arg)
-  "If ARG is non-nil enable monofont, otherwise toggle it."
-  (interactive)
-  (if window-system
-      (if (not my/is-font-mono)
-	  (if  (or arg (string= (face-attribute 'default :family) my/font-raw))
-	      (face-remap-add-relative 'default :family my/mono-font)
-	    (face-remap-add-relative 'default :family my/font-raw)))))
-
-(define-key my/leader-map (kbd "M-f") 'my/toggle-local-mono-font)
 
 ;; ** Exit emacs
 (define-key my/leader-map (kbd "C-z") 'save-buffers-kill-emacs)
@@ -2558,7 +2514,12 @@ Borrowed from mozc.el."
 ;; Make counsel-yank-pop use default height
 ;;(delete `(counsel-yank-pop . 5) ivy-height-alist)
 ;; Disable set height depending on command
-(setq ivy-height-alist '())
+(add-hook 'after-init-hook '(lambda () 
+			      (setq ivy-height-alist nil)
+			      (setq-default ivy-height-alist nil)
+			      (add-to-list 'ivy-height-alist '(swiper . 10))))
+;;(add-to-list 'ivy-height-alist '(swiper . 10))
+;;(add-to-list 'ivy-height-alist '(swiper . 10))
 
 ;; **** Highlight whole row in minibuffer
 ;; Change the default emacs formatter to highlight whole row in minibuffer
@@ -3188,25 +3149,6 @@ Borrowed from mozc.el."
 (my/evil-universal-define-key "C-b" 'evil-jump-backward)
 (my/evil-universal-define-key "M-b" 'evil-jump-forward)
 
-;; ** Relative line numbers
-;; (when (version<= "26.0.50" emacs-version )
-;; (global-display-line-numbers-mode)
-
-;; (setq display-line-numbers-type 'relative)
-;; (setq-default display-line-numbers-type 'relative)
-;; (setq display-line-numbers-current-absolute nil)
-;; (setq-default display-line-numbers-current-absolute nil)
-
-;; ;; Fixes org headings not
-;; ;;(add-hook 'org-mode-hook (lambda ()(interactive) (setq-local display-line-numbers-type 'visual)))
-;; (add-hook 'outline-mode-hook (lambda ()(interactive) (setq-local display-line-numbers-type 'visual)))
-;; (add-hook 'outline-minor-mode-hook (lambda ()(interactive) (setq-local display-line-numbers-type 'visual)))
-
-;; (if window-system
-;; (progn
-;; (set-face-attribute 'line-number-current-line nil :family my/mono-font)
-;; (set-face-attribute 'line-number nil :family my/mono-font))))
-
 ;; ** Avy
 (straight-use-package 'avy)
 (require 'avy)
@@ -3403,6 +3345,24 @@ Borrowed from mozc.el."
 ;; (bookmark-load (ivy-read "load bookmark file " nil)))
 
 ;; * Window management
+;; ** Window split functions
+(defun my/window-split-up ()
+  (interactive)
+  (split-window nil nil 'above))
+
+(defun my/window-split-down ()
+  (interactive)
+  (split-window nil nil 'below))
+
+(defun my/window-split-left ()
+  (interactive)
+  (split-window nil nil 'left))
+
+(defun my/window-split-right ()
+  (interactive)
+  (split-window nil nil 'right))
+
+;; ** Window config manager
 (defvar my/window-config-name-changed-hook nil
   "Hook called after user has loaded a window configuration")
 
@@ -3832,7 +3792,10 @@ Borrowed from mozc.el."
 (straight-use-package 'aggressive-indent)
 
 (global-aggressive-indent-mode)
-;; (add-hook 'prog-mode-hook 'aggressive-indent-mode)
+(add-to-list 'aggressive-indent-excluded-modes 'plantuml-mode)
+(add-to-list 'aggressive-indent-excluded-modes 'java-mode)
+(add-to-list 'aggressive-indent-excluded-modes 'c-mode)
+(add-to-list 'aggressive-indent-excluded-modes 'fsharp-mode)
 
 ;; *** Whitespace cleanup
 (straight-use-package 'whitespace-cleanup-mode)
@@ -4023,10 +3986,6 @@ Borrowed from mozc.el."
 
 ;; Org src compatibility
 (add-to-list 'auto-mode-alist '("\\.plantuml\\'" . plantuml-mode))
-
-(defun my/plantuml-mode ()
-  (interactive)
-  (aggressive-indent-mode -1))
 
 (add-hook 'plantuml-mode-hook 'my/plantuml-mode)
 
@@ -4230,7 +4189,6 @@ Borrowed from mozc.el."
 (require 'lsp-java)
 
 (defun my/java-mode ()
-  (aggressive-indent-mode -1)
   (lsp)
   (lsp-lens-mode))
 
@@ -4371,7 +4329,6 @@ Borrowed from mozc.el."
 (setq ccls-executable "/bin/ccls")
 
 (defun my/c-mode ()
-  (aggressive-indent-mode 0)
   (lsp)
   (lsp-lens-mode)
   (push 'company-lsp company-backends)
@@ -4618,9 +4575,6 @@ Borrowed from mozc.el."
 
 ;; *** Settings
 (defun my/fsharp-mode()
-  ;; Disable not so helpful modes
-  ;;
-  (aggressive-indent-mode 0)
   ;; Fsharp has built in intellisense highlight thing at point
   (symbol-overlay-mode -1)
   ;; Visual line mode in fsharp mode is broken, makes swiper take years to start, use truncate lines mode instead
@@ -4874,12 +4828,12 @@ Borrowed from mozc.el."
   (my/give-buffer-unique-name "*eshell*"))
 
 ;; ** Prefer lisp to bash
-(setq eshell-prefer-lisp-functions t)
-(setq eshell-prefer-lisp-variables t)
+(setq eshell-prefer-lisp-functions nil)
+(setq eshell-prefer-lisp-variables nil)
 
 ;; ** Use tramp for sudo
-(require 'em-tramp)
-(defalias 'sudo 'eshell/sudo)
+;;(require 'em-tramp)
+;;(defalias 'sudo 'eshell/sudo)
 
 ;; ** Autocompletion
 ;; (defun company-eshell-history (command &optional arg &rest ignored)
@@ -6138,8 +6092,7 @@ Borrowed from mozc.el."
 ;; *** Summary mode
 ;; Mode for choosing which mail to open
 (defun my/gnus-summary-mode ()
-  (setq truncate-lines t)
-  (my/toggle-local-mono-font t))
+  (setq truncate-lines t))
 
 (add-hook 'gnus-summary-mode-hook 'my/gnus-summary-mode)
 
@@ -6568,24 +6521,29 @@ Borrowed from mozc.el."
 
 (setq my/find-scan-cache '())
 
+(defun my/find-clean-cache ()
+  (interactive)
+  (setq my/find-scan-cache nil)
+  (mapc (lambda (list) (delete-file (nth 1 list))) my/find-scan-dirs))
+
 ;; TODO: Load cache file support
 (defun my/find-cache-dir (list)
   (let* ((default-directory (nth 0 list))
 	 ;; This PWD might be a problem https://stackoverflow.com/questions/246215/how-can-i-generate-a-list-of-files-with-their-absolute-path-in-linux
 	 (cache (nth 1 list))
 	 (results (if (file-exists-p cache)
-		      (f-read "/home/admin/find-home")
-		    (shell-command-to-string "find \"$PWD\"")))))
+		      (f-read cache)
+		    (shell-command-to-string "find \"$PWD\""))))
 
-  (when (not (file-exists-p cache))
-    ;; write to file
-    (my/create-file-with-content-if-not-exist cache results))
+    (when (not (file-exists-p cache))
+      ;; write to file
+      (my/create-file-with-content-if-not-exist cache results))
 
-  ;; Cache
-  (add-to-list 'my/find-scan-cache `(,(nth 1 list)
-				     ,(split-string
-				       results
-				       "\n"))))
+    ;; Cache
+    (add-to-list 'my/find-scan-cache `(,default-directory
+					,(split-string
+					  results
+					  "\n")))))
 
 ;;(require 's)
 ;; TODO: Error if outside scope defined by my/find-scan-dirs
@@ -6778,8 +6736,10 @@ Borrowed from mozc.el."
   
   
   ;; Split
-  ("o" split-window-right nil)
-  ("v" split-window-below nil)
+  ("o" my/window-split-right nil)
+  ("O" my/window-split-left nil)
+  ("v" my/window-split-down nil)
+  ("V" my/window-split-up nil)
   
   ("i" my/clone-indirect-buffer-name nil)
   ("I" my/clone-indirect-buffer-name-other-window nil)
@@ -7589,9 +7549,9 @@ Borrowed from mozc.el."
   (setq truncate-lines t)
   ;;(setq mode-line-format nil)
   
-  (if window-system
-      ;; Change to mono face
-      (face-remap-add-relative 'default :family my/mono-font)) ;;:height my/default-face-height))
+  ;;  (if window-system
+  ;;      ;; Change to mono face
+  ;;      (face-remap-add-relative 'default :family my/mono-font)) ;;:height my/default-face-height))
   
   ;; Offset by 10 pixels to make text fit
   (set-window-fringes (selected-window) 10 0)
@@ -8216,7 +8176,7 @@ Borrowed from mozc.el."
 	 ;;;  Org
   ;; =make this bold=
   (set-face-attribute 'org-verbatim nil :weight 'bold)
-  (set-face-attribute 'org-code nil :family my/mono-font)
+  (set-face-attribute 'org-code nil)
   
   (set-face-attribute 'org-quote nil :slant 'italic)
   
@@ -8290,24 +8250,15 @@ Borrowed from mozc.el."
   ;;(set-face-attribute 'symbol-overlay nil :foreground my/foreground-color :background my/mark-color)
   
 	 ;;; Company
-  (set-face-attribute 'company-scrollbar-bg nil :background my/background-color :family my/mono-font)
-  (set-face-attribute 'company-scrollbar-fg nil :background my/foreground-color :family my/mono-font)
+  (set-face-attribute 'company-scrollbar-bg nil :background my/background-color)
+  (set-face-attribute 'company-scrollbar-fg nil :background my/foreground-color)
   
   ;; Selected entry
-  (set-face-attribute 'company-tooltip-selection nil :background my/foreground-color :foreground my/background-color :family my/mono-font)
+  (set-face-attribute 'company-tooltip-selection nil :background my/foreground-color :foreground my/background-color)
   ;; All unmatching text
-  (set-face-attribute 'company-tooltip nil :foreground my/foreground-color :background my/background-color-1 :family my/mono-font)
+  (set-face-attribute 'company-tooltip nil :foreground my/foreground-color :background my/background-color-1)
   ;; All matching text
-  (set-face-attribute 'company-tooltip-common nil :foreground my/background-color :background my/foreground-color :family my/mono-font)
-  
-  ;;      ;;; Company box
-  ;;  (if (require 'company-box nil 'noerror)
-  ;;      (progn
-  ;;        (set-face-attribute 'company-box-annotation nil :family my/mono-font)
-  ;;        (set-face-attribute 'company-box-background nil :family my/mono-font)
-  ;;        (set-face-attribute 'company-box-candidate nil :family my/mono-font)
-  ;;        (set-face-attribute 'company-box-scrollbar nil :family my/mono-font)
-  ;;        (set-face-attribute 'company-box-selection nil :family my/mono-font)))
+  (set-face-attribute 'company-tooltip-common nil :foreground my/background-color :background my/foreground-color)
   
 	 ;;; Popup menu
   ;; Selected entry
@@ -8349,18 +8300,14 @@ Borrowed from mozc.el."
   (set-face-attribute 'yascroll:thumb-text-area nil :background "slateblue")
   
 	 ;;; Term
-  (set-face-attribute 'term nil :family my/mono-font)
-  (set-face-attribute 'term-bold nil :family my/mono-font)
-  (set-face-attribute 'term-underline nil :family my/mono-font)
-  
-  (set-face-attribute 'term-color-black nil :foreground "black" :background "black" :family my/mono-font)
-  (set-face-attribute 'term-color-blue nil :foreground "blue" :background "blue" :family my/mono-font)
-  (set-face-attribute 'term-color-cyan nil :foreground "cyan" :background "cyan" :family my/mono-font)
-  (set-face-attribute 'term-color-green nil :foreground "green" :background "green" :family my/mono-font)
-  (set-face-attribute 'term-color-magenta nil :foreground "magenta" :background "magenta" :family my/mono-font)
-  (set-face-attribute 'term-color-red nil :foreground "red" :background "red" :family my/mono-font)
-  (set-face-attribute 'term-color-white nil :foreground "white" :background "white" :family my/mono-font)
-  (set-face-attribute 'term-color-yellow nil :foreground "yellow" :background "yellow" :family my/mono-font)
+  (set-face-attribute 'term-color-black nil :foreground "black" :background "black")
+  (set-face-attribute 'term-color-blue nil :foreground "blue" :background "blue")
+  (set-face-attribute 'term-color-cyan nil :foreground "cyan" :background "cyan")
+  (set-face-attribute 'term-color-green nil :foreground "green" :background "green")
+  (set-face-attribute 'term-color-magenta nil :foreground "magenta" :background "magenta")
+  (set-face-attribute 'term-color-red nil :foreground "red" :background "red")
+  (set-face-attribute 'term-color-white nil :foreground "white" :background "white")
+  (set-face-attribute 'term-color-yellow nil :foreground "yellow" :background "yellow")
   
 	 ;;; Litable
   ;;  (set-face-attribute 'litable-result-face nil :foreground my/foreground-color :background my/background-color :weight 'bold)
@@ -8448,19 +8395,9 @@ Borrowed from mozc.el."
   (set-face-attribute 'lsp-ui-sideline-symbol-info nil :foreground my/mark-color :background my/background-color)
   
      ;;;; Lens
-  (set-face-attribute 'lsp-lens-face nil :foreground my/foreground-color :background my/mark-color-4 :height 0.8)
-  
-   ;;; Which-key
-  (set-face-attribute 'which-key-command-description-face nil :family my/mono-font)
-  (set-face-attribute 'which-key-docstring-face nil :family my/mono-font)
-  (set-face-attribute 'which-key-group-description-face nil :family my/mono-font)
-  (set-face-attribute 'which-key-highlighted-command-face nil :family my/mono-font)
-  (set-face-attribute 'which-key-key-face nil :family my/mono-font)
-  (set-face-attribute 'which-key-local-map-description-face nil :family my/mono-font)
-  (set-face-attribute 'which-key-note-face nil :family my/mono-font)
-  (set-face-attribute 'which-key-separator-face nil :family my/mono-font)
-  (set-face-attribute 'which-key-special-key-face nil :family my/mono-font))
+  (set-face-attribute 'lsp-lens-face nil :foreground my/foreground-color :background my/mark-color-4 :height 0.8))
 
+   ;;; Which-key
 (if window-system
     (add-hook 'exwm-init-hook 'my/theme)
   (add-hook 'after-init-hook 'my/theme))
