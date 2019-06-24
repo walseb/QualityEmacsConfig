@@ -151,7 +151,7 @@
 ;; Press c to compress, Z to extract
 ;; To stop dired from creating new folder when unpacking, change in section "Dired atool"
 
-;; ** Can't find package error
+;; ** Can't find package error in package.el
 ;; run
 ;; =package-refresh-contents=
 ;; or restart emacs
@@ -478,6 +478,15 @@
 ;; *** Clean global mode map
 ;; It's currently full of unused keys
 ;; *** Maybe only use evil-edit instead
+
+;; ** Fix git repo in mode line
+;; When having multiple windows up, it only shows the selected window git repo
+
+;; ** Move yascrollbar
+;; Fringe might be in use by vc
+;; Maybe move to gutter
+
+;; ** Try to fix performance of yascrollbar
 
 ;; * First
 ;; Things to do first
@@ -1038,6 +1047,103 @@
     (goto-char (point-min))
     (forward-line (1- count)))
   (end-of-line))
+
+;; ** Fix evil scroll
+;; https://github.com/emacs-evil/evil/pull/1154/files
+(evil-define-command evil-scroll-up (count)
+  "Scrolls the window and the cursor COUNT lines upwards.
+If COUNT is not specified the function scrolls down
+`evil-scroll-count', which is the last used count.
+If the scroll count is zero the command scrolls half the screen."
+  :repeat nil
+  :keep-visual t
+  (interactive "<c>")
+  (evil-save-column
+    (setq count (or count (max 0 evil-scroll-count)))
+    (setq evil-scroll-count count)
+    (when (= (point-min) (line-beginning-position))
+      (signal 'beginning-of-buffer nil))
+    (when (zerop count)
+      (setq count (/ (window-body-height) 2)))
+    (let ((xy (evil-posn-x-y (posn-at-point))))
+      (condition-case nil
+          (progn
+            (scroll-down count)
+            (goto-char (posn-point (posn-at-x-y (car xy) (cdr xy)))))
+        (beginning-of-buffer
+         (condition-case nil
+             (with-no-warnings (previous-line count))
+           (beginning-of-buffer)))))))
+
+(evil-define-command evil-scroll-down (count)
+  "Scrolls the window and the cursor COUNT lines downwards.
+If COUNT is not specified the function scrolls down
+`evil-scroll-count', which is the last used count.
+If the scroll count is zero the command scrolls half the screen."
+  :repeat nil
+  :keep-visual t
+  (interactive "<c>")
+  (evil-save-column
+    (setq count (or count (max 0 evil-scroll-count)))
+    (setq evil-scroll-count count)
+    (when (eobp) (signal 'end-of-buffer nil))
+    (when (zerop count)
+      (setq count (/ (window-body-height) 2)))
+    ;; BUG #660: First check whether the eob is visible.
+    ;; In that case we do not scroll but merely move point.
+    (if (<= (point-max) (window-end))
+	(with-no-warnings (next-line count nil))
+      (let ((xy (evil-posn-x-y (posn-at-point))))
+	(condition-case nil
+	    (progn
+	      (scroll-up count)
+	      (let* ((wend (window-end nil t))
+		     (p (posn-at-x-y (car xy) (cdr xy)))
+		     (margin (max 0 (- scroll-margin
+				       (cdr (posn-col-row p))))))
+		(goto-char (posn-point p))
+		;; ensure point is not within the scroll-margin
+		(when (> margin 0)
+		  (with-no-warnings (next-line margin))
+		  (recenter scroll-margin))
+		(when (<= (point-max) wend)
+		  (save-excursion
+		    (goto-char (point-max))
+		    (recenter (- (max 1 scroll-margin)))))))
+	  (end-of-buffer
+	   (goto-char (point-max))
+	   (recenter (- (max 1 scroll-margin)))))))))
+
+(defvar evil-cached-header-line-height nil
+  "Cached height of the header line.")
+
+(defun evil-header-line-height ()
+  "Return the height of the header line.
+If there is no header line, return nil."
+  (let ((posn (posn-at-x-y 0 0)))
+    (when (eq (posn-area posn) 'header-line)
+      (cdr (posn-object-width-height posn)))))
+
+(defun evil-posn-x-y (position)
+  "Return the x and y coordinates in POSITION.
+This function returns y offset from the top of the buffer area including
+the header line.  This definition could be changed in future.
+Note: On Emacs 22 and 23, y offset, returned by `posn-at-point' and taken
+by `posn-at-x-y', is relative to the top of the buffer area including
+the header line.
+However, on Emacs 24, y offset returned by `posn-at-point' is relative to
+the text area excluding the header line, while y offset taken by
+`posn-at-x-y' is relative to the buffer area including the header line.
+This asymmetry is by design according to GNU Emacs team.
+This function fixes the asymmetry between them on Emacs 24 and later versions.
+Borrowed from mozc.el."
+  (let ((xy (posn-x-y position)))
+    (when (and (> emacs-major-version 24) header-line-format)
+      (setcdr xy (+ (cdr xy)
+                    (or evil-cached-header-line-height
+                        (setq evil-cached-header-line-height (evil-header-line-height))
+                        0))))
+    xy))
 
 ;; ** Keys
 ;; Prevent emacs state from being exited with esc, fixes exwm since it uses emacs state and to exit hydra you have to do esc
@@ -1695,8 +1801,17 @@
 ;; ** Echo keypresses instantly
 (setq echo-keystrokes 0.01)
 
-;; ** Disable mouse features
+;; ** Configure mouse
 (define-key minibuffer-inactive-mode-map [mouse-1] #'ignore)
+
+;; *** Disable middleclick and right click
+(define-key global-map [mouse-2] #'ignore)
+(my/evil-universal-define-key "<mouse-2>" #'ignore)
+
+(define-key global-map [mouse-3] #'ignore)
+
+;; *** Disable mouse wheel acceleration
+(setq mouse-wheel-progressive-speed nil)
 
 ;; ** Minibuffer-depth
 ;; Enable and show minibuffer recursive depth
@@ -1731,6 +1846,9 @@
   (interactive)
   (my/config-visit)
   (my/outorg-export-to-org-file "~/.emacs.d/readme.org"))
+
+;; ** Esup
+(straight-use-package 'esup)
 
 ;; * File options
 (define-prefix-command 'my/file-options-map)
@@ -1834,6 +1952,14 @@
   (run-hooks 'my/open-map-hook))
 
 (define-key my/open-map (kbd "a") 'my/org-agenda-show-agenda-and-todo)
+
+;; ** Open messages
+(defun my/open-messages ()
+  (interactive)
+  (switch-to-buffer "*Messages*")
+  (run-hooks 'my/open-map-hook))
+
+(define-key my/open-map (kbd "m") 'my/open-messages)
 
 ;; ** Open downloads
 (defun my/open-downloads ()
@@ -2430,7 +2556,9 @@
 (setq ivy-height 20)
 
 ;; Make counsel-yank-pop use default height
-(delete `(counsel-yank-pop . ,ivy-height) ivy-height-alist)
+;;(delete `(counsel-yank-pop . 5) ivy-height-alist)
+;; Disable set height depending on command
+(setq ivy-height-alist '())
 
 ;; **** Highlight whole row in minibuffer
 ;; Change the default emacs formatter to highlight whole row in minibuffer
@@ -5497,7 +5625,7 @@
 (setq magit-commit-show-diff nil)
 
 ;; *** Diff
-(require 'magit-diff)
+;;(require 'magit-diff)
 (setq-default magit-diff-refine-hunk 'all)
 ;; (setq-default magit-diff-refine-ignore-whitespace nil)
 
@@ -5509,7 +5637,7 @@
 (require 'magit)
 (require 'magit-mode)
 
-(evil-define-key '(normal motion) magit-mode-map (kbd "0") #'magit-diff-default-context)
+(evil-define-key '(normal motion) magit-mode-map (kbd "0") 'magit-diff-default-context)
 (evil-define-key '(normal motion) magit-mode-map (kbd "1") #'magit-section-show-level-1)
 (evil-define-key '(normal motion) magit-mode-map  (kbd "2") #'magit-section-show-level-2)
 (evil-define-key '(normal motion) magit-mode-map  (kbd "3") #'magit-section-show-level-3)
@@ -6429,55 +6557,70 @@
 ;; (string-to-number number-of-processors))))
 
 ;; * Find
-;; ** Custom locate
-;; Locate only under current dir
-(defvar my/locate-cache nil)
-(defconst my/locate-database-dir "/home/admin/locate.db")
-
-(defun my/locate-updatedb ()
-  (interactive)
-  (if my/using-gnu-mlocate
-      (shell-command (concat "updatedb --localpaths=/home/admin --output=" my/locate-database-dir))
-    (shell-command (concat "updatedb --database-root=/home/admin --output=" my/locate-database-dir)))
-  
-  (my/locate-update-cache))
-
-(defun my/locate-update-cache ()
-  (setq my/locate-cache (split-string
-			 (shell-command-to-string
-			  (concat "locate --database=" my/locate-database-dir " -r ."))
-			 "\n")))
-
 ;; Would be nice if we could remove the initial file path, but it's too slow with pure map
 ;;  (map 'list (lambda (string) (substring string (length dir))))
 ;; And using mapc doesn't work because substring is a pure function
 ;;  (mapc (lambda (string) (substring string (length dir))))
-(require 's)
-(defun my/locate-list-remove-outside-curr-dir ()
-  "Return locate cache with irrelevant entries removed."
-  (let ((dir (expand-file-name default-directory)))
-    (seq-filter
-     (lambda (string) (s-starts-with-p dir string)) my/locate-cache)))
 
-(defun my/locate ()
+(setq my/find-scan-dirs '(("/home/admin/" "/home/admin/find-home")
+			  ("/mnt/c" "/home/admin/find-mnt-c")
+			  ("/mnt/e" "/home/admin/find-mnt-e")))
+
+(setq my/find-scan-cache '())
+
+;; TODO: Load cache file support
+(defun my/find-cache-dir (list)
+  (let* ((default-directory (nth 0 list))
+	 ;; This PWD might be a problem https://stackoverflow.com/questions/246215/how-can-i-generate-a-list-of-files-with-their-absolute-path-in-linux
+	 (cache (nth 1 list))
+	 (results (if (file-exists-p cache)
+		      (f-read "/home/admin/find-home")
+		    (shell-command-to-string "find \"$PWD\"")))))
+
+  (when (not (file-exists-p cache))
+    ;; write to file
+    (my/create-file-with-content-if-not-exist cache results))
+
+  ;; Cache
+  (add-to-list 'my/find-scan-cache `(,(nth 1 list)
+				     ,(split-string
+				       results
+				       "\n"))))
+
+;;(require 's)
+;; TODO: Error if outside scope defined by my/find-scan-dirs
+(defun my/find ()
   (interactive)
-  (let ((original-gc gc-cons-threshold))
-    (setq gc-cons-threshold 80000000)
-    ;; Check if cache is empty
-    (when (not my/locate-cache)
-      (my/locate-update-cache)
-      ;; If still nothing in cache
-      (when (not my/locate-cache)
-	(message "Locate command returned nothing")))
-    
-    (ivy-read "Locate: " (my/locate-list-remove-outside-curr-dir)
-	      :initial-input (concat "^" (expand-file-name default-directory))
-	      :action (lambda (file)
-			(when file
-			  (with-ivy-window
-			    (find-file
-			     (concat (file-remote-p default-directory) file)))))
-	      :unwind '(lambda () (setq gc-cons-threshold original-gc)))))
+  (let* ((gc-cons-threshold 80000000)
+	 ;; Load cached search
+	 (search (nth 1
+		      (cl-find-if (lambda (list) 
+				    (file-in-directory-p
+				     default-directory (nth 0 list)))
+				  my/find-scan-cache))))
+    (if search
+	;; map-some
+	
+	(let* ((dir (expand-file-name default-directory))
+	       (dir-length (length dir)))
+	  (find-file (ivy-read
+		      ""
+		      ;; This is pretty slow because it's creating a new list
+		      ;;(map 'list (lambda (string) (substring string dir-length))
+		      ;; Sort out irrelevant entries
+		      ;;				      (seq-filter
+		      ;;				       (lambda (string) (s-starts-with-p dir string)) search)
+		      search
+		      
+		      :predicate (lambda (string) (s-starts-with-p dir string))
+		      :initial-input (concat "^" (expand-file-name default-directory))
+		      :sort nil
+		      )))
+      ;;)
+      (my/find-cache-dir
+       (cl-find-if (lambda (list)
+		     (file-in-directory-p (expand-file-name default-directory) (nth 0 list))) my/find-scan-dirs))
+      (my/find))))
 
 ;; * Spelling
 (define-prefix-command 'my/spell-map)
@@ -6661,7 +6804,7 @@
   ("M-e" my/change-default-directory nil)
   
   ;; Find
-  ("f" my/locate nil)
+  ("f" my/find nil)
   ("F" my/counsel-ag nil)
   
   ;; Switch buffer
@@ -8133,6 +8276,7 @@
   
 	 ;;; Dired
   (set-face-attribute 'dired-directory nil :foreground my/background-color :background my/foreground-color)
+  (my/set-face-to-default 'dired-perm-write 't)
   
 	 ;;; Spray
   ;;  (set-face-attribute 'spray-accent-face nil :foreground "red" :background my/background-color)
