@@ -1,3 +1,5 @@
+;; -*- lexical-binding:t -*-
+
 (setq debug-on-error t)
 
 (set-face-attribute 'default nil :foreground "white" :background "black")

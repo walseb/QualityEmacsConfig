@@ -299,7 +299,6 @@
 ;; ** Packages to try
 ;; nix-buffer
 
-;; ** Fix s key moving around the view when searching down
 ;; ** PR evil-mc changes
 ;; ** Delete around char 'c'
 ;; Need to find how to use the "inside" operator, etc
@@ -335,11 +334,6 @@
 ;; *** Dovecot docker process
 ;; Add to and configure in nixos config
 
-;; ** Use lexical bindings in config
-;; ** Add more haskell tools
-;; HIE, etc
-
-;; ** Better folding binds
 ;; ** Add is wsl/VM in config
 ;; This will disable volume controls for example
 
@@ -349,18 +343,6 @@
 ;; Look into changing from locate to using "directory-files-recursively" to cache all files on the pc
 ;; Problem seems to be that it needs sudo to do this
 
-;; *** Use find instead
-;; You can have a lisp list with all the dirs that you want scanned in a variable
-;; #+begin_src example
-;; '(
-;;   ("~" '("file1" "file2"))
-
-;;   ("/mnt/c" '("file3" "file4")))
-;; #+end_src
-
-;; When function first runs, find gets everything in directories and caches that in emacs to variable
-;; If you want you can dump those variables to disk
-
 ;; ** Fix ivy grep/occur
 ;; Colors change when you put your cursor over custom faces
 
@@ -369,18 +351,9 @@
 
 ;; ** % should go to closest paren if not on one
 ;; ** Dedicated auto comment key?
-;; ** g-n g-p highlighting stays
-;; ** Pressing e in dired insert mode should kill the older buffer
 ;; ** Make macros faster
 ;; Temporarily disable "global-hl-line-mode" while running macro (takes like 70% cpu in worst cases)
 ;; Disable symbol-overlay while in macro (takes little cpu, but you can still gain speed)
-
-;; ** C-h in ivy-find-file
-;; ** When hiding comments make comment face same as background
-;; Seems like the comment background color is still left when hiding comments
-
-;; ** Should org mode indent source blocks by 2 spaces?
-;; Checkout heading: Disable code block indent
 
 ;; ** Read large files package
 ;; There is one for dired too
@@ -395,20 +368,12 @@
 
 ;; ** A quick spellchecker in comments and org-mode
 
-;; ** Fix low-res nix heading fonts
-;; No idea why they are low res
-
 ;; ** Org-noter
 ;; Great for commenting pdfs
 
 ;; ** Org-capture
 ;; Great for referencing to source code
 
-;; ** lsp-mode in org src-buffers
-;; Read
-;; https://github.com/emacs-lsp/lsp-mode/issues/377
-
-;; ** M-n and M-p to move visual line
 ;; ** Fix swiper in man mode
 ;; ** Easier way of accesing nix docs
 ;; man 5 configuration.nix
@@ -479,15 +444,14 @@
 ;; It's currently full of unused keys
 ;; *** Maybe only use evil-edit instead
 
-;; ** Fix git repo in mode line
-;; When having multiple windows up, it only shows the selected window git repo
-
 ;; ** Move yascrollbar
 ;; Fringe might be in use by vc
 ;; Maybe move to gutter
 
 ;; ** Try to fix performance of yascrollbar
 
+;; ** Fix unicode fonts
+;; Right now unicode fonts are most of the time taller than the normal fonts
 ;; * First
 ;; Things to do first
 (setq mode-line-format nil)
@@ -892,13 +856,11 @@
 ;; Example
 (setq evil-insert-state-modes nil)
 
-(if (string< emacs-version "24.3")
-    (error "Since emacs version is under 24.3, you need to remove cl-... in this section, and add (require 'cl) (not recommended to do in later versions)"))
 
 (cl-loop for (mode . state) in '(
 				 ;; So i C-leader works for exwm windows
 				 (exwm-mode . emacs)
-				 ;;(eshell-mode . insert)
+				 (eshell-mode . insert)
 				 (term-mode . insert)
 				 ;;(org-agenda-mode . insert)
 				 (magit-popup-mode . insert)
@@ -1805,6 +1767,10 @@ Borrowed from mozc.el."
 
 ;; ** Esup
 (straight-use-package 'esup)
+
+;; ** Man mode
+;; *** Disable keys
+(setq Man-mode-map (make-sparse-keymap))
 
 ;; * File options
 (define-prefix-command 'my/file-options-map)
@@ -3010,16 +2976,16 @@ Borrowed from mozc.el."
   (interactive)
   (call-interactively 'isearch-repeat-forward)
   
-  (if (string= my/last-isearch-dir 'backward)
-      (call-interactively 'isearch-repeat-forward))
+  (when (string= my/last-isearch-dir 'backward)
+    (call-interactively 'isearch-repeat-forward))
   (setq my/last-isearch-dir 'forward))
 
 (defun my/isearch-repeat-backward ()
   (interactive)
   (call-interactively 'isearch-repeat-backward)
   
-  (if (string= my/last-isearch-dir 'forward)
-      (call-interactively 'isearch-repeat-backward))
+  (when (string= my/last-isearch-dir 'forward)
+    (call-interactively 'isearch-repeat-backward))
   (setq my/last-isearch-dir 'backward))
 
 (add-hook 'isearch-mode-end-hook (lambda () (setq my/last-isearch-dir nil)))
@@ -5065,11 +5031,22 @@ Borrowed from mozc.el."
 (my/evil-visual-define-key "s" 'my/isearch-forward-regexp)
 (my/evil-visual-define-key "S" 'my/isearch-backward-regexp)
 
-(my/evil-normal-define-key "g n" 'isearch-repeat-forward)
-(my/evil-normal-define-key "g p" 'isearch-repeat-backward)
+(defun my/isearch-repeat-forward-with-cleanup ()
+  (interactive)
+  (call-interactively 'isearch-repeat-forward)
+  ;;(run-with-idle-timer 1 nil 'lazy-highlight-cleanup)
+  (run-with-idle-timer 1 nil 'isearch-done))
 
-(my/evil-visual-define-key "g n" 'isearch-repeat-forward)
-(my/evil-visual-define-key "g p" 'isearch-repeat-backward)
+(defun my/isearch-repeat-backward-with-cleanup ()
+  (interactive)
+  (call-interactively 'isearch-repeat-backward)
+  (run-with-idle-timer 1 nil 'isearch-done))
+
+(my/evil-normal-define-key "g n" 'my/isearch-repeat-forward-with-cleanup)
+(my/evil-normal-define-key "g p" 'my/isearch-repeat-backward-with-cleanup)
+
+(my/evil-visual-define-key "g n" 'my/isearch-repeat-forward-with-cleanup)
+(my/evil-visual-define-key "g p" 'my/isearch-repeat-backward-with-cleanup)
 
 ;; (my/evil-normal-define-key "/" 'evil-substitute)
 ;; (my/evil-normal-define-key "?" 'evil-change-whole-line)
@@ -7423,6 +7400,11 @@ Borrowed from mozc.el."
 (setq mode-line-format nil)
 (setq-default mode-line-format nil)
 
+;; *** Mode line highlight face
+(defface my/mode-line-highlight
+  '((t :inherit highlight))
+  "Face for highlighting something in mode line")
+
 ;; *** Mode line contents
 ;; Using header line to display
 ;; Set mode line height
@@ -7467,6 +7449,10 @@ Borrowed from mozc.el."
 		
 		;; is narrowed
 		"%n"
+
+		;; Is loccur
+		(:eval (when loccur-mode
+			 " Loccur"))
 		
 		" | "
 		
@@ -7474,8 +7460,10 @@ Borrowed from mozc.el."
 		"%e"
 		
 		;; Print mode
-		(:eval (if defining-kbd-macro
-			   "[MACRO] "))
+		(:eval (when defining-kbd-macro
+			 (propertize
+			  "[MACRO] "
+			  'face 'my/mode-line-highlight)))
 		
 		
 		;; Print buffer name
@@ -8346,6 +8334,10 @@ Borrowed from mozc.el."
   (set-face-attribute 'header-line nil
 		      :foreground my/foreground-color
 		      :background "#063000")
+
+  (set-face-attribute 'my/mode-line-highlight nil
+		      :foreground "#063000"
+		      :background my/foreground-color)
   
   ;; Mode line separator
   ;; Set mode line height
@@ -8415,7 +8407,6 @@ Borrowed from mozc.el."
 
 ;; * Report start time
 (run-with-timer 4 nil (lambda () (interactive) (message (concat "Booted in " (emacs-init-time)))))
-
 
 ;; * Byte-compile the config
 ;; Byte compilation doesn't work before loading everything because of some reason, so do it now
