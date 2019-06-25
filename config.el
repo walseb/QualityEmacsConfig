@@ -452,6 +452,15 @@
 
 ;; ** Fix unicode fonts
 ;; Right now unicode fonts are most of the time taller than the normal fonts
+;; ** Fix haskell
+;; Maybe also add hlive to config?
+
+;; *** Remove intero
+;; Fix haskell-repl
+
+;; ** Direnv binds
+;; Maybe add direnv bind for creating a .envrc with content "use nix"
+
 ;; * First
 ;; Things to do first
 (setq mode-line-format nil)
@@ -4219,7 +4228,7 @@ Borrowed from mozc.el."
 (straight-use-package 'intero)
 (require 'intero)
 
-(add-hook 'haskell-mode-hook 'intero-mode)
+;;(add-hook 'haskell-mode-hook 'intero-mode)
 
 ;; Enabble hlint
 (flycheck-add-next-checker 'intero '(warning . haskell-hlint))
@@ -4243,10 +4252,10 @@ Borrowed from mozc.el."
        text))))
 
 ;; *** lsp-haskell
-;; (straight-use-package 'lsp-haskell)
-;; (require 'lsp-haskell)
+(straight-use-package 'lsp-haskell)
+(require 'lsp-haskell)
 
-;; (add-hook 'haskell-mode-hook 'lsp)
+(add-hook 'haskell-mode-hook 'lsp)
 
 ;; ** C/CPP
 ;; *** Irony
@@ -7298,9 +7307,9 @@ Borrowed from mozc.el."
 ;; *** Disable in insert mode
 (defun symbol-overlay-post-command ()
   "Installed on `post-command-hook'."
-  (unless (string= (symbol-overlay-get-symbol nil t) symbol-overlay-temp-symbol)
+  (unless (or (not (eq evil-state 'normal)) (string= (symbol-overlay-get-symbol nil t) symbol-overlay-temp-symbol))
     (symbol-overlay-remove-temp)
-    (when (and (eq evil-state 'normal) (not symbol-overlay-idle-time))
+    (when (not symbol-overlay-idle-time)
       (symbol-overlay-maybe-put-temp))))
 
 ;; ** Show paren

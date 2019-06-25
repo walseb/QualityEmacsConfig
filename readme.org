@@ -452,6 +452,12 @@ Maybe move to gutter
 
 ** Fix unicode fonts
 Right now unicode fonts are most of the time taller than the normal fonts
+** Fix haskell
+Maybe also add hlive to config?
+
+*** Remove intero
+Fix haskell-repl
+
 * First
 Things to do first
 #+begin_src emacs-lisp
@@ -4957,9 +4963,9 @@ Haskell-indentation-mode seems better?? or hi2 or hindent
 #+begin_src emacs-lisp
 (straight-use-package 'intero)
 (require 'intero)
+#+end_src
 
 (add-hook 'haskell-mode-hook 'intero-mode)
-#+end_src
 
 Enabble hlint
 #+begin_src emacs-lisp
@@ -4989,10 +4995,12 @@ The current one ignores any beg and end if you are not in visual line mode
 #+end_src
 
 *** lsp-haskell
+#+begin_src emacs-lisp
 (straight-use-package 'lsp-haskell)
 (require 'lsp-haskell)
 
 (add-hook 'haskell-mode-hook 'lsp)
+#+end_src
 
 ** C/CPP
 *** Irony
@@ -8525,9 +8533,9 @@ Supposed to be faster thang highlight-thing
 #+begin_src emacs-lisp
 (defun symbol-overlay-post-command ()
   "Installed on `post-command-hook'."
-  (unless (string= (symbol-overlay-get-symbol nil t) symbol-overlay-temp-symbol)
+  (unless (or (not (eq evil-state 'normal)) (string= (symbol-overlay-get-symbol nil t) symbol-overlay-temp-symbol))
     (symbol-overlay-remove-temp)
-    (when (and (eq evil-state 'normal) (not symbol-overlay-idle-time))
+    (when (not symbol-overlay-idle-time)
       (symbol-overlay-maybe-put-temp))))
 #+end_src
 
