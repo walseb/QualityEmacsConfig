@@ -458,6 +458,11 @@
 ;; ** Direnv binds
 ;; Maybe add direnv bind for creating a .envrc with content "use nix"
 
+;; ** Outlines
+;; Fix the heading font-lock so that it also covers the comment part
+;; *** Highlight to end of window
+;; Maybe the outlines should be highlighted to the end of the window
+
 ;; * First
 ;; Things to do first
 (setq mode-line-format nil)
