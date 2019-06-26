@@ -455,9 +455,6 @@
 ;; ** Fix haskell
 ;; Maybe also add hlive to config?
 
-;; *** Remove intero
-;; Fix haskell-repl
-
 ;; ** Direnv binds
 ;; Maybe add direnv bind for creating a .envrc with content "use nix"
 
@@ -870,6 +867,7 @@
 				 ;; So i C-leader works for exwm windows
 				 (exwm-mode . emacs)
 				 (eshell-mode . insert)
+				 (interactive-haskell-mode . insert)
 				 (term-mode . insert)
 				 ;;(org-agenda-mode . insert)
 				 (magit-popup-mode . insert)
@@ -3812,8 +3810,6 @@ Borrowed from mozc.el."
     ('c++-mode (call-interactively 'xref-find-definitions))
     ('objc-mode (call-interactively 'xref-find-definitions))
     ('csharp-mode (omnisharp-go-to-definition))
-    ;; No idea why but supplying a empty string makes it work
-    ('haskell-mode (intero-goto-definition))
     (_
      (if lsp-mode
 	 (lsp-find-definition)
@@ -3828,7 +3824,6 @@ Borrowed from mozc.el."
   (interactive)
   (pcase major-mode
     ('csharp-mode (omnisharp-find-usages-with-ido))
-    ('haskell-mode (intero-uses-at))
     (_ (call-interactively 'xref-find-references))))
 
 (define-key my/leader-map (kbd "u") 'my/auto-find-usages)
@@ -3849,7 +3844,7 @@ Borrowed from mozc.el."
       ('c-mode (cling-send-region (line-beginning-position) (line-end-position)))
       ('c++-mode (cling-send-region (line-beginning-position) (line-end-position)))
       ('csharp-mode (my/csharp-run-repl))
-      ('haskell-mode (intero-repl-eval-region (line-end-position) (save-excursion (re-search-backward (rx bol (or (any alpha) (any lower))))) ))
+      ('haskell-mode (haskell-interactive-copy-to-prompt))
       (_ (call-interactively 'eros-eval-last-sexp)))))
 
 (defun my/auto-eval-region ()
@@ -3861,7 +3856,7 @@ Borrowed from mozc.el."
     ('c-mode (cling-send-region (point) (mark)))
     ('c++-mode (cling-send-region (point) (mark)))
     ('csharp-mode (my/csharp-run-repl))
-    ('haskell-mode (intero-repl-eval-region (point) (mark)))
+    ('haskell-mode (haskell-interactive-copy-to-prompt))
     (_ (eros--eval-overlay
 	(eval-region (point) (mark) t)
 	(point)))))
@@ -3876,7 +3871,7 @@ Borrowed from mozc.el."
     ('c-mode (cling-send-buffer))
     ('c++-mode (cling-send-buffer))
     ('csharp-mode (my/csharp-run-repl))
-    ('haskell-mode (intero-repl-load))
+    ('haskell-mode (haskell-process-load-file))
     (_ (eval-buffer nil))))
 
 (defun my/auto-eval-print ()
@@ -3885,7 +3880,7 @@ Borrowed from mozc.el."
     ('org-mode (call-interactively #'org-babel-execute-src-block))
     ('scheme-mode (geiser-eval-last-sexp t))
     ('clojure-mode (cider-eval-print-last-sexp))
-    ('csharp-mode (my/csharp-run-repl))
+    ('csharp-mode (haskell-interactive-copy-to-prompt))
     (_ (eval-print-last-sexp nil))))
 
 (define-key my/leader-map (kbd "e") 'my/auto-eval)
@@ -4202,6 +4197,18 @@ Borrowed from mozc.el."
 ;; ** Haskell
 (straight-use-package '(haskell-mode :type git :host github :repo "walseb/haskell-mode"))
 
+;; *** Haskell-doc
+;; Haskell-doc kind of fills in the holes where lsp-haskell doesn't work
+
+(setq haskell-doc-idle-delay 0)
+
+(defun my/haskell-doc-mode ()
+  ;; haskll-doc-mode is buggy if eldoc is on
+  (eldoc-mode -1)
+  (haskell-doc-mode 1))
+
+(add-hook 'haskell-mode-hook 'my/haskell-doc-mode)
+
 ;; *** Project management
 ;; **** Stack
 (straight-use-package 'hasky-stack)
@@ -4223,33 +4230,6 @@ Borrowed from mozc.el."
 
 ;; *** Haskell-cabal
 (straight-use-package 'company-cabal)
-
-;; *** intero
-(straight-use-package 'intero)
-(require 'intero)
-
-;;(add-hook 'haskell-mode-hook 'intero-mode)
-
-;; Enabble hlint
-(flycheck-add-next-checker 'intero '(warning . haskell-hlint))
-
-(setq intero-pop-to-repl nil)
-
-;; Start repl mode in insert mode
-(add-to-list 'evil-insert-state-modes 'intero-repl-mode)
-
-;; **** Redefine eval-region
-;; The current one ignores any beg and end if you are not in visual line mode
-(defun intero-repl-eval-region (begin end &optional prompt-options)
-  "Evaluate the code in region from BEGIN to END in the REPL.
-   If the region is unset, the current line will be used.
-   PROMPT-OPTIONS are passed to `intero-repl-buffer' if supplied."
-  (interactive "r")
-  (let ((text (buffer-substring-no-properties begin end)))
-    (intero-with-repl-buffer prompt-options
-      (comint-simple-send
-       (get-buffer-process (current-buffer))
-       text))))
 
 ;; *** lsp-haskell
 (straight-use-package 'lsp-haskell)
@@ -8139,7 +8119,6 @@ Borrowed from mozc.el."
   ;;  font-lock-variable-name-face
   ;;  font-lock-warning-face
   
-  
   (set-face-attribute 'font-lock-doc-face nil :foreground my/foreground-color :background my/background-color-4)
   
   (set-face-attribute 'font-lock-comment-face nil :foreground (color-lighten-name my/background-color 30) :background my/background-color) ;;:height my/comment-face-height)
@@ -8148,9 +8127,18 @@ Borrowed from mozc.el."
   
   (my/set-face-to-default 'font-lock-function-name-face t)
   
-  ;; Required by other face
-  (my/set-face-to-default 'outline-4 t)
+  (require 'hl-line)
+  (set-face-attribute 'hl-line nil :foreground my/foreground-color :background my/background-color-2 :underline nil)
   
+  (set-face-attribute 'outline-1 nil :foreground my/background-color :background my/foreground-color-6)
+  (set-face-attribute 'outline-2 nil :foreground my/background-color :background my/foreground-color-6)
+  (set-face-attribute 'outline-3 nil :foreground my/background-color :background my/foreground-color-6)
+  (set-face-attribute 'outline-4 nil :foreground my/background-color :background my/foreground-color-6)
+  (set-face-attribute 'outline-5 nil :foreground my/background-color :background my/foreground-color-6)
+  (set-face-attribute 'outline-6 nil :foreground my/background-color :background my/foreground-color-6)
+  (set-face-attribute 'outline-7 nil :foreground my/background-color :background my/foreground-color-6)
+  (set-face-attribute 'outline-8 nil :foreground my/background-color :background my/foreground-color-6)
+
   ;; Evil
   (setq evil-emacs-state-cursor '("purple" box))
   (setq evil-normal-state-cursor '("red" box))
@@ -8166,8 +8154,6 @@ Borrowed from mozc.el."
   ;; Hl current line
   ;; Underlines part of current line
   ;;(set-face-attribute 'hl-line nil :foreground my/foreground-color :background nil :underline t)
-  (require 'hl-line)
-  (set-face-attribute 'hl-line nil :foreground my/foreground-color :background my/background-color-2 :underline nil)
   
 	 ;;;  Org
   ;; =make this bold=

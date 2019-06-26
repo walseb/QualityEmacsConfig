@@ -455,9 +455,6 @@ Right now unicode fonts are most of the time taller than the normal fonts
 ** Fix haskell
 Maybe also add hlive to config?
 
-*** Remove intero
-Fix haskell-repl
-
 ** Direnv binds
 Maybe add direnv bind for creating a .envrc with content "use nix"
 
@@ -967,6 +964,7 @@ Example
 				 ;; So i C-leader works for exwm windows
 				 (exwm-mode . emacs)
 				 (eshell-mode . insert)
+				 (interactive-haskell-mode . insert)
 				 (term-mode . insert)
 				 ;;(org-agenda-mode . insert)
 				 (magit-popup-mode . insert)
@@ -4469,8 +4467,6 @@ eldoc-box-hover-mode eldoc-box-hover-mode)
     ('c++-mode (call-interactively 'xref-find-definitions))
     ('objc-mode (call-interactively 'xref-find-definitions))
     ('csharp-mode (omnisharp-go-to-definition))
-    ;; No idea why but supplying a empty string makes it work
-    ('haskell-mode (intero-goto-definition))
     (_
      (if lsp-mode
 	 (lsp-find-definition)
@@ -4487,7 +4483,6 @@ eldoc-box-hover-mode eldoc-box-hover-mode)
   (interactive)
   (pcase major-mode
     ('csharp-mode (omnisharp-find-usages-with-ido))
-    ('haskell-mode (intero-uses-at))
     (_ (call-interactively 'xref-find-references))))
 
 (define-key my/leader-map (kbd "u") 'my/auto-find-usages)
@@ -4510,7 +4505,7 @@ eldoc-box-hover-mode eldoc-box-hover-mode)
       ('c-mode (cling-send-region (line-beginning-position) (line-end-position)))
       ('c++-mode (cling-send-region (line-beginning-position) (line-end-position)))
       ('csharp-mode (my/csharp-run-repl))
-      ('haskell-mode (intero-repl-eval-region (line-end-position) (save-excursion (re-search-backward (rx bol (or (any alpha) (any lower))))) ))
+      ('haskell-mode (haskell-interactive-copy-to-prompt))
       (_ (call-interactively 'eros-eval-last-sexp)))))
 
 (defun my/auto-eval-region ()
@@ -4522,7 +4517,7 @@ eldoc-box-hover-mode eldoc-box-hover-mode)
     ('c-mode (cling-send-region (point) (mark)))
     ('c++-mode (cling-send-region (point) (mark)))
     ('csharp-mode (my/csharp-run-repl))
-    ('haskell-mode (intero-repl-eval-region (point) (mark)))
+    ('haskell-mode (haskell-interactive-copy-to-prompt))
     (_ (eros--eval-overlay
 	(eval-region (point) (mark) t)
 	(point)))))
@@ -4537,7 +4532,7 @@ eldoc-box-hover-mode eldoc-box-hover-mode)
     ('c-mode (cling-send-buffer))
     ('c++-mode (cling-send-buffer))
     ('csharp-mode (my/csharp-run-repl))
-    ('haskell-mode (intero-repl-load))
+    ('haskell-mode (haskell-process-load-file))
     (_ (eval-buffer nil))))
 
 (defun my/auto-eval-print ()
@@ -4546,7 +4541,7 @@ eldoc-box-hover-mode eldoc-box-hover-mode)
     ('org-mode (call-interactively #'org-babel-execute-src-block))
     ('scheme-mode (geiser-eval-last-sexp t))
     ('clojure-mode (cider-eval-print-last-sexp))
-    ('csharp-mode (my/csharp-run-repl))
+    ('csharp-mode (haskell-interactive-copy-to-prompt))
     (_ (eval-print-last-sexp nil))))
 
 (define-key my/leader-map (kbd "e") 'my/auto-eval)
@@ -4934,6 +4929,20 @@ or
 (straight-use-package '(haskell-mode :type git :host github :repo "walseb/haskell-mode"))
 #+end_src
 
+*** Haskell-doc
+Haskell-doc kind of fills in the holes where lsp-haskell doesn't work
+
+#+begin_src emacs-lisp
+(setq haskell-doc-idle-delay 0)
+
+(defun my/haskell-doc-mode ()
+  ;; haskll-doc-mode is buggy if eldoc is on
+  (eldoc-mode -1)
+  (haskell-doc-mode 1))
+
+(add-hook 'haskell-mode-hook 'my/haskell-doc-mode)
+#+end_src
+
 *** Project management
 **** Stack
 #+begin_src emacs-lisp
@@ -4960,41 +4969,6 @@ Haskell-indentation-mode seems better?? or hi2 or hindent
 *** Haskell-cabal
 #+begin_src emacs-lisp
 (straight-use-package 'company-cabal)
-#+end_src
-
-*** intero
-#+begin_src emacs-lisp
-(straight-use-package 'intero)
-(require 'intero)
-#+end_src
-
-(add-hook 'haskell-mode-hook 'intero-mode)
-
-Enabble hlint
-#+begin_src emacs-lisp
-(flycheck-add-next-checker 'intero '(warning . haskell-hlint))
-
-(setq intero-pop-to-repl nil)
-#+end_src
-
-Start repl mode in insert mode
-#+begin_src emacs-lisp
-(add-to-list 'evil-insert-state-modes 'intero-repl-mode)
-#+end_src
-
-**** Redefine eval-region
-The current one ignores any beg and end if you are not in visual line mode
-#+begin_src emacs-lisp
-(defun intero-repl-eval-region (begin end &optional prompt-options)
-  "Evaluate the code in region from BEGIN to END in the REPL.
-   If the region is unset, the current line will be used.
-   PROMPT-OPTIONS are passed to `intero-repl-buffer' if supplied."
-  (interactive "r")
-  (let ((text (buffer-substring-no-properties begin end)))
-    (intero-with-repl-buffer prompt-options
-      (comint-simple-send
-       (get-buffer-process (current-buffer))
-       text))))
 #+end_src
 
 *** lsp-haskell
@@ -9474,7 +9448,6 @@ mode-line-format
   ;;  font-lock-variable-name-face
   ;;  font-lock-warning-face
   
-  
   (set-face-attribute 'font-lock-doc-face nil :foreground my/foreground-color :background my/background-color-4)
   
   (set-face-attribute 'font-lock-comment-face nil :foreground (color-lighten-name my/background-color 30) :background my/background-color) ;;:height my/comment-face-height)
@@ -9483,9 +9456,18 @@ mode-line-format
   
   (my/set-face-to-default 'font-lock-function-name-face t)
   
-  ;; Required by other face
-  (my/set-face-to-default 'outline-4 t)
+  (require 'hl-line)
+  (set-face-attribute 'hl-line nil :foreground my/foreground-color :background my/background-color-2 :underline nil)
   
+  (set-face-attribute 'outline-1 nil :foreground my/background-color :background my/foreground-color-6)
+  (set-face-attribute 'outline-2 nil :foreground my/background-color :background my/foreground-color-6)
+  (set-face-attribute 'outline-3 nil :foreground my/background-color :background my/foreground-color-6)
+  (set-face-attribute 'outline-4 nil :foreground my/background-color :background my/foreground-color-6)
+  (set-face-attribute 'outline-5 nil :foreground my/background-color :background my/foreground-color-6)
+  (set-face-attribute 'outline-6 nil :foreground my/background-color :background my/foreground-color-6)
+  (set-face-attribute 'outline-7 nil :foreground my/background-color :background my/foreground-color-6)
+  (set-face-attribute 'outline-8 nil :foreground my/background-color :background my/foreground-color-6)
+
   ;; Evil
   (setq evil-emacs-state-cursor '("purple" box))
   (setq evil-normal-state-cursor '("red" box))
@@ -9501,8 +9483,6 @@ mode-line-format
   ;; Hl current line
   ;; Underlines part of current line
   ;;(set-face-attribute 'hl-line nil :foreground my/foreground-color :background nil :underline t)
-  (require 'hl-line)
-  (set-face-attribute 'hl-line nil :foreground my/foreground-color :background my/background-color-2 :underline nil)
   
 	 ;;;  Org
   ;; =make this bold=
