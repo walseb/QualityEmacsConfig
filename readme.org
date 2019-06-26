@@ -458,6 +458,9 @@ Maybe also add hlive to config?
 *** Remove intero
 Fix haskell-repl
 
+** Direnv binds
+Maybe add direnv bind for creating a .envrc with content "use nix"
+
 * First
 Things to do first
 #+begin_src emacs-lisp
@@ -7641,7 +7644,7 @@ And using mapc doesn't work because substring is a pure function
   (mapc (lambda (list) (delete-file (nth 1 list))) my/find-scan-dirs))
 #+end_src
 
-TODO: Load cache file support
+TODO: Add option to compress the files saved with tar, this reduces the file size by like 99% and doesn't take any time (and only has to be done while loading the file into the elisp list)
 #+begin_src emacs-lisp
 (defun my/find-cache-dir (list)
   (let* ((default-directory (nth 0 list))
@@ -7649,7 +7652,7 @@ TODO: Load cache file support
 	 (cache (nth 1 list))
 	 (results (if (file-exists-p cache)
 		      (f-read cache)
-		    (shell-command-to-string "find \"$PWD\""))))
+		    (shell-command-to-string "find \"$PWD\" -name '.git' -prune -o -type f -print"))))
 
     (when (not (file-exists-p cache))
       ;; write to file
@@ -7660,39 +7663,38 @@ TODO: Load cache file support
 					,(split-string
 					  results
 					  "\n")))))
-#+end_src
 
 (require 's)
-TODO: Error if outside scope defined by my/find-scan-dirs
+#+end_src
+TODO: Error if user is outside scope defined by my/find-scan-dirs
+TODO: Add command to search entire scan dir, i.e. ignore predicate here
 #+begin_src emacs-lisp
 (defun my/find ()
   (interactive)
   (let* ((gc-cons-threshold 80000000)
-	 ;; Load cached search
+	 ;; Load data from cached search corresponding to this default-directory
 	 (search (nth 1
 		      (cl-find-if (lambda (list) 
 				    (file-in-directory-p
 				     default-directory (nth 0 list)))
 				  my/find-scan-cache))))
+
     (if search
-	;; map-some
-	
 	(let* ((dir (expand-file-name default-directory))
 	       (dir-length (length dir)))
 	  (find-file (ivy-read
-		      ""
+		      (concat "Find: ")
 		      ;; This is pretty slow because it's creating a new list
 		      ;;(map 'list (lambda (string) (substring string dir-length))
-		      ;; Sort out irrelevant entries
-		      ;;				      (seq-filter
-		      ;;				       (lambda (string) (s-starts-with-p dir string)) search)
 		      search
 		      
+		      ;; Predicate is slightly faster than using seq-filter somehow
 		      :predicate (lambda (string) (s-starts-with-p dir string))
-		      :initial-input (concat "^" (expand-file-name default-directory))
-		      :sort nil
-		      )))
-      ;;)
+		      ;; We can't have initial input because if the path contains capital letters, we have to use capital letters in the search. Also if we just lower case the search we will get a bad path if we choose to use capital letters in the search
+		      ;;:initial-input (concat "^" (expand-file-name default-directory))
+		      ;; Don't sort for better performance, find should already have sorted it
+		      :sort nil)))
+
       (my/find-cache-dir
        (cl-find-if (lambda (list)
 		     (file-in-directory-p (expand-file-name default-directory) (nth 0 list))) my/find-scan-dirs))
