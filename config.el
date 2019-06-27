@@ -463,6 +463,7 @@
 ;; *** Highlight to end of window
 ;; Maybe the outlines should be highlighted to the end of the window
 
+;; ** Optimize number key symbol placement
 ;; * First
 ;; Things to do first
 (setq mode-line-format nil)
@@ -1777,9 +1778,6 @@ Borrowed from mozc.el."
   (my/config-visit)
   (my/outorg-export-to-org-file "~/.emacs.d/readme.org"))
 
-;; ** Esup
-(straight-use-package 'esup)
-
 ;; ** Man mode
 ;; *** Disable keys
 (setq Man-mode-map (make-sparse-keymap))
@@ -2690,42 +2688,82 @@ Borrowed from mozc.el."
 ;; ** Ivy rich
 (straight-use-package 'ivy-rich)
 (require 'ivy-rich)
-(ivy-rich-mode 1)
 
+(defvar my/ivy-rich-docstring-spacing 40)
+
+;; *** Faces
+(defface my/ivy-rich-doc-face
+  '((t :inherit font-lock-doc-face))
+  "Face used for the doc face in ivy rich buffers")
+
+(defface my/ivy-rich-switch-buffer-size-face
+  '((t :inherit default))
+  "Face used by ivy rich")
+
+(defface my/ivy-rich-switch-buffer-path-face
+  '((t :inherit default))
+  "Face used by ivy rich")
+
+(defface my/ivy-rich-switch-buffer-project-face
+  '((t :inherit default))
+  "Face used by ivy rich")
+
+(defface my/ivy-rich-switch-buffer-indicator-face
+  '((t :inherit default))
+  "Face used by ivy rich")
+
+(defface my/ivy-rich-switch-buffer-major-mode-face
+  '((t :inherit default))
+  "Face used by ivy rich")
+
+(defface my/ivy-rich-find-file-symlink-face
+  '((t :inherit default))
+  "Face used by ivy rich")
+
+;; *** Set transformers list
 ;; (ivy-set-display-transformer 'ivy-switch-buffer 'ivy-switch-buffer)
 ;; (setq ivy-rich-path-style 'abbrev)
-'(ivy-switch-buffer
-  (:columns
-   ((ivy-rich-candidate (:width 30))  ; return the candidate itself
-    (ivy-rich-switch-buffer-size (:width 7))  ; return the buffer size
-    (ivy-rich-switch-buffer-indicators (:width 4 :face error :align right)); return the buffer indicators
-    (ivy-rich-switch-buffer-major-mode (:width 12 :face warning))          ; return the major mode info
-    (ivy-rich-switch-buffer-project (:width 15 :face success))             ; return project name using `projectile'
-    (ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))))))  ; return file path relative to project root or `default-directory' if project is nil
-   :predicate
-   (lambda (cand) (get-buffer cand)))
-  counsel-M-x
-  (:columns
-   ((counsel-M-x-transformer (:width 40))  ; thr original transfomer
-    (ivy-rich-counsel-function-docstring (:face font-lock-doc-face))))  ; return the docstring of the command
-  counsel-describe-function
-  (:columns
-   ((counsel-describe-function-transformer (:width 40))  ; the original transformer
-    (ivy-rich-counsel-function-docstring (:face font-lock-doc-face))))  ; return the docstring of the function
-  counsel-describe-variable
-  (:columns
-   ((counsel-describe-variable-transformer (:width 40))  ; the original transformer
-    (ivy-rich-counsel-variable-docstring (:face font-lock-doc-face))))  ; return the docstring of the variable
-  counsel-recentf
-  (:columns
-   ((ivy-rich-candidate (:width 0.8)) ; return the candidate itself
-    (ivy-rich-file-last-modified-time (:face font-lock-comment-face))))) ; return the last modified time of the file
+
+(setq ivy-rich-display-transformers-list
+      `(ivy-switch-buffer
+	(:columns
+	 ((ivy-rich-candidate (:width 30))
+	  (ivy-rich-switch-buffer-size (:width 7 :face my/ivy-rich-switch-buffer-size-face))
+	  (ivy-rich-switch-buffer-indicators (:width 4 :face my/ivy-rich-switch-buffer-indicator-face :align right))
+	  (ivy-rich-switch-buffer-major-mode (:width 12 :face my/ivy-rich-switch-buffer-major-mode-face))
+	  (ivy-rich-switch-buffer-project (:width 15 :face my/ivy-rich-switch-buffer-project-face))
+	  (ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))) :face my/ivy-rich-switch-buffer-path-face)))
+	 :predicate
+	 (lambda (cand) (get-buffer cand)))
+	counsel-find-file
+	(:columns
+	 ((ivy-read-file-transformer)
+	  (ivy-rich-counsel-find-file-truename (:face my/ivy-rich-find-file-symlink-face))))
+	counsel-M-x
+	(:columns
+	 ((counsel-M-x-transformer (:width ,my/ivy-rich-docstring-spacing))
+	  (ivy-rich-counsel-function-docstring (:face my/ivy-rich-doc-face))))
+	counsel-describe-function
+	(:columns
+	 ((counsel-describe-function-transformer (:width ,my/ivy-rich-docstring-spacing))
+	  (ivy-rich-counsel-function-docstring (:face my/ivy-rich-doc-face))))
+	counsel-describe-variable
+	(:columns
+	 ((counsel-describe-variable-transformer (:width ,my/ivy-rich-docstring-spacing))
+	  (ivy-rich-counsel-variable-docstring (:face my/ivy-rich-doc-face))))
+	counsel-recentf
+	(:columns
+	 ((ivy-rich-candidate (:width 0.8))
+	  (ivy-rich-file-last-modified-time (:face font-lock-comment-face))))))
+
+(ivy-rich-mode 1)
 
 ;; ** Company
 (straight-use-package 'company)
 (require 'company)
 
-(setq company-idle-delay 0.1)
+(setq company-idle-delay 0)
+;; Sets how long before company echoes tooltips in the minibuffer. Normally company and eldocs fights eachother if this is 0. This is fixed using hooks in "Fix company and eldoc"
 (setq company-echo-delay 0)
 
 ;; Don't downcase result
@@ -2741,7 +2779,7 @@ Borrowed from mozc.el."
 
 (setq company-show-numbers t)
 
-;; Make sure only 10 candidates are shown at a time
+;; Only show 10 candidates at a time
 (setq company-tooltip-limit 10)
 
 ;; Align annotations to right side
@@ -2755,8 +2793,13 @@ Borrowed from mozc.el."
 
 (global-company-mode t)
 
-;; Remove dabbrev because evil has a better alternative and dabbrev is slow with long files
+;; Remove dabbrev because it's slow in long files
 (setq company-backends (delete 'company-dabbrev company-backends))
+
+;; *** Fix company and eldoc
+;; Where the company menu is up, eldoc shouldn't write to the minibuffer because company is already writing documentation there
+(add-hook 'company-completion-started-hook '(lambda (a) (setq-local eldoc-idle-delay 100)))
+(add-hook 'company-after-completion-hook '(lambda (a) (setq-local eldoc-idle-delay my/eldoc-idle-delay)))
 
 ;; *** Company posframe
 ;; (straight-use-package 'company-posframe)
@@ -2971,7 +3014,7 @@ Borrowed from mozc.el."
       (loccur-mode -1)))
 
 ;; *** Keys
-(my/evil-normal-define-key "M-s" 'my/loccur-isearch)
+(my/evil-normal-define-key "C-S-s" 'my/loccur-isearch)
 
 ;; ** Isearch
 (require 'isearch)
@@ -3268,12 +3311,12 @@ Borrowed from mozc.el."
 (straight-use-package 'goto-chg)
 
 ;; ** My find file
-(defun my/find-file ()
-  (interactive)
-  (find-file (let ((dir (ignore-errors (dired-current-directory))))
-	       (if dir
-		   (read-file-name "Find file: " dir)
-		 (read-file-name "Find file: " default-directory)))))
+;;(defun my/find-file ()
+;;  (interactive)
+;;  (find-file (let ((dir (ignore-errors (dired-current-directory))))
+;;	       (if dir
+;;		   (read-file-name "Find file: " dir)
+;;		 (read-file-name "Find file: " default-directory)))))
 
 ;; ** Change default directory
 (defun my/change-default-directory ()
@@ -3539,6 +3582,8 @@ Borrowed from mozc.el."
 (straight-use-package 'dired-du)
 (require 'dired-du)
 
+(setq dired-du-size-format t)
+
 ;; *** Disable on new buffer
 (add-hook 'dired-mode-hook 'my/dired-du-disable-quietly)
 
@@ -3643,7 +3688,7 @@ Borrowed from mozc.el."
 ;; Lower keys for commands not operating on all the marked files
 (evil-define-key 'insert dired-mode-map (kbd "a") 'dired-find-alternate-file)
 (evil-define-key '(normal insert) dired-mode-map (kbd "d") 'dired-flag-file-deletion)
-(evil-define-key 'insert dired-mode-map (kbd "e") 'my/find-file)
+(evil-define-key 'insert dired-mode-map (kbd "e") 'counsel-find-file)
 ;; (put 'dired-find-file :advertised-binding (kbd "\C-m"))
 (evil-define-key 'insert dired-mode-map (kbd "g") 'revert-buffer)
 (evil-define-key 'insert dired-mode-map (kbd "i") 'dired-maybe-insert-subdir)
@@ -3713,7 +3758,8 @@ Borrowed from mozc.el."
 ;; (add-hook 'emacs-lisp-mode-hook 'eldoc-mode)
 (setq eldoc-echo-area-use-multiline-p t)
 (setq-default eldoc-echo-area-use-multiline-p t)
-(setq eldoc-idle-delay 0)
+(setq my/eldoc-idle-delay 0)
+(setq eldoc-idle-delay my/eldoc-idle-delay)
 
 (setq tooltip-resize-echo-area t)
 
@@ -4917,9 +4963,6 @@ Borrowed from mozc.el."
 (add-hook 'eshell-mode-hook 'my/bind-eshell-keys)
 
 ;; * Keys
-;; ** Clean default maps
-;; *** Clean global keys
-
 ;; ** Key rebinds
 (require 'evil-maps)
 
@@ -4930,22 +4973,22 @@ Borrowed from mozc.el."
 
 ;; *** Language specific symbols
 ;; **** Lower
-(my/evil-emacs-define-key "M-a" '(lambda () (interactive) (my/exwm-fake-key "å")))
-(my/evil-emacs-define-key "M-e" '(lambda () (interactive) (my/exwm-fake-key "ä")))
-(my/evil-emacs-define-key "M-o" '(lambda () (interactive) (my/exwm-fake-key "ö")))
+(my/evil-emacs-define-key "M-f" '(lambda () (interactive) (my/exwm-fake-key "å")))
+(my/evil-emacs-define-key "M-u" '(lambda () (interactive) (my/exwm-fake-key "ä")))
+(my/evil-emacs-define-key "M-b" '(lambda () (interactive) (my/exwm-fake-key "ö")))
 
-(my/evil-universal-define-key "M-a" '(lambda () (interactive) (my/fake-key "å" ?\å)))
-(my/evil-universal-define-key "M-e" '(lambda () (interactive) (my/fake-key "ä" ?\ä)))
-(my/evil-universal-define-key "M-o" '(lambda () (interactive) (my/fake-key "ö" ?\ö)))
+(define-key key-translation-map (kbd "M-f") (kbd "å"))
+(define-key key-translation-map (kbd "M-u") (kbd "ä"))
+(define-key key-translation-map (kbd "M-b") (kbd "ö"))
 
 ;; **** Capital
-(my/evil-emacs-define-key "M-A" '(lambda () (interactive) (my/exwm-fake-key "Å")))
-(my/evil-emacs-define-key "M-E" '(lambda () (interactive) (my/exwm-fake-key "Ä")))
-(my/evil-emacs-define-key "M-O" '(lambda () (interactive) (my/exwm-fake-key "Ö")))
+(my/evil-emacs-define-key "M-F" '(lambda () (interactive) (my/exwm-fake-key "Å")))
+(my/evil-emacs-define-key "M-U" '(lambda () (interactive) (my/exwm-fake-key "Ä")))
+(my/evil-emacs-define-key "M-B" '(lambda () (interactive) (my/exwm-fake-key "Ö")))
 
-(my/evil-universal-define-key "M-A" '(lambda () (interactive) (my/fake-key "Å" ?\Å)))
-(my/evil-universal-define-key "M-E" '(lambda () (interactive) (my/fake-key "Ä" ?\Ä)))
-(my/evil-universal-define-key "M-O" '(lambda () (interactive) (my/fake-key "Ö" ?\Ö)))
+(define-key key-translation-map (kbd "M-F") (kbd "Å"))
+(define-key key-translation-map (kbd "M-U") (kbd "Ä"))
+(define-key key-translation-map (kbd "M-B") (kbd "Ö"))
 
 ;; *** Backspace/delete C-h, C-l
 (define-key evil-insert-state-map (kbd "C-f") 'backward-delete-char-untabify)
@@ -5099,6 +5142,57 @@ Borrowed from mozc.el."
 ;; (define-key key-translation-map (kbd "C-e") (kbd "TAB"))
 ;; (define-key key-translation-map (kbd "M-C-i") (kbd "C-TAB"))
 
+;; *** Rebind number row
+;; **** Numbers
+;; ***** Disable number row
+(define-key key-translation-map (kbd "1") (kbd "C-="))
+(define-key key-translation-map (kbd "2") (kbd "C-="))
+(define-key key-translation-map (kbd "3") (kbd "C-="))
+(define-key key-translation-map (kbd "4") (kbd "C-="))
+(define-key key-translation-map (kbd "5") (kbd "C-="))
+(define-key key-translation-map (kbd "6") (kbd "C-="))
+(define-key key-translation-map (kbd "7") (kbd "C-="))
+(define-key key-translation-map (kbd "8") (kbd "C-="))
+(define-key key-translation-map (kbd "9") (kbd "C-="))
+(define-key key-translation-map (kbd "0") (kbd "C-="))
+
+;; ***** Set new number row 
+(define-key key-translation-map (kbd "M-d") (kbd "1"))
+(define-key key-translation-map (kbd "M-s") (kbd "2"))
+(define-key key-translation-map (kbd "M-t") (kbd "3"))
+(define-key key-translation-map (kbd "M-n") (kbd "4"))
+(define-key key-translation-map (kbd "M-r") (kbd "5"))
+(define-key key-translation-map (kbd "M-i") (kbd "6"))
+(define-key key-translation-map (kbd "M-a") (kbd "7"))
+(define-key key-translation-map (kbd "M-e") (kbd "8"))
+(define-key key-translation-map (kbd "M-o") (kbd "9"))
+(define-key key-translation-map (kbd "M-h") (kbd "0"))
+
+;; **** Symbols
+;; ***** Disable symbol keys
+(define-key key-translation-map (kbd "!") (kbd "C-="))
+(define-key key-translation-map (kbd "@") (kbd "C-="))
+(define-key key-translation-map (kbd "#") (kbd "C-="))
+(define-key key-translation-map (kbd "$") (kbd "C-="))
+(define-key key-translation-map (kbd "%") (kbd "C-="))
+(define-key key-translation-map (kbd "^") (kbd "C-="))
+(define-key key-translation-map (kbd "&") (kbd "C-="))
+(define-key key-translation-map (kbd "*") (kbd "C-="))
+(define-key key-translation-map (kbd "(") (kbd "C-="))
+(define-key key-translation-map (kbd ")") (kbd "C-="))
+
+;; ***** Set new keys
+(define-key key-translation-map (kbd "M-D") (kbd "!"))
+(define-key key-translation-map (kbd "M-S") (kbd "@"))
+(define-key key-translation-map (kbd "M-T") (kbd "#"))
+(define-key key-translation-map (kbd "M-N") (kbd "$"))
+(define-key key-translation-map (kbd "M-R") (kbd "%"))
+(define-key key-translation-map (kbd "M-I") (kbd "^"))
+(define-key key-translation-map (kbd "M-A") (kbd "&"))
+(define-key key-translation-map (kbd "M-E") (kbd "*"))
+(define-key key-translation-map (kbd "M-O") (kbd "("))
+(define-key key-translation-map (kbd "M-H") (kbd ")"))
+
 ;; * nix
 ;; ** Direnv
 (straight-use-package 'direnv)
@@ -5169,13 +5263,13 @@ Borrowed from mozc.el."
 	([?\C-y] . [?\C-c])
 	([?\C-k] . [?\C-v])
 	
-	([?\M-a] . [?\C-å])
-	([?\M-e] . [?\C-ä])
-	([?\M-o] . [?\C-ö])
+	([?\M-f] . [?\C-å])
+	([?\M-u] . [?\C-ä])
+	([?\M-b] . [?\C-ö])
 	
-	([?\M-A] . [?\C-Å])
-	([?\M-E] . [?\C-Ä])
-	([?\M-O] . [?\C-Ö])
+	([?\M-F] . [?\C-Å])
+	([?\M-U] . [?\C-Ä])
+	([?\M-B] . [?\C-Ö])
 	
 	([?\C-c] . [?\C-c])))
 
@@ -5461,13 +5555,13 @@ Borrowed from mozc.el."
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-u") 'exwm-firefox-core-half-page-up)
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
     
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-w") '(lambda () (interactive) (my/exwm-fake-key "å")))
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-r") '(lambda () (interactive) (my/exwm-fake-key "ä")))
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-j") '(lambda () (interactive) (my/exwm-fake-key "ö")))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-f") '(lambda () (interactive) (my/exwm-fake-key "å")))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-u") '(lambda () (interactive) (my/exwm-fake-key "ä")))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-b") '(lambda () (interactive) (my/exwm-fake-key "ö")))
 
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-W") '(lambda () (interactive) (my/exwm-fake-key "Å")))
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-R") '(lambda () (interactive) (my/exwm-fake-key "Ä")))
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-J") '(lambda () (interactive) (my/exwm-fake-key "Ö")))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-F") '(lambda () (interactive) (my/exwm-fake-key "Å")))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-U") '(lambda () (interactive) (my/exwm-fake-key "Ä")))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-B") '(lambda () (interactive) (my/exwm-fake-key "Ö")))
     
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
@@ -6729,7 +6823,7 @@ Borrowed from mozc.el."
   
   ;; Buffer management
   ;; Find file
-  ("e" my/find-file nil)
+  ("e" counsel-find-file nil)
   ("E" my/dired-curr-dir nil)
   ("M-e" my/change-default-directory nil)
   
@@ -6996,6 +7090,9 @@ Borrowed from mozc.el."
 
 (add-hook 'image-mode-hook '(lambda () (interactive) (display-line-numbers-mode -1)))
 
+;; Make animated images loop
+(setq image-animate-loop t)
+
 ;; *** Open otf fonts with image mode
 (add-to-list 'auto-mode-alist '("\\.otf\\'" . image-mode))
 
@@ -7028,11 +7125,11 @@ Borrowed from mozc.el."
 (evil-define-key 'normal image-mode-map (kbd "h") '(lambda () (interactive) (image-backward-hscroll 8)))
 (evil-define-key 'normal image-mode-map (kbd "l") '(lambda () (interactive) (image-forward-hscroll 8)))
 
-(evil-define-key 'normal image-mode-map (kbd "G") '(lambda () (interactive) (image-next-line 100)))
-(evil-define-key 'normal image-mode-map (kbd "g g") '(lambda () (interactive) (image-previous-line 100)))
+(evil-define-key 'normal image-mode-map (kbd "G") '(lambda () (interactive) (image-next-line 1000)))
+(evil-define-key 'normal image-mode-map (kbd "g g") '(lambda () (interactive) (image-previous-line 1000)))
 
-(evil-define-key 'normal image-mode-map (kbd "$") '(lambda () (interactive) (image-forward-hscroll 100)))
-(evil-define-key 'normal image-mode-map (kbd "0") '(lambda () (interactive) (image-backward-hscroll 100)))
+(evil-define-key 'normal image-mode-map (kbd "$") '(lambda () (interactive) (image-forward-hscroll 1000)))
+(evil-define-key 'normal image-mode-map (kbd "0") '(lambda () (interactive) (image-backward-hscroll 1000)))
 
 (define-prefix-command 'my/image-mode-map)
 (evil-define-key 'normal image-mode-map (kbd (concat my/leader-map-key " a")) 'my/image-mode-map)
@@ -7436,7 +7533,7 @@ Borrowed from mozc.el."
 		;; (concat (int-to-string point-in-buffer-percentage) "% ~" (int-to-string line-number-count)))))
 		
 		(:eval
-		 (int-to-string (+ (count-lines (point-min) (point-max)) 1)))
+		 (int-to-string (count-lines (point-min) (point-max))))
 		
 		;;"%I"
 		
@@ -7895,28 +7992,26 @@ Borrowed from mozc.el."
 
 (my/lv-line-allocate-update-time 'my/update-uptime-timer)
 
-;; **** Eye timer
-(defvar my/eye-timer-last-break (float-time))
-
+;; **** Break timer
 ;; In seconds
-(defvar my/eye-timer-break-every (* 21 60))
+(defvar my/break-time (* 21 60))
+(defvar my/enable-breaks t)
 
-(defun my/eye-timer-break-screen ()
-  (switch-to-buffer "Break")
-  (insert "Break!"))
+(defun my/break-screen ()
+  (when my/enable-breaks
+    ;; Restart timer
+    (my/break-timer-run)
 
-(defun my/eye-timer-add ()
-  (message "$$$$$$$$$$$$$BREAK 20 sec$$$$$$$$$$$$$$")
-  (my/eye-timer-break-screen)
-  ;;(my/alert "Eye timer" 'high)
-  (setq my/eye-timer-last-break (float-time)))
+    ;; Show break buffer
+    (switch-to-buffer "Break")
+    (insert "Break")))
 
-(defun my/eye-timer-update ()
+(defun my/break-timer-run ()
   (interactive)
-  (if (> (- (float-time) my/eye-timer-last-break) my/eye-timer-break-every)
-      (my/eye-timer-add)))
+  (run-with-timer my/break-time nil #'my/break-screen))
 
-(my/lv-line-allocate-update-time 'my/eye-timer-update)
+(when my/enable-breaks
+  (my/break-timer-run))
 
 ;; *** Mode line format
 (defvar my/frame-width (frame-width))
@@ -8255,14 +8350,25 @@ Borrowed from mozc.el."
   (set-face-attribute 'popup-menu-face nil :foreground my/foreground-color :background my/background-color-1)
   
 	 ;;; Ivy
+  ;; Ivy also uses "font-lock-doc-face" for the documentation
   (set-face-attribute 'ivy-current-match nil :foreground my/background-color :background my/foreground-color)
   (set-face-attribute 'ivy-cursor nil :foreground my/background-color :background my/foreground-color)
   (set-face-attribute 'ivy-minibuffer-match-highlight nil :foreground my/background-color :background my/foreground-color)
+  ;;(set-face-attribute 'ivy-separator nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
   
   (set-face-attribute 'ivy-minibuffer-match-face-1 nil :foreground my/background-color :background my/foreground-color)
   (set-face-attribute 'ivy-minibuffer-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
   (set-face-attribute 'ivy-minibuffer-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
   (set-face-attribute 'ivy-minibuffer-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
+  
+;;; Ivy rich
+  (set-face-attribute 'my/ivy-rich-doc-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
+  (set-face-attribute 'my/ivy-rich-switch-buffer-indicator-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
+  (set-face-attribute 'my/ivy-rich-switch-buffer-major-mode-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
+  (set-face-attribute 'my/ivy-rich-switch-buffer-size-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
+  (set-face-attribute 'my/ivy-rich-switch-buffer-path-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
+  (set-face-attribute 'my/ivy-rich-switch-buffer-project-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
+  (set-face-attribute 'my/ivy-rich-find-file-symlink-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
   
 	 ;;; Swiper
   (set-face-attribute 'swiper-match-face-1 nil :foreground my/background-color :background my/foreground-color)
