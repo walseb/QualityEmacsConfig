@@ -464,6 +464,9 @@
 ;; Maybe the outlines should be highlighted to the end of the window
 
 ;; ** Optimize number key symbol placement
+;; ** Fix meta keys
+;; *** my/switch-monitor
+
 ;; * First
 ;; Things to do first
 (setq mode-line-format nil)
@@ -603,7 +606,7 @@
     nil))
 
 ;; ** Fake key
-;; *** Normal emacs buffers 
+;; *** Normal emacs buffers
 ;; Doesn't work on keys that are not english
 ;; (defun my/fake-key (key key-symbol)
 ;;  (interactive)
@@ -645,9 +648,9 @@
 
 (defun my/file-size-human-readable (file-size &optional flavor decimal)
   "Produce a string showing FILE-SIZE in human-readable form.
- 
+
    Optional second argument FLAVOR controls the units and the display format:
- 
+
     If FLAVOR is nil or omitted, each kilobyte is 1024 bytes and the produced
        suffixes are \"k\", \"M\", \"G\", \"T\", etc.
     If FLAVOR is `si', each kilobyte is 1000 bytes and the produced suffixes
@@ -657,7 +660,7 @@
     If DECIMAL is true, a decimal number is returned"
   (setq 1024Decimal (if decimal 1024.0 1024))
   (setq 1000Decimal (if decimal 1000.0 1000))
-  
+
   (let ((power (if (or (null flavor) (eq flavor 'iec))
 		   1024Decimal
 		 1000Decimal))
@@ -677,10 +680,11 @@
 	    (if (eq flavor 'iec) "iB" ""))))
 
 ;; ** Set font
-(defun my/set-default-font (font)
+(defun my/set-default-font ()
   (if window-system
       (set-face-attribute 'default nil
-			  :family font
+			  ;;:family font
+			  :fontset "fontset-default"
 			  :height my/default-face-height)))
 
 ;; ** Overlay
@@ -728,8 +732,17 @@
 
 (setq my/font (my/get-best-font))
 
-(if my/font
-    (my/set-default-font my/font))
+(when my/font
+  (set-fontset-font "fontset-default" 'latin-iso8859-3
+		    my/font)
+
+  (set-fontset-font "fontset-default" 'ascii
+		    my/font)
+
+  (set-fontset-font "fontset-default" 'latin-iso8859-1
+		    my/font)
+
+  (my/set-default-font))
 
 ;; * Startup processes
 ;; ** Prevent async command from opening new window
@@ -1150,6 +1163,11 @@ Borrowed from mozc.el."
 			      (backward-char)
 			      (call-interactively #'delete-char)))
 
+;; *** Rebind end and beg of line
+(my/evil-universal-define-key "M-l" #'evil-end-of-line)
+(my/evil-universal-define-key "M-m" #'my/go-to-middle-of-line)
+(my/evil-universal-define-key "M-g" #'evil-beginning-of-line)
+
 ;; * Backups
 ;; Stop emacs from creating backup files on every save
 (setq make-backup-files nil)
@@ -1273,11 +1291,11 @@ Borrowed from mozc.el."
 	   ('med  "yellow")
 	   ('high  "red")
 	   (_   "blue"))))
-    
+
     (if flash-once
 	(my/alert-blink-fringe-once color)
       (my/alert-blink-fringe color))
-    
+
     (if str
 	(progn
 	  (push " " my/past-alerts)
@@ -1409,15 +1427,15 @@ Borrowed from mozc.el."
    xset s noblank
    xset s off
    xset s off -dpms
- 
+
    setxkbmap -layout us -variant altgr-intl
    # setxkbmap -layout carpalx -variant qgmlwy
- 
+
    # xmodmap ~./xmodmap
- 
+
    # Fix java windows in exwm
    export _JAVA_AWT_WM_NONREPARENTING=1
- 
+
    exec emacs")
 
 (defun my/write-xinitrc ()
@@ -1446,7 +1464,7 @@ Borrowed from mozc.el."
    log_file \"~/.config/mpd/mpd.log\"
    bind_to_address \"127.0.0.1\"
    port \"6600\"
- 
+
    # For pulse audio
    audio_output {
    type \"pulse\"
@@ -1458,11 +1476,11 @@ Borrowed from mozc.el."
 	 (mpd-dir (concat config-dir "mpd/"))
 	 (mpd-config (concat mpd-dir "mpd.conf")))
     (my/create-dir-if-not-exist config-dir)
-    
+
     (my/create-dir-if-not-exist mpd-dir)
-    
+
     (my/create-file-with-content-if-not-exist mpd-config my/mpd-config-text)
-    
+
     (my/create-file-if-not-exist (concat mpd-dir "mpd.log"))
     (my/create-file-if-not-exist (concat mpd-dir "mpd.db"))
     (my/create-dir-if-not-exist (concat mpd-dir "playlists/"))))
@@ -1570,7 +1588,7 @@ Borrowed from mozc.el."
 ;; ** Sudo edit
 (straight-use-package 'sudo-edit)
 
-(define-key my/leader-map (kbd "M-s") 'sudo-edit)
+(define-key my/leader-map (kbd "C-S-s") 'sudo-edit)
 
 ;; *** Dired fix
 (defun my/sudo-edit-is-on ()
@@ -2490,7 +2508,7 @@ Borrowed from mozc.el."
 ;; Make counsel-yank-pop use default height
 ;;(delete `(counsel-yank-pop . 5) ivy-height-alist)
 ;; Disable set height depending on command
-(add-hook 'after-init-hook '(lambda () 
+(add-hook 'after-init-hook '(lambda ()
 			      (setq ivy-height-alist nil)
 			      (setq-default ivy-height-alist nil)
 			      (add-to-list 'ivy-height-alist '(swiper . 10))))
@@ -2616,14 +2634,16 @@ Borrowed from mozc.el."
   (counsel-ag nil default-directory))
 
 ;; *** Keys
-(global-set-key (kbd "M-x") 'counsel-M-x)
+(define-key my/leader-map (kbd "SPC") 'counsel-M-x)
+;;(global-set-key (kbd "M-x") 'counsel-M-x)
 (global-set-key (kbd "<f1> f") 'counsel-describe-function)
 (global-set-key (kbd "<f1> v") 'counsel-describe-variable)
 (global-set-key (kbd "<f1> l") 'counsel-find-library)
 (global-set-key (kbd "<f2> i") 'counsel-info-lookup-symbol)
 (global-set-key (kbd "<f2> u") 'counsel-unicode-char)
 
-(global-set-key (kbd "M-k") 'counsel-yank-pop)
+(define-key my/leader-map (kbd "k") 'counsel-yank-pop)
+;;(global-set-key (kbd "C-k") 'counsel-yank-pop)
 
 ;; ** Counsel flycheck
 ;;   https://github.com/nathankot/dotemacs/blob/master/init.el
@@ -3030,7 +3050,7 @@ Borrowed from mozc.el."
 (defun my/isearch-repeat-forward ()
   (interactive)
   (call-interactively 'isearch-repeat-forward)
-  
+
   (when (string= my/last-isearch-dir 'backward)
     (call-interactively 'isearch-repeat-forward))
   (setq my/last-isearch-dir 'forward))
@@ -3038,7 +3058,7 @@ Borrowed from mozc.el."
 (defun my/isearch-repeat-backward ()
   (interactive)
   (call-interactively 'isearch-repeat-backward)
-  
+
   (when (string= my/last-isearch-dir 'forward)
     (call-interactively 'isearch-repeat-backward))
   (setq my/last-isearch-dir 'backward))
@@ -3183,16 +3203,16 @@ Borrowed from mozc.el."
 		 ?g ?m ?l ?w ?y ?f ?u ?b ?x ?c ?v ?k ?p ?, ?.
 		 ;; Hard
 		 ?q ?\; ?j ?\/ ?z
-		 
+
 		 ;; Shifted
-		 
+
 		 ;; Easy
 		 ?A ?N ?E ?T ?O ?S ?H ?D
 		 ;; Med
 		 ?R ?I ?G ?M ?L ?W ?Y ?F ?U ?B ?X ?C ?V ?K ?P
 		 ;; Hard
 		 ?Q ?\: ?J ?\? ?Z
-		 
+
 		 ;; Digits
 		 ?7 ?4 ?8 ?3 ?9 ?2 ?0 ?1
 		 ))
@@ -3205,7 +3225,7 @@ Borrowed from mozc.el."
 (defun my/avy-goto-line-above-keep-horizontal-position (&optional arg)
   (interactive "p")
   (setq cursor-horizontal-pos (current-column))
-  
+
   ;; Fixes problem with goto-line and visual line mode
   (if (eq evil-state 'visual)
       (if (eq (evil-visual-type) 'line)
@@ -3215,19 +3235,19 @@ Borrowed from mozc.el."
     (progn
       (setq was-visual-line nil)
       (my/evil-normal-state arg)))
-  
+
   (avy-goto-line-above 2 t)
-  
+
   (if (eq was-visual-line t)
       (evil-visual-line))
-  
+
   (move-to-column cursor-horizontal-pos))
 
 ;; **** Below
 (defun my/avy-goto-line-below-keep-horizontal-position (&optional arg)
   (interactive "p")
   (setq cursor-horizontal-pos (current-column))
-  
+
   ;; Fixes problem with goto-line and visual line mode
   (if (eq evil-state 'visual)
       (if (eq (evil-visual-type) 'line)
@@ -3237,12 +3257,12 @@ Borrowed from mozc.el."
     (progn
       (setq was-visual-line nil)
       (my/evil-normal-state arg)))
-  
+
   (avy-goto-line-below 2)
-  
+
   (if (eq was-visual-line t)
       (evil-visual-line))
-  
+
   (move-to-column cursor-horizontal-pos))
 
 ;; *** Avy-goto-word
@@ -3250,7 +3270,7 @@ Borrowed from mozc.el."
   (interactive "p")
   (if (not (eq evil-state 'visual))
       (my/evil-normal-state arg))
-  
+
   (avy-goto-subword-0 t nil (line-beginning-position) (line-end-position)))
 
 ;; *** Avy-goto-subword-0
@@ -3329,14 +3349,14 @@ Borrowed from mozc.el."
 ;; (my/evil-normal-define-key "M-f" 'avy-goto-char-in-line)
 ;; (define-key my/leader-map (kbd "f") 'avy-goto-char-in-line)
 
-(my/evil-normal-define-key "M-w" 'my/avy-goto-word-0-in-line)
-(define-key my/leader-map (kbd "w") 'my/avy-goto-word-0-in-line)
+;;(my/evil-normal-define-key "M-w" 'my/avy-goto-word-0-in-line)
+;;(define-key my/leader-map (kbd "w") 'my/avy-goto-word-0-in-line)
 
-(my/evil-normal-define-key "M-g" 'avy-goto-char-2)
-(define-key my/leader-map (kbd "g") 'avy-goto-char-2)
-
-(my/evil-normal-define-key "M-g" 'avy-goto-char-2)
-(define-key my/leader-map (kbd "g") 'avy-goto-char-2)
+;;(my/evil-normal-define-key "M-g" 'avy-goto-char-2)
+;;(define-key my/leader-map (kbd "g") 'avy-goto-char-2)
+;;
+;;(my/evil-normal-define-key "M-g" 'avy-goto-char-2)
+;;(define-key my/leader-map (kbd "g") 'avy-goto-char-2)
 
 ;; (my/evil-normal-define-key "M-n" 'avy-goto-word-0-below)
 ;;   (define-key evil-normal-state-map (kbd "M-p") 'avy-goto-word-0-above)
@@ -3406,20 +3426,20 @@ Borrowed from mozc.el."
 (defun my/add-window-config ()
   (interactive)
   (setq my/selected-window-config (my/select-window-config "Add window config "))
-  
+
   (setq my/selected-window-config-position (my/get-selected-window-config-position my/selected-window-config))
-  
+
   (if (eq my/selected-window-config-position nil)
       (push (list my/selected-window-config (current-window-configuration)) my/window-configurations)
     (setf (nth my/selected-window-config-position my/window-configurations) (list my/selected-window-config (current-window-configuration))))
-  
+
   (my/update-current-window-config))
 
 (defun my/load-window-config ()
   (interactive)
   (setq my/selected-window-config (my/select-window-config "Load window config "))
   (set-window-configuration (nth 1 (nth (my/get-selected-window-config-position my/selected-window-config) my/window-configurations)))
-  
+
   (my/update-current-window-config))
 
 (defun my/delete-window-config ()
@@ -4037,10 +4057,10 @@ Borrowed from mozc.el."
 (setq lsp-ui-sideline-show-code-actions t
       ;; Errors i think
       lsp-ui-sideline-show-diagnostics nil
-      
+
       ;; someFunc :: IO ()
       lsp-ui-sideline-show-hover t
-      
+
       ;; [someFunc]
       lsp-ui-sideline-show-symbol t)
 
@@ -4338,7 +4358,7 @@ Borrowed from mozc.el."
   (lsp)
   (lsp-lens-mode)
   (push 'company-lsp company-backends)
-  
+
   (setq indent-tabs-mode t)
   (setq tab-width 4)
   (setq c-basic-offset 4)
@@ -4546,7 +4566,7 @@ Borrowed from mozc.el."
   (omnisharp-mode)
   (company-mode)
   (flycheck-mode)
-  
+
   (setq indent-tabs-mode nil)
   (setq c-syntactic-indentation t)
   (c-set-style "ellemtel")
@@ -4947,16 +4967,16 @@ Borrowed from mozc.el."
 (defun my/bind-eshell-keys ()
   (define-prefix-command 'my/eshell-mode-map)
   (evil-define-key 'normal eshell-mode-map (kbd (concat my/leader-map-key " a")) 'my/eshell-mode-map)
-  
+
   (evil-define-key 'normal eshell-mode-map (kbd "RET") 'eshell-send-input)
   (define-key eshell-mode-map [remap evil-ret] 'eshell-send-input)
-  
+
   (define-key my/eshell-mode-map (kbd "k") 'counsel-esh-history)
-  
+
   (evil-define-key 'normal eshell-mode-map (kbd "0") 'my/eshell-goto-beg-of-line)
 
   (evil-define-key '(normal insert visual replace) eshell-mode-map (kbd "C-c") 'eshell-kill-process)
-  
+
   (evil-define-key '(normal insert) eshell-mode-map (kbd "C-p") 'eshell-previous-matching-input-from-input)
   (evil-define-key '(normal insert) eshell-mode-map (kbd "C-n") 'eshell-next-matching-input-from-input))
 
@@ -5156,7 +5176,7 @@ Borrowed from mozc.el."
 (define-key key-translation-map (kbd "9") (kbd "C-="))
 (define-key key-translation-map (kbd "0") (kbd "C-="))
 
-;; ***** Set new number row 
+;; ***** Set new number row
 (define-key key-translation-map (kbd "M-d") (kbd "1"))
 (define-key key-translation-map (kbd "M-s") (kbd "2"))
 (define-key key-translation-map (kbd "M-t") (kbd "3"))
@@ -5182,16 +5202,16 @@ Borrowed from mozc.el."
 (define-key key-translation-map (kbd ")") (kbd "C-="))
 
 ;; ***** Set new keys
-(define-key key-translation-map (kbd "M-D") (kbd "!"))
-(define-key key-translation-map (kbd "M-S") (kbd "@"))
-(define-key key-translation-map (kbd "M-T") (kbd "#"))
-(define-key key-translation-map (kbd "M-N") (kbd "$"))
-(define-key key-translation-map (kbd "M-R") (kbd "%"))
-(define-key key-translation-map (kbd "M-I") (kbd "^"))
-(define-key key-translation-map (kbd "M-A") (kbd "&"))
-(define-key key-translation-map (kbd "M-E") (kbd "*"))
-(define-key key-translation-map (kbd "M-O") (kbd "("))
-(define-key key-translation-map (kbd "M-H") (kbd ")"))
+(define-key key-translation-map (kbd "M-z") (kbd "!"))
+(define-key key-translation-map (kbd "M-x") (kbd "@"))
+(define-key key-translation-map (kbd "M-c") (kbd "#"))
+(define-key key-translation-map (kbd "M-v") (kbd "$"))
+(define-key key-translation-map (kbd "M-j") (kbd "%"))
+(define-key key-translation-map (kbd "M-k") (kbd "^"))
+(define-key key-translation-map (kbd "M-.") (kbd "&"))
+(define-key key-translation-map (kbd "M-/") (kbd "*"))
+(define-key key-translation-map (kbd "M-p") (kbd "("))
+(define-key key-translation-map (kbd "M-,") (kbd ")"))
 
 ;; * nix
 ;; ** Direnv
@@ -5231,46 +5251,46 @@ Borrowed from mozc.el."
 	;; movement
 	([?\C-p] . [up])
 	([?\C-n] . [down])
-	
+
 	;; ([?\C-u] . [prior])
 	;; ([?\C-w] . [next])
 	([?\C-w] . [?\C-d])
-	
+
 	([?\C-s] . [?\C-f])
-	
+
 	([?\C-a] . [return])
 	([?\r] . [return])
-	
+
 	;;([?\C-e] . [?\C-[])
 	;; ([?\C-e] . [escape])
 	;; ([?\e] . [escape])
-	
+
 	([?\C-t] . [tab])
 	([?\t] . [tab])
-	
+
 	([?\C-g] . [escape])
 	;;([?\e] . [escape])
-	
+
 	;; Firefox hard-coded open url hotkey
 	;;([?\C-o] . [f6])
-	
+
 	;; Redo
 	([?\C-r] . [?\C-y])
 	;; Undo
 	([?\M-u] . [?\C-z])
-	
+
 	;; cut/paste.
 	([?\C-y] . [?\C-c])
 	([?\C-k] . [?\C-v])
-	
+
 	([?\M-f] . [?\C-å])
 	([?\M-u] . [?\C-ä])
 	([?\M-b] . [?\C-ö])
-	
+
 	([?\M-F] . [?\C-Å])
 	([?\M-U] . [?\C-Ä])
 	([?\M-B] . [?\C-Ö])
-	
+
 	([?\C-c] . [?\C-c])))
 
 (setq exwm-input-prefix-keys nil)
@@ -5487,10 +5507,10 @@ Borrowed from mozc.el."
     (straight-use-package 'exwm-firefox-core)
     (straight-use-package 'exwm-firefox-evil)
     (require 'exwm-firefox-evil)
-    
+
     ;; Auto enable exwm-firefox-evil-mode on all firefox buffers
     (add-hook 'exwm-manage-finish-hook 'exwm-firefox-evil-activate-if-firefox)
-    
+
     ;; Run firefox buffers in normal mode
     (add-hook 'exwm-firefox-evil-mode-hook 'exwm-firefox-evil-normal)))
 
@@ -5507,10 +5527,10 @@ Borrowed from mozc.el."
       (interactive)
       (exwm-input--fake-key ?f)
       (exwm-input-send-next-key 2))
-    
+
        ;;; Normal
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "f") 'my/exwm-firefox-evil-link-hint)
-    
+
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
@@ -5532,29 +5552,29 @@ Borrowed from mozc.el."
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "t") 'exwm-firefox-core-tab-new)
     ;;(evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "t") 'my/exwm-firefox-core-window-new)
-    
+
        ;;; Visual
     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up-select)
     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down-select)
-    
+
     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up-select)
     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down-select)
-    
+
     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down-select)
-    
+
     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "j") 'exwm-firefox-core-find-next)
     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "J") 'exwm-firefox-core-find-previous)
-    
+
     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
-    
+
        ;;; Insert
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up-select)
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down-select)
-    
+
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-u") 'exwm-firefox-core-half-page-up)
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
-    
+
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-f") '(lambda () (interactive) (my/exwm-fake-key "å")))
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-u") '(lambda () (interactive) (my/exwm-fake-key "ä")))
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-b") '(lambda () (interactive) (my/exwm-fake-key "ö")))
@@ -5562,7 +5582,7 @@ Borrowed from mozc.el."
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-F") '(lambda () (interactive) (my/exwm-fake-key "Å")))
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-U") '(lambda () (interactive) (my/exwm-fake-key "Ä")))
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-B") '(lambda () (interactive) (my/exwm-fake-key "Ö")))
-    
+
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-l") '(lambda () (interactive) (exwm-input--fake-key 'delete)))
@@ -5771,7 +5791,7 @@ Borrowed from mozc.el."
 				 (setq my/emms-has-init t)
 				 (require 'emms-setup)
 				 (require 'emms-player-mpd)
-				 
+
 				 (emms-all)
 				 ;; Disable name of playing track in modeline (time is kept though)
 				 (emms-mode-line-disable))))
@@ -5952,18 +5972,18 @@ Borrowed from mozc.el."
   "Takes a screenshot of a region selected by the user and asks for file path"
   (interactive)
   (when window-system
-    
+
     ;; Check if there is a directory called "images" in current dir, if so start read-file-name inside that directory
     (if(file-exists-p (concat default-directory "images/"))
 	(setq screenshot-base-path (concat default-directory "images/"))
       (setq screenshot-base-path default-directory))
-    
+
     ;; If screenshot path is not empty
     (call-process "import" nil nil nil ".newScreen.png")
-    
+
     ;; Ask for path
     (setq screenshot-path (read-file-name "Screenshot file (.png already added) " screenshot-base-path))
-    
+
     (call-process "convert" nil nil nil ".newScreen.png" "-shave" "1x1" (concat screenshot-path ".png"))
     (call-process "rm" nil nil nil ".newScreen.png")))
 
@@ -6107,7 +6127,7 @@ Borrowed from mozc.el."
   (let ((list (my/gnus-gmane-subscribed-get)))
     (dotimes (i (+ 1 (length list)))
       (add-to-list 'gnus-newsrc-alist `(,(nth i list) 3 nil nil "nntp:news.gmane.org"))))
-  
+
   ;; Move the dummy entry to the top
   (setq gnus-newsrc-alist (delete '("dummy.group" 0 nil) gnus-newsrc-alist))
   ;; We don't need the dummy group?
@@ -6117,16 +6137,16 @@ Borrowed from mozc.el."
 ;; **** Topic setup
 (defun my/gnus-topic-setup ()
   "Hides non-relevant servers and puts them into categories. To show all servers, disable my/gnus-topic-mode"
-  
+
   ;; "Gnus" is the root folder, and there are three mail accounts, "misc", "hotmail", "gmail"
   (setq gnus-topic-topology '
 	(("Gnus" visible)
-	 
+
 	 ;; Mail
 	 (("Mail" visible)
 	  (("gmail" visible))
 	  (("gmail-main" visible)))
-	 
+
 	 ;; News
 	 (("News" visible)
 	  (("Emacs" visible)
@@ -6134,7 +6154,7 @@ Borrowed from mozc.el."
 	  (("Fsharp" visible))
 	  (("Guile" visible))
 	  )))
-  
+
   (setq gnus-topic-alist `((("Gnus"))
 			   ;; Mail
 			   ("gmail-main"
@@ -6142,7 +6162,7 @@ Borrowed from mozc.el."
 			    "main-gmail/Sent"
 			    "main-gmail/Starred"
 			    "main-gmail/Trash")
-			   
+
 			   ;; News
 			   ,(append '("Emacs") my/gnus-gmane-subscribed-emacs)
 			   ,(append '("Emacs blogs") my/gnus-gmane-subscribed-emacs-blogs)
@@ -6180,7 +6200,7 @@ Borrowed from mozc.el."
 	       "%-5,5L"
 	       ;; Sender taken from header, leave -20,20 spacing
 	       "%-20,20n"
-	       
+
 	       "\t"
 	       ;; Reply tree
 	       "%B"
@@ -6529,7 +6549,7 @@ Borrowed from mozc.el."
 (if (file-exists-p "/proc/cpuinfo") (progn
 				      (define-prefix-command 'my/cpu-info-map)
 				      (define-key my/hardware-info-map (kbd "c") 'my/cpu-info-map)
-				      
+
 				      (defun my/unix-cpu-get-clock()
 					(interactive)
 					(shell-command "grep \"cpu MHz\" /proc/cpuinfo"))
@@ -6545,7 +6565,7 @@ Borrowed from mozc.el."
 					(interactive)
 					;; Linux
 					(shell-command "grep \"cores\" /proc/cpuinfo"))
-				      
+
 				      (define-key my/cpu-info-map (kbd "c") 'my/unix-cpu-get-core-count)
 				      ;; Flags
 				      (defun my/unix-cpu-get-flags()
@@ -6618,7 +6638,7 @@ Borrowed from mozc.el."
   (let* ((gc-cons-threshold 80000000)
 	 ;; Load data from cached search corresponding to this default-directory
 	 (search (nth 1
-		      (cl-find-if (lambda (list) 
+		      (cl-find-if (lambda (list)
 				    (file-in-directory-p
 				     default-directory (nth 0 list)))
 				  my/find-scan-cache))))
@@ -6631,7 +6651,7 @@ Borrowed from mozc.el."
 		      ;; This is pretty slow because it's creating a new list
 		      ;;(map 'list (lambda (string) (substring string dir-length))
 		      search
-		      
+
 		      ;; Predicate is slightly faster than using seq-filter somehow
 		      :predicate (lambda (string) (s-starts-with-p dir string))
 		      ;; We can't have initial input because if the path contains capital letters, we have to use capital letters in the search. Also if we just lower case the search we will get a bad path if we choose to use capital letters in the search
@@ -6646,7 +6666,7 @@ Borrowed from mozc.el."
 
 ;; * Spelling
 (define-prefix-command 'my/spell-map)
-(define-key my/leader-map (kbd "S") 'my/spell-map)
+;;(define-key my/leader-map (kbd "S") 'my/spell-map)
 
 (define-key my/spell-map (kbd "d") 'ispell-change-dictionary)
 (define-key my/spell-map (kbd "s") 'flyspell-mode)
@@ -6753,17 +6773,17 @@ Borrowed from mozc.el."
   ;; :pre (setq exwm-input-line-mode-passthrough t)
   ;; :post (setq exwm-input-line-mode-passthrough nil))
   "movement"
-  
+
   ;; Move focus
   ("p" evil-window-up nil)
   ("n" evil-window-down nil)
   ("l" evil-window-right nil)
   ("h" evil-window-left nil)
-  
+
   ;; Move focus to edge window
   ;; Frame border window
   ("|" evil-window-mru nil)
-  
+
   ;; Move window
   ;; Move up
   ("P" evil-move-very-top nil)
@@ -6773,12 +6793,12 @@ Borrowed from mozc.el."
   ("L" evil-move-far-right nil)
   ;; Move left
   ("H" evil-move-far-left nil)
-  
+
   ;; Switch monitor right
   ("M-l" my/switch-monitor-right nil)
   ;; Switch monitor left
   ("M-h" my/switch-monitor-left nil)
-  
+
   ;; Resize window
   ;; Resize up
   ("C-p" (evil-window-increase-height 10) nil)
@@ -6797,66 +6817,66 @@ Borrowed from mozc.el."
   ("C-S-l" (evil-window-decrease-width 40) nil)
   ;; Resize left
   ("C-S-h" (evil-window-increase-width 40) nil)
-  
-  
+
+
   ;; Split
   ("o" my/window-split-right nil)
   ("O" my/window-split-left nil)
   ("v" my/window-split-down nil)
   ("V" my/window-split-up nil)
-  
+
   ("i" my/clone-indirect-buffer-name nil)
   ("I" my/clone-indirect-buffer-name-other-window nil)
-  
+
   ;; Search
   ("C-s" swiper-all nil)
-  
+
   ;; Close window
   ("s" delete-window nil)
   ;; Focus on window
   ("d" my/delete-other-windows nil)
-  
+
   ;; minimize window
   ("S" (lambda () (interactive) (evil-window-increase-height 1000) (evil-window-increase-width 1000)) nil)
   ;; maximize window
   ("D" (lambda () (interactive) (evil-window-decrease-height 1000) (evil-window-decrease-width 1000)) nil)
-  
+
   ;; Buffer management
   ;; Find file
   ("e" counsel-find-file nil)
   ("E" my/dired-curr-dir nil)
   ("M-e" my/change-default-directory nil)
-  
+
   ;; Find
   ("f" my/find nil)
   ("F" my/counsel-ag nil)
-  
+
   ;; Switch buffer
   ("a" ivy-switch-buffer nil)
-  
+
   ("A" my/switch-to-last-buffer nil)
-  
+
   ;; Kill buffer
   ("k" kill-current-buffer nil)
-  
+
   ;; Move around in buffer
   ("C-u" evil-scroll-up nil)
   ("C-w" evil-scroll-down nil)
-  
+
   ("y" counsel-linux-app nil)
-  
+
   ;; Switch window configuration
   ("t" my/load-window-config nil)
   ("T" my/add-window-config nil)
   ("C-t" my/delete-window-config nil)
-  
+
   ("b" counsel-bookmark nil)
   ("B" my/add-bookmark nil)
   ("C-b" my/delete-bookmark nil)
-  
+
   ("u" winner-undo nil)
   ("C-r" winner-redo nil)
-  
+
   ("R" rename-buffer nil))
 
 ;;  ("SPC" my/leader-map nil)
@@ -6868,45 +6888,45 @@ Borrowed from mozc.el."
 (defhydra my/lispy-hydra (:hint nil
 				:color red)
   "lisp"
-  
+
   ("H" (call-interactively #'lispy-backward nil))
   ("L" (call-interactively #'lispy-flow nil))
-  
+
   ("C-l" (call-interactively #'lispy-knight-down) nil)
   ("C-h" (call-interactively #'lispy-knight-up) nil)
-  
+
   ("l" (call-interactively #'lispy-right) nil)
   ("h" (call-interactively #'lispy-left) nil)
-  
+
   ;;   ("l" (call-interactively #'down-list) nil)
   ;;   ("h" (call-interactively #'up-list) nil)
-  
+
   ("N" (call-interactively #'lispy-raise) nil)
   ("P" (call-interactively #'lispy-convolute) nil)
-  
+
   ("n" (call-interactively #'lispy-down) nil)
   ("p" (call-interactively #'lispy-up nil))
-  
+
   ("u" (call-interactively #'undo nil))
   ;;("u" (call-interactively #'lispy-back nil))
-  
+
   ("e" (call-interactively #'my/auto-eval nil))
-  
+
   ("o" (call-interactively #'lispy-different nil))
   ("d" (call-interactively #'lispy-kill nil))
-  
+
   ;;("y" (call-interactively #'lispy-occur nil))
-  
-  
+
+
   (">" (call-interactively #'lispy-slurp nil))
   ("<" (call-interactively #'lispy-barf nil))
   ("/" (call-interactively #'lispy-splice nil))
-  
+
   ;;  ("r" (call-interactively #'lispy-raise nil))
   ;;  ("R" (call-interactively #'lispy-raise-some nil))
-  
+
   ;;("+" (call-interactively #'lispy-join nil))
-  
+
   ;;  ("C" (call-interactively #'lispy-splice nil))
   ;;  ("X" (call-interactively #'lispy-splice nil))
   ;;  ("w" (call-interactively #'lispy-splice nil))
@@ -6916,7 +6936,7 @@ Borrowed from mozc.el."
   ;;  ("/" (call-interactively #'lispy-splice nil))
   ;;  ("/" (call-interactively #'lispy-splice nil))
   ;;  ("/" (call-interactively #'lispy-splice nil))
-  
+
   ("<escape>" nil nil))
 
 ;; ;; navigation
@@ -7313,7 +7333,7 @@ Borrowed from mozc.el."
 			     (my/prettify-outline-heading-lisp)
 			     (my/prettify-outline-heading-lisp-classic)
 			     ))
-    
+
     (_ (append
 	(my/prettify-comment)
 	my/generic-greek-symbols
@@ -7503,25 +7523,25 @@ Borrowed from mozc.el."
 	       (
 		;; Print if recursive editing
 		"%["
-		
+
 		;; Information bar
 		mode-line-mule-info
 		mode-line-client
-		
+
 		;; If buffer is modified
 		mode-line-modified
-		
+
 		;; Turns into @ when remote
 		mode-line-remote
-		
+
 		" "
-		
+
 		;; Print current line number
 		;;"%l"
 		;;"%p"
 		;;(:eval (format "%d" (/ (window-start) 0.01 (point-max))))
 		;;"%p"
-		
+
 		;;"@"
 		;; Print total line number and buffer position
 		;; (:eval
@@ -7531,37 +7551,37 @@ Borrowed from mozc.el."
 		;; (let
 		;; ((point-in-buffer-percentage (floor (* (/ (float point-pos) line-number-count) 100))))
 		;; (concat (int-to-string point-in-buffer-percentage) "% ~" (int-to-string line-number-count)))))
-		
+
 		(:eval
 		 (int-to-string (count-lines (point-min) (point-max))))
-		
+
 		;;"%I"
-		
+
 		;; is narrowed
 		"%n"
 
 		;; Is loccur
 		(:eval (when loccur-mode
 			 " Loccur"))
-		
+
 		" | "
-		
+
 		;; Print error if any
 		"%e"
-		
+
 		;; Print mode
 		(:eval (when defining-kbd-macro
 			 (propertize
 			  "[MACRO] "
 			  'face 'my/mode-line-highlight)))
-		
-		
+
+
 		;; Print buffer name
 		"%b > "
-		
+
 		;; Print mode
 		"%m"
-		
+
 		;; Git branch and project name
 		(:eval
 		 (if (and (string= my/projectile-project-curr-buffer buffer-file-name) (not (string= my/projectile-project-name "-")))
@@ -7576,10 +7596,10 @@ Borrowed from mozc.el."
 				    "]"))
 		       my/projectile-project-last-name-cache)
 		   my/projectile-project-last-name-cache))
-		
-		
+
+
 		;;which-func-current
-		
+
 		;; (:eval
 		;; (let ((which-func (which-function)))
 		;; (if which-func
@@ -7626,21 +7646,21 @@ Borrowed from mozc.el."
   (setq window-size-fixed t)
   (setq truncate-lines t)
   ;;(setq mode-line-format nil)
-  
+
   ;;  (if window-system
   ;;      ;; Change to mono face
   ;;      (face-remap-add-relative 'default :family my/mono-font)) ;;:height my/default-face-height))
-  
+
   ;; Offset by 10 pixels to make text fit
   (set-window-fringes (selected-window) 10 0)
-  
+
   ;; Disable char at end of line
   (set-display-table-slot standard-display-table 0 ?\ )
-  
+
   ;; Disable cursor
   (setq cursor-type nil)
   (setq cursor-in-non-selected-windows nil)
-  
+
   (set-window-dedicated-p my/lv-line-window t)
   (set-window-parameter my/lv-line-window 'no-other-window t))
 
@@ -7948,7 +7968,7 @@ Borrowed from mozc.el."
 (if (and (file-exists-p "/proc/meminfo")
 	 (progn
 	   (with-temp-buffer
-	     
+
 	     (insert-file-contents "/proc/meminfo")
 	     (setq my/mem-string (buffer-string))
 	     (string-match "MemAvailable:.*\s" my/mem-string))))
@@ -7962,10 +7982,10 @@ Borrowed from mozc.el."
   (with-temp-buffer
     (insert-file-contents "/proc/meminfo")
     (setq my/mem-string (buffer-string))
-    
+
     (string-match "MemAvailable:.*\s" my/mem-string)
     (setq my/mem-string (match-string 0 my/mem-string))
-    
+
     ;; Default returns kb, *1000 to get it to bytes
     (setq my/available-mem (* 1000(string-to-number (substring my/mem-string (string-match "[0-9]" my/mem-string) -1))))
     (setq my/available-mem-formatted (my/file-size-human-readable my/available-mem nil t))))
@@ -8038,24 +8058,24 @@ Borrowed from mozc.el."
 		   (
 		    (:eval my/past-alerts)
 		    )))
-		 
+
 		 (format-mode-line
 		  (quote
 		   (
 		    "| "
-		    
+
 		    (:eval (if my/mode-line-show-GC-stats
 			       (concat
 				" GC: " (number-to-string (truncate gc-elapsed))
 				"(" (number-to-string gcs-done) ")"
 				" |"
 				)))
-		    
+
 		    (:eval (if my/mode-line-enable-network-traffic
 			       (concat
 				my/tx-delta-formatted " ↑ "
 				my/rx-delta-formatted " ↓ | ")))
-		    
+
 		    (:eval
 		     (when my/mode-line-enable-available-mem
 		       (concat
@@ -8065,34 +8085,34 @@ Borrowed from mozc.el."
 			    (propertize my/available-mem-formatted 'face `(:background "red"))
 			  my/available-mem-formatted)
 			" | ")))
-		    
+
 		    ;;(:eval (concat "Org:" org-mode-line-string))
 		    (:eval (if (boundp 'org-mode-line-string)
 			       (concat "Org:" org-mode-line-string " | ")))
 		    (:eval (if (not (eq battery-mode-line-string ""))
 			       (concat "BAT: " battery-mode-line-string "%%%   | ")))
-		    
+
 		    (:eval (if my/mode-line-enable-cpu-temp
 			       (concat " - " my/cpu-temp)))
-		    
+
 		    "C: "
 		    (:eval (number-to-string my/load-average))
-		    
+
 		    " |"
-		    
+
 		    (:eval (concat " Up: " my/uptime-total-time-formated))
-		    
+
 		    (:eval (if (not (string= my/gnus-unread-string ""))
 			       (concat " | "
 				       my/gnus-unread-string)))
-		    
-		    
+
+
 		    " | "
-		    
+
 		    (:eval my/time)
-		    
+
 		    " - "
-		    
+
 		    (:eval my/date)
 		    ))))))
 
@@ -8136,19 +8156,19 @@ Borrowed from mozc.el."
 	   ;; Don't change magit faces
 	   (if (not (string-match "magit" (symbol-name face)))
 	       (set-face-attribute face nil :foreground nil :background nil)))
-  
+
   (setq my/diff-added-color "#335533")
   (setq my/diff-added-hl-color (color-lighten-name "#335533" 20))
-  
+
   (setq my/diff-changed-color "#aaaa22")
   (setq my/diff-changed-hl-color (color-lighten-name "#aaaa22" 20))
-  
+
   (setq my/diff-removed-color "#553333")
   (setq my/diff-removed-hl-color (color-lighten-name "#553333" 20))
-  
+
   (setq my/diff-ancestor-color "#5f06b26ccd93")
   (setq my/diff-ancestor-hl-color (color-lighten-name "#5f06b26ccd93" 20))
-  
+
   (if window-system
       (progn
 	(setq my/mark-color my/diff-changed-color)
@@ -8158,7 +8178,7 @@ Borrowed from mozc.el."
 	(setq my/mark-color-4 (color-darken-name my/diff-changed-color 20))
 	(setq my/mark-color-5 (color-darken-name my/diff-changed-color 25))
 	(setq my/mark-color-6 (color-darken-name my/diff-changed-color 30))
-	
+
 	(setq my/foreground-color "#E6E1DC")
 	(setq my/foreground-color-1 (color-darken-name my/foreground-color 5))
 	(setq my/foreground-color-2 (color-darken-name my/foreground-color 10))
@@ -8166,15 +8186,15 @@ Borrowed from mozc.el."
 	(setq my/foreground-color-4 (color-darken-name my/foreground-color 20))
 	(setq my/foreground-color-5 (color-darken-name my/foreground-color 25))
 	(setq my/foreground-color-6 (color-darken-name my/foreground-color 30))
-	
+
 	(setq my/background-color "#232323")
 	(setq my/background-color-1 (color-lighten-name my/background-color 5))
 	(setq my/background-color-2 (color-lighten-name my/background-color 10))
 	(setq my/background-color-3 (color-lighten-name my/background-color 15))
 	(setq my/background-color-4 (color-lighten-name my/background-color 20)))
-    
+
     (setq my/mark-color "yellow")
-    
+
     (setq my/foreground-color "white")
     (setq my/foreground-color-1 "white")
     (setq my/foreground-color-2 "white")
@@ -8182,17 +8202,17 @@ Borrowed from mozc.el."
     (setq my/foreground-color-4 "white")
     (setq my/foreground-color-5 "white")
     (setq my/foreground-color-6 "white")
-    
+
     (setq my/background-color "black")
     (setq my/background-color-1 "black")
     (setq my/background-color-2 "black")
     (setq my/background-color-3 "black")
     (setq my/background-color-4 "black")
-    
+
     (setq my/diff-added-color "green")
     (setq my/diff-changed-color "yellow")
     (setq my/diff-removed-color "red"))
-  
+
 	 ;;; Emacs
   (set-face-attribute 'default nil :foreground my/foreground-color :background my/background-color)
   (set-face-attribute 'link nil :foreground my/background-color :background my/foreground-color)
@@ -8200,9 +8220,9 @@ Borrowed from mozc.el."
   (set-face-attribute 'region nil :foreground my/foreground-color :background my/mark-color)
   (set-face-attribute 'error nil :foreground "#c6350b" :background)
   (set-face-attribute 'warning nil :foreground "DarkOrange" :background)
-  
+
   ;; Syntax
-  
+
   ;;font-lock-builtin-face
   ;;  font-lock-comment-delimiter-face
   ;;  font-lock-comment-face
@@ -8218,18 +8238,18 @@ Borrowed from mozc.el."
   ;;  font-lock-type-face
   ;;  font-lock-variable-name-face
   ;;  font-lock-warning-face
-  
+
   (set-face-attribute 'font-lock-doc-face nil :foreground my/foreground-color :background my/background-color-4)
-  
+
   (set-face-attribute 'font-lock-comment-face nil :foreground (color-lighten-name my/background-color 30) :background my/background-color) ;;:height my/comment-face-height)
-  
+
   (my/set-face-to-default 'font-lock-string-face t)
-  
+
   (my/set-face-to-default 'font-lock-function-name-face t)
-  
+
   (require 'hl-line)
   (set-face-attribute 'hl-line nil :foreground my/foreground-color :background my/background-color-2 :underline nil)
-  
+
   (set-face-attribute 'outline-1 nil :foreground my/background-color :background my/foreground-color-6)
   (set-face-attribute 'outline-2 nil :foreground my/background-color :background my/foreground-color-6)
   (set-face-attribute 'outline-3 nil :foreground my/background-color :background my/foreground-color-6)
@@ -8246,43 +8266,43 @@ Borrowed from mozc.el."
   (setq evil-insert-state-cursor '("orange" box))
   (setq evil-replace-state-cursor '("green" box))
   (setq evil-operator-state-cursor '("white" hollow))
-  
+
   ;; On-screen
   ;;(set-face-attribute 'on-screen-shadow nil :foreground nil :background (color-lighten-name my/background-color 2))
   ;;(set-face-attribute 'on-screen-fringe nil :foreground my/foreground-color :background my/background-color)
-  
+
   ;; Hl current line
   ;; Underlines part of current line
   ;;(set-face-attribute 'hl-line nil :foreground my/foreground-color :background nil :underline t)
-  
+
 	 ;;;  Org
   ;; =make this bold=
   (set-face-attribute 'org-verbatim nil :weight 'bold)
   (set-face-attribute 'org-code nil)
-  
+
   (set-face-attribute 'org-quote nil :slant 'italic)
-  
+
   (set-face-attribute 'org-mode-line-clock nil :foreground my/foreground-color :background my/foreground-color :height 'unspecified)
-  
+
   (set-face-attribute 'org-mode-line-clock-overrun nil :foreground my/foreground-color :background "red" :height 'unspecified)
-  
+
   (set-face-attribute 'org-agenda-filter-effort nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
-  
+
   (set-face-attribute 'org-agenda-filter-regexp nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
-  
+
   (set-face-attribute 'org-agenda-filter-tags nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
-  
+
   (set-face-attribute 'org-agenda-filter-category nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
-  
+
 	 ;;; Diff
   (set-face-attribute 'diff-added nil  :background my/diff-added-color)
   (set-face-attribute 'diff-changed nil :background my/diff-changed-color)
   (set-face-attribute 'diff-removed nil :background my/diff-removed-color)
-  
+
   (set-face-attribute 'diff-refine-added nil  :background my/diff-added-hl-color)
   (set-face-attribute 'diff-refine-changed nil :background my/diff-changed-hl-color)
   (set-face-attribute 'diff-refine-removed nil :background my/diff-removed-hl-color)
-  
+
        ;;; Ediff
   (set-face-attribute 'ediff-current-diff-A nil :background my/diff-removed-color)
   (set-face-attribute 'ediff-current-diff-Ancestor nil :background my/diff-ancestor-color)
@@ -8300,67 +8320,69 @@ Borrowed from mozc.el."
   (set-face-attribute 'ediff-odd-diff-Ancestor nil :background (color-darken-name my/diff-ancestor-color 50))
   (set-face-attribute 'ediff-odd-diff-B nil :background (color-darken-name my/diff-added-color 20))
   (set-face-attribute 'ediff-odd-diff-C nil :background (color-darken-name my/diff-changed-color 20))
-  
+
      ;;;  Show-paren
   (set-face-attribute 'show-paren-match nil :background my/background-color :foreground my/foreground-color)
   (set-face-attribute 'show-paren-match-expression nil :background my/foreground-color :foreground my/background-color)
   (set-face-attribute 'my/show-paren-offscreen-face nil :inherit 'highlight)
-  
+
      ;;; Wgrep
   (set-face-attribute 'wgrep-file-face nil :background my/foreground-color-6 :foreground my/background-color)
-  
+
      ;;; Ivy grep
   (set-face-attribute 'ivy-grep-info nil :background my/foreground-color-6 :foreground my/background-color)
-  
+
 	 ;;; Symbol overlay
   (if window-system
       (set-face-attribute 'symbol-overlay-default-face nil :foreground my/foreground-color :background my/mark-color-5))
-  
+
 	 ;;; Dired
   (set-face-attribute 'dired-directory nil :foreground my/background-color :background my/foreground-color)
   (my/set-face-to-default 'dired-perm-write 't)
-  
+
 	 ;;; Spray
   ;;  (set-face-attribute 'spray-accent-face nil :foreground "red" :background my/background-color)
   (set-face-attribute 'spray-accent-face nil :foreground my/foreground-color :background my/background-color :underline t)
-  
+
 	 ;;; Isearch
   (set-face-attribute 'isearch nil :foreground my/background-color :background my/foreground-color)
   (set-face-attribute 'lazy-highlight nil :foreground my/background-color :background my/foreground-color)
-  
+  ;;; Haskell
+  (set-face-attribute 'haskell-literate-comment-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
+
 	 ;;; Highlight thing
   ;;(set-face-attribute 'symbol-overlay nil :foreground my/foreground-color :background my/mark-color)
-  
+
 	 ;;; Company
   (set-face-attribute 'company-scrollbar-bg nil :background my/background-color)
   (set-face-attribute 'company-scrollbar-fg nil :background my/foreground-color)
-  
+
   ;; Selected entry
   (set-face-attribute 'company-tooltip-selection nil :background my/foreground-color :foreground my/background-color)
   ;; All unmatching text
   (set-face-attribute 'company-tooltip nil :foreground my/foreground-color :background my/background-color-1)
   ;; All matching text
   (set-face-attribute 'company-tooltip-common nil :foreground my/background-color :background my/foreground-color)
-  
+
 	 ;;; Popup menu
   ;; Selected entry
   (require 'popup)
   (set-face-attribute 'popup-menu-selection-face nil :foreground my/background-color :background my/foreground-color)
   ;; All unmatching text
   (set-face-attribute 'popup-menu-face nil :foreground my/foreground-color :background my/background-color-1)
-  
+
 	 ;;; Ivy
   ;; Ivy also uses "font-lock-doc-face" for the documentation
   (set-face-attribute 'ivy-current-match nil :foreground my/background-color :background my/foreground-color)
   (set-face-attribute 'ivy-cursor nil :foreground my/background-color :background my/foreground-color)
   (set-face-attribute 'ivy-minibuffer-match-highlight nil :foreground my/background-color :background my/foreground-color)
   ;;(set-face-attribute 'ivy-separator nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-  
+
   (set-face-attribute 'ivy-minibuffer-match-face-1 nil :foreground my/background-color :background my/foreground-color)
   (set-face-attribute 'ivy-minibuffer-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
   (set-face-attribute 'ivy-minibuffer-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
   (set-face-attribute 'ivy-minibuffer-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
-  
+
 ;;; Ivy rich
   (set-face-attribute 'my/ivy-rich-doc-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
   (set-face-attribute 'my/ivy-rich-switch-buffer-indicator-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
@@ -8369,29 +8391,29 @@ Borrowed from mozc.el."
   (set-face-attribute 'my/ivy-rich-switch-buffer-path-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
   (set-face-attribute 'my/ivy-rich-switch-buffer-project-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
   (set-face-attribute 'my/ivy-rich-find-file-symlink-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-  
+
 	 ;;; Swiper
   (set-face-attribute 'swiper-match-face-1 nil :foreground my/background-color :background my/foreground-color)
   (set-face-attribute 'swiper-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
   (set-face-attribute 'swiper-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
   (set-face-attribute 'swiper-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
-  
+
 	 ;;; Avy
   (set-face-attribute 'avy-lead-face nil :foreground my/background-color :background my/foreground-color-6)
   (set-face-attribute 'avy-lead-face-0 nil :foreground my/background-color :background my/foreground-color-2)
   (set-face-attribute 'avy-lead-face-1 nil :foreground my/background-color :background my/foreground-color-4)
   (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background my/foreground-color-6)
-  
+
 	 ;;; Eshell
   (require 'em-prompt)
   (if window-system
       (set-face-attribute 'eshell-prompt nil :foreground "purple" :background my/background-color)
     (set-face-attribute 'eshell-prompt nil :foreground "magenta" :background my/background-color))
-  
+
 	 ;;; Yascroll
   (set-face-attribute 'yascroll:thumb-fringe nil :background "slateblue" :foreground "slateblue")
   (set-face-attribute 'yascroll:thumb-text-area nil :background "slateblue")
-  
+
 	 ;;; Term
   (set-face-attribute 'term-color-black nil :foreground "black" :background "black")
   (set-face-attribute 'term-color-blue nil :foreground "blue" :background "blue")
@@ -8401,11 +8423,11 @@ Borrowed from mozc.el."
   (set-face-attribute 'term-color-red nil :foreground "red" :background "red")
   (set-face-attribute 'term-color-white nil :foreground "white" :background "white")
   (set-face-attribute 'term-color-yellow nil :foreground "yellow" :background "yellow")
-  
+
 	 ;;; Litable
   ;;  (set-face-attribute 'litable-result-face nil :foreground my/foreground-color :background my/background-color :weight 'bold)
   ;;  (set-face-attribute 'litable-substitution-face nil :foreground my/foreground-color :background my/background-color :weight 'bold)
-  
+
 	 ;;; Evil-goggles
 	 ;;;; 2 color approach
   ;; (set-face-attribute 'evil-goggles-change-face nil :foreground my/background-color :background my/foreground-color)
@@ -8421,20 +8443,20 @@ Borrowed from mozc.el."
   ;; (set-face-attribute 'evil-goggles-shift-face nil :foreground my/background-color :background my/foreground-color)
   ;; (set-face-attribute 'evil-goggles-surround-face nil :foreground my/background-color :background my/foreground-color)
   ;; (set-face-attribute 'evil-goggles-yank-face nil :foreground my/background-color :background my/foreground-color)
-  
-  
+
+
   ;; (set-face-attribute 'diff-added nil  :background "green")
   ;; (set-face-attribute 'diff-changed nil :background "yellow")
   ;; (set-face-attribute 'diff-removed nil :background "red")
-  
+
   ;; Diff-hl
   (set-face-attribute 'diff-hl-change nil :background (face-attribute 'diff-changed :background))
-  
+
   ;; Paren highlight
   ;;(set-face-attribute 'show-paren-match nil :foreground my/foreground-color :background my/mark-color-5)
   (set-face-attribute 'show-paren-match nil :foreground my/background-color :background my/foreground-color)
   (set-face-attribute 'show-paren-mismatch nil :background "red")
-  
+
    ;;; Mode line
   (set-face-attribute 'header-line nil
 		      :foreground my/foreground-color
@@ -8443,7 +8465,7 @@ Borrowed from mozc.el."
   (set-face-attribute 'my/mode-line-highlight nil
 		      :foreground "#063000"
 		      :background my/foreground-color)
-  
+
   ;; Mode line separator
   ;; Set mode line height
   ;;  (set-face-attribute 'mode-line nil
@@ -8453,17 +8475,17 @@ Borrowed from mozc.el."
   ;;  (set-face-attribute 'mode-line-inactive nil
   ;;                      :foreground my/foreground-color
   ;;                      :background my/background-color)
-  
+
   ;; Highlight faces
   ;;(highlight-indent-guides-auto-set-faces)
-  
+
      ;;; lsp
   (my/set-face-to-default 'lsp-ui-doc-background nil)
   ;;(set-face-attribute 'lsp-ui-doc-background nil :foreground my/foreground-color :background my/background-color)
      ;;;; Doc
   (set-face-attribute 'lsp-ui-doc-header nil :foreground my/foreground-color :background my/background-color-4)
   (set-face-attribute 'lsp-ui-doc-url nil :foreground my/background-color :background my/foreground-color)
-  
+
      ;;;; Sideline
   (my/set-face-to-default 'lsp-ui-peek-filename nil)
   (my/set-face-to-default 'lsp-ui-peek-footer nil)
@@ -8475,7 +8497,7 @@ Borrowed from mozc.el."
   (my/set-face-to-default 'lsp-ui-peek-selection nil)
   (my/set-face-to-default 'lsp-ui-sideline-code-action nil)
   (my/set-face-to-default 'lsp-ui-sideline-current-symbol nil)
-  
+
   ;;  (set-face-attribute 'lsp-ui-peek-filename nil :foreground my/foreground-color :background my/background-color)
   ;;  (set-face-attribute 'lsp-ui-peek-footer nil :foreground my/foreground-color :background my/background-color)
   ;;  (set-face-attribute 'lsp-ui-peek-header nil :foreground my/foreground-color :background my/background-color)
@@ -8486,11 +8508,11 @@ Borrowed from mozc.el."
   ;;  (set-face-attribute 'lsp-ui-peek-selection nil :foreground my/foreground-color :background my/background-color)
   ;;  (set-face-attribute 'lsp-ui-sideline-code-action nil :foreground my/foreground-color :background my/background-color)
   ;;  (set-face-attribute 'lsp-ui-sideline-current-symbol nil :foreground my/foreground-color :background my/background-color)
-  
+
   (set-face-attribute 'lsp-ui-sideline-global nil :foreground nil :background nil)
   (set-face-attribute 'lsp-ui-sideline-symbol nil :foreground my/background-color :background my/foreground-color)
   (set-face-attribute 'lsp-ui-sideline-symbol-info nil :foreground my/mark-color :background my/background-color)
-  
+
      ;;;; Lens
   (set-face-attribute 'lsp-lens-face nil :foreground my/foreground-color :background my/mark-color-4 :height 0.8))
 
