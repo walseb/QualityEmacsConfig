@@ -680,11 +680,12 @@
 	    (if (eq flavor 'iec) "iB" ""))))
 
 ;; ** Set font
-(defun my/set-default-font ()
+(defun my/set-default-font (font)
   (if window-system
       (set-face-attribute 'default nil
 			  ;;:family font
-			  :fontset "fontset-default"
+			  :font font
+			  ;;:fontset "fontset-default"
 			  :height my/default-face-height)))
 
 ;; ** Overlay
@@ -742,7 +743,7 @@
   (set-fontset-font "fontset-default" 'latin-iso8859-1
 		    my/font)
 
-  (my/set-default-font))
+  (my/set-default-font my/font))
 
 ;; * Startup processes
 ;; ** Prevent async command from opening new window
@@ -1163,11 +1164,6 @@ Borrowed from mozc.el."
 			      (backward-char)
 			      (call-interactively #'delete-char)))
 
-;; *** Rebind end and beg of line
-(my/evil-universal-define-key "M-l" #'evil-end-of-line)
-(my/evil-universal-define-key "M-m" #'my/go-to-middle-of-line)
-(my/evil-universal-define-key "M-g" #'evil-beginning-of-line)
-
 ;; * Backups
 ;; Stop emacs from creating backup files on every save
 (setq make-backup-files nil)
@@ -1229,6 +1225,12 @@ Borrowed from mozc.el."
 
 ;; ** Delete per-session backups on startup
 (async-shell-command (concat "rm " my/backup-per-session-directory "*" ))
+
+;; ** Undo
+;; *** Disable undo warning buffer
+;; There is a warning window that pops up if you have made too many changes to a buffer, this might stop long macros, so stop that window from popping up
+(require 'warnings)
+(add-to-list 'warning-suppress-types '(undo discard-info))
 
 ;; ** Undo tree
 (straight-use-package 'undo-tree)
@@ -2346,9 +2348,6 @@ Borrowed from mozc.el."
 (set-face-attribute 'outshine-level-7 nil :inherit 'outline-7) ;;:height my/org-level-7-height)
 (set-face-attribute 'outshine-level-8 nil :inherit 'outline-8) ;;:height my/org-level-8-height)
 
-;; ** Java outline
-;; (setq outline-regexp "\\(?:\\([ \t]*.*\\(class\\|interface\\)[ \t]+[a-zA-Z0-9_]+[ \t\n]*\\({\\|extends\\|implements\\)\\)\\|[ \t]*\\(public\\|private\\|static\\|final\\|native\\|synchronized\\|transient\\|volatile\\|strictfp\\| \\|\t\\)*[ \t]+\\(\\([a-zA-Z0-9_]\\|\\( *\t*< *\t*\\)\\|\\( *\t*> *\t*\\)\\|\\( *\t*, *\t*\\)\\|\\( *\t*\\[ *\t*\\)\\|\\(]\\)\\)+\\)[ \t]+[a-zA-Z0-9_]+[ \t]*(\\(.*\\))[ \t]*\\(throws[ \t]+\\([a-zA-Z0-9_, \t\n]*\\)\\)?[ \t\n]*{\\)" )
-
 ;; ** Narrowing
 (define-prefix-command 'my/narrow-map)
 (define-key my/leader-map (kbd "n") 'my/narrow-map)
@@ -2451,46 +2450,6 @@ Borrowed from mozc.el."
 (setq yafolding-ellipsis-content my/fold-ellipsis)
 (setq yafolding-show-fringe-marks nil)
 
-;; *** Origami
-;; (straight-use-package 'origami)
-
-;; (global-origami-mode)
-
-;; (setq origami-show-fold-header t)
-
-;; **** Visuals
-;; (setq origami-fold-replacement my/fold-ellipsis)
-
-;;   (my/evil-normal-define-key "g C-o" 'my/code-fold-show)
-
-;;   (my/evil-normal-define-key "g C-a" 'my/code-fold-hide-level)
-;;   (my/evil-normal-define-key "g C-A" 'my/code-fold-show-all)
-
-;;   (my/evil-normal-define-key "g C-h" 'my/code-fold-hide)
-
-;;   (defun my/code-fold-show ()
-;;     (interactive)
-;;     (if hs-minor-mode
-;;         (hs-show-block)
-;;       (yafolding-show-element)))
-
-;;   (defun my/code-fold-show-all ()
-;;     (interactive)
-;;     (if hs-minor-mode
-;;         (hs-show-all)
-;;       (yafolding-show-all)))
-
-;;   (defun my/code-fold-hide-level ()
-;;     (interactive)
-;;     (if hs-minor-mode
-;;         (call-interactively 'hs-hide-level)
-;;       (yafolding-hide-all)))
-
-;;   (defun my/code-fold-hide ()
-;;     (interactive)
-;;     (if hs-minor-mode
-;;         (hs-hide-block)
-;;       (yafolding-hide-element)))
 ;; * Completion
 ;; ** Ivy
 (straight-use-package 'ivy)
@@ -2643,7 +2602,7 @@ Borrowed from mozc.el."
 (global-set-key (kbd "<f2> u") 'counsel-unicode-char)
 
 (define-key my/leader-map (kbd "k") 'counsel-yank-pop)
-;;(global-set-key (kbd "C-k") 'counsel-yank-pop)
+(global-set-key (kbd "M-k") 'counsel-yank-pop)
 
 ;; ** Counsel flycheck
 ;;   https://github.com/nathankot/dotemacs/blob/master/init.el
@@ -5202,16 +5161,16 @@ Borrowed from mozc.el."
 (define-key key-translation-map (kbd ")") (kbd "C-="))
 
 ;; ***** Set new keys
-(define-key key-translation-map (kbd "M-z") (kbd "!"))
-(define-key key-translation-map (kbd "M-x") (kbd "@"))
-(define-key key-translation-map (kbd "M-c") (kbd "#"))
-(define-key key-translation-map (kbd "M-v") (kbd "$"))
-(define-key key-translation-map (kbd "M-j") (kbd "%"))
-(define-key key-translation-map (kbd "M-k") (kbd "^"))
-(define-key key-translation-map (kbd "M-.") (kbd "&"))
-(define-key key-translation-map (kbd "M-/") (kbd "*"))
-(define-key key-translation-map (kbd "M-p") (kbd "("))
-(define-key key-translation-map (kbd "M-,") (kbd ")"))
+(define-key key-translation-map (kbd "M-q") (kbd "!"))
+(define-key key-translation-map (kbd "M-g") (kbd "@"))
+(define-key key-translation-map (kbd "M-m") (kbd "#"))
+(define-key key-translation-map (kbd "M-l") (kbd "$"))
+(define-key key-translation-map (kbd "M-w") (kbd "%"))
+(define-key key-translation-map (kbd "M-y") (kbd "^"))
+(define-key key-translation-map (kbd "M-b") (kbd "&"))
+(define-key key-translation-map (kbd "M-;") (kbd "*"))
+(define-key key-translation-map (kbd "M-f") (kbd "("))
+(define-key key-translation-map (kbd "M-u") (kbd ")"))
 
 ;; * nix
 ;; ** Direnv
