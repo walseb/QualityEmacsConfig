@@ -6,6 +6,44 @@
 ;; *** All optional
 ;; =msbuild dotnet-sdk godot-mono guile fsharp ghc ghc-static=
 
+;; *** Firefox
+;; **** Plugins
+;; https://addons.mozilla.org/en-US/firefox/addon/plasma-integration/
+;;
+;; https://addons.mozilla.org/en-US/firefox/addon/yet-another-hints-extension/
+;; OR
+;; https://addons.mozilla.org/en-US/firefox/addon/vim-vixen/
+
+;; ***** Vim vixen config
+;; #+begin_src example
+;; {
+;;   "keymaps": {
+;;     "<C-m>": { "type": "follow.start", "newTab": false },
+;;     "<C-j>": { "type": "follow.start", "newTab": true }
+;;   },
+;;   "search": {
+;;     "default": "google",
+;;     "engines": {
+;;       "google": "https://google.com/search?q={}",
+;;       "yahoo": "https://search.yahoo.com/search?p={}",
+;;       "bing": "https://www.bing.com/search?q={}",
+;;       "duckduckgo": "https://duckduckgo.com/?q={}",
+;;       "twitter": "https://twitter.com/search?q={}",
+;;       "wikipedia": "https://en.wikipedia.org/w/index.php?search={}"
+;;     }
+;;   },
+;;   "properties": {
+;;     "hintchars": "anetoshdirgmlwyfubxcvkp,.q;j/z",
+;;     "smoothscroll": false,
+;;     "complete": "sbh"
+;;   },
+;;   "blacklist": [
+;;   ]
+;; }#+end_src
+
+;; **** System packages
+;; plasma-browser-integration
+
 ;; *** UTF-8 support
 ;; =ttf-dejavu= fills in the gaps where opensans doesn't have the character
 
@@ -310,10 +348,32 @@
 ;; #+end_src
 
 ;; ** Firefox
-;; *** Link-hint
-;; There was a great and fast plugin for this somewhere
+;; *** Tabs
+;; http://doc.rix.si/cce/cce-browsers.html
 
-;; *** Always create window instead of tab
+(require 'dbus)
+;;(require 'dash)
+
+(defun my/browser-activate-tabs-cb (dbus ivy-hash choice)
+  (funcall dbus "Activate" :int32 (truncate (string-to-number (gethash choice ivy-hash)))))
+
+(defun my/browser-activate-tab ()
+  "Activate a browser tab using Ivy. Requires plasma-browser integration"
+  (interactive)
+  (let ((ivy-hash (make-hash-table :test 'equal))
+	(dbus (apply-partially 'dbus-call-method :session
+			       "org.kde.plasma.browser_integration" "/TabsRunner"
+			       "org.kde.plasma.browser_integration.TabsRunner")))
+    (let ((cb (-partial #'my/browser-activate-tabs-cb dbus ivy-hash))
+	  (res (funcall dbus "GetTabs")))
+      (mapc
+       (lambda (obj)
+	 (let ((id (number-to-string (car (car (alist-get "id" (car obj) nil nil #'equal)))))
+	       (title (car (car (alist-get "title" (car obj) nil nil #'equal)))))
+	   (puthash title id ivy-hash)))
+       res)
+      (ivy-read "Activate tab: " ivy-hash :action cb))))
+
 ;; ** Bookmarks
 ;; https://www.reddit.com/r/emacs/comments/9bly3d/linkmarksel_use_orgmode_links_for_bookmarks/
 ;; https://www.emacswiki.org/emacs/BookMarks
@@ -466,6 +526,8 @@
 ;; ** Optimize number key symbol placement
 ;; ** Fix meta keys
 ;; *** my/switch-monitor
+
+;; ** Narrow to paren
 
 ;; * First
 ;; Things to do first
@@ -628,7 +690,11 @@
 (defun my/exwm-fake-key (key)
   "Key is a string"
   (interactive)
-  (exwm-input--fake-key (string-to-char key)))
+  (exwm-input--fake-key
+   ;; (string-to-char
+   key
+   ;; )
+   ))
 
 ;; ** Fold ellipsis
 (defvar my/fold-ellipsis)
@@ -2652,6 +2718,8 @@ Borrowed from mozc.el."
 (global-set-key (kbd "C-s") 'my/use-swiper-or-grep)
 (global-set-key (kbd "C-s") 'my/use-swiper-or-grep)
 ;; (global-set-key (kbd "M-s") (lambda () (interactive) (my/use-swiper-or-grep nil t)))
+(define-key swiper-map (kbd "M-j") 'swiper-query-replace)
+
 
 ;;  (setq swiper-use-visual-line t)
 
@@ -2821,7 +2889,7 @@ Borrowed from mozc.el."
       (let ((win (display-buffer doc-buffer t)))
 	(set-window-start win (if start start (point-min)))))))
 
-(define-key company-active-map (kbd "M-o") 'my/company-show-doc-buffer-keep-open)
+(define-key company-active-map (kbd "C-S-h") 'my/company-show-doc-buffer-keep-open)
 
 ;; *** Company-show-numbers but with letters
 ;; Need to implement
@@ -3861,7 +3929,7 @@ Borrowed from mozc.el."
 ;; *** Auto eval
 (defun my/auto-eval ()
   (interactive)
-  (if (eq evil-state 'visual)
+  (if (string= evil-state 'visual)
       (my/auto-eval-region)
     (pcase major-mode
       ;; Silent result
@@ -3887,9 +3955,12 @@ Borrowed from mozc.el."
     ('c++-mode (cling-send-region (point) (mark)))
     ('csharp-mode (my/csharp-run-repl))
     ('haskell-mode (haskell-interactive-copy-to-prompt))
-    (_ (eros--eval-overlay
-	(eval-region (point) (mark) t)
-	(point)))))
+    (_
+     ;; eval-region doesn't return anything, just prints to the minibuffer so eros can't be used here
+     ;;(eros--eval-overlay
+     (eval-region (mark) (point) t)
+     ;;(point))
+     )))
 
 (defun my/auto-eval-buffer ()
   (interactive)
@@ -4083,8 +4154,8 @@ Borrowed from mozc.el."
 	(progn
 	  (my/backward-sexp)
 	  (if (save-match-data (looking-at "#;"))
-	      (+ (point) 2)
-	    (point)))
+  (+ (point) 2)
+  (point)))
       (scan-error (user-error "There isn't a complete s-expression before point")))))
 
 ;; *** Emacs-lisp
@@ -4451,6 +4522,7 @@ Borrowed from mozc.el."
   (interactive)
   (pcase major-mode
     ('csharp-mode (omnisharp-code-format-entire-file))
+    ('nix-mode (nix-mode-format))
     (_ ())))
 
 (defun my/auto-format-region ()
@@ -4952,22 +5024,22 @@ Borrowed from mozc.el."
 
 ;; *** Language specific symbols
 ;; **** Lower
-(my/evil-emacs-define-key "M-f" '(lambda () (interactive) (my/exwm-fake-key "å")))
-(my/evil-emacs-define-key "M-u" '(lambda () (interactive) (my/exwm-fake-key "ä")))
-(my/evil-emacs-define-key "M-b" '(lambda () (interactive) (my/exwm-fake-key "ö")))
+;; (my/evil-emacs-define-key "M-p" '(lambda () (interactive) (my/exwm-fake-key "å")))
+;; (my/evil-emacs-define-key "M-," '(lambda () (interactive) (my/exwm-fake-key "ä")))
+;; (my/evil-emacs-define-key "M-." '(lambda () (interactive) (my/exwm-fake-key "ö")))
 
-(define-key key-translation-map (kbd "M-f") (kbd "å"))
-(define-key key-translation-map (kbd "M-u") (kbd "ä"))
-(define-key key-translation-map (kbd "M-b") (kbd "ö"))
+(define-key key-translation-map (kbd "M-p") (kbd "å"))
+(define-key key-translation-map (kbd "M-,") (kbd "ä"))
+(define-key key-translation-map (kbd "M-.") (kbd "ö"))
 
 ;; **** Capital
-(my/evil-emacs-define-key "M-F" '(lambda () (interactive) (my/exwm-fake-key "Å")))
-(my/evil-emacs-define-key "M-U" '(lambda () (interactive) (my/exwm-fake-key "Ä")))
-(my/evil-emacs-define-key "M-B" '(lambda () (interactive) (my/exwm-fake-key "Ö")))
+;; (my/evil-emacs-define-key "M-P" '(lambda () (interactive) (my/exwm-fake-key ?Å)))
+;; (my/evil-emacs-define-key "M-<" '(lambda () (interactive) (my/exwm-fake-key ?Ä)))
+;; (my/evil-emacs-define-key "M->" '(lambda () (interactive) (my/exwm-fake-key ?Ö)))
 
-(define-key key-translation-map (kbd "M-F") (kbd "Å"))
-(define-key key-translation-map (kbd "M-U") (kbd "Ä"))
-(define-key key-translation-map (kbd "M-B") (kbd "Ö"))
+(define-key key-translation-map (kbd "M-P") (kbd "Å"))
+(define-key key-translation-map (kbd "M-<") (kbd "Ä"))
+(define-key key-translation-map (kbd "M->") (kbd "Ö"))
 
 ;; *** Backspace/delete C-h, C-l
 (define-key evil-insert-state-map (kbd "C-f") 'backward-delete-char-untabify)
@@ -5180,13 +5252,19 @@ Borrowed from mozc.el."
 ;; ** Nix-mode
 (straight-use-package 'nix-mode)
 
-;; ** Nix-options company
+;; ** Nix-options
+;; *** Company
 (straight-use-package 'company-nixos-options)
 ;; I can't find a pure add-to-list so i have to copy it so that company-backends isn't modified
 (add-hook 'nix-mode-hook '(lambda () (interactive)
 			    (let ((list company-backends))
 			      (add-to-list 'list 'company-nixos-options)
 			      (setq-local company-backends list))))
+
+;; *** Ivy
+(defun my/nixos-options-ivy ()
+  (interactive)
+  (completing-read "nix-options" nixos-options))
 
 ;; ** Pretty sha paths
 ;;  (straight-use-package 'pretty-sha-path)
@@ -5278,20 +5356,81 @@ Borrowed from mozc.el."
 (straight-use-package 'exwm)
 
 (require 'exwm)
-;; (require 'exwm-config)
 
 ;; enable exwm
 (exwm-enable)
 
-;; (add-hook 'exwm-manage-finish-hook 'my/exwm-mode)
-;; (defun my/exwm-mode ()
-;;  (interactive)
-;;  ())
-
 ;; ** Exwm-edit
-(setq exwm-edit-bind-default-keys nil)
-(straight-use-package '(exwm-edit :type git :host github :repo "walseb/exwm-edit"))
+(setq exwm-edit-bind-default-keys
+      nil)
+(straight-use-package '(exwm-edit :type git :host github :repo "walseb/exwm-edit" :branch "ultimate2"))
 (require 'exwm-edit)
+(global-exwm-edit-mode 1)
+
+;; *** Removed header
+(add-hook 'exwm-edit-mode-hook '(lambda () (kill-local-variable 'header-line-format)))
+
+;; *** Redefine compose
+;; Currently exwm-edit messes with my window setup, this fixes that and disables the buggy copy functionallity
+;;(defcustom exwm-edit-split-below t
+;;  "If non-nil `exwm-edit--compose' splits the window below.
+;;Otherwise split the window to the right."
+;;  :type 'boolean
+;;  :group 'exwm-edit)
+;;
+;;(defun exwm-edit--compose ()
+;;  "Edit text in an EXWM app."
+;;  (interactive)
+;;  ;; flushing clipboard is required, otherwise `gui-get-selection` simply picks up what's in the clipboard (when nothing is actually selected in GUI)
+;;  (gui-set-selection nil nil)
+;;  (let* ((title (exwm-edit--buffer-title (buffer-name)))
+;;	 (existing (get-buffer title))
+;;	 (inhibit-read-only t)
+;;	 (save-interprogram-paste-before-kill t)
+;;	 (selection-coding-system 'utf-8))            ; required for multilang-support
+;;    (when (derived-mode-p 'exwm-mode)
+;;      (setq exwm-edit--last-exwm-buffer (buffer-name))
+;;      (unless (bound-and-true-p global-exwm-edit-mode)
+;;	(global-exwm-edit-mode 1))
+;;      (if existing
+;;	  (switch-to-buffer-other-window existing)
+;;	(select-window
+;;	 (if exwm-edit-split-below
+;;	     (split-window-below)
+;;	   (split-window-right)))
+;;	(switch-to-buffer (get-buffer-create title))
+;;	(exwm-edit-mode 1)
+;;	(run-hooks 'exwm-edit-compose-hook)))))
+;;
+;;(defun exwm-edit--finish ()
+;;  "Called when done editing buffer created by `exwm-edit--compose'."
+;;  (interactive)
+;;  (run-hooks 'exwm-edit-before-finish-hook)
+;;  (kill-region (point-min)
+;;	       (point-max))
+;;  (kill-buffer-and-window)
+;;  (let ((buffer (switch-to-buffer exwm-edit--last-exwm-buffer)))
+;;    (exwm-input--set-focus (exwm--buffer->id (window-buffer (selected-window))))
+;;    (run-at-time "0.05 sec" nil (lambda ()
+;;				  ;; Since the text isn't marked, mark it now
+;;				  (exwm-input--fake-key ?\C-a)
+;;				  (exwm-input--fake-key ?\C-v)))
+;;    (setq exwm-edit--last-exwm-buffer nil)))
+;;
+;;(defun exwm-edit--cancel ()
+;;  "Called to cancell editing in a buffer created by `exwm-edit--compose'."
+;;  (interactive)
+;;  (run-hooks 'exwm-edit-before-cancel-hook)
+;;  (kill-buffer-and-window)
+;;  (let ((buffer (switch-to-buffer exwm-edit--last-exwm-buffer)))
+;;    (exwm-input--set-focus (exwm--buffer->id (window-buffer (selected-window))))
+;;    (exwm-input--fake-key 'right)
+;;    (setq exwm-edit--last-exwm-buffer nil)))
+
+;; *** Keys
+(exwm-input-set-key (kbd "M-j") #'exwm-edit--compose)
+;;(my/evil-universal-define-key "M-j" #'exwm-edit--compose)
+;;(my/evil-emacs-define-key "M-j" #'exwm-edit--compose)
 
 ;; ** Set exwm buffer name
 ;; *** Manually set buffer name
@@ -5463,8 +5602,10 @@ Borrowed from mozc.el."
 ;; ** Firefox exwm integration
 (eval-after-load 'exwm
   (progn
-    (straight-use-package 'exwm-firefox-core)
-    (straight-use-package 'exwm-firefox-evil)
+    (straight-use-package '(exwm-firefox-core :type git :host github :repo "walseb/exwm-firefox-core"  :branch "new-exwm-edit-version"))
+    (straight-use-package '(exwm-firefox-evil :type git :host github :repo "walseb/exwm-firefox-evil"  :branch "new-exwm-edit-version"))
+    ;;    (straight-use-package 'exwm-firefox-core)
+    ;;    (straight-use-package 'exwm-firefox-evil)
     (require 'exwm-firefox-evil)
 
     ;; Auto enable exwm-firefox-evil-mode on all firefox buffers
@@ -5473,23 +5614,17 @@ Borrowed from mozc.el."
     ;; Run firefox buffers in normal mode
     (add-hook 'exwm-firefox-evil-mode-hook 'exwm-firefox-evil-normal)))
 
-;; *** Open new window macro
-(defun my/exwm-firefox-core-window-new ()
-  (interactive)
-  (exwm-firefox-core-window-new)
-  (run-with-timer 0.5 nil 'exwm-firefox-core-focus-search-bar))
+(setq exwm-firefox-core-search-bookmarks '(("google.com")
+					   ("youtube.com")
+					   ("github.com")
+					   ("gmail.com")))
+
+(setq exwm-firefox-evil-link-hint-end-key nil)
 
 ;; *** Keys
 (eval-after-load 'exwm
   (progn
-    (defun my/exwm-firefox-evil-link-hint ()
-      (interactive)
-      (exwm-input--fake-key ?f)
-      (exwm-input-send-next-key 2))
-
        ;;; Normal
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "f") 'my/exwm-firefox-evil-link-hint)
-
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
@@ -5498,26 +5633,38 @@ Borrowed from mozc.el."
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-f") 'exwm-firefox-core-left)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "e") 'my/browser-activate-tab)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "N") 'exwm-firefox-core-tab-next)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "P") 'exwm-firefox-core-tab-previous)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "s") 'exwm-firefox-core-tab-close)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "j") 'exwm-firefox-core-find-next)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "J") 'exwm-firefox-core-find-previous)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "k") 'exwm-firefox-core-tab-close)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "g n") 'exwm-firefox-core-find-next)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "g p") 'exwm-firefox-core-find-previous)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-s") 'exwm-firefox-core-quick-find)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "t") 'exwm-firefox-core-tab-new)
-    ;;(evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "t") 'my/exwm-firefox-core-window-new)
+
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "s") 'exwm-firefox-core-find)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "S") 'exwm-firefox-core-find)
+
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<prior>") 'exwm-firefox-core-page-up)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<next>") 'exwm-firefox-core-page-down)
+
+
+    (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-find-next)
+    (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-find-previous)
+
+    ;; Bind tab
+    (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "TAB") '(lambda () (interactive)
+											      (exwm-input--fake-key 'tab)))
+
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "f") 'exwm-firefox-evil-link-hint)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "F") 'exwm-firefox-evil-link-hint-new-tab)
 
        ;;; Visual
     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up-select)
     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down-select)
-
-    (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up-select)
-    (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down-select)
 
     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down-select)
 
@@ -5528,25 +5675,24 @@ Borrowed from mozc.el."
     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
 
        ;;; Insert
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up-select)
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down-select)
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-u") '(lambda () (interactive) (exwm-firefox-evil-normal) (exwm-firefox-core-half-page-up)))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-w") '(lambda () (interactive) (exwm-firefox-evil-normal) (exwm-firefox-core-half-page-down)))
+    ;;
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-f") '(lambda () (interactive) (my/exwm-fake-key "å")))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-u") '(lambda () (interactive) (my/exwm-fake-key "ä")))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-b") '(lambda () (interactive) (my/exwm-fake-key "ö")))
+    ;;
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-F") '(lambda () (interactive) (my/exwm-fake-key "Å")))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-U") '(lambda () (interactive) (my/exwm-fake-key "Ä")))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-B") '(lambda () (interactive) (my/exwm-fake-key "Ö")))
 
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-u") 'exwm-firefox-core-half-page-up)
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
-
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-f") '(lambda () (interactive) (my/exwm-fake-key "å")))
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-u") '(lambda () (interactive) (my/exwm-fake-key "ä")))
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-b") '(lambda () (interactive) (my/exwm-fake-key "ö")))
-
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-F") '(lambda () (interactive) (my/exwm-fake-key "Å")))
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-U") '(lambda () (interactive) (my/exwm-fake-key "Ä")))
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-B") '(lambda () (interactive) (my/exwm-fake-key "Ö")))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-,") '(lambda () (interactive) (my/exwm-fake-key ?ä)))
+    ()
 
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-l") '(lambda () (interactive) (exwm-input--fake-key 'delete)))
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-f") '(lambda () (interactive) (exwm-input--fake-key 'backspace)))))
-
 
 ;; ** Next browser
 ;; (defun my/write-next-config ()
@@ -6554,74 +6700,7 @@ Borrowed from mozc.el."
 ;; (string-to-number number-of-processors))))
 
 ;; * Find
-;; Would be nice if we could remove the initial file path, but it's too slow with pure map
-;;  (map 'list (lambda (string) (substring string (length dir))))
-;; And using mapc doesn't work because substring is a pure function
-;;  (mapc (lambda (string) (substring string (length dir))))
-
-(setq my/find-scan-dirs '(("/home/admin/" "/home/admin/find-home")
-			  ("/mnt/c" "/home/admin/find-mnt-c")
-			  ("/mnt/e" "/home/admin/find-mnt-e")))
-
-(setq my/find-scan-cache '())
-
-(defun my/find-clean-cache ()
-  (interactive)
-  (setq my/find-scan-cache nil)
-  (mapc (lambda (list) (delete-file (nth 1 list))) my/find-scan-dirs))
-
-;; TODO: Add option to compress the files saved with tar, this reduces the file size by like 99% and doesn't take any time (and only has to be done while loading the file into the elisp list)
-(defun my/find-cache-dir (list)
-  (let* ((default-directory (nth 0 list))
-	 ;; This PWD might be a problem https://stackoverflow.com/questions/246215/how-can-i-generate-a-list-of-files-with-their-absolute-path-in-linux
-	 (cache (nth 1 list))
-	 (results (if (file-exists-p cache)
-		      (f-read cache)
-		    (shell-command-to-string "find \"$PWD\" -name '.git' -prune -o -type f -print"))))
-
-    (when (not (file-exists-p cache))
-      ;; write to file
-      (my/create-file-with-content-if-not-exist cache results))
-
-    ;; Cache
-    (add-to-list 'my/find-scan-cache `(,default-directory
-					,(split-string
-					  results
-					  "\n")))))
-
-(require 's)
-;; TODO: Error if user is outside scope defined by my/find-scan-dirs
-;; TODO: Add command to search entire scan dir, i.e. ignore predicate here
-(defun my/find ()
-  (interactive)
-  (let* ((gc-cons-threshold 80000000)
-	 ;; Load data from cached search corresponding to this default-directory
-	 (search (nth 1
-		      (cl-find-if (lambda (list)
-				    (file-in-directory-p
-				     default-directory (nth 0 list)))
-				  my/find-scan-cache))))
-
-    (if search
-	(let* ((dir (expand-file-name default-directory))
-	       (dir-length (length dir)))
-	  (find-file (ivy-read
-		      (concat "Find: ")
-		      ;; This is pretty slow because it's creating a new list
-		      ;;(map 'list (lambda (string) (substring string dir-length))
-		      search
-
-		      ;; Predicate is slightly faster than using seq-filter somehow
-		      :predicate (lambda (string) (s-starts-with-p dir string))
-		      ;; We can't have initial input because if the path contains capital letters, we have to use capital letters in the search. Also if we just lower case the search we will get a bad path if we choose to use capital letters in the search
-		      ;;:initial-input (concat "^" (expand-file-name default-directory))
-		      ;; Don't sort for better performance, find should already have sorted it
-		      :sort nil)))
-
-      (my/find-cache-dir
-       (cl-find-if (lambda (list)
-		     (file-in-directory-p (expand-file-name default-directory) (nth 0 list))) my/find-scan-dirs))
-      (my/find))))
+(straight-use-package '(ellocate :type git :host github :repo "walseb/ellocate"))
 
 ;; * Spelling
 (define-prefix-command 'my/spell-map)
@@ -6807,7 +6886,7 @@ Borrowed from mozc.el."
   ("M-e" my/change-default-directory nil)
 
   ;; Find
-  ("f" my/find nil)
+  ("f" ellocate nil)
   ("F" my/counsel-ag nil)
 
   ;; Switch buffer
@@ -6829,9 +6908,11 @@ Borrowed from mozc.el."
   ("T" my/add-window-config nil)
   ("C-t" my/delete-window-config nil)
 
-  ("b" counsel-bookmark nil)
-  ("B" my/add-bookmark nil)
-  ("C-b" my/delete-bookmark nil)
+  ("b" my/browser-activate-tab nil)
+
+  (";" counsel-bookmark nil)
+  (":" my/add-bookmark nil)
+  ("C-;" my/delete-bookmark nil)
 
   ("u" winner-undo nil)
   ("C-r" winner-redo nil)
