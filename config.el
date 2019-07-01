@@ -527,7 +527,10 @@
 ;; ** Fix meta keys
 ;; *** my/switch-monitor
 
-;; ** Narrow to paren
+;; ** Narrow
+;; *** Narrow to current line
+;; when you arent selecting anything while doing narrow region
+;; *** Narrow to paren
 
 ;; * First
 ;; Things to do first
@@ -1402,8 +1405,6 @@ Borrowed from mozc.el."
   (setq my/past-alerts (remove (completing-read "Remove entry" my/past-alerts) my/past-alerts))
   (my/lv-line-update))
 
-(define-key my/leader-map (kbd "DEL") 'my/alert-reset)
-
 ;; * Package management
 ;; ** Guix
 (straight-use-package 'guix)
@@ -2021,7 +2022,6 @@ Borrowed from mozc.el."
 	  "iceweasel"
 	"firefox"))))
 
-(defvar my/temp-firefox-title-name "")
 (defvar my/browser-bookmarks '(
 			       "youtube.com"
 			       "discordapp.com/channels/@me"
@@ -2594,13 +2594,11 @@ Borrowed from mozc.el."
 
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "TAB") 'ivy-partial-or-done)
 
-(evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "DEL") 'ivy-backward-delete-char)
-
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "RET") 'ivy-done)
 
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-d") 'ivy-insert-current)
 
-(evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-f") 'ivy-backward-delete-char)
+(evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "<backspace>") 'ivy-backward-delete-char)
 
 ;; Clear ivy input
 (evil-define-key '(motion normal) ivy-minibuffer-map (kbd "D") '(lambda () (interactive) (beginning-of-line-text)
@@ -2906,34 +2904,20 @@ Borrowed from mozc.el."
 (setq company-quickhelp-delay nil)
 
 ;; *** Visuals
-;; Make company mode inherit colors from theme, change later maybe
-(require 'color)
+;; **** Lighter
+(defun my/company--group-lighter (candidate base)
+  (let ((backend (or (get-text-property 0 'company-backend candidate)
+		     (cl-some (lambda (x) (and (not (keywordp x)) x))
+			      company-backend))))
+    (when (and backend (symbolp backend))
+      (let ((name (replace-regexp-in-string "company-\\|-company" ""
+					    (symbol-name backend))))
+	(format "%s-%s | " base name)))))
 
-;; Compatibility with 16 color terminals
-;; (if (not (string= (face-attribute 'default :background) "unspecified-bg"))
-;; (let* ((my/background-color (face-attribute 'default :background)))
-;; (set-face-attribute 'company-scrollbar-bg nil :background (color-lighten-name my/background-color 10))
-;; (set-face-attribute 'company-scrollbar-fg nil :background (color-lighten-name my/background-color 5))
-
-;; ;; Selected entry
-;; (set-face-attribute 'company-tooltip-selection nil :background (face-attribute 'font-lock-function-name-face :background) :foreground  (face-attribute 'font-lock-function-name-face :foreground))
-;; ;; All unmatching text
-;; (set-face-attribute 'company-tooltip nil :foreground (face-attribute 'default :foreground) :background (color-lighten-name my/background-color 10))
-;; ;; All matching text
-;; (set-face-attribute 'company-tooltip-common nil :foreground (face-attribute 'font-lock-constant-face :foreground) :background (face-attribute 'font-lock-constant-face :background)))
-;; (set-face-attribute 'company-scrollbar-bg nil :background "black")
-;; (set-face-attribute 'company-scrollbar-fg nil :background "white")
-
-;; ;; Selected entry
-;; (set-face-attribute 'company-tooltip-selection nil :background "black" :foreground "red")
-;; ;; All unmatching text
-;; (set-face-attribute 'company-tooltip nil :foreground "white" :background "black")
-;; ;; All matching text
-;; (set-face-attribute 'company-tooltip-common nil :foreground "orange" :background "black"))
+;; ***** Set base
+(setq company-lighter-base "company")
 
 ;; *** Keys
-(define-key company-active-map (kbd "C-f") nil)
-
 (define-key company-active-map (kbd "M-n") nil)
 (define-key company-active-map (kbd "M-p") nil)
 (define-key company-active-map (kbd "C-n") 'company-select-next)
@@ -3118,7 +3102,7 @@ Borrowed from mozc.el."
 
 ;; *** Keys
 ;; Disable custom C-f key
-(define-key isearch-mode-map (kbd "C-f") 'isearch-delete-char)
+(define-key isearch-mode-map (kbd "<backspace>") 'isearch-delete-char)
 
 ;; ** Goto middle of line
 (defun my/go-to-middle-of-line ()
@@ -3203,11 +3187,11 @@ Borrowed from mozc.el."
 (my/evil-normal-define-key "C-p" 'indentation-backward-to-previous-sibling)
 (my/evil-visual-define-key "C-p" 'indentation-backward-to-previous-sibling)
 
-(my/evil-normal-define-key "C-h" 'indentation-up-to-parent)
-(my/evil-visual-define-key "C-h" 'indentation-up-to-parent)
+(my/evil-normal-define-key "<backspace>" 'indentation-up-to-parent)
+(my/evil-visual-define-key "<backspace>" 'indentation-up-to-parent)
 
-(my/evil-normal-define-key "C-l" 'indentation-down-to-child)
-(my/evil-visual-define-key "C-l" 'indentation-down-to-child)
+(my/evil-normal-define-key "C-h" 'indentation-down-to-child)
+(my/evil-visual-define-key "C-h" 'indentation-down-to-child)
 
 ;; ** Marks
 (setq mark-ring-max 100)
@@ -3329,29 +3313,25 @@ Borrowed from mozc.el."
 ;; (setq on-screen-highlight-method 'fringe)
 
 ;; ** Jammer
-;; (straight-use-package 'jammer)
-
-;; (setq jammer-repeat-delay 0.5)
-;; (setq jammer-repeat-window 1)
-
-;; (setq jammer-type 'repeat)
-;; (setq jammer-block-type 'blacklist)
-;; (setq jammer-block-list '(
-;; ;; Backward/forward
-;; evil-backward-char evil-forward-char evil-previous-line evil-next-line previous-line next-line
-;; ;; Dired
-;; dired-next-line dired-previous-line
-
-
-
-;; ;; word movements
-;; evil-forward-word evil-forward-word-begin evil-forward-word-end evil-backward-word-begin
-
-;; ;; WORD movements
-;; evil-forward-WORD evil-forward-WORD-begin evil-forward-WORD-end evil-backward-WORD-begin
-
-;; evil-backward-word-begin evil-backward-word-end))
-;; (jammer-mode)
+(straight-use-package 'jammer)
+(setq jammer-repeat-delay 0.5)
+ (setq jammer-repeat-window 1)
+(setq jammer-type 'repeat)
+(setq jammer-block-type 'blacklist)
+(setq jammer-block-list '(
+			  backward-delete-char
+			  delete-char
+			  ;;			  ;; Backward/forward
+			  ;;			  evil-backward-char evil-forward-char evil-previous-line evil-next-line previous-line next-line
+			  ;;			  ;; Dired
+			  ;;			  dired-next-line dired-previous-line
+			  ;;			  word movements
+			  ;;			  evil-forward-word evil-forward-word-begin evil-forward-word-end evil-backward-word-begin
+			  ;;			  ;; WORD movements
+			  ;;			  evil-forward-WORD evil-forward-WORD-begin evil-forward-WORD-end evil-backward-WORD-begin
+			  ;;			  evil-backward-word-begin evil-backward-word-end
+			  ))
+(jammer-mode)
 
 ;; ** goto change
 ;; g-; and g-,
@@ -4154,8 +4134,8 @@ Borrowed from mozc.el."
 	(progn
 	  (my/backward-sexp)
 	  (if (save-match-data (looking-at "#;"))
-  (+ (point) 2)
-  (point)))
+     (+ (point) 2)
+     (point)))
       (scan-error (user-error "There isn't a complete s-expression before point")))))
 
 ;; *** Emacs-lisp
@@ -5042,16 +5022,13 @@ Borrowed from mozc.el."
 (define-key key-translation-map (kbd "M->") (kbd "Ö"))
 
 ;; *** Backspace/delete C-h, C-l
-(define-key evil-insert-state-map (kbd "C-f") 'backward-delete-char-untabify)
-(define-key evil-insert-state-map (kbd "C-l") 'delete-char)
+(define-key key-translation-map (kbd "C-f") (kbd "<backspace>"))
+(define-key key-translation-map (kbd "<backspace>") (kbd "C-="))
+(define-key key-translation-map (kbd "C-l") (kbd "<delete>"))
+(define-key key-translation-map (kbd "<delete>") (kbd "C-="))
 
-(define-key evil-replace-state-map (kbd "C-f") 'backward-delete-char-untabify)
-(define-key evil-replace-state-map (kbd "C-l") 'delete-char)
-
-(define-key evil-normal-state-map (kbd "<backspace>") 'my/alert)
-(define-key evil-insert-state-map (kbd "<backspace>") 'my/alert)
-
-(define-key evil-replace-state-map (kbd "DEL") 'my/alert)
+(my/evil-universal-define-key "<backspace>" 'backward-delete-char)
+(my/evil-universal-define-key "<delete>" 'delete-char)
 
 ;; *** k(Move up) <--> p(Paste)
 ;; **** k
@@ -5238,9 +5215,9 @@ Borrowed from mozc.el."
 (define-key key-translation-map (kbd "M-m") (kbd "#"))
 (define-key key-translation-map (kbd "M-l") (kbd "$"))
 (define-key key-translation-map (kbd "M-w") (kbd "%"))
-(define-key key-translation-map (kbd "M-y") (kbd "^"))
+(define-key key-translation-map (kbd "M-;") (kbd "^"))
 (define-key key-translation-map (kbd "M-b") (kbd "&"))
-(define-key key-translation-map (kbd "M-;") (kbd "*"))
+(define-key key-translation-map (kbd "M-y") (kbd "*"))
 (define-key key-translation-map (kbd "M-f") (kbd "("))
 (define-key key-translation-map (kbd "M-u") (kbd ")"))
 
@@ -5283,8 +5260,9 @@ Borrowed from mozc.el."
 (setq exwm-input-simulation-keys
       '(
 	;; Delete char
-	([?\C-f] . [delete])
-	([?\C-l] . [backspace])
+	([?\C-l] . [delete])
+	([?\C-f] . [backspace])
+
 	;; movement
 	([?\C-p] . [up])
 	([?\C-n] . [down])
@@ -5630,7 +5608,7 @@ Borrowed from mozc.el."
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-l") 'exwm-firefox-core-right)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-f") 'exwm-firefox-core-left)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<backspace>") 'exwm-firefox-core-left)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
@@ -5692,7 +5670,7 @@ Borrowed from mozc.el."
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-l") '(lambda () (interactive) (exwm-input--fake-key 'delete)))
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-f") '(lambda () (interactive) (exwm-input--fake-key 'backspace)))))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "<backspace>") '(lambda () (interactive) (exwm-input--fake-key 'backspace)))))
 
 ;; ** Next browser
 ;; (defun my/write-next-config ()
@@ -5879,7 +5857,7 @@ Borrowed from mozc.el."
 
 ;; ** Music
 (define-prefix-command 'my/music-map)
-(define-key my/leader-map (kbd "m") 'my/music-map)
+(define-key my/leader-map (kbd "M") 'my/music-map)
 
 ;; *** EMMS
 ;; Setup emms
@@ -6723,13 +6701,13 @@ Borrowed from mozc.el."
 (define-key my/spell-map (kbd "c") 'my/toggle-company-ispell)
 
 ;; * Calc
-;; (define-key my/leader-map (kbd "c") 'calc)
+(define-key my/leader-map (kbd "m") 'calc)
 
 (defun my/calc-kill-current-line ()
   (interactive)
   (calc-kill-region (line-beginning-position) (line-end-position)))
 
-(evil-define-key 'normal calc-mode-map (kbd "d d") 'my/calc-kill-current-line)
+(evil-define-key 'normal calc-mode-map [remap evil-delete-whole-line] 'my/calc-kill-current-line)
 (evil-define-key 'visual calc-mode-map (kbd "d") 'calc-kill-region)
 
 ;; * Artist mode
@@ -6781,7 +6759,7 @@ Borrowed from mozc.el."
 
 (setq artist-mode-map (make-sparse-keymap))
 (setq-default artist-mode-map (make-sparse-keymap))
-;; (evil-define-key 'insert artist-mode-map (kbd "DEL") 'picture-backward-clear-column)
+;; (evil-define-key 'insert artist-mode-map (kbd "<delete>") 'picture-backward-clear-column)
 
 ;; (evil-define-key 'insert artist-mode-map (kbd "RET") 'newline)
 
@@ -6843,9 +6821,9 @@ Borrowed from mozc.el."
   ;; Resize down
   ("C-n" (evil-window-decrease-height 10) nil)
   ;; Resize right
-  ("C-l" (evil-window-decrease-width 10) nil)
+  ("<delete>" (evil-window-decrease-width 10) nil)
   ;; Resize left
-  ("C-h" (evil-window-increase-width 10) nil)
+  ("\b" (evil-window-increase-width 10) nil)
 
   ;; Resize up
   ("C-S-p" (evil-window-increase-height 40) nil)
@@ -7504,7 +7482,7 @@ Borrowed from mozc.el."
 (hl-highlight-mode)
 (global-hl-highlight-mode 1)
 
-(define-key my/leader-map (kbd "M") 'hl-highlight-thingatpt-local)
+;;(define-key my/leader-map (kbd "M") 'hl-highlight-thingatpt-local)
 
 ;; ** Disable blinking cursor
 (blink-cursor-mode 0)
@@ -7638,14 +7616,22 @@ Borrowed from mozc.el."
 		   my/projectile-project-last-name-cache))
 
 
-		;;which-func-current
+		" |"
 
-		;; (:eval
-		;; (let ((which-func (which-function)))
-		;; (if which-func
-		;; (concat
-		;; " "
-		;; which-func))))
+		(" "
+		 (company-candidates
+		  (:eval
+		   (if (consp company-backend)
+		       (my/company--group-lighter (nth company-selection
+						       company-candidates)
+						  company-lighter-base)
+		     (concat
+		      (symbol-name company-backend)
+		      " | "
+		      )
+		     ))
+		  ;; Symbol when company is not in use
+		  ""))
 		)))
 
 ;; *** LV-line (top modeline)
@@ -8219,7 +8205,9 @@ Borrowed from mozc.el."
 	(setq my/mark-color-5 (color-darken-name my/diff-changed-color 25))
 	(setq my/mark-color-6 (color-darken-name my/diff-changed-color 30))
 
+	;;(setq my/foreground-color "#E6E1DC")
 	(setq my/foreground-color "#E6E1DC")
+	(setq my/foreground-color (color-darken-name my/foreground-color 10))
 	(setq my/foreground-color-1 (color-darken-name my/foreground-color 5))
 	(setq my/foreground-color-2 (color-darken-name my/foreground-color 10))
 	(setq my/foreground-color-3 (color-darken-name my/foreground-color 15))
@@ -8227,7 +8215,8 @@ Borrowed from mozc.el."
 	(setq my/foreground-color-5 (color-darken-name my/foreground-color 25))
 	(setq my/foreground-color-6 (color-darken-name my/foreground-color 30))
 
-	(setq my/background-color "#232323")
+	;;(setq my/background-color "#232323")
+	(setq my/background-color "#000000")
 	(setq my/background-color-1 (color-lighten-name my/background-color 5))
 	(setq my/background-color-2 (color-lighten-name my/background-color 10))
 	(setq my/background-color-3 (color-lighten-name my/background-color 15))
