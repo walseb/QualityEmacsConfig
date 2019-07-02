@@ -3321,6 +3321,7 @@ Borrowed from mozc.el."
 (setq jammer-block-list '(
 			  backward-delete-char
 			  delete-char
+			  ivy-backward-delete-char
 			  ;;			  ;; Backward/forward
 			  ;;			  evil-backward-char evil-forward-char evil-previous-line evil-next-line previous-line next-line
 			  ;;			  ;; Dired
@@ -3724,6 +3725,7 @@ Borrowed from mozc.el."
 (evil-define-key 'insert dired-mode-map (kbd "l") 'dired-do-redisplay)
 (evil-define-key 'normal dired-mode-map (kbd "M-m") 'dired-mark-subdir-files)
 (evil-define-key '(normal insert) dired-mode-map (kbd "m") 'dired-mark)
+(evil-define-key 'insert dired-mode-map (kbd "M") 'dired-toggle-marks)
 (evil-define-key 'insert dired-mode-map (kbd "n") 'dired-next-line)
 (evil-define-key '(normal insert) dired-mode-map (kbd "o") 'dired-find-file-other-window)
 (evil-define-key 'insert dired-mode-map (kbd "\C-o") 'dired-display-file)
@@ -5664,8 +5666,8 @@ Borrowed from mozc.el."
     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-U") '(lambda () (interactive) (my/exwm-fake-key "Ä")))
     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-B") '(lambda () (interactive) (my/exwm-fake-key "Ö")))
 
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-,") '(lambda () (interactive) (my/exwm-fake-key ?ä)))
-    ()
+;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-,") '(lambda () (interactive) (exwm-input--fake-key ?ä)))
+;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "ä") '(lambda () (interactive) (exwm-input--fake-key ?ä)))
 
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
@@ -8096,7 +8098,9 @@ Borrowed from mozc.el."
 		    (:eval (if my/mode-line-enable-network-traffic
 			       (concat
 				my/tx-delta-formatted " ↑ "
-				my/rx-delta-formatted " ↓ | ")))
+				my/rx-delta-formatted " ↓ "
+				"| "
+				)))
 
 		    (:eval
 		     (when my/mode-line-enable-available-mem
