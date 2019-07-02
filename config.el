@@ -7615,9 +7615,6 @@ Borrowed from mozc.el."
 		       my/projectile-project-last-name-cache)
 		   my/projectile-project-last-name-cache))
 
-
-		" |"
-
 		(" "
 		 (company-candidates
 		  (:eval
@@ -7626,10 +7623,9 @@ Borrowed from mozc.el."
 						       company-candidates)
 						  company-lighter-base)
 		     (concat
+		      "| "
 		      (symbol-name company-backend)
-		      " | "
-		      )
-		     ))
+		      )))
 		  ;; Symbol when company is not in use
 		  ""))
 		)))
@@ -8205,9 +8201,8 @@ Borrowed from mozc.el."
 	(setq my/mark-color-5 (color-darken-name my/diff-changed-color 25))
 	(setq my/mark-color-6 (color-darken-name my/diff-changed-color 30))
 
-	;;(setq my/foreground-color "#E6E1DC")
 	(setq my/foreground-color "#E6E1DC")
-	(setq my/foreground-color (color-darken-name my/foreground-color 10))
+	;;(setq my/foreground-color (color-darken-name my/foreground-color 10))
 	(setq my/foreground-color-1 (color-darken-name my/foreground-color 5))
 	(setq my/foreground-color-2 (color-darken-name my/foreground-color 10))
 	(setq my/foreground-color-3 (color-darken-name my/foreground-color 15))
@@ -8215,8 +8210,8 @@ Borrowed from mozc.el."
 	(setq my/foreground-color-5 (color-darken-name my/foreground-color 25))
 	(setq my/foreground-color-6 (color-darken-name my/foreground-color 30))
 
-	;;(setq my/background-color "#232323")
-	(setq my/background-color "#000000")
+	(setq my/background-color "#232323")
+	;;(setq my/background-color "#000000")
 	(setq my/background-color-1 (color-lighten-name my/background-color 5))
 	(setq my/background-color-2 (color-lighten-name my/background-color 10))
 	(setq my/background-color-3 (color-lighten-name my/background-color 15))
@@ -8489,7 +8484,8 @@ Borrowed from mozc.el."
    ;;; Mode line
   (set-face-attribute 'header-line nil
 		      :foreground my/foreground-color
-		      :background "#063000")
+		      ;;:background "#063000"
+		      :background "#001330")
 
   (set-face-attribute 'my/mode-line-highlight nil
 		      :foreground "#063000"
