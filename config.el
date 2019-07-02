@@ -532,6 +532,8 @@
 ;; when you arent selecting anything while doing narrow region
 ;; *** Narrow to paren
 
+;; ** Haskell fix at point
+
 ;; * First
 ;; Things to do first
 (setq mode-line-format nil)
@@ -3190,8 +3192,8 @@ Borrowed from mozc.el."
 (my/evil-normal-define-key "<backspace>" 'indentation-up-to-parent)
 (my/evil-visual-define-key "<backspace>" 'indentation-up-to-parent)
 
-(my/evil-normal-define-key "C-h" 'indentation-down-to-child)
-(my/evil-visual-define-key "C-h" 'indentation-down-to-child)
+(my/evil-normal-define-key "<delete>" 'indentation-down-to-child)
+(my/evil-visual-define-key "<delete>" 'indentation-down-to-child)
 
 ;; ** Marks
 (setq mark-ring-max 100)
@@ -3321,7 +3323,7 @@ Borrowed from mozc.el."
 (setq jammer-block-list '(
 			  backward-delete-char
 			  delete-char
-			  ivy-backward-delete-char
+			  ;;ivy-backward-delete-char
 			  ;;			  ;; Backward/forward
 			  ;;			  evil-backward-char evil-forward-char evil-previous-line evil-next-line previous-line next-line
 			  ;;			  ;; Dired
