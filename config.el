@@ -3054,11 +3054,24 @@ Borrowed from mozc.el."
 (define-key isearch-mode-map (kbd "C-n") 'my/isearch-repeat-forward)
 (define-key isearch-mode-map (kbd "C-p") 'my/isearch-repeat-backward)
 
+(define-key isearch-mode-map (kbd "C-w") '(lambda () (interactive) () (my/isearch-repeat-times t 5)))
+(define-key isearch-mode-map (kbd "C-u") '(lambda () (interactive) () (my/isearch-repeat-times nil 5)))
+
 (setq isearch-lazy-highlight t)
 (setq lazy-highlight-initial-delay 0)
 
 ;; *** Stop from having to press C-n two times after pressing C-p
 (defvar my/last-isearch-dir nil)
+
+(defun my/isearch-repeat-times (forward &optional count)
+  (dotimes (i count)
+    (my/isearch-repeat forward)))
+
+(defun my/isearch-repeat (forward)
+  (interactive)
+  (if forward
+      (my/isearch-repeat-forward)
+    (my/isearch-repeat-backward)))
 
 (defun my/isearch-repeat-forward ()
   (interactive)
@@ -3189,8 +3202,8 @@ Borrowed from mozc.el."
 (my/evil-normal-define-key "C-p" 'indentation-backward-to-previous-sibling)
 (my/evil-visual-define-key "C-p" 'indentation-backward-to-previous-sibling)
 
-(my/evil-normal-define-key "<backspace>" 'indentation-up-to-parent)
-(my/evil-visual-define-key "<backspace>" 'indentation-up-to-parent)
+(my/evil-normal-define-key "C-h" 'indentation-up-to-parent)
+(my/evil-visual-define-key "C-h" 'indentation-up-to-parent)
 
 (my/evil-normal-define-key "<delete>" 'indentation-down-to-child)
 (my/evil-visual-define-key "<delete>" 'indentation-down-to-child)
@@ -5032,7 +5045,8 @@ Borrowed from mozc.el."
 (define-key key-translation-map (kbd "<delete>") (kbd "C-="))
 
 (my/evil-universal-define-key "<backspace>" 'backward-delete-char)
-(my/evil-universal-define-key "<delete>" 'delete-char)
+(my/evil-insert-define-key "<delete>" 'delete-char)
+(my/evil-replace-define-key "<delete>" 'delete-char)
 
 ;; *** k(Move up) <--> p(Paste)
 ;; **** k
@@ -5818,6 +5832,9 @@ Borrowed from mozc.el."
 (define-key my/vc-map (kbd "&") 'projectile-run-async-shell-command-in-root)
 
 (define-key my/vc-map (kbd "o") 'magit-status)
+
+(define-key my/vc-map (kbd "a") 'counsel-projectile-switch-to-buffer)
+(define-key my/vc-map (kbd "A") 'counsel-projectile-switch-project)
 
 ;; * Media
 ;; ** Volume keys
@@ -7593,10 +7610,11 @@ Borrowed from mozc.el."
 
 		;; Print mode
 		(:eval (when defining-kbd-macro
-			 (propertize
-			  "[MACRO] "
-			  'face 'my/mode-line-highlight)))
-
+			 (concat
+			  (propertize
+			   "[MACRO]"
+			   'face 'my/mode-line-highlight)
+			  " ")))
 
 		;; Print buffer name
 		"%b > "
