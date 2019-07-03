@@ -5003,7 +5003,9 @@ Borrowed from mozc.el."
 
   (evil-define-key 'normal eshell-mode-map (kbd "0") 'my/eshell-goto-beg-of-line)
 
-  (evil-define-key '(normal insert visual replace) eshell-mode-map (kbd "C-c") 'eshell-kill-process)
+  (evil-define-key '(normal insert visual replace) eshell-mode-map (kbd "C-c") '(lambda () (interactive) (insert "") (call-interactively 'eshell-send-input)))
+  ;;(evil-define-key '(normal insert visual replace) eshell-mode-map (kbd "C-x") 'eshell-interrupt-process)
+  (evil-define-key '(normal insert visual replace) eshell-mode-map (kbd "C-x") 'eshell-kill-process)
 
   (evil-define-key '(normal insert) eshell-mode-map (kbd "C-p") 'eshell-previous-matching-input-from-input)
   (evil-define-key '(normal insert) eshell-mode-map (kbd "C-n") 'eshell-next-matching-input-from-input))
