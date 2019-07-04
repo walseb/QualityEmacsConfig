@@ -3553,6 +3553,10 @@ Borrowed from mozc.el."
 
 (require 'wdired)
 
+;; ** Disable cluttered major mode
+Dired normally puts the sorting string in the major mode name, this disables that
+(defun dired-sort-set-mode-line ())
+
 ;; ** Open current dir
 (defun my/dired-curr-dir ()
   (interactive)
@@ -5817,7 +5821,6 @@ Borrowed from mozc.el."
 (define-key my/vc-map (kbd "k") 'diff-hl-revert-hunk)
 (define-key my/vc-map (kbd "=") 'diff-hl-diff-goto-hunk)
 
-(define-key my/vc-map (kbd "e") 'counsel-projectile-find-file)
 (define-key my/vc-map (kbd "s") 'counsel-git-grep)
 ;; (define-key my/vc-map (kbd "s") 'counsel-projectile-ag)
 (define-key my/vc-map (kbd "d") 'projectile-dired)
@@ -5837,6 +5840,9 @@ Borrowed from mozc.el."
 
 (define-key my/vc-map (kbd "a") 'counsel-projectile-switch-to-buffer)
 (define-key my/vc-map (kbd "A") 'counsel-projectile-switch-project)
+
+(define-key my/vc-map (kbd "f") 'counsel-projectile-find-file)
+(define-key my/vc-map (kbd "F") 'counsel-projectile-ag)
 
 ;; * Media
 ;; ** Volume keys
