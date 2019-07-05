@@ -534,6 +534,11 @@
 
 ;; ** Haskell fix at point
 
+;; ** Haskell structural movement by rebinding "z" hotkey
+
+;; ** Ivy menu for suspend-map
+;; Also rename it to something better
+
 ;; * First
 ;; Things to do first
 (setq mode-line-format nil)
@@ -1611,6 +1616,9 @@ Borrowed from mozc.el."
   '(lambda () (interactive)
      (setq truncate-lines (not truncate-lines))))
 
+;; ** Visual line mode
+(global-visual-line-mode 1)
+
 ;; *** Fringe indicators of wrapped line
 (setq visual-line-fringe-indicators '(right-triangle nil))
 
@@ -1630,9 +1638,7 @@ Borrowed from mozc.el."
 (setq ring-bell-function 'ignore)
 
 ;; ** Subword (camel case movement)
-;;  #+begin_src emacs-lisp
-;; (global-subword-mode 1)
-;;  #+end_src
+(global-subword-mode 1)
 
 ;; ** Change max killring size
 (setq kill-ring-max 500)
@@ -2864,6 +2870,7 @@ Borrowed from mozc.el."
 			     (user-error "No documentation available")))
 	     start)
 	(setq-local truncate-lines nil)
+	(visual-line-mode 1)
 	(when (consp doc-buffer)
 	  (setq start (cdr doc-buffer)
 		doc-buffer (car doc-buffer)))
@@ -2882,6 +2889,7 @@ Borrowed from mozc.el."
 			   (user-error "No documentation available")))
 	   start)
       (setq-local truncate-lines nil)
+      (visual-line-mode 1)
       (when (consp doc-buffer)
 	(setq start (cdr doc-buffer)
 	      doc-buffer (car doc-buffer)))
@@ -3554,7 +3562,7 @@ Borrowed from mozc.el."
 (require 'wdired)
 
 ;; ** Disable cluttered major mode
-Dired normally puts the sorting string in the major mode name, this disables that
+;; Dired normally puts the sorting string in the major mode name, this disables that
 (defun dired-sort-set-mode-line ())
 
 ;; ** Open current dir
@@ -3584,9 +3592,6 @@ Dired normally puts the sorting string in the major mode name, this disables tha
 (straight-use-package 'dired-atool)
 
 (dired-atool-setup)
-
-(define-key dired-mode-map "c" 'dired-atool-do-pack)
-(define-key dired-mode-map "Z" 'dired-atool-do-unpack-with-subdirectory)
 
 ;; ** Wdired
 (define-prefix-command 'my/wdired-mode-map)
@@ -3681,11 +3686,11 @@ Dired normally puts the sorting string in the major mode name, this disables tha
 (evil-define-key '(normal insert) dired-mode-map (kbd "RET") 'dired-find-file)
 (evil-define-key '(normal insert) dired-mode-map(kbd "C") 'dired-do-copy)
 (evil-define-key '(normal insert) dired-mode-map (kbd "D") 'dired-do-delete)
-(evil-define-key '(normal insert) dired-mode-map  (kbd "R") 'dired-do-rename)
+(evil-define-key '(normal insert) dired-mode-map  (kbd "j") 'dired-do-rename)
 (evil-define-key '(normal insert) dired-mode-map  (kbd "!") 'dired-do-shell-command)
 (evil-define-key '(normal insert) dired-mode-map  (kbd "&") 'dired-do-async-shell-command)
-(evil-define-key '(normal insert) dired-mode-map  (kbd "Z") 'dired-do-compress)
-(evil-define-key '(normal insert) dired-mode-map  (kbd "c") 'dired-do-compress-to)
+(evil-define-key '(normal insert) dired-mode-map  (kbd "Z") 'dired-atool-do-unpack-with-subdirectory)
+(evil-define-key '(normal insert) dired-mode-map  (kbd "c") 'dired-atool-do-pack)
 
 (evil-define-key 'insert dired-mode-map  (kbd "G") 'dired-do-chgrp)
 (evil-define-key 'insert dired-mode-map  (kbd "H") 'dired-do-hardlink)
@@ -3739,7 +3744,6 @@ Dired normally puts the sorting string in the major mode name, this disables tha
 ;; (put 'dired-find-file :advertised-binding (kbd "\C-m"))
 (evil-define-key 'insert dired-mode-map (kbd "g") 'revert-buffer)
 (evil-define-key 'insert dired-mode-map (kbd "i") 'dired-maybe-insert-subdir)
-(evil-define-key '(normal insert) dired-mode-map (kbd "j") 'dired-goto-file)
 ;; Maybe bind this??
 (evil-define-key 'insert dired-mode-map (kbd "l") 'dired-do-redisplay)
 (evil-define-key 'normal dired-mode-map (kbd "M-m") 'dired-mark-subdir-files)
@@ -3747,7 +3751,7 @@ Dired normally puts the sorting string in the major mode name, this disables tha
 (evil-define-key 'insert dired-mode-map (kbd "M") 'dired-toggle-marks)
 (evil-define-key 'insert dired-mode-map (kbd "n") 'dired-next-line)
 (evil-define-key '(normal insert) dired-mode-map (kbd "o") 'dired-find-file-other-window)
-(evil-define-key 'insert dired-mode-map (kbd "\C-o") 'dired-display-file)
+(evil-define-key '(normal insert) dired-mode-map (kbd "O") 'dired-insert-subdir)
 (evil-define-key 'insert dired-mode-map (kbd "p") 'dired-previous-line)
 (evil-define-key 'insert dired-mode-map (kbd "s") 'my/dired-sort-menu)
 (evil-define-key 'insert dired-mode-map (kbd "t") 'dired-toggle-marks)
@@ -4636,7 +4640,8 @@ Dired normally puts the sorting string in the major mode name, this disables tha
   ;; Fsharp has built in intellisense highlight thing at point
   (symbol-overlay-mode -1)
   ;; Visual line mode in fsharp mode is broken, makes swiper take years to start, use truncate lines mode instead
-  (visual-line-mode 0))
+  ;;(visual-line-mode 0)
+  )
 
 ;; Autostart
 (add-hook 'fsharp-mode-hook 'my/fsharp-mode)
@@ -4858,12 +4863,13 @@ Dired normally puts the sorting string in the major mode name, this disables tha
 ;; (advice-add 'evil-paste-after :after (lambda (&rest r) (interactive) (my/pass-pop-killring)))
 ;; (advice-add 'evil-paste-before :after (lambda (&rest r) (interactive) (my/pass-pop-killring)))
 
-;; * Terms
+;; * Terminal
 ;; ** Set max lines to a lot
 (setq term-buffer-maximum-size 10000)
 
-;; ** Ansi term
-(add-hook 'term-mode-hook (lambda () (interactive) (setq truncate-lines t)))
+;; ** Disable line wrapping
+(add-hook 'term-mode-hook (lambda () (interactive) (visual-line-mode -1)
+			    (setq truncate-lines t)))
 
 ;; *** Keys
 ;; (my/evil-universal-define-key-in-mode 'term-raw-map "C-," 'term-char-mode)
@@ -5798,6 +5804,8 @@ Dired normally puts the sorting string in the major mode name, this disables tha
 ;; ** diff-hl
 (straight-use-package 'diff-hl)
 
+(setq diff-hl-side 'right)
+
 (global-diff-hl-mode)
 
 ;; If there is no fringe (terminal), use margin instead
@@ -6289,7 +6297,8 @@ Dired normally puts the sorting string in the major mode name, this disables tha
 ;; *** Summary mode
 ;; Mode for choosing which mail to open
 (defun my/gnus-summary-mode ()
-  (setq truncate-lines t))
+  (setq truncate-lines t)
+  (visual-line-mode -1))
 
 (add-hook 'gnus-summary-mode-hook 'my/gnus-summary-mode)
 
@@ -6491,21 +6500,19 @@ Dired normally puts the sorting string in the major mode name, this disables tha
 (define-key my/leader-map (kbd "~") 'my/system-commands-map)
 
 ;; ** Suspend
-;;   #+begin_src emacs-lisp
-;; (define-prefix-command 'my/system-suspend-map)
-;; (define-key my/system-commands-map (kbd "s") 'my/system-suspend-map)
+ (define-prefix-command 'my/system-suspend-map)
+ (define-key my/system-commands-map (kbd "s") 'my/system-suspend-map)
 
-;; (defun my/systemd-suspend-PC()
-;;   (interactive)
-;;   (shell-command "systemctl suspend"))
-;; (define-key my/system-suspend-map (kbd "C-s") 'my/systemd-suspend-PC)
+ (defun my/systemd-suspend-PC()
+   (interactive)
+   (shell-command "systemctl suspend"))
+ (define-key my/system-suspend-map (kbd "C-s") 'my/systemd-suspend-PC)
 
-;; (defun my/systemd-hibernate-PC()
-;;   (interactive)
-;;   (shell-command "systemctl hibernate"))
-;;   ;; Never used
-;; ;;(define-key my/system-suspend-map (kbd "C-h") 'my/systemd-hibernate-PC)
-;; #+end_src
+;;(defun my/systemd-hibernate-PC()
+;;  (interactive)
+;;  (shell-command "systemctl hibernate"))
+;; Never used
+;;(define-key my/system-suspend-map (kbd "C-h") 'my/systemd-hibernate-PC)
 
 ;; ** Multi-monitor
 (define-prefix-command 'my/system-monitor-map)
@@ -6552,7 +6559,8 @@ Dired normally puts the sorting string in the major mode name, this disables tha
 ;; **** Disable line wrapping
 (defun my/proced-mode ()
   (interactive)
-  (toggle-truncate-lines 1))
+  (toggle-truncate-lines 1)
+  (visual-line-mode -1))
 
 ;; (add-hook 'proced-post-display-hook 'my/proced-mode)
 (add-hook 'proced-mode-hook 'my/proced-mode)
@@ -6619,7 +6627,8 @@ Dired normally puts the sorting string in the major mode name, this disables tha
 ;; ** Netstat
 (defun my/net-utils-mode ()
   (interactive)
-  (toggle-truncate-lines 1))
+  (toggle-truncate-lines 1)
+  (visual-line-mode -1))
 
 (add-hook 'net-utils-mode-hook 'my/net-utils-mode)
 
@@ -7427,7 +7436,7 @@ Dired normally puts the sorting string in the major mode name, this disables tha
 ;; ** Fringe size
 ;; Used by diff-hl and flycheck
 ;; Fringe only on the left side
-(fringe-mode '(5 . 0))
+(fringe-mode '(5 . 5))
 
 ;; ** Beacon
 ;; (straight-use-package 'beacon)
@@ -7497,6 +7506,7 @@ Dired normally puts the sorting string in the major mode name, this disables tha
 ;; ** Scrollbar
 (straight-use-package 'yascroll)
 (global-yascroll-bar-mode)
+(setq yascroll:scroll-bar '(left-fringe))
 
 ;; ** Hl-Todo
 (straight-use-package 'hl-todo)
@@ -7691,12 +7701,12 @@ Dired normally puts the sorting string in the major mode name, this disables tha
 
 ;; **** Create LV-line at top
 (defun my/lv-line-set-buffer ()
-  (setq truncate-lines nil)
   (setq-local mode-line-format nil)
   (setq indicate-empty-lines nil)
   (set-window-hscroll my/lv-line-window 0)
   (setq window-size-fixed t)
   (setq truncate-lines t)
+  (visual-line-mode -1)
   ;;(setq mode-line-format nil)
 
   ;;  (if window-system
