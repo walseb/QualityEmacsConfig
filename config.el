@@ -2729,6 +2729,11 @@ Borrowed from mozc.el."
 
 ;;  (setq swiper-use-visual-line t)
 
+;; *** Disable visual line search
+;; When using visual line mode swiper also searches every visual line, not just every line. This is really slow
+(setq swiper-use-visual-line nil)
+(setq swiper-use-visual-line-p (lambda (test) nil))
+
 ;; *** Search for thing-at-point
 (defun my/swiper-thing-at-point ()
   "jump to word under cursor"
