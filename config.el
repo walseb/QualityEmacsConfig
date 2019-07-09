@@ -1240,108 +1240,6 @@ Borrowed from mozc.el."
 			      (backward-char)
 			      (call-interactively #'delete-char)))
 
-;; * Backups
-;; Stop emacs from creating backup files on every save
-(setq make-backup-files nil)
-;; Max amount of characters, 200 000 ~200kb
-(defvar my/per-session-backup-limit 200000)
-
-(defvar my/backup-directory (concat (expand-file-name user-emacs-directory) "backups/"))
-(defvar my/backup-per-session-directory (concat my/backup-directory "per-session/"))
-(defvar my/auto-saves-directory (concat (expand-file-name user-emacs-directory) "auto-saves/"))
-
-(my/create-dir-if-not-exist my/backup-directory)
-(my/create-dir-if-not-exist my/backup-per-session-directory)
-(my/create-dir-if-not-exist my/auto-saves-directory)
-(defun my/backup-buffer-mode-ok ()
-  (pcase (file-name-extension (buffer-name))
-    ("gpg" nil)
-    (_ (pcase major-mode
-	 ('image-mode nil)
-	 (_ t)))))
-
-(defun my/should-backup-buffer ()
-  (and (buffer-modified-p) buffer-file-name (my/backup-buffer-mode-ok) (< (point-max) my/per-session-backup-limit)))
-
-(defun my/backup-format-file-path (path)
-  (replace-regexp-in-string "/" "!" path))
-
-(defun my/backup-buffer (backup-path)
-  (interactive)
-  (if (my/should-backup-buffer)
-      (save-restriction (widen) (write-region (point-min) (point-max) (concat backup-path (number-to-string (floor (float-time))) (my/backup-format-file-path (buffer-file-name)))))))
-
-;; ** Make backup on first save
-(defvar my/first-save t)
-
-(defun my/backup-original-buffer ()
-  (interactive)
-  (if my/first-save
-      (progn
-	(my/backup-buffer my/backup-directory)
-	(setq-local my/first-save nil))))
-
-;; ** Make backup on every save
-(defun my/backup-buffer-per-session ()
-  (interactive)
-  (if (not my/first-save)
-      (my/backup-buffer my/backup-per-session-directory)))
-
-;; ** Delete old backups
-;; Automatically delete old backup files older than a week
-(message "Deleting old backup files...")
-(let ((week (* 60 60 24 7))
-      (current (float-time (current-time))))
-  (dolist (file (directory-files my/backup-directory t))
-    (when (and (backup-file-name-p file)
-	       (> (- current (float-time (nth 5 (file-attributes file))))
-		  week))
-      (message "%s" file)
-      (delete-file file))))
-
-;; ** Delete per-session backups on startup
-(async-shell-command (concat "rm " my/backup-per-session-directory "*" ))
-
-;; ** Undo
-;; *** Disable undo warning buffer
-;; There is a warning window that pops up if you have made too many changes to a buffer, this might stop long macros, so stop that window from popping up
-(require 'warnings)
-(add-to-list 'warning-suppress-types '(undo discard-info))
-
-;; ** Undo tree
-(straight-use-package 'undo-tree)
-
-(setq global-undo-tree-mode t)
-
-;; Fixes errors
-(setq undo-tree-enable-undo-in-region nil)
-(setq-default undo-tree-enable-undo-in-region nil)
-
-;; (setq undo-tree-auto-save-history t)
-;; (setq-default undo-tree-auto-save-history t)
-
-(setq undo-tree-visualizer-lazy-drawing nil)
-(setq-default undo-tree-visualizer-lazy-drawing nil)
-
-(setq undo-tree-visualizer-timestamps t)
-(setq undo-tree-visualizer-diff t)
-
-;; (setq undo-tree-auto-save-history t)
-
-;; (setq undo-tree-history-directory-alist '(("." . "~/.emacs.d/saves")))
-;; (make-directory (concat spacemacs-cache-directory "undo"))
-
-;; *** Keys
-(add-hook 'undo-tree-visualizer-mode-hook '(lambda () (interactive) (run-with-timer 0.1 nil 'evil-force-normal-state)))
-
-(setq undo-tree-visualizer-mode-map (make-sparse-keymap))
-
-(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "p") #'undo-tree-visualize-undo)
-(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "n") #'undo-tree-visualize-redo)
-(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "l") #'undo-tree-visualize-switch-branch-right)
-(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "h") #'undo-tree-visualize-switch-branch-left)
-(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "d") #'undo-tree-visualizer-toggle-diff)
-
 ;; * Leader
 ;; When changing leader, change =my/leader-map-key=
 (define-prefix-command 'my/leader-map)
@@ -5376,7 +5274,7 @@ Borrowed from mozc.el."
 ;; ** Exwm-edit
 (setq exwm-edit-bind-default-keys
       nil)
-(straight-use-package '(exwm-edit :type git :host github :repo "walseb/exwm-edit" :branch "ultimate2"))
+(straight-use-package '(exwm-edit :type git :host github :repo "walseb/exwm-edit" :branch "AllFixes"))
 (require 'exwm-edit)
 (global-exwm-edit-mode 1)
 
@@ -8596,6 +8494,109 @@ Borrowed from mozc.el."
 ;; (counsel-faces)
 
 (define-key my/leader-map (kbd "M-c") 'my/theme)
+
+;; * Backups
+;; Stop emacs from creating backup files on every save
+(setq make-backup-files nil)
+;; Max amount of characters, 200 000 ~200kb
+(defvar my/per-session-backup-limit 200000)
+
+(defvar my/backup-directory (concat (expand-file-name user-emacs-directory) "backups/"))
+(defvar my/backup-per-session-directory (concat my/backup-directory "per-session/"))
+(defvar my/auto-saves-directory (concat (expand-file-name user-emacs-directory) "auto-saves/"))
+
+(my/create-dir-if-not-exist my/backup-directory)
+(my/create-dir-if-not-exist my/backup-per-session-directory)
+(my/create-dir-if-not-exist my/auto-saves-directory)
+(defun my/backup-buffer-mode-ok ()
+  (pcase (file-name-extension (buffer-name))
+    ("gpg" nil)
+    (_ (pcase major-mode
+	 ('image-mode nil)
+	 (_ t)))))
+
+(defun my/should-backup-buffer ()
+  (and (buffer-modified-p) buffer-file-name (my/backup-buffer-mode-ok) (< (point-max) my/per-session-backup-limit)))
+
+(defun my/backup-format-file-path (path)
+  (replace-regexp-in-string "/" "!" path))
+
+(defun my/backup-buffer (backup-path)
+  (interactive)
+  (if (my/should-backup-buffer)
+      (save-restriction (widen) (write-region (point-min) (point-max) (concat backup-path (number-to-string (floor (float-time))) (my/backup-format-file-path (buffer-file-name)))))))
+
+;; ** Make backup on first save
+(defvar my/first-save t)
+
+(defun my/backup-original-buffer ()
+  (interactive)
+  (if my/first-save
+      (progn
+	(my/backup-buffer my/backup-directory)
+	(setq-local my/first-save nil))))
+
+;; ** Make backup on every save
+(defun my/backup-buffer-per-session ()
+  (interactive)
+  (if (not my/first-save)
+      (my/backup-buffer my/backup-per-session-directory)))
+
+;; ** Delete old backups
+;; Automatically delete old backup files older than a week
+(message "Deleting old backup files...")
+(let ((week (* 60 60 24 7))
+      (current (float-time (current-time))))
+  (dolist (file (directory-files my/backup-directory t))
+    (when (and (backup-file-name-p file)
+	       (> (- current (float-time (nth 5 (file-attributes file))))
+		  week))
+      (message "%s" file)
+      (delete-file file))))
+
+;; ** Delete per-session backups on startup
+(ignore-errors
+  (async-shell-command (concat "rm " my/backup-per-session-directory "*" )))
+
+;; ** Undo
+;; *** Disable undo warning buffer
+;; There is a warning window that pops up if you have made too many changes to a buffer, this might stop long macros, so stop that window from popping up
+(require 'warnings)
+(add-to-list 'warning-suppress-types '(undo discard-info))
+
+;; ** Undo tree
+(straight-use-package 'undo-tree)
+
+(setq global-undo-tree-mode t)
+
+;; Fixes errors
+(setq undo-tree-enable-undo-in-region nil)
+(setq-default undo-tree-enable-undo-in-region nil)
+
+;; (setq undo-tree-auto-save-history t)
+;; (setq-default undo-tree-auto-save-history t)
+
+(setq undo-tree-visualizer-lazy-drawing nil)
+(setq-default undo-tree-visualizer-lazy-drawing nil)
+
+(setq undo-tree-visualizer-timestamps t)
+(setq undo-tree-visualizer-diff t)
+
+;; (setq undo-tree-auto-save-history t)
+
+;; (setq undo-tree-history-directory-alist '(("." . "~/.emacs.d/saves")))
+;; (make-directory (concat spacemacs-cache-directory "undo"))
+
+;; *** Keys
+(add-hook 'undo-tree-visualizer-mode-hook '(lambda () (interactive) (run-with-timer 0.1 nil 'evil-force-normal-state)))
+
+(setq undo-tree-visualizer-mode-map (make-sparse-keymap))
+
+(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "p") #'undo-tree-visualize-undo)
+(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "n") #'undo-tree-visualize-redo)
+(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "l") #'undo-tree-visualize-switch-branch-right)
+(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "h") #'undo-tree-visualize-switch-branch-left)
+(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "d") #'undo-tree-visualizer-toggle-diff)
 
 ;; * Run command on boot
 (if my/on-boot-run

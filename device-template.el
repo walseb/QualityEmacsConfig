@@ -19,3 +19,9 @@
 (defvar my/on-boot-run nil)
 
 (defvar my/using-gnu-mlocate t)
+
+;; (defun my/carpalx-enable ()
+;;   (interactive)
+;;   (async-shell-command "setxkbmap -I ~/.emacs.d/configs/kbd-layouts/ carpalx.xkb -print | xkbcomp -I/home/admin/.emacs.d/configs/kbd-layouts/ - $DISPLAY"))
+;;
+;; (my/carpalx-enable)
