@@ -1615,45 +1615,26 @@ Borrowed from mozc.el."
 (define-key my/leader-map (kbd "h") help-map)
 
 ;; ** Help mode
-(define-prefix-command 'my/help-map)
-(define-key my/leader-map (kbd "H") 'my/help-map)
-
-(define-key my/help-map (kbd "C-c") 'counsel-colors-emacs)
-(define-key my/help-map (kbd "C") 'counsel-colors-web)
-
-(define-key my/help-map (kbd "m") 'which-key-show-major-mode)
-
-(define-key my/help-map (kbd "c") 'rainbow-mode)
-
-(define-key my/help-map (kbd "y") 'yas-describe-tables)
-
-;; *** Disable help mode binds
-(setq help-mode-map (make-sparse-keymap))
-(setq-default help-mode-map (make-sparse-keymap))
-
-;; (evil-define-key 'normal help-mode-map (kbd "H") 'help-go-back)
-;; (evil-define-key 'normal help-mode-map (kbd "L") 'help-go-forward)
-;; (evil-define-key 'normal help-mode-map (kbd "<escape>") 'keyboard-quit)
-
 (setq help-mode-map
       (let ((map (make-sparse-keymap)))
-	(define-key map "H" 'help-go-back)
-	(define-key map "L" 'help-go-forward)
-	(define-key map (kbd "<escape>") 'keyboard-quit)
+	(define-key map "C-h" 'help-go-back)
+	(define-key map "c-l" 'help-go-forward)
 	map))
 
+(advice-add 'help-mode :after (lambda () (interactive) (evil-force-normal-state)))
+
 ;; ** Compilation mode
-;; (setq compilation-mode-map (make-sparse-keymap))
-;; (setq-default compilation-mode-map (make-sparse-keymap))
+(setq compilation-mode-map (make-sparse-keymap))
+(setq-default compilation-mode-map (make-sparse-keymap))
 
-;; (setq compilation-minor-mode-map (make-sparse-keymap))
-;; (setq-default compilation-minor-mode-map (make-sparse-keymap))
+(setq compilation-minor-mode-map (make-sparse-keymap))
+(setq-default compilation-minor-mode-map (make-sparse-keymap))
 
-;; (setq compilation-shell-minor-mode-map (make-sparse-keymap))
-;; (setq-default compilation-shell-minor-mode-map (make-sparse-keymap))
+(setq compilation-shell-minor-mode-map (make-sparse-keymap))
+(setq-default compilation-shell-minor-mode-map (make-sparse-keymap))
 
-;; (setq compilation-mode-tool-bar-map (make-sparse-keymap))
-;; (setq-default compilation-mode-tool-bar-map (make-sparse-keymap))
+(setq compilation-mode-tool-bar-map (make-sparse-keymap))
+(setq-default compilation-mode-tool-bar-map (make-sparse-keymap))
 
 (advice-add 'compilation-mode :after (lambda () (interactive) (evil-force-normal-state)))
 
@@ -1816,10 +1797,20 @@ Borrowed from mozc.el."
 
 (defun my/switch-to-scratch()
   (interactive)
-  (find-file (concat user-emacs-directory"*scratch*"))
+  (let ((scratch-buffer (get-buffer "*scratch*")))
+    (if scratch-buffer
+	(switch-to-buffer scratch-buffer)
+      (switch-to-buffer "*scratch*")
+      (insert-file-contents (concat user-emacs-directory "scratch"))
+      ;; This generates a new mode map and uses it. This makes it possible to modify the current mode map without modifying the org mode map.
+      (org-mode)
+      (use-local-map (copy-keymap org-mode-map))
+      (local-set-key [remap save-buffer] '(lambda () (interactive)
+					    ;; Using write-region instead of write-file here makes it so that the scratch buffer doesn't get assigned to a file, which means it can be used without any problems in a direnv buffer
+					    (write-region (point-min) (point-max) (concat user-emacs-directory "scratch"))))))
   (run-hooks 'my/open-map-hook))
 
-(define-key my/open-map (kbd "s") 'my/switch-to-scratch)
+  (define-key my/open-map (kbd "s") 'my/switch-to-scratch)
 
 ;; ** Backup
 (defun my/backups-visit ()
@@ -2467,6 +2458,8 @@ Borrowed from mozc.el."
 
 (setq ivy-minibuffer-map (make-sparse-keymap))
 
+(define-key ivy-mode-map [remap backward-delete-char] 'ivy-backward-delete-char)
+
 ;; Enable avy movements in ivy buffer
 (evil-define-key '(motion normal) ivy-minibuffer-map (kbd "M-n") 'ivy-avy)
 (evil-define-key '(motion normal) ivy-minibuffer-map (kbd "M-p") 'ivy-avy)
@@ -2503,8 +2496,6 @@ Borrowed from mozc.el."
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "RET") 'ivy-done)
 
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-d") 'ivy-insert-current)
-
-(evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "<backspace>") 'ivy-backward-delete-char)
 
 ;; Clear ivy input
 (evil-define-key '(motion normal) ivy-minibuffer-map (kbd "D") '(lambda () (interactive) (beginning-of-line-text)
@@ -3026,10 +3017,6 @@ Borrowed from mozc.el."
 (defun my/ivy--regex-plus (string &optional lax)
   (ivy--regex-plus string))
 
-;; *** Keys
-;; Disable custom C-f key
-(define-key isearch-mode-map (kbd "<backspace>") 'isearch-delete-char)
-
 ;; ** Goto middle of line
 (defun my/go-to-middle-of-line ()
   (interactive)
@@ -3116,8 +3103,8 @@ Borrowed from mozc.el."
 (my/evil-normal-define-key "C-h" 'indentation-up-to-parent)
 (my/evil-visual-define-key "C-h" 'indentation-up-to-parent)
 
-(my/evil-normal-define-key "<delete>" 'indentation-down-to-child)
-(my/evil-visual-define-key "<delete>" 'indentation-down-to-child)
+(my/evil-normal-define-key "<deletechar>" 'indentation-down-to-child)
+(my/evil-visual-define-key "<deletechar>" 'indentation-down-to-child)
 
 ;; ** Marks
 (setq mark-ring-max 100)
@@ -4213,7 +4200,8 @@ Borrowed from mozc.el."
 
 (defun my/haskell-doc-mode ()
   ;; haskll-doc-mode is buggy if eldoc is on
-  (eldoc-mode -1)
+  (setq-local lsp-eldoc-enable-hover nil)
+  ;;(run-with-timer 0.05 nil (lambda () (eldoc-mode -1)))
   (haskell-doc-mode 1))
 
 (add-hook 'haskell-mode-hook 'my/haskell-doc-mode)
@@ -4953,15 +4941,21 @@ Borrowed from mozc.el."
 (define-key key-translation-map (kbd "M-<") (kbd "Ä"))
 (define-key key-translation-map (kbd "M->") (kbd "Ö"))
 
-;; *** Backspace/delete C-h, C-l
-(define-key key-translation-map (kbd "C-f") (kbd "<backspace>"))
+;; *** Rebind backspace with C-f
+;; 127 is backspace
+(define-key key-translation-map (kbd "C-f") [127])
+;; There are 2 unbinds here for compatibility
+(define-key key-translation-map [127] (kbd "C-="))
 (define-key key-translation-map (kbd "<backspace>") (kbd "C-="))
-(define-key key-translation-map (kbd "C-l") (kbd "<delete>"))
-(define-key key-translation-map (kbd "<delete>") (kbd "C-="))
 
-(my/evil-universal-define-key "<backspace>" 'backward-delete-char)
-(my/evil-insert-define-key "<delete>" 'delete-char)
-(my/evil-replace-define-key "<delete>" 'delete-char)
+;; Don't split up tabs on delete
+(my/evil-universal-define-key (kbd "DEL") 'backward-delete-char)
+
+;; *** Rebind delete with
+(define-key key-translation-map (kbd "C-l") (kbd "<deletechar>"))
+;; There are 2 unbinds here for compatibility
+(define-key key-translation-map (kbd "<deletechar>") (kbd "C-="))
+(define-key key-translation-map (kbd "<delete>") (kbd "C-="))
 
 ;; *** k(Move up) <--> p(Paste)
 ;; **** k
@@ -5536,14 +5530,16 @@ Borrowed from mozc.el."
 (eval-after-load 'exwm
   (progn
        ;;; Normal
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-l") 'exwm-firefox-core-right)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<backspace>") 'exwm-firefox-core-left)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
+
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "l") 'exwm-firefox-core-right)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "h") 'exwm-firefox-core-left)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<deletechar>") 'exwm-firefox-core-right)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-h") 'exwm-firefox-core-left)
+
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "e") 'my/browser-activate-tab)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "N") 'exwm-firefox-core-tab-next)
@@ -5597,8 +5593,8 @@ Borrowed from mozc.el."
     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-U") '(lambda () (interactive) (my/exwm-fake-key "Ä")))
     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-B") '(lambda () (interactive) (my/exwm-fake-key "Ö")))
 
-;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-,") '(lambda () (interactive) (exwm-input--fake-key ?ä)))
-;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "ä") '(lambda () (interactive) (exwm-input--fake-key ?ä)))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-,") '(lambda () (interactive) (exwm-input--fake-key ?ä)))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "ä") '(lambda () (interactive) (exwm-input--fake-key ?ä)))
 
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
