@@ -1,7 +1,11 @@
+# -*- mode: sh; -*-
+# This is not a bash file, but that makes the comments work
+
+# * Main gmail
 IMAPAccount main-gmail
 # Address to connect to
 Host imap.gmail.com
-User INSERT-USERNAME
+User INSERT-USERNAME-WITHOUT-@
 PassCmd "gpg2 -q --for-your-eyes-only --no-tty -d ~/.mbsyncpassword.gpg"
 # Plaintext: "Pass INSERTPASSWORD"
 # Password protect it "PassCmd gpg2 -q --for-your-eyes-only --no-tty -d ~/.mbsyncpassword.gpg"
@@ -13,6 +17,7 @@ CertificateFile /etc/ssl/certs/ca-certificates.crt
 #CertificateFile ~/.cert/imap.gmail.com.pem
 #CertificateFile ~/.cert/Equifax_Secure_CA.pem
 
+# ** Folder structure
 IMAPStore main-gmail-remote
 Account main-gmail
 

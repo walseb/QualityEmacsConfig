@@ -193,8 +193,17 @@
 ;; run
 ;; =package-refresh-contents=
 ;; or restart emacs
+
 ;; ** Gnus
-;; *** How to setup name and password
+;; *** Setup mail with dovecot
+;; 1. Use nixos config
+;; 2. run my/write-mail-configs
+;; 3. Change permissions =chmod 600 ~/.dovecot-pass= =chmod 600 ~/.msmtprc= =chmod 600 ~/.mbsyncrc=
+;; 4. Enter google app password, etc into mbsync and msmtp config now in your home directory
+;; 5. Put your user password, etc into .dovecot-pass file in your home dir
+;; 6. Restart emacs
+
+;; *** How to setup name and password without dovecot
 ;; Create authinfo.pgp file. It is auto encrypted/decrypted
 
 ;; Format for gmail is currently
@@ -538,6 +547,14 @@
 
 ;; ** Ivy menu for suspend-map
 ;; Also rename it to something better
+
+;; ** Heading text-object
+
+;; ** Fix my/gnus-topic-add-gmane-groups
+;; It doesn't work and it's badly written
+
+;; ** Automate email setup
+;; You could easily create prompts when creating the config files that modify the password and user fields
 
 ;; * First
 ;; Things to do first
@@ -1359,19 +1376,22 @@ Borrowed from mozc.el."
 ;; * Write configs
 (defun my/write-configs ()
   (interactive)
-  (pcase (completing-read "Which config to write"
-			  '("gnus" "xdefaults" "xinit" "xmodmap" "mpd" "gpg-agent" "cabal"))
-    ("gnus" (my/write-gnus))
+  (pcase (completing-read "Which config to write: "
+			  '("xdefaults" "xinit" "xmodmap" "mpd" "gpg-agent" "cabal" "mbsync" "msmtp" "dovecot") nil t)
     ("xdefaults" (my/write-xdefaults))
     ("xinit" (my/write-xinitrc))
     ("xmodmap" (my/write-xmodmap))
     ("mpd" (my/write-mpd-config))
     ("gpg-agent" (my/write-gpg-agent-config))
-    ("cabal" (my/write-cabal-config))))
+    ("cabal" (my/write-cabal-config))
+    ("mbsync" (my/write-mbsync-config))
+    ("msmtp" (my/write-msmtp-config))
+    ("dovecot" (my/write-dovecot-config))))
 
 (define-key my/leader-map (kbd "C-c") 'my/write-configs)
 
 ;; ** Write .gnus.el
+;; I thinks this is no longer needed
 ;; Create =.gnus.el=, which gnus reads from
 (defconst my/gnus-config-text "
    AddYourEmailHereThenDeleteThis
@@ -1477,10 +1497,32 @@ Borrowed from mozc.el."
     (my/create-dir-if-not-exist cabal-dir)
     (my/create-file-with-content-if-not-exist cabal-file my/nix-config-text)))
 
+;; ** Write mail configs
+(defun my/write-mail-configs ()
+  (interactive)
+  (my/write-mbsync-config)
+  (my/write-msmtp-config)
+  (my/write-dovecot-config))
+
+(defun my/write-mbsync-config ()
+  (let* ((source-dir (concat user-emacs-directory "configs/mail/mbsync/.mbsyncrc"))
+	 (target-dir "~/.mbsyncrc"))
+    (copy-file source-dir target-dir)))
+
+(defun my/write-msmtp-config ()
+  (let* ((source-dir (concat user-emacs-directory "configs/mail/msmtp/.msmtprc"))
+	 (target-dir "~/.msmtprc"))
+    (copy-file source-dir target-dir)))
+
+(defun my/write-dovecot-config ()
+  (let ((config-dir  "~/.dovecot-pass"))
+    (my/create-file-with-content-if-not-exist config-dir "admin:{PLAIN}")))
+
 ;; * Minor
 ;; ** Startup
 ;; Disable startup message
 (setq inhibit-startup-message t)
+(setq inhibit-startup-echo-area-message t)
 
 ;; ** Scratch buffer
 ;; *** Disable scratch buffer on startup
@@ -2458,8 +2500,6 @@ Borrowed from mozc.el."
 
 (setq ivy-minibuffer-map (make-sparse-keymap))
 
-(define-key ivy-mode-map [remap backward-delete-char] 'ivy-backward-delete-char)
-
 ;; Enable avy movements in ivy buffer
 (evil-define-key '(motion normal) ivy-minibuffer-map (kbd "M-n") 'ivy-avy)
 (evil-define-key '(motion normal) ivy-minibuffer-map (kbd "M-p") 'ivy-avy)
@@ -2554,16 +2594,15 @@ Borrowed from mozc.el."
   (counsel-ag nil default-directory))
 
 ;; *** Keys
-(define-key my/leader-map (kbd "SPC") 'counsel-M-x)
+(define-key my/leader-map (kbd "g") 'counsel-M-x)
 ;;(global-set-key (kbd "M-x") 'counsel-M-x)
-(global-set-key (kbd "<f1> f") 'counsel-describe-function)
-(global-set-key (kbd "<f1> v") 'counsel-describe-variable)
-(global-set-key (kbd "<f1> l") 'counsel-find-library)
-(global-set-key (kbd "<f2> i") 'counsel-info-lookup-symbol)
-(global-set-key (kbd "<f2> u") 'counsel-unicode-char)
 
 (define-key my/leader-map (kbd "k") 'counsel-yank-pop)
 (global-set-key (kbd "M-k") 'counsel-yank-pop)
+
+;;(define-key ivy-minibuffer-map [remap backward-delete-char] 'ivy-backward-delete-char)
+;;(define-key ivy-minibuffer-map [remap evil-delete-backward-char-and-join] 'ivy-backward-delete-char)
+(define-key ivy-minibuffer-map (kbd "DEL") 'ivy-backward-delete-char)
 
 ;; ** Counsel flycheck
 ;;   https://github.com/nathankot/dotemacs/blob/master/init.el
@@ -4049,8 +4088,8 @@ Borrowed from mozc.el."
 	(progn
 	  (my/backward-sexp)
 	  (if (save-match-data (looking-at "#;"))
-     (+ (point) 2)
-     (point)))
+  (+ (point) 2)
+  (point)))
       (scan-error (user-error "There isn't a complete s-expression before point")))))
 
 ;; *** Emacs-lisp
@@ -4233,6 +4272,10 @@ Borrowed from mozc.el."
 (require 'lsp-haskell)
 
 (add-hook 'haskell-mode-hook 'lsp)
+
+;; *** Flycheck
+;; Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the standard ghc checker though, because it works fine if I don't have HIE. If I have HIE emacs should use that instead
+(setq flycheck-checkers (remove 'haskell-stack-ghc flycheck-checkers))
 
 ;; ** C/CPP
 ;; *** Irony
@@ -4949,7 +4992,7 @@ Borrowed from mozc.el."
 (define-key key-translation-map (kbd "<backspace>") (kbd "C-="))
 
 ;; Don't split up tabs on delete
-(my/evil-universal-define-key (kbd "DEL") 'backward-delete-char)
+;;(global-set-key (kbd "DEL") 'backward-delete-char)
 
 ;; *** Rebind delete with
 (define-key key-translation-map (kbd "C-l") (kbd "<deletechar>"))
@@ -5256,7 +5299,7 @@ Borrowed from mozc.el."
 
 (setq exwm-input-global-keys nil)
 
-;; ** Core
+;; ** load exwm
 ;; https://emacs.stackexchange.com/questions/33326/how-do-i-cut-and-paste-effectively-between-applications-while-using-exwm
 (straight-use-package 'exwm)
 
@@ -5264,6 +5307,24 @@ Borrowed from mozc.el."
 
 ;; enable exwm
 (exwm-enable)
+
+;; ** exwm keys
+(exwm-input-set-key (kbd my/mod-leader-map-key) 'my/leader-map)
+
+(exwm-input-set-key (kbd "M-<tab>") 'my/toggle-switch-to-minibuffer)
+
+(exwm-input-set-key (kbd "C-e") 'keyboard-quit)
+(exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
+(exwm-input-set-key (kbd "C-=") 'my/window-hydra/body)
+
+(exwm-input-set-key (kbd "M-x") 'counsel-M-x)
+
+;;(exwm-input-set-key (kbd "DEL") '(lambda () (interactive) (exwm-input--fake-key 'backspace)))
+;;(exwm-input-set-key (kbd "<deletechar>") '(lambda () (interactive) (exwm-input--fake-key 'delete)))
+
+;;(exwm-input-set-key (kbd "M-w") '(lambda () (interactive) (exwm-input--fake-key ?\å)))
+;;(exwm-input-set-key (kbd "M-r") '(lambda () (interactive) (exwm-input--fake-key ?\ä)))
+;;(exwm-input-set-key (kbd "M-j") '(lambda () (interactive) (exwm-input--fake-key ?\ö)))
 
 ;; ** Exwm-edit
 (setq exwm-edit-bind-default-keys
@@ -5275,67 +5336,8 @@ Borrowed from mozc.el."
 ;; *** Removed header
 (add-hook 'exwm-edit-mode-hook '(lambda () (kill-local-variable 'header-line-format)))
 
-;; *** Redefine compose
-;; Currently exwm-edit messes with my window setup, this fixes that and disables the buggy copy functionallity
-;;(defcustom exwm-edit-split-below t
-;;  "If non-nil `exwm-edit--compose' splits the window below.
-;;Otherwise split the window to the right."
-;;  :type 'boolean
-;;  :group 'exwm-edit)
-;;
-;;(defun exwm-edit--compose ()
-;;  "Edit text in an EXWM app."
-;;  (interactive)
-;;  ;; flushing clipboard is required, otherwise `gui-get-selection` simply picks up what's in the clipboard (when nothing is actually selected in GUI)
-;;  (gui-set-selection nil nil)
-;;  (let* ((title (exwm-edit--buffer-title (buffer-name)))
-;;	 (existing (get-buffer title))
-;;	 (inhibit-read-only t)
-;;	 (save-interprogram-paste-before-kill t)
-;;	 (selection-coding-system 'utf-8))            ; required for multilang-support
-;;    (when (derived-mode-p 'exwm-mode)
-;;      (setq exwm-edit--last-exwm-buffer (buffer-name))
-;;      (unless (bound-and-true-p global-exwm-edit-mode)
-;;	(global-exwm-edit-mode 1))
-;;      (if existing
-;;	  (switch-to-buffer-other-window existing)
-;;	(select-window
-;;	 (if exwm-edit-split-below
-;;	     (split-window-below)
-;;	   (split-window-right)))
-;;	(switch-to-buffer (get-buffer-create title))
-;;	(exwm-edit-mode 1)
-;;	(run-hooks 'exwm-edit-compose-hook)))))
-;;
-;;(defun exwm-edit--finish ()
-;;  "Called when done editing buffer created by `exwm-edit--compose'."
-;;  (interactive)
-;;  (run-hooks 'exwm-edit-before-finish-hook)
-;;  (kill-region (point-min)
-;;	       (point-max))
-;;  (kill-buffer-and-window)
-;;  (let ((buffer (switch-to-buffer exwm-edit--last-exwm-buffer)))
-;;    (exwm-input--set-focus (exwm--buffer->id (window-buffer (selected-window))))
-;;    (run-at-time "0.05 sec" nil (lambda ()
-;;				  ;; Since the text isn't marked, mark it now
-;;				  (exwm-input--fake-key ?\C-a)
-;;				  (exwm-input--fake-key ?\C-v)))
-;;    (setq exwm-edit--last-exwm-buffer nil)))
-;;
-;;(defun exwm-edit--cancel ()
-;;  "Called to cancell editing in a buffer created by `exwm-edit--compose'."
-;;  (interactive)
-;;  (run-hooks 'exwm-edit-before-cancel-hook)
-;;  (kill-buffer-and-window)
-;;  (let ((buffer (switch-to-buffer exwm-edit--last-exwm-buffer)))
-;;    (exwm-input--set-focus (exwm--buffer->id (window-buffer (selected-window))))
-;;    (exwm-input--fake-key 'right)
-;;    (setq exwm-edit--last-exwm-buffer nil)))
-
 ;; *** Keys
 (exwm-input-set-key (kbd "M-j") #'exwm-edit--compose)
-;;(my/evil-universal-define-key "M-j" #'exwm-edit--compose)
-;;(my/evil-emacs-define-key "M-j" #'exwm-edit--compose)
 
 ;; ** Set exwm buffer name
 ;; *** Manually set buffer name
@@ -5424,21 +5426,6 @@ Borrowed from mozc.el."
 (setq exwm-workspace-minibuffer-position 'top)
 
 (add-hook 'exwm-init-hook (lambda () (interactive) (exwm-workspace-attach-minibuffer)))
-
-;; ** Keys
-(exwm-input-set-key (kbd my/mod-leader-map-key) 'my/leader-map)
-
-(exwm-input-set-key (kbd "M-<tab>") 'my/toggle-switch-to-minibuffer)
-
-(exwm-input-set-key (kbd "C-e") 'keyboard-quit)
-(exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
-(exwm-input-set-key (kbd "C-=") 'my/window-hydra/body)
-
-(exwm-input-set-key (kbd "M-x") 'counsel-M-x)
-
-;;(exwm-input-set-key (kbd "M-w") '(lambda () (interactive) (exwm-input--fake-key ?\å)))
-;;(exwm-input-set-key (kbd "M-r") '(lambda () (interactive) (exwm-input--fake-key ?\ä)))
-;;(exwm-input-set-key (kbd "M-j") '(lambda () (interactive) (exwm-input--fake-key ?\ö)))
 
 ;; * Shr
 (require 'shr)
@@ -6026,7 +6013,6 @@ Borrowed from mozc.el."
 (setq gnus-use-full-window nil)
 
 ;; *** Sources
-;; If dovecot server is setup
 (if (my/is-system-package-installed 'dovecot)
     (setq gnus-select-method '(nnimap "Dovecot"
 				      (nnimap-stream network)
@@ -6113,7 +6099,9 @@ Borrowed from mozc.el."
 ;; Adds headers to each server, tree view
 (defun my/gnus-topic-mode ()
   (my/gnus-topic-setup)
-  (my/gnus-topic-add-gmane-groups))
+  ;; This doesn't work
+  ;;(my/gnus-topic-add-gmane-groups)
+  )
 
 (add-hook 'gnus-topic-mode-hook 'my/gnus-topic-mode)
 
@@ -6121,21 +6109,22 @@ Borrowed from mozc.el."
 (defvar my/gnus-topic-gmane-prefix "nntp+news.gmane.org:")
 
 (setq my/gnus-gmane-subscribed-emacs `(
-				       ;; Gnus
-				       ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.help") ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.general") ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.announce") ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.user")))
+				       ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.help")
+				       ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.general")
+				       ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.announce")
+				       ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.user")))
 
 (setq my/gnus-gmane-subscribed-emacs-blogs `(
-					     ,(concat my/gnus-topic-gmane-prefix "gwene.com.oremacs") ,(concat my/gnus-topic-gmane-prefix "gwene.me.emacsair")))
+					     ,(concat my/gnus-topic-gmane-prefix "gwene.com.oremacs")
+					     ,(concat my/gnus-topic-gmane-prefix "gwene.me.emacsair")))
 
 (setq my/gnus-gmane-subscribed-fsharp `(
-					;; Gnus
 					,(concat my/gnus-topic-gmane-prefix "gwene.com.reddit.pay.r.fsharp")))
 
 (setq my/gnus-gmane-subscribed-guile `(
-				       ;; Gnus
 				       ,(concat my/gnus-topic-gmane-prefix "gmane.lisp.guile.user")))
 
-(defun my/gnus-gmane-subscribed-get()
+(defun my/gnus-gmane-subscribed-get ()
   (append
    my/gnus-gmane-subscribed-guile
    my/gnus-gmane-subscribed-fsharp
@@ -6196,8 +6185,8 @@ Borrowed from mozc.el."
 ;; *** Summary mode
 ;; Mode for choosing which mail to open
 (defun my/gnus-summary-mode ()
-  (setq truncate-lines t)
-  (visual-line-mode -1))
+  (visual-line-mode -1)
+  (setq truncate-lines t))
 
 (add-hook 'gnus-summary-mode-hook 'my/gnus-summary-mode)
 
@@ -6360,18 +6349,27 @@ Borrowed from mozc.el."
 ;; ** mbsync
 (defvar my/sync-mail-hook nil)
 (defvar my/sync-mail-has-begun nil)
+(defconst my/mbsync-config "~/.mbsyncrc")
 
 (defun my/sync-mail ()
   (interactive)
-  (async-shell-command "mbsync -a")
-  (run-with-timer 0 nil (lambda () (interactive) (run-hooks 'my/sync-mail-hook))))
+  (if (file-exists-p my/mbsync-config)
+      (progn
+	(async-shell-command (concat
+			      "mbsync -a "
+			      "--config "
+			      my/mbsync-config))
+	;; Give it 10 seconds to fetch all mail, then count the unread mail
+	(run-with-timer 10 nil (lambda () (interactive) (run-hooks 'my/sync-mail-hook))))
+    (message "mbsync config not created")))
 
-
+(defvar my/is-syncing nil)
 (add-hook 'gnus-topic-mode-hook 'my/sync-mail-begin)
 
 (defun my/sync-mail-begin ()
-  (if (my/is-system-package-installed 'mbsync)
-      (run-with-timer 10 300 'my/sync-mail)))
+  (when (and (my/is-system-package-installed 'mbsync) (file-exists-p my/mbsync-config) (not my/is-syncing))
+    (setq my/is-syncing t)
+    (run-with-timer 10 300 'my/sync-mail)))
 
 ;; ** Display unread mail count
 (defun my/gnus-scan-unread ()
@@ -7840,7 +7838,7 @@ Borrowed from mozc.el."
 (my/linux-update-network-tx-delta)
 
 ;; **** Mail
-(defvar my/gnus-unread-string "")
+(defvar my/gnus-unread-string nil)
 
 (defun my/gnus-update-unread()
   (my/gnus-scan-unread)
@@ -8065,7 +8063,7 @@ Borrowed from mozc.el."
 
 		    (:eval (concat " Up: " my/uptime-total-time-formated))
 
-		    (:eval (if (not (string= my/gnus-unread-string ""))
+		    (:eval (if (and my/gnus-unread-string (not (string= my/gnus-unread-string "")))
 			       (concat " | "
 				       my/gnus-unread-string)))
 
