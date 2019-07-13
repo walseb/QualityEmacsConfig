@@ -2517,7 +2517,7 @@ Borrowed from mozc.el."
 (evil-define-key 'insert ivy-minibuffer-map (kbd "C-n") 'ivy-next-line)
 (evil-define-key 'insert ivy-minibuffer-map (kbd "C-p") 'ivy-previous-line)
 
-(evil-define-key '(motion normal) ivy-minibuffer-map (kbd "<escape>") 'ivy-call)
+(evil-define-key '(motion normal) ivy-minibuffer-map (kbd "C-y") 'ivy-call)
 
 (define-key ivy-minibuffer-map [remap evil-ret] 'ivy-done)
 (define-key ivy-minibuffer-map [remap newline] 'ivy-done)
@@ -3988,7 +3988,8 @@ Borrowed from mozc.el."
 (defun my/auto-docs ()
   (interactive)
   (pcase major-mode
-    ('haskell-mode (ivy-hoogle))))
+    ('haskell-mode (ivy-hoogle))
+    ('nix-mode (my/nixos-options-ivy))))
 
 (define-key my/leader-map (kbd "h") help-map)
 (define-key my/leader-map (kbd "H") 'my/auto-docs)
@@ -4315,10 +4316,9 @@ Borrowed from mozc.el."
 ;; Use nix-haskell-mode for automatic project management
 ;; (straight-use-package 'nix-haskell-mode)
 
-;; *** Indentation
-;; Haskell-indentation-mode seems better?? or hi2 or hindent
-;; (straight-use-package 'hyai)
-;; (straight-use-package 'hindent)
+;; *** Formatting
+;;(setq haskell-stylish-on-save t)
+(setq haskell-mode-stylish-haskell-path "brittany")
 
 ;; *** Extension management
 (straight-use-package 'hasky-extensions)
@@ -4521,6 +4521,7 @@ Borrowed from mozc.el."
   (pcase major-mode
     ('csharp-mode (omnisharp-code-format-entire-file))
     ('nix-mode (nix-mode-format))
+    ('haskell-mode (haskell-mode-stylish-buffer))
     (_ ())))
 
 (defun my/auto-format-region ()
@@ -5287,7 +5288,11 @@ Borrowed from mozc.el."
 ;; *** Ivy
 (defun my/nixos-options-ivy ()
   (interactive)
-  (completing-read "nix-options" nixos-options))
+  (switch-to-buffer
+   (nixos-options-doc-buffer
+    (nixos-options-get-documentation-for-option
+     (nixos-options-get-option-by-name
+      (completing-read "nix-options" nixos-options))))))
 
 ;; ** Pretty sha paths
 ;;  (straight-use-package 'pretty-sha-path)
@@ -5549,6 +5554,8 @@ Borrowed from mozc.el."
 
 (setq w3m-session-crash-recovery nil)
 
+(setq w3m-search-word-at-point nil)
+
 ;; *** Images
 ;; Make images load instantly
 (setq w3m-default-display-inline-images t)
@@ -5562,13 +5569,30 @@ Borrowed from mozc.el."
 	 ;; There are two (not whitespace) here because otherwise the * wildcard would accept strings without any char after a dot
 	 (if (not (string-match-p (rx punct (not whitespace) (not whitespace) (regexp "*") eol) search))
 	     (concat "https://www.google.com/search?q=" search)
-	   search))))
+	   search)) t))
 
 (define-key my/leader-map (kbd "b") 'my/launch-w3m)
+
+;; *** Switch w3m buffer
+(defun my/switch-w3m-buffer ()
+  "Switch w3m buffer"
+  (interactive)
+  (setq this-command #'my/switch-w3m-buffer)
+  (ivy-read "Switch to buffer: " #'internal-complete-buffer
+	    :keymap ivy-switch-buffer-map
+	    :preselect (buffer-name (other-buffer (current-buffer)))
+	    :action #'ivy--switch-buffer-action
+	    :matcher #'ivy--switch-buffer-matcher
+	    :caller 'ivy-switch-buffer
+	    :initial-input "*w3m*"))
 
 ;; *** Keys
 (evil-define-key 'normal w3m-mode-map (kbd "RET") 'w3m-view-this-url)
 (evil-define-key 'normal w3m-mode-map (kbd "o") 'w3m-search)
+(evil-define-key 'insert w3m-mode-map (kbd "q") 'undefined)
+
+(evil-define-key 'normal w3m-mode-map (kbd "u") 'w3m-history)
+(evil-define-key 'normal w3m-mode-map (kbd "U") 'w3m-db-history)
 
 ;; ** Eww/shr
 (require 'eww)
@@ -6313,18 +6337,18 @@ Borrowed from mozc.el."
 	       "\t"
 	       ;; Date as specified by `gnus-user-date-format-alist`
 	       "%&user-date; \t"
-	       ;; Linecount, leave -5,5 spacing
-	       "%-5,5L"
-	       ;; Sender taken from header, leave -20,20 spacing
-	       "%-20,20n"
+	    ;; Linecount, leave -5,5 spacing
+	    "%-5,5L"
+	    ;; Sender taken from header, leave -20,20 spacing
+	    "%-20,20n"
 
-	       "\t"
-	       ;; Reply tree
-	       "%B"
-	       ;; Article subject string
-	       "%-80,80S"
-	       ;; End
-	       "\n"))
+	    "\t"
+	    ;; Reply tree
+	    "%B"
+	    ;; Article subject string
+	    "%-80,80S"
+	    ;; End
+	    "\n"))
 
 (setq gnus-user-date-format-alist '((t . "%Y-%m-%d %H:%M")))
 (setq gnus-thread-sort-functions '(gnus-thread-sort-by-date))
@@ -6365,6 +6389,7 @@ Borrowed from mozc.el."
 
 (evil-define-key 'normal gnus-summary-mode-map (kbd "i") 'nil)
 (evil-define-key 'normal gnus-summary-mode-map (kbd "RET") 'gnus-summary-scroll-up)
+(define-key gnus-summary-mode-map [remap kill-current-buffer] 'gnus-summary-exit)
 
 (defun my/gnus-summary-show-all-mail ()
   "Show all mail"
@@ -6413,7 +6438,8 @@ Borrowed from mozc.el."
 
 ;; **** Mail renderers, etc
 ;; html renderer
-(setq mm-text-html-renderer 'shr)
+;;(setq mm-text-html-renderer 'shr)
+(setq mm-text-html-renderer 'w3m)
 ;; Inline images?
 (setq mm-attachment-override-types '("image/.*"))
 ;; No HTML mail
@@ -6918,9 +6944,12 @@ Borrowed from mozc.el."
   ("f" ellocate nil)
   ("F" my/counsel-ag nil)
 
+  ;; Browser
+  ("b" my/switch-w3m-buffer nil)
+  ("B" my/browser-activate-tab nil)
+
   ;; Switch buffer
   ("a" ivy-switch-buffer nil)
-
   ("A" my/switch-to-last-buffer nil)
 
   ;; Kill buffer
@@ -6936,8 +6965,6 @@ Borrowed from mozc.el."
   ("t" my/load-window-config nil)
   ("T" my/add-window-config nil)
   ("C-t" my/delete-window-config nil)
-
-  ("b" my/browser-activate-tab nil)
 
   (";" counsel-bookmark nil)
   (":" my/add-bookmark nil)
