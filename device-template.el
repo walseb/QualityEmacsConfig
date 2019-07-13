@@ -25,3 +25,7 @@
 ;;   (async-shell-command "setxkbmap -I ~/.emacs.d/configs/kbd-layouts/ carpalx.xkb -print | xkbcomp -I/home/admin/.emacs.d/configs/kbd-layouts/ - $DISPLAY"))
 ;;
 ;; (my/carpalx-enable)
+
+(defvar my/run-mail-on-boot nil)
+
+(setq ellocate-scan-dirs '(("~/" "~/ellocate-home-db")))

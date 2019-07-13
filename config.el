@@ -1208,6 +1208,9 @@ Borrowed from mozc.el."
 			0))))
     xy))
 
+;; ** Fix evil open line
+(setq evil-auto-indent nil)
+
 ;; ** Keys
 ;; Prevent emacs state from being exited with esc, fixes exwm since it uses emacs state and to exit hydra you have to do esc
 (define-key evil-emacs-state-map (kbd "<escape>") 'keyboard-quit)
@@ -1653,9 +1656,6 @@ Borrowed from mozc.el."
 ;; ** Exit emacs
 (define-key my/leader-map (kbd "C-z") 'save-buffers-kill-emacs)
 
-;; ** Bind help key
-(define-key my/leader-map (kbd "h") help-map)
-
 ;; ** Help mode
 (setq help-mode-map
       (let ((map (make-sparse-keymap)))
@@ -1798,6 +1798,10 @@ Borrowed from mozc.el."
 ;; *** Disable keys
 (setq Man-mode-map (make-sparse-keymap))
 
+;; ** Timer
+;; Set timer to only run expired repeating hooks once after sleep
+(setq timer-max-repeats 1)
+
 ;; * File options
 (define-prefix-command 'my/file-options-map)
 (define-key my/leader-map (kbd "`") 'my/file-options-map)
@@ -1847,9 +1851,9 @@ Borrowed from mozc.el."
       ;; This generates a new mode map and uses it. This makes it possible to modify the current mode map without modifying the org mode map.
       (org-mode)
       (use-local-map (copy-keymap org-mode-map))
-      (local-set-key [remap save-buffer] '(lambda () (interactive)
-					    ;; Using write-region instead of write-file here makes it so that the scratch buffer doesn't get assigned to a file, which means it can be used without any problems in a direnv buffer
-					    (write-region (point-min) (point-max) (concat user-emacs-directory "scratch"))))))
+      (local-set-key [remap my/save-and-backup-buffer] '(lambda () (interactive)
+							  ;; Using write-region instead of write-file here makes it so that the scratch buffer doesn't get assigned to a file, which means it can be used without any problems in a direnv buffer
+							  (write-region (point-min) (point-max) (concat user-emacs-directory "scratch"))))))
   (run-hooks 'my/open-map-hook))
 
   (define-key my/open-map (kbd "s") 'my/switch-to-scratch)
@@ -1988,7 +1992,7 @@ Borrowed from mozc.el."
   (interactive)
   (eww-browse-url (concat "https://www.google.com/search?q=" (completing-read "search: " nil))))
 
-(define-key my/leader-map (kbd "b") 'my/launch-eww)
+;;(define-key my/leader-map (kbd "b") 'my/launch-eww)
 
 ;; ** Suggest
 (define-key my/leader-map (kbd "s") 'suggest)
@@ -2714,11 +2718,14 @@ Borrowed from mozc.el."
       `(ivy-switch-buffer
 	(:columns
 	 ((ivy-rich-candidate (:width 30))
-	  (ivy-rich-switch-buffer-size (:width 7 :face my/ivy-rich-switch-buffer-size-face))
+	  ;;(ivy-rich-switch-buffer-size (:width 7 :face my/ivy-rich-switch-buffer-size-face))
 	  (ivy-rich-switch-buffer-indicators (:width 4 :face my/ivy-rich-switch-buffer-indicator-face :align right))
 	  (ivy-rich-switch-buffer-major-mode (:width 12 :face my/ivy-rich-switch-buffer-major-mode-face))
-	  (ivy-rich-switch-buffer-project (:width 15 :face my/ivy-rich-switch-buffer-project-face))
-	  (ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))) :face my/ivy-rich-switch-buffer-path-face)))
+
+	  ;; These two takes a lot of memory and cpu
+	  ;;(ivy-rich-switch-buffer-project (:width 15 :face my/ivy-rich-switch-buffer-project-face))
+	  ;;(ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))) :face my/ivy-rich-switch-buffer-path-face))
+	  )
 	 :predicate
 	 (lambda (cand) (get-buffer cand)))
 	counsel-find-file
@@ -3977,6 +3984,15 @@ Borrowed from mozc.el."
 
 (define-key my/leader-map (kbd "C") 'my/auto-compile)
 
+;; *** Auto docs
+(defun my/auto-docs ()
+  (interactive)
+  (pcase major-mode
+    ('haskell-mode (ivy-hoogle))))
+
+(define-key my/leader-map (kbd "h") help-map)
+(define-key my/leader-map (kbd "H") 'my/auto-docs)
+
 ;; ** Documentation
 ;; *** Compact-docstrings
 ;; (straight-use-package 'compact-docstrings)
@@ -4088,8 +4104,8 @@ Borrowed from mozc.el."
 	(progn
 	  (my/backward-sexp)
 	  (if (save-match-data (looking-at "#;"))
-  (+ (point) 2)
-  (point)))
+     (+ (point) 2)
+     (point)))
       (scan-error (user-error "There isn't a complete s-expression before point")))))
 
 ;; *** Emacs-lisp
@@ -4231,6 +4247,49 @@ Borrowed from mozc.el."
 
 ;; ** Haskell
 (straight-use-package '(haskell-mode :type git :host github :repo "walseb/haskell-mode"))
+
+;; *** Hoogle
+;; **** Ivy
+;;(straight-use-package '(ivy-hoogle :type git :host github :repo "sjsch/ivy-hoogle"))
+
+(defvar ivy-hoogle-max-entries 200)
+(defun ivy-hoogle--do-search (&optional request-prefix)
+  (let* ((pattern (or (and request-prefix
+			   (concat request-prefix
+				   " "))))
+	 (lim ivy-hoogle-max-entries)
+	 (args (append (list "search" "-l")
+		       (and lim (list "-n" (int-to-string lim)))
+		       (list pattern))))
+    (let (candidates)
+      (with-temp-buffer
+	(apply #'call-process "hoogle" nil t nil args)
+	(goto-char (point-min))
+	(while (not (eobp))
+	  (if (looking-at "\\(.+?\\) -- \\(.+\\)")
+	      (push (propertize (match-string 1)
+				'hoogle-url (match-string-no-properties 2))
+		    candidates))
+	  (forward-line 1)))
+      (nreverse candidates))))
+
+(defun ivy-hoogle--function (str)
+  (mapcar #'ivy-hoogle--fontify-haskell (ivy-hoogle--do-search str)))
+
+(defvar ivy-hoogle-history nil)
+
+;;;###autoload
+(defun ivy-hoogle ()
+  "Perform a hoogle search."
+  (interactive)
+  (ivy-read "Hoogle: "
+	    #'ivy-hoogle--do-search
+	    :dynamic-collection t
+	    :history ivy-hoogle-history
+	    :preselect (counsel-symbol-at-point)
+	    :re-builder #'regexp-quote
+	    :action (lambda (str)
+		      (browse-url (get-text-property 0 'hoogle-url str)))))
 
 ;; *** Haskell-doc
 ;; Haskell-doc kind of fills in the holes where lsp-haskell doesn't work
@@ -4814,16 +4873,33 @@ Borrowed from mozc.el."
 ;; Change to temporary name before renaming
 (setq eshell-buffer-name "eshell")
 
-(setq eshell-highlight-prompt t)
-(setq eshell-hist-ignoredups t)
-(setq eshell-history-size 10000)
-
 (setq-default eshell-status-in-mode-line nil)
 
 (defun my/eshell ()
   (interactive)
   (eshell)
   (my/give-buffer-unique-name "*eshell*"))
+
+;; ** History
+(setq eshell-highlight-prompt t)
+(setq eshell-hist-ignoredups t)
+(setq eshell-history-size 10000)
+
+;; *** Append history
+;; https://emacs.stackexchange.com/questions/18564/merge-history-from-multiple-eshells
+(setq eshell-save-history-on-exit nil)
+
+(defun eshell-append-history ()
+  "Call `eshell-write-history' with the `append' parameter set to `t'."
+  (when eshell-history-ring
+    (let ((newest-cmd-ring (make-ring 1)))
+      (ring-insert newest-cmd-ring (car (ring-elements eshell-history-ring)))
+      (let ((eshell-history-ring newest-cmd-ring))
+	(eshell-write-history eshell-history-file-name t)))))
+
+(add-hook 'eshell-pre-command-hook #'eshell-append-history)
+
+(add-hook 'eshell-mode-hook '(lambda () (interactive) (setq eshell-exit-hook (remove 'eshell-write-history eshell-exit-hook))))
 
 ;; ** Prefer lisp to bash
 (setq eshell-prefer-lisp-functions nil)
@@ -4949,7 +5025,7 @@ Borrowed from mozc.el."
 
   (evil-define-key '(normal insert visual replace) eshell-mode-map (kbd "C-c") '(lambda () (interactive) (insert "") (call-interactively 'eshell-send-input)))
   ;;(evil-define-key '(normal insert visual replace) eshell-mode-map (kbd "C-x") 'eshell-interrupt-process)
-  (evil-define-key '(normal insert visual replace) eshell-mode-map (kbd "C-x") 'eshell-kill-process)
+  (evil-define-key '(normal insert visual replace) eshell-mode-map (kbd "C-z") 'eshell-kill-process)
 
   (evil-define-key '(normal insert) eshell-mode-map (kbd "C-p") 'eshell-previous-matching-input-from-input)
   (evil-define-key '(normal insert) eshell-mode-map (kbd "C-n") 'eshell-next-matching-input-from-input))
@@ -5463,9 +5539,39 @@ Borrowed from mozc.el."
 	(browse-url url))))))
 
 ;; * Browser
+;; ** w3m
+(straight-use-package 'w3m)
+(require 'w3m)
+
+(w3m-display-mode 'plain)
+
+(setq w3m-use-title-buffer-name t)
+
+(setq w3m-session-crash-recovery nil)
+
+;; *** Images
+;; Make images load instantly
+(setq w3m-default-display-inline-images t)
+(setq w3m-idle-images-show-interval 0)
+
+;; *** Launch w3m
+(defun my/launch-w3m ()
+  (interactive)
+  (w3m (let ((search (completing-read "search: " nil)))
+	 ;; Don't do a google search for anything that has a dot then a letter
+	 ;; There are two (not whitespace) here because otherwise the * wildcard would accept strings without any char after a dot
+	 (if (not (string-match-p (rx punct (not whitespace) (not whitespace) (regexp "*") eol) search))
+	     (concat "https://www.google.com/search?q=" search)
+	   search))))
+
+(define-key my/leader-map (kbd "b") 'my/launch-w3m)
+
+;; *** Keys
+(evil-define-key 'normal w3m-mode-map (kbd "RET") 'w3m-view-this-url)
+(evil-define-key 'normal w3m-mode-map (kbd "o") 'w3m-search)
+
 ;; ** Eww/shr
 (require 'eww)
-
 
 ;; *** Add URL to buffer name
 (add-hook 'eww-after-render-hook '(lambda () (interactive) (my/give-buffer-unique-name (concat "eww - " (plist-get eww-data :title)))))
@@ -5597,7 +5703,8 @@ Borrowed from mozc.el."
 ;; )
 
 ;; ** Set default browser
-(setq-default browse-url-browser-function 'eww-browse-url)
+;;(setq-default browse-url-browser-function 'eww-browse-url)
+(setq-default browse-url-browser-function 'w3m-browse-url)
 
 ;; * Version control
 ;; ** Ediff
@@ -6082,7 +6189,8 @@ Borrowed from mozc.el."
 
 ;; **** Keys
 (evil-define-key 'normal gnus-group-mode-map (kbd "i") 'nil)
-(evil-define-key 'normal gnus-group-mode-map (kbd "RET") (lambda () (interactive) (gnus-topic-select-group t)))
+(evil-define-key 'normal gnus-group-mode-map (kbd "o") (lambda () (interactive) (gnus-topic-select-group t)))
+(evil-define-key 'normal gnus-group-mode-map (kbd "RET") 'gnus-topic-select-group)
 (evil-define-key '(normal insert) gnus-group-mode-map (kbd "TAB") 'gnus-topic-select-group)
 
 (define-prefix-command 'my/gnus-group-map)
@@ -6353,23 +6461,31 @@ Borrowed from mozc.el."
 
 (defun my/sync-mail ()
   (interactive)
+  (message (concat "Syncing mail at: " (current-time-string)))
   (if (file-exists-p my/mbsync-config)
-      (progn
-	(async-shell-command (concat
-			      "mbsync -a "
-			      "--config "
-			      my/mbsync-config))
-	;; Give it 10 seconds to fetch all mail, then count the unread mail
-	(run-with-timer 10 nil (lambda () (interactive) (run-hooks 'my/sync-mail-hook))))
+      (let ((mbsync-config my/mbsync-config))
+	(async-start
+	 (lambda ()
+	   (shell-command (concat
+			   "mbsync -a "
+			   "--config "
+			   mbsync-config))
+	   )
+	 (lambda (result)
+	   (run-hooks 'my/sync-mail-hook))))
     (message "mbsync config not created")))
 
 (defvar my/is-syncing nil)
-(add-hook 'gnus-topic-mode-hook 'my/sync-mail-begin)
 
 (defun my/sync-mail-begin ()
   (when (and (my/is-system-package-installed 'mbsync) (file-exists-p my/mbsync-config) (not my/is-syncing))
     (setq my/is-syncing t)
-    (run-with-timer 10 300 'my/sync-mail)))
+    (run-with-timer 0 300 'my/sync-mail)))
+
+(if my/run-mail-on-boot
+    (add-hook 'exwm-init-hook 'my/sync-mail-begin)
+  ;;(my/sync-mail-begin)
+  (add-hook 'gnus-topic-mode-hook 'my/sync-mail-begin))
 
 ;; ** Display unread mail count
 (defun my/gnus-scan-unread ()
@@ -7183,7 +7299,12 @@ Borrowed from mozc.el."
   '(("&&" . ?∧)
     ("||" . ?∨)))
 
-(defconst my/pretty-comment-symbol ?|)
+(defvar my/pretty-comment-symbol ?|)
+;; https://www.w3schools.com/charsets/ref_utf_block.asp
+(when window-system
+  ;;(setq my/pretty-comment-symbol ?▏)
+  ;; (setq my/pretty-comment-symbol ?█)
+  (setq my/pretty-comment-symbol ?▶))
 
 (defun my/prettify-comment ()
   `((,(string-trim comment-start) . ,my/pretty-comment-symbol)))
@@ -7411,13 +7532,14 @@ Borrowed from mozc.el."
 (global-hl-todo-mode)
 
 ;; ** Hl-anything
-(straight-use-package 'hl-anything)
-
-(define-globalized-minor-mode global-hl-highlight-mode
-  hl-highlight-mode hl-highlight-mode)
-(hl-highlight-mode)
-(global-hl-highlight-mode 1)
-
+;; Really buggy and makes buffer switching slow
+;; (straight-use-package 'hl-anything)
+;;
+;; (define-globalized-minor-mode global-hl-highlight-mode
+;;   hl-highlight-mode hl-highlight-mode)
+;; (hl-highlight-mode)
+;; (global-hl-highlight-mode 1)
+;;
 ;;(define-key my/leader-map (kbd "M") 'hl-highlight-thingatpt-local)
 
 ;; ** Disable blinking cursor
@@ -7599,19 +7721,15 @@ Borrowed from mozc.el."
 ;; **** Create LV-line at top
 (defun my/lv-line-set-buffer ()
   (setq-local mode-line-format nil)
+  (setq-local header-line-format nil)
   (setq indicate-empty-lines nil)
   (set-window-hscroll my/lv-line-window 0)
   (setq window-size-fixed t)
   (setq truncate-lines t)
   (visual-line-mode -1)
-  ;;(setq mode-line-format nil)
-
-  ;;  (if window-system
-  ;;      ;; Change to mono face
-  ;;      (face-remap-add-relative 'default :family my/mono-font)) ;;:height my/default-face-height))
 
   ;; Offset by 10 pixels to make text fit
-  (set-window-fringes (selected-window) 10 0)
+  ;;(set-window-fringes (selected-window) 10 0)
 
   ;; Disable char at end of line
   (set-display-table-slot standard-display-table 0 ?\ )
@@ -7850,7 +7968,8 @@ Borrowed from mozc.el."
 	 (my/gnus-get-unread-news-count))))
 
 (add-hook 'my/sync-mail-hook 'my/gnus-update-unread)
-(add-hook 'gnus-summary-exit-map 'my/gnus-update-unread)
+(add-hook 'gnus-summary-exit-hook '(lambda () (my/gnus-update-unread)
+				     (my/lv-line-update)))
 
 ;; **** Battery
 ;; If there is a battery, display it in the mode line
@@ -7858,6 +7977,34 @@ Borrowed from mozc.el."
 
 (display-battery-mode 1)
 (setq battery-mode-line-format "%th - %p")
+
+;; ***** Reload battery display mode
+(defun my/battery-display-mode-reload ()
+  (interactive)
+  (setq battery-status-function
+	(cond ((and (eq system-type 'gnu/linux)
+		    (file-readable-p "/proc/apm"))
+	       #'battery-linux-proc-apm)
+	      ((and (eq system-type 'gnu/linux)
+		    (file-directory-p "/proc/acpi/battery"))
+	       #'battery-linux-proc-acpi)
+	      ((and (eq system-type 'gnu/linux)
+		    (file-directory-p "/sys/class/power_supply/")
+		    (directory-files "/sys/class/power_supply/" nil
+				     battery-linux-sysfs-regexp))
+	       #'battery-linux-sysfs)
+	      ((and (eq system-type 'berkeley-unix)
+		    (file-executable-p "/usr/sbin/apm"))
+	       #'battery-bsd-apm)
+	      ((and (eq system-type 'darwin)
+		    (condition-case nil
+			(with-temp-buffer
+			  (and (eq (call-process "pmset" nil t nil "-g" "ps") 0)
+			       (> (buffer-size) 0)))
+		      (error nil)))
+	       #'battery-pmset)
+	      ((fboundp 'w32-battery-status)
+	       #'w32-battery-status))))
 
 ;; **** Date and time
 ;; Display time and date in good format (also displays CPU load)
@@ -8103,19 +8250,11 @@ Borrowed from mozc.el."
   ;; Reset face
   (set-face-attribute face-name nil :family 'unspecified :foundry 'unspecified :width 'unspecified :height 'unspecified :weight 'unspecified :slant 'unspecified :foreground 'unspecified :background 'unspecified :underline 'unspecified :overline 'unspecified :strike-through 'unspecified :box 'unspecified :stipple 'unspecified :font 'unspecified :inherit 'default))
 
-;; (defun my/clean-font-lock-keywords ()
-;;  (interactive)
-;;  (mapc 'my/count font-lock-keywords-alist)
-;;  )
-;; (setq my/counter 0)
-;; (defun my/count (&optional rest)
-;;  (setq my/counter (+ 1 my/counter)))
-
 (defun my/theme ()
   (interactive)
-  (cl-loop for face in (face-list) do
+   (cl-loop for face in (face-list) do
 	   ;; Don't change magit faces
-	   (if (not (string-match "magit" (symbol-name face)))
+	   (if (and (not (string-match "magit" (symbol-name face))) (not (string-match "w3m" (symbol-name face))))
 	       (set-face-attribute face nil :foreground nil :background nil)))
 
   (setq my/diff-added-color "#335533")
