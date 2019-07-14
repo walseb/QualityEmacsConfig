@@ -798,8 +798,6 @@
     ;; Then delete overlay
     (delete-overlay inline-overlay)))
 
-;; (my/inline-overlay-print "test")
-
 ;; ** Repeat char
 (defun my/repeat-char (char initial-string n)
   (setq initial-string (concat char initial-string))

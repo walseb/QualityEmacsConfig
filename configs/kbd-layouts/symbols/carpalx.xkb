@@ -87,4 +87,15 @@ xkb_symbols "qgmlwy" {
 
     key <AB04>	{ [         v,          V, leftdoublequotemark, leftsinglequotemark ]	};
 
+    // Replace caps lock with meta
+    //key <CAPS> {    [ Alt_L ]   };
+    //key <LALT> {    [ Caps_Lock     ]   };
+
+    // Replace tab with meta
+    // key <TAB> {    [ Alt_L ]   };
+    // key <LALT> {    [ Tab     ]   };
+
+    // Replace control with caps
+    key <CAPS> {    [ Control_L ]   };
+    key <LCTL> {    [ Caps_Lock     ]   };
 };
