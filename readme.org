@@ -193,8 +193,17 @@ To stop dired from creating new folder when unpacking, change in section "Dired 
 run
 =package-refresh-contents=
 or restart emacs
+
 ** Gnus
-*** How to setup name and password
+*** Setup mail with dovecot
+1. Use nixos config
+2. run my/write-mail-configs
+3. Change permissions =chmod 600 ~/.dovecot-pass= =chmod 600 ~/.msmtprc= =chmod 600 ~/.mbsyncrc=
+4. Enter google app password, etc into mbsync and msmtp config now in your home directory
+5. Put your user password, etc into .dovecot-pass file in your home dir
+6. Restart emacs
+
+*** How to setup name and password without dovecot
 Create authinfo.pgp file. It is auto encrypted/decrypted
 
 Format for gmail is currently
@@ -430,8 +439,6 @@ I should probably not just have a header named just "visuals"
 ** Track down more performance problems
 Especially when using highlight-indent-guides on large files
 
-** A quick spellchecker in comments and org-mode
-
 ** Org-noter
 Great for commenting pdfs
 
@@ -542,6 +549,14 @@ when you arent selecting anything while doing narrow region
 
 ** Ivy menu for suspend-map
 Also rename it to something better
+
+** Heading text-object
+
+** Fix my/gnus-topic-add-gmane-groups
+It doesn't work and it's badly written
+
+** Automate email setup
+You could easily create prompts when creating the config files that modify the password and user fields
 
 * First
 Things to do first
@@ -834,8 +849,6 @@ Default file-size-human-readable returns decimal values
     ;; Then delete overlay
     (delete-overlay inline-overlay)))
 #+end_src
-
-(my/inline-overlay-print "test")
 
 ** Repeat char
 #+begin_src emacs-lisp
@@ -1323,6 +1336,11 @@ Borrowed from mozc.el."
     xy))
 #+end_src
 
+** Fix evil open line
+#+begin_src emacs-lisp
+(setq evil-auto-indent nil)
+#+end_src
+
 ** Keys
 Prevent emacs state from being exited with esc, fixes exwm since it uses emacs state and to exit hydra you have to do esc
 #+begin_src emacs-lisp
@@ -1390,130 +1408,6 @@ P is normally bound to manual, make this key useful
 			   '(lambda () (interactive)
 			      (backward-char)
 			      (call-interactively #'delete-char)))
-#+end_src
-
-* Backups
-Stop emacs from creating backup files on every save
-#+begin_src emacs-lisp
-(setq make-backup-files nil)
-#+end_src
-Max amount of characters, 200 000 ~200kb
-#+begin_src emacs-lisp
-(defvar my/per-session-backup-limit 200000)
-
-(defvar my/backup-directory (concat (expand-file-name user-emacs-directory) "backups/"))
-(defvar my/backup-per-session-directory (concat my/backup-directory "per-session/"))
-(defvar my/auto-saves-directory (concat (expand-file-name user-emacs-directory) "auto-saves/"))
-
-(my/create-dir-if-not-exist my/backup-directory)
-(my/create-dir-if-not-exist my/backup-per-session-directory)
-(my/create-dir-if-not-exist my/auto-saves-directory)
-(defun my/backup-buffer-mode-ok ()
-  (pcase (file-name-extension (buffer-name))
-    ("gpg" nil)
-    (_ (pcase major-mode
-	 ('image-mode nil)
-	 (_ t)))))
-
-(defun my/should-backup-buffer ()
-  (and (buffer-modified-p) buffer-file-name (my/backup-buffer-mode-ok) (< (point-max) my/per-session-backup-limit)))
-
-(defun my/backup-format-file-path (path)
-  (replace-regexp-in-string "/" "!" path))
-
-(defun my/backup-buffer (backup-path)
-  (interactive)
-  (if (my/should-backup-buffer)
-      (save-restriction (widen) (write-region (point-min) (point-max) (concat backup-path (number-to-string (floor (float-time))) (my/backup-format-file-path (buffer-file-name)))))))
-#+end_src
-
-** Make backup on first save
-#+begin_src emacs-lisp
-(defvar my/first-save t)
-
-(defun my/backup-original-buffer ()
-  (interactive)
-  (if my/first-save
-      (progn
-	(my/backup-buffer my/backup-directory)
-	(setq-local my/first-save nil))))
-#+end_src
-
-** Make backup on every save
-#+begin_src emacs-lisp
-(defun my/backup-buffer-per-session ()
-  (interactive)
-  (if (not my/first-save)
-      (my/backup-buffer my/backup-per-session-directory)))
-#+end_src
-
-** Delete old backups
-Automatically delete old backup files older than a week
-#+begin_src emacs-lisp
-(message "Deleting old backup files...")
-(let ((week (* 60 60 24 7))
-      (current (float-time (current-time))))
-  (dolist (file (directory-files my/backup-directory t))
-    (when (and (backup-file-name-p file)
-	       (> (- current (float-time (nth 5 (file-attributes file))))
-		  week))
-      (message "%s" file)
-      (delete-file file))))
-#+end_src
-
-** Delete per-session backups on startup
-#+begin_src emacs-lisp
-(async-shell-command (concat "rm " my/backup-per-session-directory "*" ))
-#+end_src
-
-** Undo
-*** Disable undo warning buffer
-There is a warning window that pops up if you have made too many changes to a buffer, this might stop long macros, so stop that window from popping up
-#+begin_src emacs-lisp
-(require 'warnings)
-(add-to-list 'warning-suppress-types '(undo discard-info))
-#+end_src
-
-** Undo tree
-#+begin_src emacs-lisp
-(straight-use-package 'undo-tree)
-
-(setq global-undo-tree-mode t)
-#+end_src
-
-Fixes errors
-#+begin_src emacs-lisp
-(setq undo-tree-enable-undo-in-region nil)
-(setq-default undo-tree-enable-undo-in-region nil)
-#+end_src
-
-(setq undo-tree-auto-save-history t)
-(setq-default undo-tree-auto-save-history t)
-
-#+begin_src emacs-lisp
-(setq undo-tree-visualizer-lazy-drawing nil)
-(setq-default undo-tree-visualizer-lazy-drawing nil)
-
-(setq undo-tree-visualizer-timestamps t)
-(setq undo-tree-visualizer-diff t)
-#+end_src
-
-(setq undo-tree-auto-save-history t)
-
-(setq undo-tree-history-directory-alist '(("." . "~/.emacs.d/saves")))
-(make-directory (concat spacemacs-cache-directory "undo"))
-
-*** Keys
-#+begin_src emacs-lisp
-(add-hook 'undo-tree-visualizer-mode-hook '(lambda () (interactive) (run-with-timer 0.1 nil 'evil-force-normal-state)))
-
-(setq undo-tree-visualizer-mode-map (make-sparse-keymap))
-
-(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "p") #'undo-tree-visualize-undo)
-(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "n") #'undo-tree-visualize-redo)
-(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "l") #'undo-tree-visualize-switch-branch-right)
-(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "h") #'undo-tree-visualize-switch-branch-left)
-(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "d") #'undo-tree-visualizer-toggle-diff)
 #+end_src
 
 * Leader
@@ -1646,20 +1540,23 @@ When changing leader, change =my/leader-map-key=
 #+begin_src emacs-lisp
 (defun my/write-configs ()
   (interactive)
-  (pcase (completing-read "Which config to write"
-			  '("gnus" "xdefaults" "xinit" "xmodmap" "mpd" "gpg-agent" "cabal"))
-    ("gnus" (my/write-gnus))
+  (pcase (completing-read "Which config to write: "
+			  '("xdefaults" "xinit" "xmodmap" "mpd" "gpg-agent" "cabal" "mbsync" "msmtp" "dovecot") nil t)
     ("xdefaults" (my/write-xdefaults))
     ("xinit" (my/write-xinitrc))
     ("xmodmap" (my/write-xmodmap))
     ("mpd" (my/write-mpd-config))
     ("gpg-agent" (my/write-gpg-agent-config))
-    ("cabal" (my/write-cabal-config))))
+    ("cabal" (my/write-cabal-config))
+    ("mbsync" (my/write-mbsync-config))
+    ("msmtp" (my/write-msmtp-config))
+    ("dovecot" (my/write-dovecot-config))))
 
 (define-key my/leader-map (kbd "C-c") 'my/write-configs)
 #+end_src
 
 ** Write .gnus.el
+I thinks this is no longer needed
 Create =.gnus.el=, which gnus reads from
 #+begin_src emacs-lisp
 (defconst my/gnus-config-text "
@@ -1779,11 +1676,35 @@ This swaps capslock and ctrl
     (my/create-file-with-content-if-not-exist cabal-file my/nix-config-text)))
 #+end_src
 
+** Write mail configs
+#+begin_src emacs-lisp
+(defun my/write-mail-configs ()
+  (interactive)
+  (my/write-mbsync-config)
+  (my/write-msmtp-config)
+  (my/write-dovecot-config))
+
+(defun my/write-mbsync-config ()
+  (let* ((source-dir (concat user-emacs-directory "configs/mail/mbsync/.mbsyncrc"))
+	 (target-dir "~/.mbsyncrc"))
+    (copy-file source-dir target-dir)))
+
+(defun my/write-msmtp-config ()
+  (let* ((source-dir (concat user-emacs-directory "configs/mail/msmtp/.msmtprc"))
+	 (target-dir "~/.msmtprc"))
+    (copy-file source-dir target-dir)))
+
+(defun my/write-dovecot-config ()
+  (let ((config-dir  "~/.dovecot-pass"))
+    (my/create-file-with-content-if-not-exist config-dir "admin:{PLAIN}")))
+#+end_src
+
 * Minor
 ** Startup
 Disable startup message
 #+begin_src emacs-lisp
 (setq inhibit-startup-message t)
+(setq inhibit-startup-echo-area-message t)
 #+end_src
 
 ** Scratch buffer
@@ -1957,46 +1878,19 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 (define-key my/leader-map (kbd "C-z") 'save-buffers-kill-emacs)
 #+end_src
 
-** Bind help key
-#+begin_src emacs-lisp
-(define-key my/leader-map (kbd "h") help-map)
-#+end_src
-
 ** Help mode
-#+begin_src emacs-lisp
-(define-prefix-command 'my/help-map)
-(define-key my/leader-map (kbd "H") 'my/help-map)
-
-(define-key my/help-map (kbd "C-c") 'counsel-colors-emacs)
-(define-key my/help-map (kbd "C") 'counsel-colors-web)
-
-(define-key my/help-map (kbd "m") 'which-key-show-major-mode)
-
-(define-key my/help-map (kbd "c") 'rainbow-mode)
-
-(define-key my/help-map (kbd "y") 'yas-describe-tables)
-#+end_src
-
-*** Disable help mode binds
-#+begin_src emacs-lisp
-(setq help-mode-map (make-sparse-keymap))
-(setq-default help-mode-map (make-sparse-keymap))
-#+end_src
-
-(evil-define-key 'normal help-mode-map (kbd "H") 'help-go-back)
-(evil-define-key 'normal help-mode-map (kbd "L") 'help-go-forward)
-(evil-define-key 'normal help-mode-map (kbd "<escape>") 'keyboard-quit)
-
 #+begin_src emacs-lisp
 (setq help-mode-map
       (let ((map (make-sparse-keymap)))
-	(define-key map "H" 'help-go-back)
-	(define-key map "L" 'help-go-forward)
-	(define-key map (kbd "<escape>") 'keyboard-quit)
+	(define-key map "C-h" 'help-go-back)
+	(define-key map "c-l" 'help-go-forward)
 	map))
+
+(advice-add 'help-mode :after (lambda () (interactive) (evil-force-normal-state)))
 #+end_src
 
 ** Compilation mode
+#+begin_src emacs-lisp
 (setq compilation-mode-map (make-sparse-keymap))
 (setq-default compilation-mode-map (make-sparse-keymap))
 
@@ -2009,7 +1903,6 @@ In org mode when displaying images pixel scroll mode can be useful maybe
 (setq compilation-mode-tool-bar-map (make-sparse-keymap))
 (setq-default compilation-mode-tool-bar-map (make-sparse-keymap))
 
-#+begin_src emacs-lisp
 (advice-add 'compilation-mode :after (lambda () (interactive) (evil-force-normal-state)))
 #+end_src
 
@@ -2165,6 +2058,21 @@ Enable and show minibuffer recursive depth
 (setq Man-mode-map (make-sparse-keymap))
 #+end_src
 
+** Timer
+Set timer to only run expired repeating hooks once after sleep
+#+begin_src emacs-lisp
+(setq timer-max-repeats 1)
+#+end_src
+
+** Auto kill buffer
+#+begin_src emacs-lisp
+(defun my/auto-kill-buffer ()
+  (interactive)
+  (pcase major-mode
+    ('gnus-summary-mode (gnus-summary-exit))
+    (_ (kill-current-buffer))))
+#+end_src
+
 * File options
 #+begin_src emacs-lisp
 (define-prefix-command 'my/file-options-map)
@@ -2219,10 +2127,20 @@ Kill the initial scratch buffer
 
 (defun my/switch-to-scratch()
   (interactive)
-  (find-file (concat user-emacs-directory"*scratch*"))
+  (let ((scratch-buffer (get-buffer "*scratch*")))
+    (if scratch-buffer
+	(switch-to-buffer scratch-buffer)
+      (switch-to-buffer "*scratch*")
+      (insert-file-contents (concat user-emacs-directory "scratch"))
+      ;; This generates a new mode map and uses it. This makes it possible to modify the current mode map without modifying the org mode map.
+      (org-mode)
+      (use-local-map (copy-keymap org-mode-map))
+      (local-set-key [remap my/save-and-backup-buffer] '(lambda () (interactive)
+							  ;; Using write-region instead of write-file here makes it so that the scratch buffer doesn't get assigned to a file, which means it can be used without any problems in a direnv buffer
+							  (write-region (point-min) (point-max) (concat user-emacs-directory "scratch"))))))
   (run-hooks 'my/open-map-hook))
 
-(define-key my/open-map (kbd "s") 'my/switch-to-scratch)
+  (define-key my/open-map (kbd "s") 'my/switch-to-scratch)
 #+end_src
 
 ** Backup
@@ -2385,9 +2303,9 @@ Kill the initial scratch buffer
 (defun my/launch-eww ()
   (interactive)
   (eww-browse-url (concat "https://www.google.com/search?q=" (completing-read "search: " nil))))
+#+end_src
 
 (define-key my/leader-map (kbd "b") 'my/launch-eww)
-#+end_src
 
 ** Suggest
 #+begin_src emacs-lisp
@@ -3035,7 +2953,7 @@ Enable avy movements in ivy buffer
 (evil-define-key 'insert ivy-minibuffer-map (kbd "C-n") 'ivy-next-line)
 (evil-define-key 'insert ivy-minibuffer-map (kbd "C-p") 'ivy-previous-line)
 
-(evil-define-key '(motion normal) ivy-minibuffer-map (kbd "<escape>") 'ivy-call)
+(evil-define-key '(motion normal) ivy-minibuffer-map (kbd "C-y") 'ivy-call)
 
 (define-key ivy-minibuffer-map [remap evil-ret] 'ivy-done)
 (define-key ivy-minibuffer-map [remap newline] 'ivy-done)
@@ -3060,8 +2978,6 @@ define-key 'insert ivy-minibuffer-map  (kbd "C-y") 'ivy-dispatching-done)
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "RET") 'ivy-done)
 
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-d") 'ivy-insert-current)
-
-(evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "<backspace>") 'ivy-backward-delete-char)
 #+end_src
 
 Clear ivy input
@@ -3136,18 +3052,19 @@ Delete text under selection when pasing just like with normal evil paste
 
 *** Keys
 #+begin_src emacs-lisp
-(define-key my/leader-map (kbd "SPC") 'counsel-M-x)
+(define-key my/leader-map (kbd "g") 'counsel-M-x)
 #+end_src
 (global-set-key (kbd "M-x") 'counsel-M-x)
-#+begin_src emacs-lisp
-(global-set-key (kbd "<f1> f") 'counsel-describe-function)
-(global-set-key (kbd "<f1> v") 'counsel-describe-variable)
-(global-set-key (kbd "<f1> l") 'counsel-find-library)
-(global-set-key (kbd "<f2> i") 'counsel-info-lookup-symbol)
-(global-set-key (kbd "<f2> u") 'counsel-unicode-char)
 
+#+begin_src emacs-lisp
 (define-key my/leader-map (kbd "k") 'counsel-yank-pop)
 (global-set-key (kbd "M-k") 'counsel-yank-pop)
+#+end_src
+
+(define-key ivy-minibuffer-map [remap backward-delete-char] 'ivy-backward-delete-char)
+(define-key ivy-minibuffer-map [remap evil-delete-backward-char-and-join] 'ivy-backward-delete-char)
+#+begin_src emacs-lisp
+(define-key ivy-minibuffer-map (kbd "DEL") 'ivy-backward-delete-char)
 #+end_src
 
 ** Counsel flycheck
@@ -3277,11 +3194,14 @@ When using visual line mode swiper also searches every visual line, not just eve
       `(ivy-switch-buffer
 	(:columns
 	 ((ivy-rich-candidate (:width 30))
-	  (ivy-rich-switch-buffer-size (:width 7 :face my/ivy-rich-switch-buffer-size-face))
+	  ;;(ivy-rich-switch-buffer-size (:width 7 :face my/ivy-rich-switch-buffer-size-face))
 	  (ivy-rich-switch-buffer-indicators (:width 4 :face my/ivy-rich-switch-buffer-indicator-face :align right))
 	  (ivy-rich-switch-buffer-major-mode (:width 12 :face my/ivy-rich-switch-buffer-major-mode-face))
-	  (ivy-rich-switch-buffer-project (:width 15 :face my/ivy-rich-switch-buffer-project-face))
-	  (ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))) :face my/ivy-rich-switch-buffer-path-face)))
+
+	  ;; These two takes a lot of memory and cpu
+	  ;;(ivy-rich-switch-buffer-project (:width 15 :face my/ivy-rich-switch-buffer-project-face))
+	  ;;(ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))) :face my/ivy-rich-switch-buffer-path-face))
+	  )
 	 :predicate
 	 (lambda (cand) (get-buffer cand)))
 	counsel-find-file
@@ -3682,12 +3602,6 @@ Flycheck with extra correction for elisp packages
   (ivy--regex-plus string))
 #+end_src
 
-*** Keys
-Disable custom C-f key
-#+begin_src emacs-lisp
-(define-key isearch-mode-map (kbd "<backspace>") 'isearch-delete-char)
-#+end_src
-
 ** Goto middle of line
 #+begin_src emacs-lisp
 (defun my/go-to-middle-of-line ()
@@ -3779,8 +3693,8 @@ https://emacs.stackexchange.com/questions/20900/navigate-by-indentation
 (my/evil-normal-define-key "C-h" 'indentation-up-to-parent)
 (my/evil-visual-define-key "C-h" 'indentation-up-to-parent)
 
-(my/evil-normal-define-key "<delete>" 'indentation-down-to-child)
-(my/evil-visual-define-key "<delete>" 'indentation-down-to-child)
+(my/evil-normal-define-key "<deletechar>" 'indentation-down-to-child)
+(my/evil-visual-define-key "<deletechar>" 'indentation-down-to-child)
 #+end_src
 
 ** Marks
@@ -4745,6 +4659,18 @@ eldoc-box-hover-mode eldoc-box-hover-mode)
 (define-key my/leader-map (kbd "C") 'my/auto-compile)
 #+end_src
 
+*** Auto docs
+#+begin_src emacs-lisp
+(defun my/auto-docs ()
+  (interactive)
+  (pcase major-mode
+    ('haskell-mode (ivy-hoogle))
+    ('nix-mode (my/nixos-options-ivy))))
+
+(define-key my/leader-map (kbd "h") help-map)
+(define-key my/leader-map (kbd "H") 'my/auto-docs)
+#+end_src
+
 ** Documentation
 *** Compact-docstrings
 (straight-use-package 'compact-docstrings)
@@ -5062,6 +4988,53 @@ or
 (straight-use-package '(haskell-mode :type git :host github :repo "walseb/haskell-mode"))
 #+end_src
 
+*** Hoogle
+**** Ivy
+(straight-use-package '(ivy-hoogle :type git :host github :repo "sjsch/ivy-hoogle"))
+
+#+begin_src emacs-lisp
+(defvar ivy-hoogle-max-entries 200)
+(defun ivy-hoogle--do-search (&optional request-prefix)
+  (let* ((pattern (or (and request-prefix
+			   (concat request-prefix
+				   " "))))
+	 (lim ivy-hoogle-max-entries)
+	 (args (append (list "search" "-l")
+		       (and lim (list "-n" (int-to-string lim)))
+		       (list pattern))))
+    (let (candidates)
+      (with-temp-buffer
+	(apply #'call-process "hoogle" nil t nil args)
+	(goto-char (point-min))
+	(while (not (eobp))
+	  (if (looking-at "\\(.+?\\) -- \\(.+\\)")
+	      (push (propertize (match-string 1)
+				'hoogle-url (match-string-no-properties 2))
+		    candidates))
+	  (forward-line 1)))
+      (nreverse candidates))))
+
+(defun ivy-hoogle--function (str)
+  (mapcar #'ivy-hoogle--fontify-haskell (ivy-hoogle--do-search str)))
+
+(defvar ivy-hoogle-history nil)
+#+end_src
+
+###autoload
+#+begin_src emacs-lisp
+(defun ivy-hoogle ()
+  "Perform a hoogle search."
+  (interactive)
+  (ivy-read "Hoogle: "
+	    #'ivy-hoogle--do-search
+	    :dynamic-collection t
+	    :history ivy-hoogle-history
+	    :preselect (counsel-symbol-at-point)
+	    :re-builder #'regexp-quote
+	    :action (lambda (str)
+		      (browse-url (get-text-property 0 'hoogle-url str)))))
+#+end_src
+
 *** Haskell-doc
 Haskell-doc kind of fills in the holes where lsp-haskell doesn't work
 
@@ -5070,7 +5043,8 @@ Haskell-doc kind of fills in the holes where lsp-haskell doesn't work
 
 (defun my/haskell-doc-mode ()
   ;; haskll-doc-mode is buggy if eldoc is on
-  (eldoc-mode -1)
+  (setq-local lsp-eldoc-enable-hover nil)
+  ;;(run-with-timer 0.05 nil (lambda () (eldoc-mode -1)))
   (haskell-doc-mode 1))
 
 (add-hook 'haskell-mode-hook 'my/haskell-doc-mode)
@@ -5089,10 +5063,11 @@ Haskell-doc kind of fills in the holes where lsp-haskell doesn't work
 Use nix-haskell-mode for automatic project management
 (straight-use-package 'nix-haskell-mode)
 
-*** Indentation
-Haskell-indentation-mode seems better?? or hi2 or hindent
-(straight-use-package 'hyai)
-(straight-use-package 'hindent)
+*** Formatting
+(setq haskell-stylish-on-save t)
+#+begin_src emacs-lisp
+(setq haskell-mode-stylish-haskell-path "brittany")
+#+end_src
 
 *** Extension management
 #+begin_src emacs-lisp
@@ -5110,6 +5085,12 @@ Haskell-indentation-mode seems better?? or hi2 or hindent
 (require 'lsp-haskell)
 
 (add-hook 'haskell-mode-hook 'lsp)
+#+end_src
+
+*** Flycheck
+Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the standard ghc checker though, because it works fine if I don't have HIE. If I have HIE emacs should use that instead
+#+begin_src emacs-lisp
+(setq flycheck-checkers (remove 'haskell-stack-ghc flycheck-checkers))
 #+end_src
 
 ** C/CPP
@@ -5312,6 +5293,7 @@ Run out of function
   (pcase major-mode
     ('csharp-mode (omnisharp-code-format-entire-file))
     ('nix-mode (nix-mode-format))
+    ('haskell-mode (haskell-mode-stylish-buffer))
     (_ ())))
 
 (defun my/auto-format-region ()
@@ -5718,16 +5700,37 @@ Change to temporary name before renaming
 #+begin_src emacs-lisp
 (setq eshell-buffer-name "eshell")
 
-(setq eshell-highlight-prompt t)
-(setq eshell-hist-ignoredups t)
-(setq eshell-history-size 10000)
-
 (setq-default eshell-status-in-mode-line nil)
 
 (defun my/eshell ()
   (interactive)
   (eshell)
   (my/give-buffer-unique-name "*eshell*"))
+#+end_src
+
+** History
+#+begin_src emacs-lisp
+(setq eshell-highlight-prompt t)
+(setq eshell-hist-ignoredups t)
+(setq eshell-history-size 10000)
+#+end_src
+
+*** Append history
+https://emacs.stackexchange.com/questions/18564/merge-history-from-multiple-eshells
+#+begin_src emacs-lisp
+(setq eshell-save-history-on-exit nil)
+
+(defun eshell-append-history ()
+  "Call `eshell-write-history' with the `append' parameter set to `t'."
+  (when eshell-history-ring
+    (let ((newest-cmd-ring (make-ring 1)))
+      (ring-insert newest-cmd-ring (car (ring-elements eshell-history-ring)))
+      (let ((eshell-history-ring newest-cmd-ring))
+	(eshell-write-history eshell-history-file-name t)))))
+
+(add-hook 'eshell-pre-command-hook #'eshell-append-history)
+
+(add-hook 'eshell-mode-hook '(lambda () (interactive) (setq eshell-exit-hook (remove 'eshell-write-history eshell-exit-hook))))
 #+end_src
 
 ** Prefer lisp to bash
@@ -5877,7 +5880,7 @@ Eshell keys are buffer local... Bind them on startup
 
   (evil-define-key '(normal insert visual replace) eshell-mode-map (kbd "C-c") '(lambda () (interactive) (insert "") (call-interactively 'eshell-send-input)))
   ;;(evil-define-key '(normal insert visual replace) eshell-mode-map (kbd "C-x") 'eshell-interrupt-process)
-  (evil-define-key '(normal insert visual replace) eshell-mode-map (kbd "C-x") 'eshell-kill-process)
+  (evil-define-key '(normal insert visual replace) eshell-mode-map (kbd "C-z") 'eshell-kill-process)
 
   (evil-define-key '(normal insert) eshell-mode-map (kbd "C-p") 'eshell-previous-matching-input-from-input)
   (evil-define-key '(normal insert) eshell-mode-map (kbd "C-n") 'eshell-next-matching-input-from-input))
@@ -5921,16 +5924,28 @@ Eshell keys are buffer local... Bind them on startup
 (define-key key-translation-map (kbd "M->") (kbd "Ö"))
 #+end_src
 
-*** Backspace/delete C-h, C-l
+*** Rebind backspace with C-f
+127 is backspace
 #+begin_src emacs-lisp
-(define-key key-translation-map (kbd "C-f") (kbd "<backspace>"))
+(define-key key-translation-map (kbd "C-f") [127])
+#+end_src
+There are 2 unbinds here for compatibility
+#+begin_src emacs-lisp
+(define-key key-translation-map [127] (kbd "C-="))
 (define-key key-translation-map (kbd "<backspace>") (kbd "C-="))
-(define-key key-translation-map (kbd "C-l") (kbd "<delete>"))
-(define-key key-translation-map (kbd "<delete>") (kbd "C-="))
+#+end_src
 
-(my/evil-universal-define-key "<backspace>" 'backward-delete-char)
-(my/evil-insert-define-key "<delete>" 'delete-char)
-(my/evil-replace-define-key "<delete>" 'delete-char)
+Don't split up tabs on delete
+(global-set-key (kbd "DEL") 'backward-delete-char)
+
+*** Rebind delete with
+#+begin_src emacs-lisp
+(define-key key-translation-map (kbd "C-l") (kbd "<deletechar>"))
+#+end_src
+There are 2 unbinds here for compatibility
+#+begin_src emacs-lisp
+(define-key key-translation-map (kbd "<deletechar>") (kbd "C-="))
+(define-key key-translation-map (kbd "<delete>") (kbd "C-="))
 #+end_src
 
 *** k(Move up) <--> p(Paste)
@@ -6187,7 +6202,12 @@ I can't find a pure add-to-list so i have to copy it so that company-backends is
 #+begin_src emacs-lisp
 (defun my/nixos-options-ivy ()
   (interactive)
-  (completing-read "nix-options" nixos-options))
+  (require 'nixos-options)
+  (switch-to-buffer
+   (nixos-options-doc-buffer
+    (nixos-options-get-documentation-for-option
+     (nixos-options-get-option-by-name
+      (completing-read "nix-options: " nixos-options))))))
 #+end_src
 
 ** Pretty sha paths
@@ -6282,7 +6302,7 @@ Exwm don't send back these keys
 (setq exwm-input-global-keys nil)
 #+end_src
 
-** Core
+** load exwm
 https://emacs.stackexchange.com/questions/33326/how-do-i-cut-and-paste-effectively-between-applications-while-using-exwm
 #+begin_src emacs-lisp
 (straight-use-package 'exwm)
@@ -6295,11 +6315,31 @@ enable exwm
 (exwm-enable)
 #+end_src
 
+** exwm keys
+#+begin_src emacs-lisp
+(exwm-input-set-key (kbd my/mod-leader-map-key) 'my/leader-map)
+
+(exwm-input-set-key (kbd "M-<tab>") 'my/toggle-switch-to-minibuffer)
+
+(exwm-input-set-key (kbd "C-e") 'keyboard-quit)
+(exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
+(exwm-input-set-key (kbd "C-=") 'my/window-hydra/body)
+
+(exwm-input-set-key (kbd "M-x") 'counsel-M-x)
+#+end_src
+
+(exwm-input-set-key (kbd "DEL") '(lambda () (interactive) (exwm-input--fake-key 'backspace)))
+(exwm-input-set-key (kbd "<deletechar>") '(lambda () (interactive) (exwm-input--fake-key 'delete)))
+
+(exwm-input-set-key (kbd "M-w") '(lambda () (interactive) (exwm-input--fake-key ?\å)))
+(exwm-input-set-key (kbd "M-r") '(lambda () (interactive) (exwm-input--fake-key ?\ä)))
+(exwm-input-set-key (kbd "M-j") '(lambda () (interactive) (exwm-input--fake-key ?\ö)))
+
 ** Exwm-edit
 #+begin_src emacs-lisp
 (setq exwm-edit-bind-default-keys
       nil)
-(straight-use-package '(exwm-edit :type git :host github :repo "walseb/exwm-edit" :branch "ultimate2"))
+(straight-use-package '(exwm-edit :type git :host github :repo "walseb/exwm-edit" :branch "AllFixes"))
 (require 'exwm-edit)
 (global-exwm-edit-mode 1)
 #+end_src
@@ -6309,69 +6349,11 @@ enable exwm
 (add-hook 'exwm-edit-mode-hook '(lambda () (kill-local-variable 'header-line-format)))
 #+end_src
 
-*** Redefine compose
-Currently exwm-edit messes with my window setup, this fixes that and disables the buggy copy functionallity
-(defcustom exwm-edit-split-below t
- "If non-nil `exwm-edit--compose' splits the window below.
-Otherwise split the window to the right."
- :type 'boolean
- :group 'exwm-edit)
-
-(defun exwm-edit--compose ()
- "Edit text in an EXWM app."
- (interactive)
- ;; flushing clipboard is required, otherwise `gui-get-selection` simply picks up what's in the clipboard (when nothing is actually selected in GUI)
- (gui-set-selection nil nil)
- (let* ((title (exwm-edit--buffer-title (buffer-name)))
-	 (existing (get-buffer title))
-	 (inhibit-read-only t)
-	 (save-interprogram-paste-before-kill t)
-	 (selection-coding-system 'utf-8))            ; required for multilang-support
-   (when (derived-mode-p 'exwm-mode)
-     (setq exwm-edit--last-exwm-buffer (buffer-name))
-     (unless (bound-and-true-p global-exwm-edit-mode)
-	(global-exwm-edit-mode 1))
-     (if existing
-	  (switch-to-buffer-other-window existing)
-	(select-window
-	 (if exwm-edit-split-below
-	     (split-window-below)
-	   (split-window-right)))
-	(switch-to-buffer (get-buffer-create title))
-	(exwm-edit-mode 1)
-	(run-hooks 'exwm-edit-compose-hook)))))
-
-(defun exwm-edit--finish ()
- "Called when done editing buffer created by `exwm-edit--compose'."
- (interactive)
- (run-hooks 'exwm-edit-before-finish-hook)
- (kill-region (point-min)
-	       (point-max))
- (kill-buffer-and-window)
- (let ((buffer (switch-to-buffer exwm-edit--last-exwm-buffer)))
-   (exwm-input--set-focus (exwm--buffer->id (window-buffer (selected-window))))
-   (run-at-time "0.05 sec" nil (lambda ()
-				  ;; Since the text isn't marked, mark it now
-				  (exwm-input--fake-key ?\C-a)
-				  (exwm-input--fake-key ?\C-v)))
-   (setq exwm-edit--last-exwm-buffer nil)))
-
-(defun exwm-edit--cancel ()
- "Called to cancell editing in a buffer created by `exwm-edit--compose'."
- (interactive)
- (run-hooks 'exwm-edit-before-cancel-hook)
- (kill-buffer-and-window)
- (let ((buffer (switch-to-buffer exwm-edit--last-exwm-buffer)))
-   (exwm-input--set-focus (exwm--buffer->id (window-buffer (selected-window))))
-   (exwm-input--fake-key 'right)
-   (setq exwm-edit--last-exwm-buffer nil)))
-
 *** Keys
 #+begin_src emacs-lisp
-(exwm-input-set-key (kbd "M-j") #'exwm-edit--compose)
+(exwm-input-set-key (kbd "C-d") #'exwm-edit--compose)
 #+end_src
-(my/evil-universal-define-key "M-j" #'exwm-edit--compose)
-(my/evil-emacs-define-key "M-j" #'exwm-edit--compose)
+(exwm-input-set-key (kbd "M-j") #'exwm-edit--compose)
 
 ** Set exwm buffer name
 *** Manually set buffer name
@@ -6477,23 +6459,6 @@ Garbage collect when entering x window (because x is not in sync with emacs)
 (add-hook 'exwm-init-hook (lambda () (interactive) (exwm-workspace-attach-minibuffer)))
 #+end_src
 
-** Keys
-#+begin_src emacs-lisp
-(exwm-input-set-key (kbd my/mod-leader-map-key) 'my/leader-map)
-
-(exwm-input-set-key (kbd "M-<tab>") 'my/toggle-switch-to-minibuffer)
-
-(exwm-input-set-key (kbd "C-e") 'keyboard-quit)
-(exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
-(exwm-input-set-key (kbd "C-=") 'my/window-hydra/body)
-
-(exwm-input-set-key (kbd "M-x") 'counsel-M-x)
-#+end_src
-
-(exwm-input-set-key (kbd "M-w") '(lambda () (interactive) (exwm-input--fake-key ?\å)))
-(exwm-input-set-key (kbd "M-r") '(lambda () (interactive) (exwm-input--fake-key ?\ä)))
-(exwm-input-set-key (kbd "M-j") '(lambda () (interactive) (exwm-input--fake-key ?\ö)))
-
 * Shr
 #+begin_src emacs-lisp
 (require 'shr)
@@ -6536,11 +6501,70 @@ Redefine function to attempt to open image if link at point wasn't found
 #+end_src
 
 * Browser
+** w3m
+#+begin_src emacs-lisp
+(straight-use-package 'w3m)
+(require 'w3m)
+
+(w3m-display-mode 'plain)
+
+(setq w3m-use-title-buffer-name t)
+
+(setq w3m-session-crash-recovery nil)
+
+(setq w3m-search-word-at-point nil)
+#+end_src
+
+*** Images
+Make images load instantly
+#+begin_src emacs-lisp
+(setq w3m-default-display-inline-images t)
+(setq w3m-idle-images-show-interval 0)
+#+end_src
+
+*** Launch w3m
+#+begin_src emacs-lisp
+(defun my/launch-w3m ()
+  (interactive)
+  (w3m (let ((search (completing-read "search: " nil)))
+	 ;; Don't do a google search for anything that has a dot then a letter
+	 ;; There are two (not whitespace) here because otherwise the * wildcard would accept strings without any char after a dot
+	 (if (not (string-match-p (rx punct (not whitespace) (not whitespace) (regexp "*") eol) search))
+	     (concat "https://www.google.com/search?q=" search)
+	   search)) t))
+
+(define-key my/leader-map (kbd "b") 'my/launch-w3m)
+#+end_src
+
+*** Switch w3m buffer
+#+begin_src emacs-lisp
+(defun my/switch-w3m-buffer ()
+  "Switch w3m buffer"
+  (interactive)
+  (setq this-command #'my/switch-w3m-buffer)
+  (ivy-read "Switch to buffer: " #'internal-complete-buffer
+	    :keymap ivy-switch-buffer-map
+	    :preselect (buffer-name (other-buffer (current-buffer)))
+	    :action #'ivy--switch-buffer-action
+	    :matcher #'ivy--switch-buffer-matcher
+	    :caller 'ivy-switch-buffer
+	    :initial-input "*w3m*"))
+#+end_src
+
+*** Keys
+#+begin_src emacs-lisp
+(evil-define-key 'normal w3m-mode-map (kbd "RET") 'w3m-view-this-url)
+(evil-define-key 'normal w3m-mode-map (kbd "o") 'w3m-search)
+(evil-define-key 'insert w3m-mode-map (kbd "q") 'undefined)
+
+(evil-define-key 'normal w3m-mode-map (kbd "u") 'w3m-history)
+(evil-define-key 'normal w3m-mode-map (kbd "U") 'w3m-db-history)
+#+end_src
+
 ** Eww/shr
 #+begin_src emacs-lisp
 (require 'eww)
 #+end_src
-
 
 *** Add URL to buffer name
 #+begin_src emacs-lisp
@@ -6599,14 +6623,16 @@ Redefine function to attempt to open image if link at point wasn't found
 (eval-after-load 'exwm
   (progn
        ;;; Normal
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-l") 'exwm-firefox-core-right)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<backspace>") 'exwm-firefox-core-left)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
+
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "l") 'exwm-firefox-core-right)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "h") 'exwm-firefox-core-left)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<deletechar>") 'exwm-firefox-core-right)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-h") 'exwm-firefox-core-left)
+
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "e") 'my/browser-activate-tab)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "N") 'exwm-firefox-core-tab-next)
@@ -6659,12 +6685,10 @@ Redefine function to attempt to open image if link at point wasn't found
     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-F") '(lambda () (interactive) (my/exwm-fake-key "Å")))
     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-U") '(lambda () (interactive) (my/exwm-fake-key "Ä")))
     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-B") '(lambda () (interactive) (my/exwm-fake-key "Ö")))
-#+end_src
 
-   (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-,") '(lambda () (interactive) (exwm-input--fake-key ?ä)))
-   (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "ä") '(lambda () (interactive) (exwm-input--fake-key ?ä)))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-,") '(lambda () (interactive) (exwm-input--fake-key ?ä)))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "ä") '(lambda () (interactive) (exwm-input--fake-key ?ä)))
 
-#+begin_src emacs-lisp
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-l") '(lambda () (interactive) (exwm-input--fake-key 'delete)))
@@ -6680,8 +6704,9 @@ Redefine function to attempt to open image if link at point wasn't found
 )
 
 ** Set default browser
-#+begin_src emacs-lisp
 (setq-default browse-url-browser-function 'eww-browse-url)
+#+begin_src emacs-lisp
+(setq-default browse-url-browser-function 'w3m-browse-url)
 #+end_src
 
 * Version control
@@ -7188,7 +7213,6 @@ Encrypt passwords
 #+end_src
 
 *** Sources
-If dovecot server is setup
 #+begin_src emacs-lisp
 (if (my/is-system-package-installed 'dovecot)
     (setq gnus-select-method '(nnimap "Dovecot"
@@ -7275,7 +7299,8 @@ Apparently only some servers support using 'some
 **** Keys
 #+begin_src emacs-lisp
 (evil-define-key 'normal gnus-group-mode-map (kbd "i") 'nil)
-(evil-define-key 'normal gnus-group-mode-map (kbd "RET") (lambda () (interactive) (gnus-topic-select-group t)))
+(evil-define-key 'normal gnus-group-mode-map (kbd "o") (lambda () (interactive) (gnus-topic-select-group t)))
+(evil-define-key 'normal gnus-group-mode-map (kbd "RET") 'gnus-topic-select-group)
 (evil-define-key '(normal insert) gnus-group-mode-map (kbd "TAB") 'gnus-topic-select-group)
 
 (define-prefix-command 'my/gnus-group-map)
@@ -7294,7 +7319,9 @@ Adds headers to each server, tree view
 #+begin_src emacs-lisp
 (defun my/gnus-topic-mode ()
   (my/gnus-topic-setup)
-  (my/gnus-topic-add-gmane-groups))
+  ;; This doesn't work
+  ;;(my/gnus-topic-add-gmane-groups)
+  )
 
 (add-hook 'gnus-topic-mode-hook 'my/gnus-topic-mode)
 #+end_src
@@ -7304,21 +7331,22 @@ Adds headers to each server, tree view
 (defvar my/gnus-topic-gmane-prefix "nntp+news.gmane.org:")
 
 (setq my/gnus-gmane-subscribed-emacs `(
-				       ;; Gnus
-				       ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.help") ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.general") ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.announce") ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.user")))
+				       ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.help")
+				       ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.general")
+				       ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.announce")
+				       ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.user")))
 
 (setq my/gnus-gmane-subscribed-emacs-blogs `(
-					     ,(concat my/gnus-topic-gmane-prefix "gwene.com.oremacs") ,(concat my/gnus-topic-gmane-prefix "gwene.me.emacsair")))
+					     ,(concat my/gnus-topic-gmane-prefix "gwene.com.oremacs")
+					     ,(concat my/gnus-topic-gmane-prefix "gwene.me.emacsair")))
 
 (setq my/gnus-gmane-subscribed-fsharp `(
-					;; Gnus
 					,(concat my/gnus-topic-gmane-prefix "gwene.com.reddit.pay.r.fsharp")))
 
 (setq my/gnus-gmane-subscribed-guile `(
-				       ;; Gnus
 				       ,(concat my/gnus-topic-gmane-prefix "gmane.lisp.guile.user")))
 
-(defun my/gnus-gmane-subscribed-get()
+(defun my/gnus-gmane-subscribed-get ()
   (append
    my/gnus-gmane-subscribed-guile
    my/gnus-gmane-subscribed-fsharp
@@ -7385,8 +7413,8 @@ Adds headers to each server, tree view
 Mode for choosing which mail to open
 #+begin_src emacs-lisp
 (defun my/gnus-summary-mode ()
-  (setq truncate-lines t)
-  (visual-line-mode -1))
+  (visual-line-mode -1)
+  (setq truncate-lines t))
 
 (add-hook 'gnus-summary-mode-hook 'my/gnus-summary-mode)
 #+end_src
@@ -7407,18 +7435,18 @@ https://www.gnu.org/software/emacs/manual/html_node/gnus/Summary-Buffer-Lines.ht
 	       "\t"
 	       ;; Date as specified by `gnus-user-date-format-alist`
 	       "%&user-date; \t"
-	       ;; Linecount, leave -5,5 spacing
-	       "%-5,5L"
-	       ;; Sender taken from header, leave -20,20 spacing
-	       "%-20,20n"
+	    ;; Linecount, leave -5,5 spacing
+	    "%-5,5L"
+	    ;; Sender taken from header, leave -20,20 spacing
+	    "%-20,20n"
 
-	       "\t"
-	       ;; Reply tree
-	       "%B"
-	       ;; Article subject string
-	       "%-80,80S"
-	       ;; End
-	       "\n"))
+	    "\t"
+	    ;; Reply tree
+	    "%B"
+	    ;; Article subject string
+	    "%-80,80S"
+	    ;; End
+	    "\n"))
 
 (setq gnus-user-date-format-alist '((t . "%Y-%m-%d %H:%M")))
 (setq gnus-thread-sort-functions '(gnus-thread-sort-by-date))
@@ -7520,8 +7548,9 @@ Make date headers better with timezone calculation and time passed
 
 **** Mail renderers, etc
 html renderer
-#+begin_src emacs-lisp
 (setq mm-text-html-renderer 'shr)
+#+begin_src emacs-lisp
+(setq mm-text-html-renderer 'w3m)
 #+end_src
 Inline images?
 #+begin_src emacs-lisp
@@ -7562,7 +7591,7 @@ Mode for writing mail
 **** Keys
 #+begin_src emacs-lisp
 (define-prefix-command 'my/gnus-message-map)
-(evil-define-key 'normal gnus-group-mode-map (kbd (concat my/leader-map-key "a")) 'my/gnus-message-map)
+(evil-define-key 'normal gnus-group-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-message-map)
 #+end_src
 
 *** Misc
@@ -7581,18 +7610,35 @@ Mode for writing mail
 #+begin_src emacs-lisp
 (defvar my/sync-mail-hook nil)
 (defvar my/sync-mail-has-begun nil)
+(defconst my/mbsync-config "~/.mbsyncrc")
 
 (defun my/sync-mail ()
   (interactive)
-  (async-shell-command "mbsync -a")
-  (run-with-timer 0 nil (lambda () (interactive) (run-hooks 'my/sync-mail-hook))))
+  (message (concat "Syncing mail at: " (current-time-string)))
+  (if (file-exists-p my/mbsync-config)
+      (let ((mbsync-config my/mbsync-config))
+	(async-start
+	 (lambda ()
+	   (shell-command (concat
+			   "mbsync -a "
+			   "--config "
+			   mbsync-config))
+	   )
+	 (lambda (result)
+	   (run-hooks 'my/sync-mail-hook))))
+    (message "mbsync config not created")))
 
-
-(add-hook 'gnus-topic-mode-hook 'my/sync-mail-begin)
+(defvar my/is-syncing nil)
 
 (defun my/sync-mail-begin ()
-  (if (my/is-system-package-installed 'mbsync)
-      (run-with-timer 10 300 'my/sync-mail)))
+  (when (and (my/is-system-package-installed 'mbsync) (file-exists-p my/mbsync-config) (not my/is-syncing))
+    (setq my/is-syncing t)
+    (run-with-timer 0 300 'my/sync-mail)))
+
+(if my/run-mail-on-boot
+    (add-hook 'exwm-init-hook 'my/sync-mail-begin)
+  ;;(my/sync-mail-begin)
+  (add-hook 'gnus-topic-mode-hook 'my/sync-mail-begin))
 #+end_src
 
 ** Display unread mail count
@@ -7898,6 +7944,103 @@ Windows cpu core count
 (define-key my/spell-map (kbd "s") 'flyspell-mode)
 #+end_src
 
+List of major modes not to check
+#+begin_src emacs-lisp
+(setq my/flyspell-do-not-check '(
+				 ;; minibuffer-inactive-mode
+
+				 gnus-summary-mode
+				 ediff-meta-mode
+				 dired-mode
+				 diff-mode
+				 help-mode
+
+				 undo-tree-mode
+				 undo-tree-visualizer-mode
+				 undo-tree-visualizer-selection-mode
+
+				 gnus-article-edit-mode
+				 gnus-article-mode
+				 gnus-binary-mode
+				 gnus-browse-mode
+				 gnus-category-mode
+				 gnus-dead-summary-mode
+				 gnus-draft-mode
+				 gnus-group-enter-server-mode
+				 gnus-group-mode
+				 gnus-mailing-list-mode
+				 gnus-message-citation-mode
+				 gnus-mode
+				 gnus-pick-mode
+				 gnus-score-mode
+				 gnus-server-mode
+				 gnus-sticky-article-mode
+				 gnus-summary-mode
+				 gnus-topic-mode
+				 gnus-undo-mode
+
+				 magit-auto-revert-mode
+				 magit-blame-mode
+				 magit-blame-read-only-mode
+				 magit-blob-mode
+				 magit-cherry-mode
+				 magit-diff-mode
+				 magit-file-mode
+				 magit-log-mode
+				 magit-log-select-mode
+				 magit-merge-preview-mode
+				 magit-mode
+				 magit-popup-help-mode
+				 magit-popup-mode
+				 magit-process-mode
+				 magit-reflog-mode
+				 magit-refs-mode
+				 magit-repolist-mode
+				 magit-revision-mode
+				 magit-stash-mode
+				 magit-stashes-mode
+				 magit-status-mode
+				 magit-submodule-list-mode
+				 magit-wip-after-apply-mode
+				 magit-wip-after-save-local-mode
+				 magit-wip-after-save-mode
+				 magit-wip-before-change-mode
+				 magit-wip-initial-backup-mode
+				 magit-wip-mode))
+
+(defun my/flyspell-mode-auto-select ()
+  (if (derived-mode-p 'prog-mode)
+      (flyspell-prog-mode)
+    (unless (member major-mode my/flyspell-do-not-check)
+      (flyspell-mode 1))))
+
+(define-globalized-minor-mode global-my/flyspell-mode
+  nil my/flyspell-mode-auto-select)
+(global-my/flyspell-mode 1)
+#+end_src
+
+** Flyspell-Correct
+#+begin_src emacs-lisp
+(straight-use-package 'flyspell-correct)
+#+end_src
+
+http://aspell.net/0.50-doc/man-html/4_Customizing.html#suggestion
+#+begin_src emacs-lisp
+(setq ispell-extra-args (list "--sug-mode=bad-spellers" "--run-together"))
+#+end_src
+(setq ispell-extra-args (list "--sug-mode=ultra" "--run-together"))
+(setq ispell-extra-args (list "--sug-mode=ultra" "--run-together"))
+
+flyspell-correct-ivy doesn't seem to do much
+(straight-use-package 'flyspell-correct-ivy)
+(setq flyspell-correct-interface #'flyspell-correct-ivy)
+
+*** Key
+#+begin_src emacs-lisp
+(my/evil-normal-define-key (kbd "C-d") 'flyspell-correct-at-point)
+(my/evil-visual-define-key (kbd "C-d") 'flyspell-correct-at-point)
+#+end_src
+
 ** Company
 #+begin_src emacs-lisp
 (defun my/toggle-company-ispell ()
@@ -8095,13 +8238,16 @@ https://www.emacswiki.org/emacs/ArtistMode
   ("f" ellocate nil)
   ("F" my/counsel-ag nil)
 
+  ;; Browser
+  ("b" my/switch-w3m-buffer nil)
+  ("B" my/browser-activate-tab nil)
+
   ;; Switch buffer
   ("a" ivy-switch-buffer nil)
-
   ("A" my/switch-to-last-buffer nil)
 
   ;; Kill buffer
-  ("k" kill-current-buffer nil)
+  ("k" my/auto-kill-buffer nil)
 
   ;; Move around in buffer
   ("C-u" evil-scroll-up nil)
@@ -8113,8 +8259,6 @@ https://www.emacswiki.org/emacs/ArtistMode
   ("t" my/load-window-config nil)
   ("T" my/add-window-config nil)
   ("C-t" my/delete-window-config nil)
-
-  ("b" my/browser-activate-tab nil)
 
   (";" counsel-bookmark nil)
   (":" my/add-bookmark nil)
@@ -8528,7 +8672,14 @@ Read =reference-point-alist= to understand how to merge characters and add space
   '(("&&" . ?∧)
     ("||" . ?∨)))
 
-(defconst my/pretty-comment-symbol ?|)
+(defvar my/pretty-comment-symbol ?|)
+#+end_src
+https://www.w3schools.com/charsets/ref_utf_block.asp
+#+begin_src emacs-lisp
+(when window-system
+  ;;(setq my/pretty-comment-symbol ?▏)
+  ;; (setq my/pretty-comment-symbol ?█)
+  (setq my/pretty-comment-symbol ?▶))
 
 (defun my/prettify-comment ()
   `((,(string-trim comment-start) . ,my/pretty-comment-symbol)))
@@ -8797,14 +8948,13 @@ Highlights surrounding parens
 #+end_src
 
 ** Hl-anything
-#+begin_src emacs-lisp
+Really buggy and makes buffer switching slow
 (straight-use-package 'hl-anything)
 
 (define-globalized-minor-mode global-hl-highlight-mode
   hl-highlight-mode hl-highlight-mode)
 (hl-highlight-mode)
 (global-hl-highlight-mode 1)
-#+end_src
 
 (define-key my/leader-map (kbd "M") 'hl-highlight-thingatpt-local)
 
@@ -9014,19 +9164,15 @@ Use lv-line to create a mode line on the top of the screen
 #+begin_src emacs-lisp
 (defun my/lv-line-set-buffer ()
   (setq-local mode-line-format nil)
+  (setq-local header-line-format nil)
   (setq indicate-empty-lines nil)
   (set-window-hscroll my/lv-line-window 0)
   (setq window-size-fixed t)
   (setq truncate-lines t)
   (visual-line-mode -1)
-  ;;(setq mode-line-format nil)
-
-  ;;  (if window-system
-  ;;      ;; Change to mono face
-  ;;      (face-remap-add-relative 'default :family my/mono-font)) ;;:height my/default-face-height))
 
   ;; Offset by 10 pixels to make text fit
-  (set-window-fringes (selected-window) 10 0)
+  ;;(set-window-fringes (selected-window) 10 0)
 
   ;; Disable char at end of line
   (set-display-table-slot standard-display-table 0 ?\ )
@@ -9275,7 +9421,7 @@ Transmitted
 
 **** Mail
 #+begin_src emacs-lisp
-(defvar my/gnus-unread-string "")
+(defvar my/gnus-unread-string nil)
 
 (defun my/gnus-update-unread()
   (my/gnus-scan-unread)
@@ -9287,7 +9433,8 @@ Transmitted
 	 (my/gnus-get-unread-news-count))))
 
 (add-hook 'my/sync-mail-hook 'my/gnus-update-unread)
-(add-hook 'gnus-summary-exit-map 'my/gnus-update-unread)
+(add-hook 'gnus-summary-exit-hook '(lambda () (my/gnus-update-unread)
+				     (my/lv-line-update)))
 #+end_src
 
 **** Battery
@@ -9297,6 +9444,36 @@ If there is a battery, display it in the mode line
 
 (display-battery-mode 1)
 (setq battery-mode-line-format "%th - %p")
+#+end_src
+
+***** Reload battery display mode
+#+begin_src emacs-lisp
+(defun my/battery-display-mode-reload ()
+  (interactive)
+  (setq battery-status-function
+	(cond ((and (eq system-type 'gnu/linux)
+		    (file-readable-p "/proc/apm"))
+	       #'battery-linux-proc-apm)
+	      ((and (eq system-type 'gnu/linux)
+		    (file-directory-p "/proc/acpi/battery"))
+	       #'battery-linux-proc-acpi)
+	      ((and (eq system-type 'gnu/linux)
+		    (file-directory-p "/sys/class/power_supply/")
+		    (directory-files "/sys/class/power_supply/" nil
+				     battery-linux-sysfs-regexp))
+	       #'battery-linux-sysfs)
+	      ((and (eq system-type 'berkeley-unix)
+		    (file-executable-p "/usr/sbin/apm"))
+	       #'battery-bsd-apm)
+	      ((and (eq system-type 'darwin)
+		    (condition-case nil
+			(with-temp-buffer
+			  (and (eq (call-process "pmset" nil t nil "-g" "ps") 0)
+			       (> (buffer-size) 0)))
+		      (error nil)))
+	       #'battery-pmset)
+	      ((fboundp 'w32-battery-status)
+	       #'w32-battery-status))))
 #+end_src
 
 **** Date and time
@@ -9528,7 +9705,7 @@ mode-line-format
 
 		    (:eval (concat " Up: " my/uptime-total-time-formated))
 
-		    (:eval (if (not (string= my/gnus-unread-string ""))
+		    (:eval (if (and my/gnus-unread-string (not (string= my/gnus-unread-string "")))
 			       (concat " | "
 				       my/gnus-unread-string)))
 
@@ -9573,22 +9750,12 @@ mode-line-format
   (add-to-list 'my/default-face-list face-name)
   ;; Reset face
   (set-face-attribute face-name nil :family 'unspecified :foundry 'unspecified :width 'unspecified :height 'unspecified :weight 'unspecified :slant 'unspecified :foreground 'unspecified :background 'unspecified :underline 'unspecified :overline 'unspecified :strike-through 'unspecified :box 'unspecified :stipple 'unspecified :font 'unspecified :inherit 'default))
-#+end_src
 
-(defun my/clean-font-lock-keywords ()
- (interactive)
- (mapc 'my/count font-lock-keywords-alist)
- )
-(setq my/counter 0)
-(defun my/count (&optional rest)
- (setq my/counter (+ 1 my/counter)))
-
-#+begin_src emacs-lisp
 (defun my/theme ()
   (interactive)
-  (cl-loop for face in (face-list) do
+   (cl-loop for face in (face-list) do
 	   ;; Don't change magit faces
-	   (if (not (string-match "magit" (symbol-name face)))
+	   (if (and (not (string-match "magit" (symbol-name face))) (not (string-match "w3m" (symbol-name face))))
 	       (set-face-attribute face nil :foreground nil :background nil)))
 
   (setq my/diff-added-color "#335533")
@@ -9965,6 +10132,131 @@ Ivy rich
 
 #+begin_src emacs-lisp
 (define-key my/leader-map (kbd "M-c") 'my/theme)
+#+end_src
+
+* Backups
+Stop emacs from creating backup files on every save
+#+begin_src emacs-lisp
+(setq make-backup-files nil)
+#+end_src
+Max amount of characters, 200 000 ~200kb
+#+begin_src emacs-lisp
+(defvar my/per-session-backup-limit 200000)
+
+(defvar my/backup-directory (concat (expand-file-name user-emacs-directory) "backups/"))
+(defvar my/backup-per-session-directory (concat my/backup-directory "per-session/"))
+(defvar my/auto-saves-directory (concat (expand-file-name user-emacs-directory) "auto-saves/"))
+
+(my/create-dir-if-not-exist my/backup-directory)
+(my/create-dir-if-not-exist my/backup-per-session-directory)
+(my/create-dir-if-not-exist my/auto-saves-directory)
+(defun my/backup-buffer-mode-ok ()
+  (pcase (file-name-extension (buffer-name))
+    ("gpg" nil)
+    (_ (pcase major-mode
+	 ('image-mode nil)
+	 (_ t)))))
+
+(defun my/should-backup-buffer ()
+  (and (buffer-modified-p) buffer-file-name (my/backup-buffer-mode-ok) (< (point-max) my/per-session-backup-limit)))
+
+(defun my/backup-format-file-path (path)
+  (replace-regexp-in-string "/" "!" path))
+
+(defun my/backup-buffer (backup-path)
+  (interactive)
+  (if (my/should-backup-buffer)
+      (save-restriction (widen) (write-region (point-min) (point-max) (concat backup-path (number-to-string (floor (float-time))) (my/backup-format-file-path (buffer-file-name)))))))
+#+end_src
+
+** Make backup on first save
+#+begin_src emacs-lisp
+(defvar my/first-save t)
+
+(defun my/backup-original-buffer ()
+  (interactive)
+  (if my/first-save
+      (progn
+	(my/backup-buffer my/backup-directory)
+	(setq-local my/first-save nil))))
+#+end_src
+
+** Make backup on every save
+#+begin_src emacs-lisp
+(defun my/backup-buffer-per-session ()
+  (interactive)
+  (if (not my/first-save)
+      (my/backup-buffer my/backup-per-session-directory)))
+#+end_src
+
+** Delete old backups
+Automatically delete old backup files older than a week
+#+begin_src emacs-lisp
+(message "Deleting old backup files...")
+(let ((week (* 60 60 24 7))
+      (current (float-time (current-time))))
+  (dolist (file (directory-files my/backup-directory t))
+    (when (and (backup-file-name-p file)
+	       (> (- current (float-time (nth 5 (file-attributes file))))
+		  week))
+      (message "%s" file)
+      (delete-file file))))
+#+end_src
+
+** Delete per-session backups on startup
+#+begin_src emacs-lisp
+(ignore-errors
+  (async-shell-command (concat "rm " my/backup-per-session-directory "*" )))
+#+end_src
+
+** Undo
+*** Disable undo warning buffer
+There is a warning window that pops up if you have made too many changes to a buffer, this might stop long macros, so stop that window from popping up
+#+begin_src emacs-lisp
+(require 'warnings)
+(add-to-list 'warning-suppress-types '(undo discard-info))
+#+end_src
+
+** Undo tree
+#+begin_src emacs-lisp
+(straight-use-package 'undo-tree)
+
+(setq global-undo-tree-mode t)
+#+end_src
+
+Fixes errors
+#+begin_src emacs-lisp
+(setq undo-tree-enable-undo-in-region nil)
+(setq-default undo-tree-enable-undo-in-region nil)
+#+end_src
+
+(setq undo-tree-auto-save-history t)
+(setq-default undo-tree-auto-save-history t)
+
+#+begin_src emacs-lisp
+(setq undo-tree-visualizer-lazy-drawing nil)
+(setq-default undo-tree-visualizer-lazy-drawing nil)
+
+(setq undo-tree-visualizer-timestamps t)
+(setq undo-tree-visualizer-diff t)
+#+end_src
+
+(setq undo-tree-auto-save-history t)
+
+(setq undo-tree-history-directory-alist '(("." . "~/.emacs.d/saves")))
+(make-directory (concat spacemacs-cache-directory "undo"))
+
+*** Keys
+#+begin_src emacs-lisp
+(add-hook 'undo-tree-visualizer-mode-hook '(lambda () (interactive) (run-with-timer 0.1 nil 'evil-force-normal-state)))
+
+(setq undo-tree-visualizer-mode-map (make-sparse-keymap))
+
+(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "p") #'undo-tree-visualize-undo)
+(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "n") #'undo-tree-visualize-redo)
+(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "l") #'undo-tree-visualize-switch-branch-right)
+(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "h") #'undo-tree-visualize-switch-branch-left)
+(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "d") #'undo-tree-visualizer-toggle-diff)
 #+end_src
 
 * Run command on boot

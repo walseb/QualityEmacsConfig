@@ -435,8 +435,6 @@
 ;; ** Track down more performance problems
 ;; Especially when using highlight-indent-guides on large files
 
-;; ** A quick spellchecker in comments and org-mode
-
 ;; ** Org-noter
 ;; Great for commenting pdfs
 
@@ -1799,6 +1797,13 @@ Borrowed from mozc.el."
 ;; ** Timer
 ;; Set timer to only run expired repeating hooks once after sleep
 (setq timer-max-repeats 1)
+
+;; ** Auto kill buffer
+(defun my/auto-kill-buffer ()
+  (interactive)
+  (pcase major-mode
+    ('gnus-summary-mode (gnus-summary-exit))
+    (_ (kill-current-buffer))))
 
 ;; * File options
 (define-prefix-command 'my/file-options-map)
@@ -5286,11 +5291,12 @@ Borrowed from mozc.el."
 ;; *** Ivy
 (defun my/nixos-options-ivy ()
   (interactive)
+  (require 'nixos-options)
   (switch-to-buffer
    (nixos-options-doc-buffer
     (nixos-options-get-documentation-for-option
      (nixos-options-get-option-by-name
-      (completing-read "nix-options" nixos-options))))))
+      (completing-read "nix-options: " nixos-options))))))
 
 ;; ** Pretty sha paths
 ;;  (straight-use-package 'pretty-sha-path)
@@ -5416,7 +5422,8 @@ Borrowed from mozc.el."
 (add-hook 'exwm-edit-mode-hook '(lambda () (kill-local-variable 'header-line-format)))
 
 ;; *** Keys
-(exwm-input-set-key (kbd "M-j") #'exwm-edit--compose)
+(exwm-input-set-key (kbd "C-d") #'exwm-edit--compose)
+;; (exwm-input-set-key (kbd "M-j") #'exwm-edit--compose)
 
 ;; ** Set exwm buffer name
 ;; *** Manually set buffer name
@@ -5800,7 +5807,6 @@ Borrowed from mozc.el."
 (straight-use-package '(forge :type git :host github :repo "magit/forge"))
 
 ;; *** Keys
-;; **** General
 (require 'magit)
 (require 'magit-mode)
 
@@ -6387,7 +6393,6 @@ Borrowed from mozc.el."
 
 (evil-define-key 'normal gnus-summary-mode-map (kbd "i") 'nil)
 (evil-define-key 'normal gnus-summary-mode-map (kbd "RET") 'gnus-summary-scroll-up)
-(define-key gnus-summary-mode-map [remap kill-current-buffer] 'gnus-summary-exit)
 
 (defun my/gnus-summary-show-all-mail ()
   "Show all mail"
@@ -6466,7 +6471,7 @@ Borrowed from mozc.el."
 
 ;; **** Keys
 (define-prefix-command 'my/gnus-message-map)
-(evil-define-key 'normal gnus-group-mode-map (kbd (concat my/leader-map-key "a")) 'my/gnus-message-map)
+(evil-define-key 'normal gnus-group-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-message-map)
 
 ;; *** Misc
 ;; **** Random color gnus logo
@@ -6762,6 +6767,95 @@ Borrowed from mozc.el."
 (define-key my/spell-map (kbd "d") 'ispell-change-dictionary)
 (define-key my/spell-map (kbd "s") 'flyspell-mode)
 
+;; List of major modes not to check
+(setq my/flyspell-do-not-check '(
+				 ;; minibuffer-inactive-mode
+
+				 gnus-summary-mode
+				 ediff-meta-mode
+				 dired-mode
+				 diff-mode
+				 help-mode
+
+				 undo-tree-mode
+				 undo-tree-visualizer-mode
+				 undo-tree-visualizer-selection-mode
+
+				 gnus-article-edit-mode
+				 gnus-article-mode
+				 gnus-binary-mode
+				 gnus-browse-mode
+				 gnus-category-mode
+				 gnus-dead-summary-mode
+				 gnus-draft-mode
+				 gnus-group-enter-server-mode
+				 gnus-group-mode
+				 gnus-mailing-list-mode
+				 gnus-message-citation-mode
+				 gnus-mode
+				 gnus-pick-mode
+				 gnus-score-mode
+				 gnus-server-mode
+				 gnus-sticky-article-mode
+				 gnus-summary-mode
+				 gnus-topic-mode
+				 gnus-undo-mode
+
+				 magit-auto-revert-mode
+				 magit-blame-mode
+				 magit-blame-read-only-mode
+				 magit-blob-mode
+				 magit-cherry-mode
+				 magit-diff-mode
+				 magit-file-mode
+				 magit-log-mode
+				 magit-log-select-mode
+				 magit-merge-preview-mode
+				 magit-mode
+				 magit-popup-help-mode
+				 magit-popup-mode
+				 magit-process-mode
+				 magit-reflog-mode
+				 magit-refs-mode
+				 magit-repolist-mode
+				 magit-revision-mode
+				 magit-stash-mode
+				 magit-stashes-mode
+				 magit-status-mode
+				 magit-submodule-list-mode
+				 magit-wip-after-apply-mode
+				 magit-wip-after-save-local-mode
+				 magit-wip-after-save-mode
+				 magit-wip-before-change-mode
+				 magit-wip-initial-backup-mode
+				 magit-wip-mode))
+
+(defun my/flyspell-mode-auto-select ()
+  (if (derived-mode-p 'prog-mode)
+      (flyspell-prog-mode)
+    (unless (member major-mode my/flyspell-do-not-check)
+      (flyspell-mode 1))))
+
+(define-globalized-minor-mode global-my/flyspell-mode
+  nil my/flyspell-mode-auto-select)
+(global-my/flyspell-mode 1)
+
+;; ** Flyspell-Correct
+(straight-use-package 'flyspell-correct)
+
+;; http://aspell.net/0.50-doc/man-html/4_Customizing.html#suggestion
+(setq ispell-extra-args (list "--sug-mode=bad-spellers" "--run-together"))
+;;(setq ispell-extra-args (list "--sug-mode=ultra" "--run-together"))
+;;(setq ispell-extra-args (list "--sug-mode=ultra" "--run-together"))
+
+;; flyspell-correct-ivy doesn't seem to do much
+;;(straight-use-package 'flyspell-correct-ivy)
+;; (setq flyspell-correct-interface #'flyspell-correct-ivy)
+
+;; *** Key
+(my/evil-normal-define-key (kbd "C-d") 'flyspell-correct-at-point)
+(my/evil-visual-define-key (kbd "C-d") 'flyspell-correct-at-point)
+
 ;; ** Company
 (defun my/toggle-company-ispell ()
   (interactive)
@@ -6951,7 +7045,7 @@ Borrowed from mozc.el."
   ("A" my/switch-to-last-buffer nil)
 
   ;; Kill buffer
-  ("k" kill-current-buffer nil)
+  ("k" my/auto-kill-buffer nil)
 
   ;; Move around in buffer
   ("C-u" evil-scroll-up nil)
