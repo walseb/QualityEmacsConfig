@@ -5572,7 +5572,7 @@ Borrowed from mozc.el."
   (w3m (let ((search (completing-read "search: " nil)))
 	 ;; Don't do a google search for anything that has a dot then a letter
 	 ;; There are two (not whitespace) here because otherwise the * wildcard would accept strings without any char after a dot
-	 (if (not (string-match-p (rx punct (not whitespace) (not whitespace) (regexp "*") eol) search))
+	 (if (not (string-match-p (rx (literal ".") (not whitespace) (not whitespace) (regexp "*") eol) search))
 	     (concat "https://www.google.com/search?q=" search)
 	   search)) t))
 
@@ -6770,6 +6770,9 @@ Borrowed from mozc.el."
 ;; List of major modes not to check
 (setq my/flyspell-do-not-check '(
 				 wdired-mode
+
+				 ;; Because of some reason, w3m doesn't get read only until very late, which activates spell checking
+				 w3m-mode
 				 ))
 
 (defun my/flyspell-mode-auto-select ()
