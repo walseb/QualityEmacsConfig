@@ -6769,71 +6769,14 @@ Borrowed from mozc.el."
 
 ;; List of major modes not to check
 (setq my/flyspell-do-not-check '(
-				 ;; minibuffer-inactive-mode
-
-				 gnus-summary-mode
-				 ediff-meta-mode
-				 dired-mode
-				 diff-mode
-				 help-mode
-
-				 undo-tree-mode
-				 undo-tree-visualizer-mode
-				 undo-tree-visualizer-selection-mode
-
-				 gnus-article-edit-mode
-				 gnus-article-mode
-				 gnus-binary-mode
-				 gnus-browse-mode
-				 gnus-category-mode
-				 gnus-dead-summary-mode
-				 gnus-draft-mode
-				 gnus-group-enter-server-mode
-				 gnus-group-mode
-				 gnus-mailing-list-mode
-				 gnus-message-citation-mode
-				 gnus-mode
-				 gnus-pick-mode
-				 gnus-score-mode
-				 gnus-server-mode
-				 gnus-sticky-article-mode
-				 gnus-summary-mode
-				 gnus-topic-mode
-				 gnus-undo-mode
-
-				 magit-auto-revert-mode
-				 magit-blame-mode
-				 magit-blame-read-only-mode
-				 magit-blob-mode
-				 magit-cherry-mode
-				 magit-diff-mode
-				 magit-file-mode
-				 magit-log-mode
-				 magit-log-select-mode
-				 magit-merge-preview-mode
-				 magit-mode
-				 magit-popup-help-mode
-				 magit-popup-mode
-				 magit-process-mode
-				 magit-reflog-mode
-				 magit-refs-mode
-				 magit-repolist-mode
-				 magit-revision-mode
-				 magit-stash-mode
-				 magit-stashes-mode
-				 magit-status-mode
-				 magit-submodule-list-mode
-				 magit-wip-after-apply-mode
-				 magit-wip-after-save-local-mode
-				 magit-wip-after-save-mode
-				 magit-wip-before-change-mode
-				 magit-wip-initial-backup-mode
-				 magit-wip-mode))
+				 wdired-mode
+				 ))
 
 (defun my/flyspell-mode-auto-select ()
   (if (derived-mode-p 'prog-mode)
       (flyspell-prog-mode)
-    (unless (member major-mode my/flyspell-do-not-check)
+    ;; It has to be both writable and not a part of the do not check list for spell checking to activate
+    (when (and (not buffer-read-only) (not (member major-mode my/flyspell-do-not-check)))
       (flyspell-mode 1))))
 
 (define-globalized-minor-mode global-my/flyspell-mode
