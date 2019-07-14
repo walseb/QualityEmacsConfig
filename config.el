@@ -1060,9 +1060,16 @@
 	("\"" . "\"")
 	("“" . "”")))
 
+;; *** Evil commentary
+(straight-use-package 'evil-commentary)
+(evil-commentary-mode)
+
+(evil-define-key 'normal evil-commentary-mode-map "gC" 'evil-commentary-line)
+(evil-define-key 'normal evil-commentary-mode-map "gY" 'evil-commentary-yank-line)
+
 ;; *** Evil-surround
-;; (straight-use-package 'evil-surround)
-;; (global-evil-surround-mode 1)
+(straight-use-package 'evil-surround)
+(global-evil-surround-mode 1)
 
 ;; *** Evil-args
 (straight-use-package 'evil-args)
@@ -1072,9 +1079,8 @@
 (define-key evil-outer-text-objects-map "a" 'evil-outer-arg)
 
 ;; ** Evil-lion
-;; (straight-use-package 'evil-lion)
-
-;; (evil-lion-mode)
+(straight-use-package 'evil-lion)
+(evil-lion-mode)
 
 ;; ** Evil-goggles
 (straight-use-package 'evil-goggles)
