@@ -554,6 +554,8 @@
 ;; ** Automate email setup
 ;; You could easily create prompts when creating the config files that modify the password and user fields
 
+;; ** Fix so that you can use counsel-yank in minibuffer again
+
 ;; * First
 ;; Things to do first
 (setq mode-line-format nil)
@@ -4032,6 +4034,9 @@ Borrowed from mozc.el."
 (straight-use-package 'company-lsp)
 (push 'company-lsp company-backends)
 
+;; Increases performance
+(setq company-lsp-cache-candidates 'auto)
+
 ;; *** LSP-ui
 (straight-use-package 'lsp-ui)
 ;; TODO I have to load the package fully here to set the fonts later
@@ -6775,6 +6780,11 @@ Borrowed from mozc.el."
 
 ;; List of major modes not to check
 (setq my/flyspell-do-not-check '(
+				 minibuffer-inactive-mode
+				 eshell-mode
+				 shell-mode
+				 term-mode
+
 				 wdired-mode
 
 				 ;; Because of some reason, w3m doesn't get read only until very late, which activates spell checking
@@ -8323,7 +8333,7 @@ Borrowed from mozc.el."
 
 (defun my/theme ()
   (interactive)
-   (cl-loop for face in (face-list) do
+  (cl-loop for face in (face-list) do
 	   ;; Don't change magit faces
 	   (if (and (not (string-match "magit" (symbol-name face))) (not (string-match "w3m" (symbol-name face))))
 	       (set-face-attribute face nil :foreground nil :background nil)))
@@ -8689,6 +8699,11 @@ Borrowed from mozc.el."
 
      ;;;; Lens
   (set-face-attribute 'lsp-lens-face nil :foreground my/foreground-color :background my/mark-color-4 :height 0.8))
+
+;;; Flyspell
+(when window-system
+  (set-face-attribute 'flyspell-incorrect nil :underline '(:style wave :color "Blue"))
+  (set-face-attribute 'flyspell-duplicate nil :underline '(:style wave :color "LightBlue")))
 
    ;;; Which-key
 (if window-system
