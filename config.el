@@ -1858,6 +1858,8 @@ Borrowed from mozc.el."
     (if scratch-buffer
 	(switch-to-buffer scratch-buffer)
       (switch-to-buffer "*scratch*")
+      (when (not (file-exists-p (concat user-emacs-directory "scratch")))
+	(write-region "" nil (concat user-emacs-directory "scratch")))
       (insert-file-contents (concat user-emacs-directory "scratch"))
       ;; This generates a new mode map and uses it. This makes it possible to modify the current mode map without modifying the org mode map.
       (org-mode)
@@ -4042,11 +4044,13 @@ Borrowed from mozc.el."
 ;; TODO I have to load the package fully here to set the fonts later
 (require 'lsp-ui)
 
+(add-hook 'lsp-mode-hook 'lsp-ui-mode)
+
 (setq lsp-ui-doc-enable nil
       lsp-ui-peek-enable t
       lsp-ui-sideline-enable t
       lsp-ui-imenu-enable t
-      lsp-ui-flycheck-enable nil)
+      lsp-ui-flycheck-enable t)
 ;; (setq lsp-ui-sideline-ignore-duplicate t)
 
 (setq lsp-ui-sideline-show-code-actions t
@@ -4341,14 +4345,19 @@ Borrowed from mozc.el."
 (straight-use-package 'company-cabal)
 
 ;; *** lsp-haskell
-(straight-use-package 'lsp-haskell)
-(require 'lsp-haskell)
+(when (not my/enable-basic-haskell-support)
+  (straight-use-package 'lsp-haskell)
+  (require 'lsp-haskell)
 
-(add-hook 'haskell-mode-hook 'lsp)
+  (add-hook 'haskell-mode-hook 'lsp))
 
 ;; *** Flycheck
 ;; Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the standard ghc checker though, because it works fine if I don't have HIE. If I have HIE emacs should use that instead
 (setq flycheck-checkers (remove 'haskell-stack-ghc flycheck-checkers))
+
+(when (not my/enable-basic-haskell-support)
+  (setq flycheck-checkers (remove 'haskell-ghc flycheck-checkers))
+  (setq flycheck-checkers (remove 'haskell-hlint flycheck-checkers)))
 
 ;; ** C/CPP
 ;; *** Irony
@@ -6801,6 +6810,14 @@ Borrowed from mozc.el."
 (define-globalized-minor-mode global-my/flyspell-mode
   nil my/flyspell-mode-auto-select)
 (global-my/flyspell-mode 1)
+
+;; ** Flyspell-prog enable only for certain faces
+;; Don't auto correct strings
+(setq flyspell-prog-text-faces
+      '(
+	;; font-lock-string-face
+	font-lock-comment-face
+	font-lock-doc-face))
 
 ;; ** Flyspell-Correct
 (straight-use-package 'flyspell-correct)

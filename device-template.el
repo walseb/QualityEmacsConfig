@@ -18,8 +18,6 @@
 
 (defvar my/on-boot-run nil)
 
-(defvar my/using-gnu-mlocate t)
-
 ;; (defun my/carpalx-enable ()
 ;;   (interactive)
 ;;   (async-shell-command "setxkbmap -I ~/.emacs.d/configs/kbd-layouts/ carpalx.xkb -print | xkbcomp -I/home/admin/.emacs.d/configs/kbd-layouts/ - $DISPLAY"))
@@ -29,3 +27,5 @@
 (defvar my/run-mail-on-boot nil)
 
 (setq ellocate-scan-dirs '(("~/" "~/ellocate-home-db")))
+
+(defvar my/enable-basic-haskell-support nil)

@@ -558,6 +558,8 @@ It doesn't work and it's badly written
 ** Automate email setup
 You could easily create prompts when creating the config files that modify the password and user fields
 
+** Fix so that you can use counsel-yank in minibuffer again
+
 * First
 Things to do first
 #+begin_src emacs-lisp
@@ -1178,9 +1180,20 @@ Allows for using indention as text objects
 	("“" . "”")))
 #+end_src
 
+*** Evil commentary
+#+begin_src emacs-lisp
+(straight-use-package 'evil-commentary)
+(evil-commentary-mode)
+
+(evil-define-key 'normal evil-commentary-mode-map "gC" 'evil-commentary-line)
+(evil-define-key 'normal evil-commentary-mode-map "gY" 'evil-commentary-yank-line)
+#+end_src
+
 *** Evil-surround
+#+begin_src emacs-lisp
 (straight-use-package 'evil-surround)
 (global-evil-surround-mode 1)
+#+end_src
 
 *** Evil-args
 #+begin_src emacs-lisp
@@ -1194,9 +1207,10 @@ bind evil-args text objects
 #+end_src
 
 ** Evil-lion
+#+begin_src emacs-lisp
 (straight-use-package 'evil-lion)
-
 (evil-lion-mode)
+#+end_src
 
 ** Evil-goggles
 #+begin_src emacs-lisp
@@ -2131,6 +2145,8 @@ Kill the initial scratch buffer
     (if scratch-buffer
 	(switch-to-buffer scratch-buffer)
       (switch-to-buffer "*scratch*")
+      (when (not (file-exists-p (concat user-emacs-directory "scratch")))
+	(write-region "" nil (concat user-emacs-directory "scratch")))
       (insert-file-contents (concat user-emacs-directory "scratch"))
       ;; This generates a new mode map and uses it. This makes it possible to modify the current mode map without modifying the org mode map.
       (org-mode)
@@ -4712,6 +4728,11 @@ Normally lsp-mode starts up flymake mode automaticall which breaks ccls
 (push 'company-lsp company-backends)
 #+end_src
 
+Increases performance
+#+begin_src emacs-lisp
+(setq company-lsp-cache-candidates 'auto)
+#+end_src
+
 *** LSP-ui
 #+begin_src emacs-lisp
 (straight-use-package 'lsp-ui)
@@ -4720,11 +4741,13 @@ TODO I have to load the package fully here to set the fonts later
 #+begin_src emacs-lisp
 (require 'lsp-ui)
 
+(add-hook 'lsp-mode-hook 'lsp-ui-mode)
+
 (setq lsp-ui-doc-enable nil
       lsp-ui-peek-enable t
       lsp-ui-sideline-enable t
       lsp-ui-imenu-enable t
-      lsp-ui-flycheck-enable nil)
+      lsp-ui-flycheck-enable t)
 #+end_src
 (setq lsp-ui-sideline-ignore-duplicate t)
 
@@ -5081,16 +5104,21 @@ Use nix-haskell-mode for automatic project management
 
 *** lsp-haskell
 #+begin_src emacs-lisp
-(straight-use-package 'lsp-haskell)
-(require 'lsp-haskell)
+(when (not my/enable-basic-haskell-support)
+  (straight-use-package 'lsp-haskell)
+  (require 'lsp-haskell)
 
-(add-hook 'haskell-mode-hook 'lsp)
+  (add-hook 'haskell-mode-hook 'lsp))
 #+end_src
 
 *** Flycheck
 Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the standard ghc checker though, because it works fine if I don't have HIE. If I have HIE emacs should use that instead
 #+begin_src emacs-lisp
 (setq flycheck-checkers (remove 'haskell-stack-ghc flycheck-checkers))
+
+(when (not my/enable-basic-haskell-support)
+  (setq flycheck-checkers (remove 'haskell-ghc flycheck-checkers))
+  (setq flycheck-checkers (remove 'haskell-hlint flycheck-checkers)))
 #+end_src
 
 ** C/CPP
@@ -6529,7 +6557,7 @@ Make images load instantly
   (w3m (let ((search (completing-read "search: " nil)))
 	 ;; Don't do a google search for anything that has a dot then a letter
 	 ;; There are two (not whitespace) here because otherwise the * wildcard would accept strings without any char after a dot
-	 (if (not (string-match-p (rx punct (not whitespace) (not whitespace) (regexp "*") eol) search))
+	 (if (not (string-match-p (rx (literal ".") (not whitespace) (not whitespace) (regexp "*") eol) search))
 	     (concat "https://www.google.com/search?q=" search)
 	   search)) t))
 
@@ -6805,7 +6833,6 @@ Disable magit in commit view, makes it possible to do large commits
 #+end_src
 
 *** Keys
-**** General
 #+begin_src emacs-lisp
 (require 'magit)
 (require 'magit-mode)
@@ -7947,76 +7974,37 @@ Windows cpu core count
 List of major modes not to check
 #+begin_src emacs-lisp
 (setq my/flyspell-do-not-check '(
-				 ;; minibuffer-inactive-mode
+				 minibuffer-inactive-mode
+				 eshell-mode
+				 shell-mode
+				 term-mode
 
-				 gnus-summary-mode
-				 ediff-meta-mode
-				 dired-mode
-				 diff-mode
-				 help-mode
+				 wdired-mode
 
-				 undo-tree-mode
-				 undo-tree-visualizer-mode
-				 undo-tree-visualizer-selection-mode
-
-				 gnus-article-edit-mode
-				 gnus-article-mode
-				 gnus-binary-mode
-				 gnus-browse-mode
-				 gnus-category-mode
-				 gnus-dead-summary-mode
-				 gnus-draft-mode
-				 gnus-group-enter-server-mode
-				 gnus-group-mode
-				 gnus-mailing-list-mode
-				 gnus-message-citation-mode
-				 gnus-mode
-				 gnus-pick-mode
-				 gnus-score-mode
-				 gnus-server-mode
-				 gnus-sticky-article-mode
-				 gnus-summary-mode
-				 gnus-topic-mode
-				 gnus-undo-mode
-
-				 magit-auto-revert-mode
-				 magit-blame-mode
-				 magit-blame-read-only-mode
-				 magit-blob-mode
-				 magit-cherry-mode
-				 magit-diff-mode
-				 magit-file-mode
-				 magit-log-mode
-				 magit-log-select-mode
-				 magit-merge-preview-mode
-				 magit-mode
-				 magit-popup-help-mode
-				 magit-popup-mode
-				 magit-process-mode
-				 magit-reflog-mode
-				 magit-refs-mode
-				 magit-repolist-mode
-				 magit-revision-mode
-				 magit-stash-mode
-				 magit-stashes-mode
-				 magit-status-mode
-				 magit-submodule-list-mode
-				 magit-wip-after-apply-mode
-				 magit-wip-after-save-local-mode
-				 magit-wip-after-save-mode
-				 magit-wip-before-change-mode
-				 magit-wip-initial-backup-mode
-				 magit-wip-mode))
+				 ;; Because of some reason, w3m doesn't get read only until very late, which activates spell checking
+				 w3m-mode
+				 ))
 
 (defun my/flyspell-mode-auto-select ()
   (if (derived-mode-p 'prog-mode)
       (flyspell-prog-mode)
-    (unless (member major-mode my/flyspell-do-not-check)
+    ;; It has to be both writable and not a part of the do not check list for spell checking to activate
+    (when (and (not buffer-read-only) (not (member major-mode my/flyspell-do-not-check)))
       (flyspell-mode 1))))
 
 (define-globalized-minor-mode global-my/flyspell-mode
   nil my/flyspell-mode-auto-select)
 (global-my/flyspell-mode 1)
+#+end_src
+
+** Flyspell-prog enable only for certain faces
+Don't auto correct strings
+#+begin_src emacs-lisp
+(setq flyspell-prog-text-faces
+      '(
+	;; font-lock-string-face
+	font-lock-comment-face
+	font-lock-doc-face))
 #+end_src
 
 ** Flyspell-Correct
@@ -9753,7 +9741,7 @@ mode-line-format
 
 (defun my/theme ()
   (interactive)
-   (cl-loop for face in (face-list) do
+  (cl-loop for face in (face-list) do
 	   ;; Don't change magit faces
 	   (if (and (not (string-match "magit" (symbol-name face))) (not (string-match "w3m" (symbol-name face))))
 	       (set-face-attribute face nil :foreground nil :background nil)))
@@ -10121,6 +10109,13 @@ Ivy rich
 
      ;;;; Lens
   (set-face-attribute 'lsp-lens-face nil :foreground my/foreground-color :background my/mark-color-4 :height 0.8))
+#+end_src
+
+Flyspell
+#+begin_src emacs-lisp
+(when window-system
+  (set-face-attribute 'flyspell-incorrect nil :underline '(:style wave :color "Blue"))
+  (set-face-attribute 'flyspell-duplicate nil :underline '(:style wave :color "LightBlue")))
 
    ;;; Which-key
 (if window-system
