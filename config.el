@@ -342,6 +342,55 @@
 ;;   setxkbmap us
 ;; #+end_src
 
+;; ** Haskell IDE engine
+;; *** Error on first line of file
+;; **** Cabal V2 related problem
+;; It could be that HIE still doesn't support cabal V2, just run =cabal configure= to fix this
+
+;; ** Nix
+;; *** Create project with cabal2nix
+;; #+BEGIN_SRC emacs-lisp
+;; cabal init
+;; #+END_SRC
+
+;; Setup cabal2nix
+;; #+BEGIN_SRC shell
+;; # Not really necessary
+;; cabal2nix . > default.nix
+
+;; cabal2nix --shell . > shell.nix
+;; # beware that HIE might not work with new-configure, run normal configure instead for V1 project
+;; *nix-shell --command 'cabal new-configure'
+;; #+END_SRC
+
+;; **** Automatically create default.nix and shell.nix from the cabal file
+;; Add to default.nix
+;; #+BEGIN_SRC
+;; # default.nix
+;; { pkgs ? import <nixpkgs> {} }:
+
+;; pkgs.haskellPackages.callCabal2nix "name" ./. {}
+;; #+END_SRC
+
+;; ***** optional
+;; And lastly add to shell.nix
+;; #+BEGIN_SRC
+;; # shell.nix
+;; (import ./. {}).env
+;; #+END_SRC
+;; and just run *nix-shell then cabal build or whatver
+;; Edit dependencies in cabal project file
+;; Nix will always be used
+
+;; OR
+;; just run
+;; #+BEGIN_SRC
+;; *nix-shell -A env
+;; #+END_SRC
+;; always instead
+
+
+
 ;; * Todo
 ;; ** Packages to try
 ;; nix-buffer
@@ -4349,11 +4398,16 @@ Borrowed from mozc.el."
   (straight-use-package 'lsp-haskell)
   (require 'lsp-haskell)
 
-  (add-hook 'haskell-mode-hook 'lsp))
+  (add-hook 'haskell-mode-hook '(lambda ()
+				  ;; lsp-haskell doesn't work with native json
+				  (setq-local lsp-use-native-json nil)
+				  ;; Fixes lockups due to prettify-symbol I think
+				  (setq-local syntax-propertize-function nil)
+				  (lsp))))
 
-;; *** Flycheck
-;; Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the standard ghc checker though, because it works fine if I don't have HIE. If I have HIE emacs should use that instead
-(setq flycheck-checkers (remove 'haskell-stack-ghc flycheck-checkers))
+  ;; *** Flycheck
+  ;; Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the standard ghc checker though, because it works fine if I don't have HIE. If I have HIE emacs should use that instead
+  (setq flycheck-checkers (remove 'haskell-stack-ghc flycheck-checkers))
 
 (when (not my/enable-basic-haskell-support)
   (setq flycheck-checkers (remove 'haskell-ghc flycheck-checkers))
@@ -8493,6 +8547,9 @@ Borrowed from mozc.el."
   (set-face-attribute 'org-agenda-filter-tags nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
 
   (set-face-attribute 'org-agenda-filter-category nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
+
+  ;; Disable right of header background coloring
+  (set-face-attribute 'org-meta-line nil :background nil)
 
 	 ;;; Diff
   (set-face-attribute 'diff-added nil  :background my/diff-added-color)
