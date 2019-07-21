@@ -7877,11 +7877,12 @@ Borrowed from mozc.el."
 		      my/buffer-git-branch
 		      "@"
 		      my/projectile-project-name
-		      "["
 		      (when my/git-changes-string
-			my/git-changes-string)
-		      "]"
-		      )))
+			(concat
+			 "["
+			 my/git-changes-string
+			 "]"
+			 )))))
 
 		(" "
 		 (company-candidates
