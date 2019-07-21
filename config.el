@@ -342,7 +342,7 @@
 ;;   setxkbmap us
 ;; #+end_src
 
-;; ** Haskell IDE engine
+;; ** Haskell IDE engine / HIE
 ;; *** Error on first line of file
 ;; **** Cabal V2 related problem
 ;; It could be that HIE still doesn't support cabal V2, just run =cabal configure= to fix this
@@ -525,8 +525,6 @@
 
 ;; ** C-k in dired should go back dir
 
-;; ** Indicator in modeline for when loccur is narrowing the buffer
-
 ;; ** Flycheck posframe should be in top right
 ;; Atleast not at point
 
@@ -582,15 +580,6 @@
 ;; ** Optimize number key symbol placement
 ;; ** Fix meta keys
 ;; *** my/switch-monitor
-
-;; ** Narrow
-;; *** Narrow to current line
-;; when you arent selecting anything while doing narrow region
-;; *** Narrow to paren
-
-;; ** Haskell fix at point
-
-;; ** Haskell structural movement by rebinding "z" hotkey
 
 ;; ** Ivy menu for suspend-map
 ;; Also rename it to something better
@@ -2429,11 +2418,30 @@ Borrowed from mozc.el."
       (loccur-mode -1)
     (widen)))
 
-(define-key my/narrow-map (kbd "w") 'my/narrow-widen)
-(define-key my/narrow-map (kbd "r") 'narrow-to-region)
+(defun my/narrow-paren ()
+  (interactive)
+  (let ((paren-beg nil)
+	(paren-end nil))
+    (save-excursion
+      (backward-up-list)
+      (setq paren-beg (point))
+      (call-interactively #'evil-jump-item)
+      (setq paren-end (point)))
+    (narrow-to-region paren-beg (+ 1 paren-end))))
 
-(define-key my/narrow-map (kbd "p") 'narrow-to-page)
+(defun my/narrow-to-region ()
+  (interactive)
+  (if (string= evil-state 'visual)
+      (call-interactively 'narrow-to-region)
+    (narrow-to-region (line-beginning-position) (line-end-position))))
+
+(define-key my/narrow-map (kbd "w") 'my/narrow-widen)
+(define-key my/narrow-map (kbd "r") 'my/narrow-to-region)
+
+(define-key my/narrow-map (kbd "s") 'narrow-to-page)
 (define-key my/narrow-map (kbd "d") 'narrow-to-defun)
+
+(define-key my/narrow-map (kbd "p") 'my/narrow-paren)
 
 (define-key my/narrow-map (kbd "i") 'my/auto-narrow-to-subtree)
 
@@ -2541,9 +2549,8 @@ Borrowed from mozc.el."
 (add-hook 'after-init-hook '(lambda ()
 			      (setq ivy-height-alist nil)
 			      (setq-default ivy-height-alist nil)
-			      (add-to-list 'ivy-height-alist '(swiper . 10))))
-;;(add-to-list 'ivy-height-alist '(swiper . 10))
-;;(add-to-list 'ivy-height-alist '(swiper . 10))
+			      (add-to-list 'ivy-height-alist '(swiper . 10))
+			      (add-to-list 'ivy-height-alist '(swiper-isearch . 10))))
 
 ;; **** Highlight whole row in minibuffer
 ;; Change the default emacs formatter to highlight whole row in minibuffer
@@ -2726,7 +2733,7 @@ Borrowed from mozc.el."
 ;; *** Disable visual line search
 ;; When using visual line mode swiper also searches every visual line, not just every line. This is really slow
 (setq swiper-use-visual-line nil)
-(setq swiper-use-visual-line-p (lambda (test) nil))
+(setq swiper-use-visual-line-p (lambda (a) nil))
 
 ;; *** Search for thing-at-point
 (defun my/swiper-thing-at-point ()
@@ -5110,6 +5117,15 @@ Borrowed from mozc.el."
 
 (add-hook 'eshell-mode-hook 'my/bind-eshell-keys)
 
+;; * Keyboard layouts
+;; ** Carpalx
+(defun my/carpalx-enable ()
+  (interactive)
+  (async-shell-command "setxkbmap -I ~/.emacs.d/configs/kbd-layouts/ carpalx.xkb -print | xkbcomp -I/home/admin/.emacs.d/configs/kbd-layouts/ - $DISPLAY"))
+
+(when my/carpalx-enable
+  (my/carpalx-enable))
+
 ;; * Keys
 ;; ** Key rebinds
 (require 'evil-maps)
@@ -6987,9 +7003,15 @@ Borrowed from mozc.el."
 
 ;; ** Window and buffer management
 (defhydra my/window-hydra (:hint nil
-				 :color red)
-  ;; :pre (setq exwm-input-line-mode-passthrough t)
-  ;; :post (setq exwm-input-line-mode-passthrough nil))
+				 :color red
+				 :pre (setq my/window-hydra/hint
+					    (concat "next: "
+						    (let ((list (ivy--buffer-list "")))
+						      (if (string= (car list) (buffer-name))
+							  (substring-no-properties
+							   (nth 1 list))
+							(substring-no-properties
+							 (car list)))))))
   "movement"
 
   ;; Move focus
@@ -7013,9 +7035,9 @@ Borrowed from mozc.el."
   ("H" evil-move-far-left nil)
 
   ;; Switch monitor right
-  ("M-l" my/switch-monitor-right nil)
+  ("$" my/switch-monitor-right nil)
   ;; Switch monitor left
-  ("M-h" my/switch-monitor-left nil)
+  ("0" my/switch-monitor-left nil)
 
   ;; Resize window
   ;; Resize up
@@ -7100,12 +7122,11 @@ Borrowed from mozc.el."
 
   ("R" rename-buffer nil))
 
-;;  ("SPC" my/leader-map nil)
-
 ;; Add this to not auto exit insert mode after closing the hydra
 ;; ("<escape>" nil))
 
-;; ** Evil-lispy
+;; ** Structural navigation
+;; *** Evil-lispy
 (defhydra my/lispy-hydra (:hint nil
 				:color red)
   "lisp"
@@ -7126,7 +7147,7 @@ Borrowed from mozc.el."
   ("P" (call-interactively #'lispy-convolute) nil)
 
   ("n" (call-interactively #'lispy-down) nil)
-  ("p" (call-interactively #'lispy-up nil))
+  ("p" (call-interactively #'lispy-up) nil)
 
   ("u" (call-interactively #'undo nil))
   ;;("u" (call-interactively #'lispy-back nil))
@@ -7234,9 +7255,46 @@ Borrowed from mozc.el."
 ;;   ("k" lispy-knight-up)
 ;;    ("z" nil))
 
+;; *** Structured haskell mode
+(straight-use-package 'shm)
+(require 'shm-case-split)
+
+(defhydra my/structured-haskell-hydra (:hint nil
+					     :color red)
+  "haskell"
+  ("U" (call-interactively '(lambda () (interactive) (insert "undefined"))) nil)
+
+  ;; Also check forward/backward node
+  ("l" shm/goto-parent-end nil)
+  ("h" shm/goto-parent nil)
+  ("RET" (call-interactively #'shm/newline-indent) nil)
+
+  ("N" (call-interactively #'shm/raise) nil)
+
+  ("u" (call-interactively #'undo) nil)
+
+  ("e" (call-interactively #'my/auto-eval) nil)
+
+  ("k" (call-interactively #'shm/yank) nil)
+  ("d" (call-interactively #'shm/kill) nil)
+  ("D" (call-interactively #'shm/kill-line) nil)
+
+  ("c" (call-interactively #'shm/case-split) nil)
+
+  ("<escape>" nil))
+
 ;; *** Keys
 (my/evil-universal-define-key my/mod-window-leader-key 'my/window-hydra/body)
 (my/evil-universal-define-key my/window-leader-key 'my/window-hydra/body)
+
+;;(defun my/structural-navigation-state ()
+;;  (interactive)
+;;  (pcase major-mode
+;;    ('haskell-mode (my/structured-haskell-hydra/body))
+;;    (_ (my/lispy-hydra/body))))
+
+;;(my/evil-visual-define-key "z" 'my/structural-navigation-state)
+;;(my/evil-normal-define-key "z" 'my/structural-navigation-state)
 
 (my/evil-visual-define-key "z" 'my/lispy-hydra/body)
 (my/evil-normal-define-key "z" 'my/lispy-hydra/body)
@@ -7811,20 +7869,19 @@ Borrowed from mozc.el."
 		;; Print mode
 		"%m"
 
-		;; Git branch and project name
+		;; Git
 		(:eval
-		 (if (and (string= my/projectile-project-curr-buffer buffer-file-name) (not (string= my/projectile-project-name "-")))
-		     (progn
-		       (setq-local my/projectile-project-last-name-cache
-				   (concat
-				    " > "
-				    my/buffer-git-branch
-				    "@"
-				    "["
-				    my/projectile-project-name
-				    "]"))
-		       my/projectile-project-last-name-cache)
-		   my/projectile-project-last-name-cache))
+		 (if (and my/projectile-project-name my/buffer-git-branch (not (string= my/projectile-project-name "-")))
+		     (concat
+		      " > "
+		      my/buffer-git-branch
+		      "@"
+		      my/projectile-project-name
+		      "["
+		      (when my/git-changes-string
+			my/git-changes-string)
+		      "]"
+		      )))
 
 		(" "
 		 (company-candidates
@@ -8178,35 +8235,89 @@ Borrowed from mozc.el."
 (my/update-time)
 (my/update-date)
 
-;; **** Git branch name
+;; **** Git project and branch name
 (require 'vc-git)
 
-(defvar my/buffer-git-branch "")
-
-(defun my/update-buffer-git-branch ()
-  (interactive)
-  ;; Fixes tramp
-  (if (not (string= major-mode "minibuffer-inactive-mode"))
-      (setq my/buffer-git-branch (car (vc-git-branches)))))
-
-(add-hook 'my/switch-buffer-hook 'my/update-buffer-git-branch)
-
-;; **** Git project name
 ;; When projectile-mode is on, project name is updated on every keypress, here it is fixed
-(defvar my/projectile-project-name "")
-(defvar my/projectile-project-curr-buffer "")
-
-;; Used by mode line to remember lasts git repo it had
-(defvar-local my/projectile-project-last-name-cache "")
+(defvar-local my/projectile-project-name nil)
+(defvar-local my/buffer-git-branch nil)
 
 (defun my/update-projectile-project-name()
   (interactive)
   ;; Some virtual buffers don't work, but dired-mode does
   (when (or (string= major-mode 'dired-mode) (and buffer-file-name (file-exists-p buffer-file-name)))
     (setq my/projectile-project-name (projectile-project-name))
-    (setq my/projectile-project-curr-buffer buffer-file-name)))
+    (setq my/buffer-git-branch (car (vc-git-branches)))))
 
 (add-hook 'my/switch-buffer-hook 'my/update-projectile-project-name)
+
+;; **** Git changes
+(require 'diff-hl)
+(defvar-local my/git-changes-string nil)
+
+(defvar-local my/vc-insert-count 0)
+(defvar-local my/vc-change-count 0)
+(defvar-local my/vc-delete-count 0)
+
+(defun my/mode-line-update-git-changes-string ()
+  (setq my/git-changes-string (format "+%d ~%d -%d"
+				      my/vc-insert-count
+				      my/vc-change-count
+				      my/vc-delete-count)))
+
+(defun my/mode-line-update-git-changes-string-reset ()
+  (setq my/vc-insert-count 0)
+  (setq my/vc-change-count 0)
+  (setq my/vc-delete-count 0)
+  (setq my/git-changes-string nil))
+
+(defun my/modeline-update-git-changes (changes)
+  "CHANGES is generated by `(diff-hl-changes)'"
+  (my/mode-line-update-git-changes-string-reset)
+  (mapc '(lambda (entry)
+	   (pcase (nth 2 entry)
+	     ('insert (setq my/vc-insert-count (+ my/vc-insert-count (nth 1 entry))))
+	     ('change (setq my/vc-change-count (+ my/vc-change-count (nth 1 entry))))
+	     ('delete (setq my/vc-delete-count (+ my/vc-delete-count (nth 1 entry))))))
+	changes)
+  (my/mode-line-update-git-changes-string))
+
+;; ***** Override old function
+(defun diff-hl-changes ()
+  (my/mode-line-update-git-changes-string-reset)
+  (let* ((file buffer-file-name)
+	 (backend (vc-backend file)))
+    (when backend
+      (let ((state (vc-state file backend)))
+	(cond
+	 ((diff-hl-modified-p state)
+	  (let* (diff-auto-refine-mode res)
+	    (with-current-buffer (diff-hl-changes-buffer file backend)
+	      (goto-char (point-min))
+	      (unless (eobp)
+		(ignore-errors
+		  (diff-beginning-of-hunk t))
+		(while (looking-at diff-hunk-header-re-unified)
+		  (let ((line (string-to-number (match-string 3)))
+			(len (let ((m (match-string 4)))
+			       (if m (string-to-number m) 1)))
+			(beg (point)))
+		    (diff-end-of-hunk)
+		    (let* ((inserts (diff-count-matches "^\\+" beg (point)))
+			   (deletes (diff-count-matches "^-" beg (point)))
+			   (type (cond ((zerop deletes) 'insert)
+				       ((zerop inserts) 'delete)
+				       (t 'change))))
+		      (when (eq type 'delete)
+			(setq len 1)
+			(cl-incf line))
+		      (push (list line len type) res))))))
+	    (my/modeline-update-git-changes res)
+	    (nreverse res)))
+	 ((eq state 'added)
+	  `((1 ,(line-number-at-pos (point-max)) insert)))
+	 ((eq state 'removed)
+	  `((1 ,(line-number-at-pos (point-max)) delete))))))))
 
 ;; **** Load average
 (defvar my/load-average 0)
@@ -8892,8 +9003,8 @@ Borrowed from mozc.el."
 (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "d") #'undo-tree-visualizer-toggle-diff)
 
 ;; * Run command on boot
-(if my/on-boot-run
-    (async-shell-command my/on-boot-run))
+(if my/run-command-on-boot
+    (async-shell-command my/run-command-on-boot))
 
 ;; * Restore gc mem
 (setq gc-cons-threshold my/after-gc-mem)
