@@ -554,18 +554,17 @@
 
 ;; ** Fix keys
 ;; Exwm keys are really messy, remove 'my/keys-mode-map'
+
 ;; *** Clean global mode map
 ;; It's currently full of unused keys
-;; *** Maybe only use evil-edit instead
 
-;; ** Move yascrollbar
-;; Fringe might be in use by vc
-;; Maybe move to gutter
+;; *** Maybe only use evil-edit instead
 
 ;; ** Try to fix performance of yascrollbar
 
 ;; ** Fix unicode fonts
 ;; Right now unicode fonts are most of the time taller than the normal fonts
+
 ;; ** Fix haskell
 ;; Maybe also add hlive to config?
 
@@ -1104,7 +1103,9 @@
 (straight-use-package 'evil-commentary)
 (evil-commentary-mode)
 
-(evil-define-key 'normal evil-commentary-mode-map "gC" 'evil-commentary-line)
+(evil-define-key 'normal evil-commentary-mode-map ":" 'evil-commentary-line)
+(evil-define-key 'normal evil-commentary-mode-map ";" 'evil-commentary)
+
 (evil-define-key 'normal evil-commentary-mode-map "gY" 'evil-commentary-yank-line)
 
 ;; *** Evil-surround
@@ -2698,7 +2699,7 @@ Borrowed from mozc.el."
 		  (flycheck-error-list-set-source source-buffer)
 		  (flycheck-error-list-reset-filter)
 		  (revert-buffer t t t)
-		  (split-string (buffer-string) "\n" t " *")))
+		  (split-string (buffer-string) "\n" t)))
 	      :action (lambda (s &rest _)
 			(-when-let* ( (error (get-text-property 0 'tabulated-list-id s))
 				      (pos (flycheck-error-pos error)) )
@@ -5742,6 +5743,8 @@ Borrowed from mozc.el."
 (eval-after-load 'exwm
   (progn
        ;;; Normal
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-d") 'exwm-edit--compose)
+
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up)
