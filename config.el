@@ -2272,9 +2272,6 @@ Borrowed from mozc.el."
 ;;    (org-src--get-lang-mode LANG))
 
 ;; ** Key
-;; (evil-define-key 'normal org-mode-map (kbd "TAB") 'org-cycle)
-;; (evil-define-key 'normal org-mode-map (kbd "C-s") 'swiper)
-
 (define-key my/org-mode-map (kbd "i") 'org-toggle-inline-images)
 (define-key my/org-mode-map (kbd "e") 'org-insert-link)
 
@@ -2299,8 +2296,7 @@ Borrowed from mozc.el."
 
 (define-key my/org-mode-map (kbd "d") 'org-deadline)
 
-;; Rebind tab to be yas-expand due to bugs with org-cycle when expanding snippets
-(define-key org-mode-map "\t" 'yas-expand)
+;;(define-key org-mode-map "\t" 'nil)
 
 ;; *** Show map
 (define-prefix-command 'my/org-show-mode-map)
@@ -2355,6 +2351,9 @@ Borrowed from mozc.el."
 (straight-use-package 'outshine)
 ;; (straight-use-package '(outshine :type git :host github :repo "alphapapa/outshine"))
 (require 'outshine)
+
+;; Clean outshine-mode-map
+(setq outshine-mode-map (make-sparse-keymap))
 
 (add-hook 'outline-minor-mode-hook 'outshine-mode)
 
@@ -3036,6 +3035,10 @@ Borrowed from mozc.el."
   (call-interactively 'yas-insert-snippet))
 
 (define-key my/leader-map (kbd "i") 'my/yas-insert-snippet)
+
+;; Maybe unbind yas-expand in normal mode, since you only really do it in insert mode
+(my/evil-normal-define-key "TAB" #'yas-expand)
+(my/evil-insert-define-key "TAB" #'yas-expand)
 
 ;; * Movement
 ;; ** Loccur
@@ -4180,8 +4183,8 @@ Borrowed from mozc.el."
 	(progn
 	  (my/backward-sexp)
 	  (if (save-match-data (looking-at "#;"))
-     (+ (point) 2)
-     (point)))
+	      (+ (point) 2)
+	    (point)))
       (scan-error (user-error "There isn't a complete s-expression before point")))))
 
 ;; *** Emacs-lisp
@@ -4328,7 +4331,8 @@ Borrowed from mozc.el."
 ;; **** Ivy
 ;;(straight-use-package '(ivy-hoogle :type git :host github :repo "sjsch/ivy-hoogle"))
 
-(defvar ivy-hoogle-max-entries 200)
+(defvar ivy-hoogle-max-entries 100)
+
 (defun ivy-hoogle--do-search (&optional request-prefix)
   (let* ((pattern (or (and request-prefix
 			   (concat request-prefix
