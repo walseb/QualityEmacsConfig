@@ -342,6 +342,55 @@ X11 probably uses UK language layout. Fix it with
   setxkbmap us
 #+end_src
 
+** Haskell IDE engine / HIE
+*** Error on first line of file
+**** Cabal V2 related problem
+It could be that HIE still doesn't support cabal V2, just run =cabal configure= to fix this
+
+** Nix
+*** Create project with cabal2nix
+#+BEGIN_SRC emacs-lisp
+cabal init
+#+END_SRC
+
+Setup cabal2nix
+#+BEGIN_SRC shell
+# Not really necessary
+cabal2nix . > default.nix
+
+cabal2nix --shell . > shell.nix
+# beware that HIE might not work with new-configure, run normal configure instead for V1 project
+*nix-shell --command 'cabal new-configure'
+#+END_SRC
+
+**** Automatically create default.nix and shell.nix from the cabal file
+Add to default.nix
+#+BEGIN_SRC
+# default.nix
+{ pkgs ? import <nixpkgs> {} }:
+
+pkgs.haskellPackages.callCabal2nix "name" ./. {}
+#+END_SRC
+
+***** optional
+And lastly add to shell.nix
+#+BEGIN_SRC
+# shell.nix
+(import ./. {}).env
+#+END_SRC
+and just run *nix-shell then cabal build or whatver
+Edit dependencies in cabal project file
+Nix will always be used
+
+OR
+just run
+#+BEGIN_SRC
+*nix-shell -A env
+#+END_SRC
+always instead
+
+
+
 * Todo
 ** Packages to try
 nix-buffer
@@ -480,8 +529,6 @@ Then you can have a number like how many processes are running
 
 ** C-k in dired should go back dir
 
-** Indicator in modeline for when loccur is narrowing the buffer
-
 ** Flycheck posframe should be in top right
 Atleast not at point
 
@@ -511,18 +558,17 @@ evil-universal-define-key overwrites the evil mode map, this should use global-m
 
 ** Fix keys
 Exwm keys are really messy, remove 'my/keys-mode-map'
+
 *** Clean global mode map
 It's currently full of unused keys
-*** Maybe only use evil-edit instead
 
-** Move yascrollbar
-Fringe might be in use by vc
-Maybe move to gutter
+*** Maybe only use evil-edit instead
 
 ** Try to fix performance of yascrollbar
 
 ** Fix unicode fonts
 Right now unicode fonts are most of the time taller than the normal fonts
+
 ** Fix haskell
 Maybe also add hlive to config?
 
@@ -537,15 +583,6 @@ Maybe the outlines should be highlighted to the end of the window
 ** Optimize number key symbol placement
 ** Fix meta keys
 *** my/switch-monitor
-
-** Narrow
-*** Narrow to current line
-when you arent selecting anything while doing narrow region
-*** Narrow to paren
-
-** Haskell fix at point
-
-** Haskell structural movement by rebinding "z" hotkey
 
 ** Ivy menu for suspend-map
 Also rename it to something better
@@ -879,20 +916,27 @@ Default file-size-human-readable returns decimal values
 	      (if (my/font-installed "Perfect DOS VGA 437")
 		  "Perfect DOS VGA 437"))))))))
 
+(defun my/get-best-symbol-font ()
+  (if (my/font-installed "DejaVu Sans Mono")
+      "DejaVu Sans Mono"
+    (if (my/font-installed "dejavu sans mono")
+	"DejaVuSansMono"
+      (if (my/font-installed "Noto Sans Mono")
+	  "NotoSansMono"))))
+
 (setq my/font (my/get-best-font))
+(setq my/symbol-font (my/get-best-symbol-font))
 
 (when my/font
-  (set-fontset-font "fontset-default" 'latin-iso8859-3
-		    my/font)
+  ;; Set default font
+  (add-to-list 'default-frame-alist (cons 'font my/font))
 
-  (set-fontset-font "fontset-default" 'ascii
-		    my/font)
+  ;;(my/set-default-font my/font)
 
-  (set-fontset-font "fontset-default" 'latin-iso8859-1
-		    my/font)
-
-  (my/set-default-font my/font))
+  ;; Set symbol font
+  (set-fontset-font t 'symbol my/symbol-font))
 #+end_src
+
 
 * Startup processes
 ** Prevent async command from opening new window
@@ -1185,7 +1229,9 @@ Allows for using indention as text objects
 (straight-use-package 'evil-commentary)
 (evil-commentary-mode)
 
-(evil-define-key 'normal evil-commentary-mode-map "gC" 'evil-commentary-line)
+(evil-define-key 'normal evil-commentary-mode-map ":" 'evil-commentary-line)
+(evil-define-key 'normal evil-commentary-mode-map ";" 'evil-commentary)
+
 (evil-define-key 'normal evil-commentary-mode-map "gY" 'evil-commentary-yank-line)
 #+end_src
 
@@ -2607,9 +2653,6 @@ The function =org-src-get-lang-mode= doesn't exist, but the function =org-src--g
    (org-src--get-lang-mode LANG))
 
 ** Key
-(evil-define-key 'normal org-mode-map (kbd "TAB") 'org-cycle)
-(evil-define-key 'normal org-mode-map (kbd "C-s") 'swiper)
-
 #+begin_src emacs-lisp
 (define-key my/org-mode-map (kbd "i") 'org-toggle-inline-images)
 (define-key my/org-mode-map (kbd "e") 'org-insert-link)
@@ -2636,10 +2679,7 @@ The function =org-src-get-lang-mode= doesn't exist, but the function =org-src--g
 (define-key my/org-mode-map (kbd "d") 'org-deadline)
 #+end_src
 
-Rebind tab to be yas-expand due to bugs with org-cycle when expanding snippets
-#+begin_src emacs-lisp
-(define-key org-mode-map "\t" 'yas-expand)
-#+end_src
+(define-key org-mode-map "\t" 'nil)
 
 *** Show map
 #+begin_src emacs-lisp
@@ -2715,6 +2755,11 @@ Elisp mode uses the classic lisp outline syntax
 (straight-use-package '(outshine :type git :host github :repo "alphapapa/outshine"))
 #+begin_src emacs-lisp
 (require 'outshine)
+#+end_src
+
+Clean outshine-mode-map
+#+begin_src emacs-lisp
+(setq outshine-mode-map (make-sparse-keymap))
 
 (add-hook 'outline-minor-mode-hook 'outshine-mode)
 
@@ -2791,11 +2836,30 @@ Elisp mode uses the classic lisp outline syntax
       (loccur-mode -1)
     (widen)))
 
-(define-key my/narrow-map (kbd "w") 'my/narrow-widen)
-(define-key my/narrow-map (kbd "r") 'narrow-to-region)
+(defun my/narrow-paren ()
+  (interactive)
+  (let ((paren-beg nil)
+	(paren-end nil))
+    (save-excursion
+      (backward-up-list)
+      (setq paren-beg (point))
+      (call-interactively #'evil-jump-item)
+      (setq paren-end (point)))
+    (narrow-to-region paren-beg (+ 1 paren-end))))
 
-(define-key my/narrow-map (kbd "p") 'narrow-to-page)
+(defun my/narrow-to-region ()
+  (interactive)
+  (if (string= evil-state 'visual)
+      (call-interactively 'narrow-to-region)
+    (narrow-to-region (line-beginning-position) (line-end-position))))
+
+(define-key my/narrow-map (kbd "w") 'my/narrow-widen)
+(define-key my/narrow-map (kbd "r") 'my/narrow-to-region)
+
+(define-key my/narrow-map (kbd "s") 'narrow-to-page)
 (define-key my/narrow-map (kbd "d") 'narrow-to-defun)
+
+(define-key my/narrow-map (kbd "p") 'my/narrow-paren)
 
 (define-key my/narrow-map (kbd "i") 'my/auto-narrow-to-subtree)
 #+end_src
@@ -2923,10 +2987,9 @@ Disable set height depending on command
 (add-hook 'after-init-hook '(lambda ()
 			      (setq ivy-height-alist nil)
 			      (setq-default ivy-height-alist nil)
-			      (add-to-list 'ivy-height-alist '(swiper . 10))))
+			      (add-to-list 'ivy-height-alist '(swiper . 10))
+			      (add-to-list 'ivy-height-alist '(swiper-isearch . 10))))
 #+end_src
-(add-to-list 'ivy-height-alist '(swiper . 10))
-(add-to-list 'ivy-height-alist '(swiper . 10))
 
 **** Highlight whole row in minibuffer
 Change the default emacs formatter to highlight whole row in minibuffer
@@ -3105,7 +3168,7 @@ Delete text under selection when pasing just like with normal evil paste
 		  (flycheck-error-list-set-source source-buffer)
 		  (flycheck-error-list-reset-filter)
 		  (revert-buffer t t t)
-		  (split-string (buffer-string) "\n" t " *")))
+		  (split-string (buffer-string) "\n" t)))
 	      :action (lambda (s &rest _)
 			(-when-let* ( (error (get-text-property 0 'tabulated-list-id s))
 				      (pos (flycheck-error-pos error)) )
@@ -3148,7 +3211,7 @@ Checks for if case sensative search
 When using visual line mode swiper also searches every visual line, not just every line. This is really slow
 #+begin_src emacs-lisp
 (setq swiper-use-visual-line nil)
-(setq swiper-use-visual-line-p (lambda (test) nil))
+(setq swiper-use-visual-line-p (lambda (a) nil))
 #+end_src
 
 *** Search for thing-at-point
@@ -3510,6 +3573,12 @@ Flycheck with extra correction for elisp packages
   (call-interactively 'yas-insert-snippet))
 
 (define-key my/leader-map (kbd "i") 'my/yas-insert-snippet)
+#+end_src
+
+Maybe unbind yas-expand in normal mode, since you only really do it in insert mode
+#+begin_src emacs-lisp
+(my/evil-normal-define-key "TAB" #'yas-expand)
+(my/evil-insert-define-key "TAB" #'yas-expand)
 #+end_src
 
 * Movement
@@ -4680,7 +4749,7 @@ eldoc-box-hover-mode eldoc-box-hover-mode)
 (defun my/auto-docs ()
   (interactive)
   (pcase major-mode
-    ('haskell-mode (ivy-hoogle))
+    ('haskell-mode (my/ivy-hoogle))
     ('nix-mode (my/nixos-options-ivy))))
 
 (define-key my/leader-map (kbd "h") help-map)
@@ -4836,8 +4905,8 @@ TODO I have to load the package fully here to set the fonts later
 	(progn
 	  (my/backward-sexp)
 	  (if (save-match-data (looking-at "#;"))
-     (+ (point) 2)
-     (point)))
+	      (+ (point) 2)
+	    (point)))
       (scan-error (user-error "There isn't a complete s-expression before point")))))
 #+end_src
 
@@ -5016,46 +5085,34 @@ or
 (straight-use-package '(ivy-hoogle :type git :host github :repo "sjsch/ivy-hoogle"))
 
 #+begin_src emacs-lisp
-(defvar ivy-hoogle-max-entries 200)
-(defun ivy-hoogle--do-search (&optional request-prefix)
-  (let* ((pattern (or (and request-prefix
-			   (concat request-prefix
-				   " "))))
-	 (lim ivy-hoogle-max-entries)
-	 (args (append (list "search" "-l")
-		       (and lim (list "-n" (int-to-string lim)))
-		       (list pattern))))
-    (let (candidates)
-      (with-temp-buffer
-	(apply #'call-process "hoogle" nil t nil args)
-	(goto-char (point-min))
-	(while (not (eobp))
-	  (if (looking-at "\\(.+?\\) -- \\(.+\\)")
-	      (push (propertize (match-string 1)
-				'hoogle-url (match-string-no-properties 2))
-		    candidates))
-	  (forward-line 1)))
-      (nreverse candidates))))
+(defvar my/ivy-hoogle-max-entries 100)
 
-(defun ivy-hoogle--function (str)
-  (mapcar #'ivy-hoogle--fontify-haskell (ivy-hoogle--do-search str)))
+(defun my/ivy-hoogle--do-search (str)
+  (let* ((args (concat
+		"search "
+		"-l "
+		(and my/ivy-hoogle-max-entries (concat "-n " (int-to-string my/ivy-hoogle-max-entries))))))
+    (message args)
 
-(defvar ivy-hoogle-history nil)
-#+end_src
+    (counsel--async-command (format "hoogle %s %s"
+				    args
+				    str))
+    '("working...")))
 
-###autoload
-#+begin_src emacs-lisp
-(defun ivy-hoogle ()
+(defun my/ivy-hoogle ()
   "Perform a hoogle search."
   (interactive)
   (ivy-read "Hoogle: "
-	    #'ivy-hoogle--do-search
+	    #'my/ivy-hoogle--do-search
 	    :dynamic-collection t
-	    :history ivy-hoogle-history
 	    :preselect (counsel-symbol-at-point)
 	    :re-builder #'regexp-quote
 	    :action (lambda (str)
-		      (browse-url (get-text-property 0 'hoogle-url str)))))
+		      (browse-url (substring-no-properties str
+							   ;; + 3 is to remove the "-- " from the string
+							   (+ (string-match "-- .*$" str) 3)
+							   (length str))))
+	    :caller 'my/ivy-hoogle))
 #+end_src
 
 *** Haskell-doc
@@ -5108,13 +5165,16 @@ Use nix-haskell-mode for automatic project management
   (straight-use-package 'lsp-haskell)
   (require 'lsp-haskell)
 
-  (add-hook 'haskell-mode-hook 'lsp))
-#+end_src
+  (add-hook 'haskell-mode-hook '(lambda ()
+				  ;; lsp-haskell doesn't work with native json
+				  (setq-local lsp-use-native-json nil)
+				  ;; Fixes lockups due to prettify-symbol I think
+				  (setq-local syntax-propertize-function nil)
+				  (lsp))))
 
-*** Flycheck
-Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the standard ghc checker though, because it works fine if I don't have HIE. If I have HIE emacs should use that instead
-#+begin_src emacs-lisp
-(setq flycheck-checkers (remove 'haskell-stack-ghc flycheck-checkers))
+  ;; *** Flycheck
+  ;; Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the standard ghc checker though, because it works fine if I don't have HIE. If I have HIE emacs should use that instead
+  (setq flycheck-checkers (remove 'haskell-stack-ghc flycheck-checkers))
 
 (when (not my/enable-basic-haskell-support)
   (setq flycheck-checkers (remove 'haskell-ghc flycheck-checkers))
@@ -5916,6 +5976,17 @@ Eshell keys are buffer local... Bind them on startup
 (add-hook 'eshell-mode-hook 'my/bind-eshell-keys)
 #+end_src
 
+* Keyboard layouts
+** Carpalx
+#+begin_src emacs-lisp
+(defun my/carpalx-enable ()
+  (interactive)
+  (async-shell-command "setxkbmap -I ~/.emacs.d/configs/kbd-layouts/ carpalx.xkb -print | xkbcomp -I/home/admin/.emacs.d/configs/kbd-layouts/ - $DISPLAY"))
+
+(when my/carpalx-enable
+  (my/carpalx-enable))
+#+end_src
+
 * Keys
 ** Key rebinds
 #+begin_src emacs-lisp
@@ -6651,6 +6722,8 @@ Make images load instantly
 (eval-after-load 'exwm
   (progn
        ;;; Normal
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-d") 'exwm-edit--compose)
+
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up)
@@ -8144,9 +8217,15 @@ https://www.emacswiki.org/emacs/ArtistMode
 ** Window and buffer management
 #+begin_src emacs-lisp
 (defhydra my/window-hydra (:hint nil
-				 :color red)
-  ;; :pre (setq exwm-input-line-mode-passthrough t)
-  ;; :post (setq exwm-input-line-mode-passthrough nil))
+				 :color red
+				 :pre (setq my/window-hydra/hint
+					    (concat "next: "
+						    (let ((list (ivy--buffer-list "")))
+						      (if (string= (car list) (buffer-name))
+							  (substring-no-properties
+							   (nth 1 list))
+							(substring-no-properties
+							 (car list)))))))
   "movement"
 
   ;; Move focus
@@ -8170,9 +8249,9 @@ https://www.emacswiki.org/emacs/ArtistMode
   ("H" evil-move-far-left nil)
 
   ;; Switch monitor right
-  ("M-l" my/switch-monitor-right nil)
+  ("$" my/switch-monitor-right nil)
   ;; Switch monitor left
-  ("M-h" my/switch-monitor-left nil)
+  ("0" my/switch-monitor-left nil)
 
   ;; Resize window
   ;; Resize up
@@ -8258,12 +8337,11 @@ https://www.emacswiki.org/emacs/ArtistMode
   ("R" rename-buffer nil))
 #+end_src
 
- ("SPC" my/leader-map nil)
-
 Add this to not auto exit insert mode after closing the hydra
 ("<escape>" nil))
 
-** Evil-lispy
+** Structural navigation
+*** Evil-lispy
 #+begin_src emacs-lisp
 (defhydra my/lispy-hydra (:hint nil
 				:color red)
@@ -8285,7 +8363,7 @@ Add this to not auto exit insert mode after closing the hydra
   ("P" (call-interactively #'lispy-convolute) nil)
 
   ("n" (call-interactively #'lispy-down) nil)
-  ("p" (call-interactively #'lispy-up nil))
+  ("p" (call-interactively #'lispy-up) nil)
 
   ("u" (call-interactively #'undo nil))
   ;;("u" (call-interactively #'lispy-back nil))
@@ -8394,11 +8472,52 @@ Knight
   ("k" lispy-knight-up)
    ("z" nil))
 
+*** Structured haskell mode
+#+begin_src emacs-lisp
+(straight-use-package 'shm)
+(require 'shm-case-split)
+
+(defhydra my/structured-haskell-hydra (:hint nil
+					     :color red)
+  "haskell"
+  ("U" (call-interactively '(lambda () (interactive) (insert "undefined"))) nil)
+
+  ;; Also check forward/backward node
+  ("l" shm/goto-parent-end nil)
+  ("h" shm/goto-parent nil)
+  ("RET" (call-interactively #'shm/newline-indent) nil)
+
+  ("N" (call-interactively #'shm/raise) nil)
+
+  ("u" (call-interactively #'undo) nil)
+
+  ("e" (call-interactively #'my/auto-eval) nil)
+
+  ("k" (call-interactively #'shm/yank) nil)
+  ("d" (call-interactively #'shm/kill) nil)
+  ("D" (call-interactively #'shm/kill-line) nil)
+
+  ("c" (call-interactively #'shm/case-split) nil)
+
+  ("<escape>" nil))
+#+end_src
+
 *** Keys
 #+begin_src emacs-lisp
 (my/evil-universal-define-key my/mod-window-leader-key 'my/window-hydra/body)
 (my/evil-universal-define-key my/window-leader-key 'my/window-hydra/body)
+#+end_src
 
+(defun my/structural-navigation-state ()
+ (interactive)
+ (pcase major-mode
+   ('haskell-mode (my/structured-haskell-hydra/body))
+   (_ (my/lispy-hydra/body))))
+
+(my/evil-visual-define-key "z" 'my/structural-navigation-state)
+(my/evil-normal-define-key "z" 'my/structural-navigation-state)
+
+#+begin_src emacs-lisp
 (my/evil-visual-define-key "z" 'my/lispy-hydra/body)
 (my/evil-normal-define-key "z" 'my/lispy-hydra/body)
 #+end_src
@@ -8635,23 +8754,35 @@ Read =reference-point-alist= to understand how to merge characters and add space
     (">=" . ?≥)
     ("<=" . ?≤)
     ))
+#+end_src
 
+https://github.com/enomsg/vim-haskellConcealPlus/blob/master/after/syntax/haskell.vim
+#+begin_src emacs-lisp
 (defconst my/generic-arrow-symbols
   '(
     ("-<" . ?↢)
     (">-" . ?↣)
+    ;; ("-<" . ?⤙)
+    ;; (">-" . ?⤚)
+
     ("~>" . ?⇝)
     ("<~" . ?⇜)
+
     ("->" . ?→)
     ("<-" . ?←)
+
     ("=>" . ?⇒)
     ("<=" . ?⇐)
+
     ("->>" . ?↠)
     ("<<-" . ?↞)
+
     ("|>" . ?⊳)
     ("<|" . ?⊲)
+
     ("<<" . ?≪)
-    (">>" . ?≫)))
+    (">>" . ?≫)
+    ))
 
 (defconst my/generic-greek-symbols
   '(("lambda" . ?λ)))
@@ -8728,6 +8859,16 @@ https://www.w3schools.com/charsets/ref_utf_block.asp
     ;; Doesn't work?
     ;;haskell-font-lock-dot-is-not-composition)
     ("forall" . ?∀)))
+
+(defconst my/haskell-type-symbols
+  '(
+    ("Bool" . ?𝔹)
+    ("Real" . ?ℝ)
+    ("Integer" . ?ℤ)
+    ("Natural" . ?ℕ)
+    ("Rational" . ?ℚ)
+    ("Irrational" . ?ℙ)
+    ))
 #+end_src
 
 *** Elisp
@@ -8744,12 +8885,12 @@ https://www.w3schools.com/charsets/ref_utf_block.asp
     ('haskell-mode (append
 		    (my/prettify-comment)
 		    my/haskell-symbols
+		    my/haskell-type-symbols
 		    my/generic-greek-symbols
 		    my/generic-equal-symbols
 		    my/generic-arrow-symbols
 		    my/generic-logic-symbols
-		    (my/prettify-outline-heading)
-		    ))
+		    (my/prettify-outline-heading)))
     ('fsharp-mode (append
 		   (my/prettify-comment)
 		   my/fsharp-symbols
@@ -8760,7 +8901,6 @@ https://www.w3schools.com/charsets/ref_utf_block.asp
 		   ))
     ('emacs-lisp-mode (append
 		       (my/prettify-comment-lisp)
-		       ;;(my/prettify-comment-lisp)
 		       my/elisp-symbols
 		       my/generic-greek-symbols
 		       my/generic-equal-symbols
@@ -8769,8 +8909,7 @@ https://www.w3schools.com/charsets/ref_utf_block.asp
 		       (my/prettify-outline-heading-lisp-classic)
 		       ))
     ('lisp-interaction-mode (append
-			     (my/prettify-comment)
-			     ;;(my/prettify-comment-lisp)
+			     (my/prettify-comment-lisp)
 			     my/elisp-symbols
 			     my/generic-greek-symbols
 			     my/generic-equal-symbols
@@ -9082,20 +9221,20 @@ Set mode line height
 		;; Print mode
 		"%m"
 
-		;; Git branch and project name
+		;; Git
 		(:eval
-		 (if (and (string= my/projectile-project-curr-buffer buffer-file-name) (not (string= my/projectile-project-name "-")))
-		     (progn
-		       (setq-local my/projectile-project-last-name-cache
-				   (concat
-				    " > "
-				    my/buffer-git-branch
-				    "@"
-				    "["
-				    my/projectile-project-name
-				    "]"))
-		       my/projectile-project-last-name-cache)
-		   my/projectile-project-last-name-cache))
+		 (if (and my/projectile-project-name my/buffer-git-branch (not (string= my/projectile-project-name "-")))
+		     (concat
+		      " > "
+		      my/buffer-git-branch
+		      "@"
+		      my/projectile-project-name
+		      (when my/git-changes-string
+			(concat
+			 "["
+			 my/git-changes-string
+			 "]"
+			 )))))
 
 		(" "
 		 (company-candidates
@@ -9488,40 +9627,96 @@ Update date now
 (my/update-date)
 #+end_src
 
-**** Git branch name
+**** Git project and branch name
 #+begin_src emacs-lisp
 (require 'vc-git)
-
-(defvar my/buffer-git-branch "")
-
-(defun my/update-buffer-git-branch ()
-  (interactive)
-  ;; Fixes tramp
-  (if (not (string= major-mode "minibuffer-inactive-mode"))
-      (setq my/buffer-git-branch (car (vc-git-branches)))))
-
-(add-hook 'my/switch-buffer-hook 'my/update-buffer-git-branch)
 #+end_src
 
-**** Git project name
 When projectile-mode is on, project name is updated on every keypress, here it is fixed
 #+begin_src emacs-lisp
-(defvar my/projectile-project-name "")
-(defvar my/projectile-project-curr-buffer "")
-#+end_src
-
-Used by mode line to remember lasts git repo it had
-#+begin_src emacs-lisp
-(defvar-local my/projectile-project-last-name-cache "")
+(defvar-local my/projectile-project-name nil)
+(defvar-local my/buffer-git-branch nil)
 
 (defun my/update-projectile-project-name()
   (interactive)
   ;; Some virtual buffers don't work, but dired-mode does
   (when (or (string= major-mode 'dired-mode) (and buffer-file-name (file-exists-p buffer-file-name)))
     (setq my/projectile-project-name (projectile-project-name))
-    (setq my/projectile-project-curr-buffer buffer-file-name)))
+    (setq my/buffer-git-branch (car (vc-git-branches)))))
 
 (add-hook 'my/switch-buffer-hook 'my/update-projectile-project-name)
+#+end_src
+
+**** Git changes
+#+begin_src emacs-lisp
+(require 'diff-hl)
+(defvar-local my/git-changes-string nil)
+
+(defvar-local my/vc-insert-count 0)
+(defvar-local my/vc-change-count 0)
+(defvar-local my/vc-delete-count 0)
+
+(defun my/mode-line-update-git-changes-string ()
+  (setq my/git-changes-string (format "+%d ~%d -%d"
+				      my/vc-insert-count
+				      my/vc-change-count
+				      my/vc-delete-count)))
+
+(defun my/mode-line-update-git-changes-string-reset ()
+  (setq my/vc-insert-count 0)
+  (setq my/vc-change-count 0)
+  (setq my/vc-delete-count 0)
+  (setq my/git-changes-string nil))
+
+(defun my/modeline-update-git-changes (changes)
+  "CHANGES is generated by `(diff-hl-changes)'"
+  (my/mode-line-update-git-changes-string-reset)
+  (mapc '(lambda (entry)
+	   (pcase (nth 2 entry)
+	     ('insert (setq my/vc-insert-count (+ my/vc-insert-count (nth 1 entry))))
+	     ('change (setq my/vc-change-count (+ my/vc-change-count (nth 1 entry))))
+	     ('delete (setq my/vc-delete-count (+ my/vc-delete-count (nth 1 entry))))))
+	changes)
+  (my/mode-line-update-git-changes-string))
+#+end_src
+
+***** Override old function
+#+begin_src emacs-lisp
+(defun diff-hl-changes ()
+  (my/mode-line-update-git-changes-string-reset)
+  (let* ((file buffer-file-name)
+	 (backend (vc-backend file)))
+    (when backend
+      (let ((state (vc-state file backend)))
+	(cond
+	 ((diff-hl-modified-p state)
+	  (let* (diff-auto-refine-mode res)
+	    (with-current-buffer (diff-hl-changes-buffer file backend)
+	      (goto-char (point-min))
+	      (unless (eobp)
+		(ignore-errors
+		  (diff-beginning-of-hunk t))
+		(while (looking-at diff-hunk-header-re-unified)
+		  (let ((line (string-to-number (match-string 3)))
+			(len (let ((m (match-string 4)))
+			       (if m (string-to-number m) 1)))
+			(beg (point)))
+		    (diff-end-of-hunk)
+		    (let* ((inserts (diff-count-matches "^\\+" beg (point)))
+			   (deletes (diff-count-matches "^-" beg (point)))
+			   (type (cond ((zerop deletes) 'insert)
+				       ((zerop inserts) 'delete)
+				       (t 'change))))
+		      (when (eq type 'delete)
+			(setq len 1)
+			(cl-incf line))
+		      (push (list line len type) res))))))
+	    (my/modeline-update-git-changes res)
+	    (nreverse res)))
+	 ((eq state 'added)
+	  `((1 ,(line-number-at-pos (point-max)) insert)))
+	 ((eq state 'removed)
+	  `((1 ,(line-number-at-pos (point-max)) delete))))))))
 #+end_src
 
 **** Load average
@@ -9884,6 +10079,18 @@ mode-line-format
   (set-face-attribute 'org-agenda-filter-tags nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
 
   (set-face-attribute 'org-agenda-filter-category nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
+
+  ;; Disable right of header background coloring
+  (set-face-attribute 'org-meta-line nil :background nil)
+
+  ;; Used by org-src block borders, currently just using the comment face
+#+end_src
+ (set-face-attribute 'org-block-begin-line nil :background my/background-color-3)
+ (set-face-attribute 'org-block-end-line nil :background my/background-color-3)
+
+#+begin_src emacs-lisp
+  ;; Used by org src-blocks when in use, might also be used for other things
+  (set-face-attribute 'secondary-selection nil :background (color-darken-name my/background-color 5))
 
 	 ;;; Diff
   (set-face-attribute 'diff-added nil  :background my/diff-added-color)
@@ -10256,8 +10463,8 @@ Fixes errors
 
 * Run command on boot
 #+begin_src emacs-lisp
-(if my/on-boot-run
-    (async-shell-command my/on-boot-run))
+(if my/run-command-on-boot
+    (async-shell-command my/run-command-on-boot))
 #+end_src
 
 * Restore gc mem

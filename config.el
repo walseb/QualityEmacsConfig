@@ -859,19 +859,26 @@
 	      (if (my/font-installed "Perfect DOS VGA 437")
 		  "Perfect DOS VGA 437"))))))))
 
+(defun my/get-best-symbol-font ()
+  (if (my/font-installed "DejaVu Sans Mono")
+      "DejaVu Sans Mono"
+    (if (my/font-installed "dejavu sans mono")
+	"DejaVuSansMono"
+      (if (my/font-installed "Noto Sans Mono")
+	  "NotoSansMono"))))
+
 (setq my/font (my/get-best-font))
+(setq my/symbol-font (my/get-best-symbol-font))
 
 (when my/font
-  (set-fontset-font "fontset-default" 'latin-iso8859-3
-		    my/font)
+  ;; Set default font
+  (add-to-list 'default-frame-alist (cons 'font my/font))
 
-  (set-fontset-font "fontset-default" 'ascii
-		    my/font)
+  ;;(my/set-default-font my/font)
 
-  (set-fontset-font "fontset-default" 'latin-iso8859-1
-		    my/font)
+  ;; Set symbol font
+  (set-fontset-font t 'symbol my/symbol-font))
 
-  (my/set-default-font my/font))
 
 ;; * Startup processes
 ;; ** Prevent async command from opening new window
@@ -4061,7 +4068,7 @@ Borrowed from mozc.el."
 (defun my/auto-docs ()
   (interactive)
   (pcase major-mode
-    ('haskell-mode (ivy-hoogle))
+    ('haskell-mode (my/ivy-hoogle))
     ('nix-mode (my/nixos-options-ivy))))
 
 (define-key my/leader-map (kbd "h") help-map)
@@ -4331,45 +4338,34 @@ Borrowed from mozc.el."
 ;; **** Ivy
 ;;(straight-use-package '(ivy-hoogle :type git :host github :repo "sjsch/ivy-hoogle"))
 
-(defvar ivy-hoogle-max-entries 100)
+(defvar my/ivy-hoogle-max-entries 100)
 
-(defun ivy-hoogle--do-search (&optional request-prefix)
-  (let* ((pattern (or (and request-prefix
-			   (concat request-prefix
-				   " "))))
-	 (lim ivy-hoogle-max-entries)
-	 (args (append (list "search" "-l")
-		       (and lim (list "-n" (int-to-string lim)))
-		       (list pattern))))
-    (let (candidates)
-      (with-temp-buffer
-	(apply #'call-process "hoogle" nil t nil args)
-	(goto-char (point-min))
-	(while (not (eobp))
-	  (if (looking-at "\\(.+?\\) -- \\(.+\\)")
-	      (push (propertize (match-string 1)
-				'hoogle-url (match-string-no-properties 2))
-		    candidates))
-	  (forward-line 1)))
-      (nreverse candidates))))
+(defun my/ivy-hoogle--do-search (str)
+  (let* ((args (concat
+		"search "
+		"-l "
+		(and my/ivy-hoogle-max-entries (concat "-n " (int-to-string my/ivy-hoogle-max-entries))))))
+    (message args)
 
-(defun ivy-hoogle--function (str)
-  (mapcar #'ivy-hoogle--fontify-haskell (ivy-hoogle--do-search str)))
+    (counsel--async-command (format "hoogle %s %s"
+				    args
+				    str))
+    '("working...")))
 
-(defvar ivy-hoogle-history nil)
-
-;;;###autoload
-(defun ivy-hoogle ()
+(defun my/ivy-hoogle ()
   "Perform a hoogle search."
   (interactive)
   (ivy-read "Hoogle: "
-	    #'ivy-hoogle--do-search
+	    #'my/ivy-hoogle--do-search
 	    :dynamic-collection t
-	    :history ivy-hoogle-history
 	    :preselect (counsel-symbol-at-point)
 	    :re-builder #'regexp-quote
 	    :action (lambda (str)
-		      (browse-url (get-text-property 0 'hoogle-url str)))))
+		      (browse-url (substring-no-properties str
+							   ;; + 3 is to remove the "-- " from the string
+							   (+ (string-match "-- .*$" str) 3)
+							   (length str))))
+	    :caller 'my/ivy-hoogle))
 
 ;; *** Haskell-doc
 ;; Haskell-doc kind of fills in the holes where lsp-haskell doesn't work
@@ -7492,22 +7488,32 @@ Borrowed from mozc.el."
     ("<=" . ?≤)
     ))
 
+;; https://github.com/enomsg/vim-haskellConcealPlus/blob/master/after/syntax/haskell.vim
 (defconst my/generic-arrow-symbols
   '(
     ("-<" . ?↢)
     (">-" . ?↣)
+    ;; ("-<" . ?⤙)
+    ;; (">-" . ?⤚)
+
     ("~>" . ?⇝)
     ("<~" . ?⇜)
+
     ("->" . ?→)
     ("<-" . ?←)
+
     ("=>" . ?⇒)
     ("<=" . ?⇐)
+
     ("->>" . ?↠)
     ("<<-" . ?↞)
+
     ("|>" . ?⊳)
     ("<|" . ?⊲)
+
     ("<<" . ?≪)
-    (">>" . ?≫)))
+    (">>" . ?≫)
+    ))
 
 (defconst my/generic-greek-symbols
   '(("lambda" . ?λ)))
@@ -7579,6 +7585,16 @@ Borrowed from mozc.el."
     ;;haskell-font-lock-dot-is-not-composition)
     ("forall" . ?∀)))
 
+(defconst my/haskell-type-symbols
+  '(
+    ("Bool" . ?𝔹)
+    ("Real" . ?ℝ)
+    ("Integer" . ?ℤ)
+    ("Natural" . ?ℕ)
+    ("Rational" . ?ℚ)
+    ("Irrational" . ?ℙ)
+    ))
+
 ;; *** Elisp
 (defconst my/elisp-symbols
   '(("defun" . ?λ)
@@ -7590,12 +7606,12 @@ Borrowed from mozc.el."
     ('haskell-mode (append
 		    (my/prettify-comment)
 		    my/haskell-symbols
+		    my/haskell-type-symbols
 		    my/generic-greek-symbols
 		    my/generic-equal-symbols
 		    my/generic-arrow-symbols
 		    my/generic-logic-symbols
-		    (my/prettify-outline-heading)
-		    ))
+		    (my/prettify-outline-heading)))
     ('fsharp-mode (append
 		   (my/prettify-comment)
 		   my/fsharp-symbols
@@ -7606,7 +7622,6 @@ Borrowed from mozc.el."
 		   ))
     ('emacs-lisp-mode (append
 		       (my/prettify-comment-lisp)
-		       ;;(my/prettify-comment-lisp)
 		       my/elisp-symbols
 		       my/generic-greek-symbols
 		       my/generic-equal-symbols
@@ -7615,8 +7630,7 @@ Borrowed from mozc.el."
 		       (my/prettify-outline-heading-lisp-classic)
 		       ))
     ('lisp-interaction-mode (append
-			     (my/prettify-comment)
-			     ;;(my/prettify-comment-lisp)
+			     (my/prettify-comment-lisp)
 			     my/elisp-symbols
 			     my/generic-greek-symbols
 			     my/generic-equal-symbols
@@ -8669,6 +8683,13 @@ Borrowed from mozc.el."
 
   ;; Disable right of header background coloring
   (set-face-attribute 'org-meta-line nil :background nil)
+
+  ;; Used by org-src block borders, currently just using the comment face
+;;  (set-face-attribute 'org-block-begin-line nil :background my/background-color-3)
+;;  (set-face-attribute 'org-block-end-line nil :background my/background-color-3)
+
+  ;; Used by org src-blocks when in use, might also be used for other things
+  (set-face-attribute 'secondary-selection nil :background (color-darken-name my/background-color 5))
 
 	 ;;; Diff
   (set-face-attribute 'diff-added nil  :background my/diff-added-color)
