@@ -4334,6 +4334,12 @@ Borrowed from mozc.el."
 ;; ** Haskell
 (straight-use-package '(haskell-mode :type git :host github :repo "walseb/haskell-mode"))
 
+(defun my/haskell-mode ()
+  (interactive)
+  (setq-local evil-shift-width 2))
+
+(add-hook 'haskell-mode-hook 'my/haskell-mode)
+
 ;; *** Hoogle
 ;; **** Ivy
 ;;(straight-use-package '(ivy-hoogle :type git :host github :repo "sjsch/ivy-hoogle"))
@@ -4346,8 +4352,7 @@ Borrowed from mozc.el."
 		"-l "
 		(and my/ivy-hoogle-max-entries (concat "-n " (int-to-string my/ivy-hoogle-max-entries))))))
     (message args)
-
-    (counsel--async-command (format "hoogle %s %s"
+    (counsel--async-command (format "hoogle %s \"%s\""
 				    args
 				    str))
     '("working...")))
@@ -4361,10 +4366,11 @@ Borrowed from mozc.el."
 	    :preselect (counsel-symbol-at-point)
 	    :re-builder #'regexp-quote
 	    :action (lambda (str)
-		      (browse-url (substring-no-properties str
-							   ;; + 3 is to remove the "-- " from the string
-							   (+ (string-match "-- .*$" str) 3)
-							   (length str))))
+		      (browse-url
+		       (substring-no-properties str
+						;; + 3 is to remove the "-- " from the string
+						(+ (string-match "-- .*$" str) 3)
+						(length str))))
 	    :caller 'my/ivy-hoogle))
 
 ;; *** Haskell-doc
@@ -4375,7 +4381,6 @@ Borrowed from mozc.el."
 (defun my/haskell-doc-mode ()
   ;; haskll-doc-mode is buggy if eldoc is on
   (setq-local lsp-eldoc-enable-hover nil)
-  ;;(run-with-timer 0.05 nil (lambda () (eldoc-mode -1)))
   (haskell-doc-mode 1))
 
 (add-hook 'haskell-mode-hook 'my/haskell-doc-mode)
@@ -4402,6 +4407,10 @@ Borrowed from mozc.el."
 (straight-use-package 'company-cabal)
 
 ;; *** lsp-haskell
+(add-hook 'haskell-mode-hook '(lambda ()
+				;; Fixes lockups due to prettify-symbol I think
+				(setq-local syntax-propertize-function nil)))
+
 (when (not my/enable-basic-haskell-support)
   (straight-use-package 'lsp-haskell)
   (require 'lsp-haskell)
@@ -4409,13 +4418,11 @@ Borrowed from mozc.el."
   (add-hook 'haskell-mode-hook '(lambda ()
 				  ;; lsp-haskell doesn't work with native json
 				  (setq-local lsp-use-native-json nil)
-				  ;; Fixes lockups due to prettify-symbol I think
-				  (setq-local syntax-propertize-function nil)
 				  (lsp))))
 
-  ;; *** Flycheck
-  ;; Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the standard ghc checker though, because it works fine if I don't have HIE. If I have HIE emacs should use that instead
-  (setq flycheck-checkers (remove 'haskell-stack-ghc flycheck-checkers))
+;; *** Flycheck
+;; Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the standard ghc checker though, because it works fine if I don't have HIE. If I have HIE emacs should use that instead
+(setq flycheck-checkers (remove 'haskell-stack-ghc flycheck-checkers))
 
 (when (not my/enable-basic-haskell-support)
   (setq flycheck-checkers (remove 'haskell-ghc flycheck-checkers))
@@ -4475,7 +4482,7 @@ Borrowed from mozc.el."
   (setq indent-tabs-mode t)
   (setq tab-width 4)
   (setq c-basic-offset 4)
-  (setq evil-shift-width 4))
+  (setq-local evil-shift-width 4))
 
 (add-hook 'c-mode-hook 'my/c-mode)
 (add-hook 'c++-mode-hook 'my/c-mode)
@@ -4687,7 +4694,7 @@ Borrowed from mozc.el."
   (c-set-style "ellemtel")
   (setq c-basic-offset 4)
   (setq tab-width 4)
-  (setq evil-shift-width 4))
+  (setq evil-shift-width-local 4))
 
 (add-hook 'csharp-mode-hook 'my/csharp-mode)
 
@@ -5114,7 +5121,9 @@ Borrowed from mozc.el."
   (evil-define-key '(normal insert visual replace) eshell-mode-map (kbd "C-z") 'eshell-kill-process)
 
   (evil-define-key '(normal insert) eshell-mode-map (kbd "C-p") 'eshell-previous-matching-input-from-input)
-  (evil-define-key '(normal insert) eshell-mode-map (kbd "C-n") 'eshell-next-matching-input-from-input))
+  (evil-define-key '(normal insert) eshell-mode-map (kbd "C-n") 'eshell-next-matching-input-from-input)
+
+  (evil-define-key '(normal insert) eshell-mode-map (kbd "TAB") 'completion-at-point))
 
 (add-hook 'eshell-mode-hook 'my/bind-eshell-keys)
 
@@ -8196,11 +8205,11 @@ Borrowed from mozc.el."
 	 "M:"
 	 (my/gnus-get-unread-mail-count)
 	 " > N:"
-	 (my/gnus-get-unread-news-count))))
+	 (my/gnus-get-unread-news-count)))
+  (my/lv-line-update))
 
 (add-hook 'my/sync-mail-hook 'my/gnus-update-unread)
-(add-hook 'gnus-summary-exit-hook '(lambda () (my/gnus-update-unread)
-				     (my/lv-line-update)))
+(add-hook 'gnus-summary-exit-hook 'my/gnus-update-unread)
 
 ;; **** Battery
 ;; If there is a battery, display it in the mode line
