@@ -1072,6 +1072,7 @@
 (evil-define-text-object my/evil-a-line (count &optional beg end type)
   "Select range between a character by which the command is followed."
   (my/evil-line-range count beg end type t))
+
 (evil-define-text-object my/evil-inner-line (count &optional beg end type)
   "Select inner range between a character by which the command is followed."
   (my/evil-line-range count beg end type))
@@ -1817,24 +1818,23 @@ Borrowed from mozc.el."
 
 ;; ** Clone indirect buffer name
 ;; *** Clone indirect buffer this window
-(defun my/clone-indirect-buffer-name ()
+(defun my/clone-indirect-buffer ()
   (interactive)
   (clone-indirect-buffer
    (concat
+    "I: "
     (buffer-name)
-    " | "
-    (completing-read "Buffer name: " nil))
-   t
-   ))
+    )
+   t))
 
 ;; *** Clone indirect buffer other window
-(defun my/clone-indirect-buffer-name-other-window ()
+(defun my/clone-indirect-buffer-other-window ()
   (interactive)
   (clone-indirect-buffer-other-window
    (concat
+    "I: "
     (buffer-name)
-    " | "
-    (completing-read "Buffer name: " nil))
+    )
    t
    ))
 
@@ -2324,6 +2324,21 @@ Borrowed from mozc.el."
 
 (add-hook 'prog-mode-hook 'outline-minor-mode)
 
+;; ** Outline evil text object
+(evil-define-text-object evil-heading (count &optional beg end type)
+  "Select entire buffer"
+  (let ((top nil)
+	(bot nil))
+    (save-restriction
+      (save-excursion
+	(my/auto-narrow-to-subtree)
+	(setq top (point-min))
+	(setq bot (point-max))))
+    (evil-range top bot)))
+
+(define-key evil-outer-text-objects-map "h" 'evil-entire-entire-buffer)
+(define-key evil-inner-text-objects-map "h" 'evil-entire-entire-buffer)
+
 ;; ** Imenu
 (define-key my/leader-map (kbd "I") 'counsel-imenu)
 
@@ -2416,41 +2431,33 @@ Borrowed from mozc.el."
 (set-face-attribute 'outshine-level-8 nil :inherit 'outline-8) ;;:height my/org-level-8-height)
 
 ;; ** Narrowing
-(define-prefix-command 'my/narrow-map)
-(define-key my/leader-map (kbd "n") 'my/narrow-map)
+;;(define-prefix-command 'my/narrow-map)
+;;(define-key my/leader-map (kbd "n") 'my/narrow-map)
 
+;; *** Narrow indirect
+(defun my/narrow-indirect (beg end)
+  (my/clone-indirect-buffer)
+  (narrow-to-region beg end))
+
+;; *** Evil narrow
+(evil-define-operator evil-narrow-indirect (beg end type)
+  "Indirectly narrow the region from BEG to END."
+  (interactive "<R>")
+  (evil-normal-state)
+  (my/narrow-indirect beg end))
+
+(define-key evil-normal-state-map "m" 'evil-narrow-indirect)
+(define-key evil-visual-state-map "m" 'evil-narrow-indirect)
+
+;; *** Universal narrow function
 (defun my/narrow-widen ()
   (interactive)
   (if loccur-mode
       (loccur-mode -1)
     (widen)))
 
-(defun my/narrow-paren ()
-  (interactive)
-  (let ((paren-beg nil)
-	(paren-end nil))
-    (save-excursion
-      (backward-up-list)
-      (setq paren-beg (point))
-      (call-interactively #'evil-jump-item)
-      (setq paren-end (point)))
-    (narrow-to-region paren-beg (+ 1 paren-end))))
-
-(defun my/narrow-to-region ()
-  (interactive)
-  (if (string= evil-state 'visual)
-      (call-interactively 'narrow-to-region)
-    (narrow-to-region (line-beginning-position) (line-end-position))))
-
-(define-key my/narrow-map (kbd "w") 'my/narrow-widen)
-(define-key my/narrow-map (kbd "r") 'my/narrow-to-region)
-
-(define-key my/narrow-map (kbd "s") 'narrow-to-page)
-(define-key my/narrow-map (kbd "d") 'narrow-to-defun)
-
-(define-key my/narrow-map (kbd "p") 'my/narrow-paren)
-
-(define-key my/narrow-map (kbd "i") 'my/auto-narrow-to-subtree)
+;; (define-key my/narrow-map (kbd "w") 'my/narrow-widen)
+(define-key my/leader-map (kbd "n") 'my/narrow-widen)
 
 ;; *** Narrow to subtree
 (defun my/auto-narrow-to-subtree ()
@@ -2460,6 +2467,8 @@ Borrowed from mozc.el."
     (_
      (outline-previous-visible-heading 1)
      (outshine-narrow-to-subtree))))
+
+;; (define-key my/narrow-map (kbd "i") 'my/auto-narrow-to-subtree)
 
 ;; ** Outline ellipsis
 (defvar outline-display-table (make-display-table))
@@ -3154,8 +3163,8 @@ Borrowed from mozc.el."
 ;; https://emacs.stackexchange.com/questions/20900/navigate-by-indentation
 (defun indentation-get-next-good-line (direction skip good)
   "Moving in direction `direction', and skipping over blank lines and lines that
-  satisfy relation `skip' between their indentation and the original indentation,
-  finds the first line whose indentation satisfies predicate `good'."
+    satisfy relation `skip' between their indentation and the original indentation,
+    finds the first line whose indentation satisfies predicate `good'."
   (let ((starting-indentation (current-indentation))
 	(lines-moved direction))
     (save-excursion
@@ -4190,9 +4199,9 @@ Borrowed from mozc.el."
 	(progn
 	  (my/backward-sexp)
 	  (if (save-match-data (looking-at "#;"))
-	      (+ (point) 2)
-	    (point)))
-      (scan-error (user-error "There isn't a complete s-expression before point")))))
+    (+ (point) 2)
+    (point)))
+  (scan-error (user-error "There isn't a complete s-expression before point")))))
 
 ;; *** Emacs-lisp
 ;; **** Eros
@@ -4383,7 +4392,7 @@ Borrowed from mozc.el."
   (setq-local lsp-eldoc-enable-hover nil)
   (haskell-doc-mode 1))
 
-(add-hook 'haskell-mode-hook 'my/haskell-doc-mode)
+;; (add-hook 'haskell-mode-hook 'my/haskell-doc-mode)
 
 ;; *** Project management
 ;; **** Stack
@@ -4406,12 +4415,14 @@ Borrowed from mozc.el."
 ;; *** Haskell-cabal
 (straight-use-package 'company-cabal)
 
-;; *** lsp-haskell
+;; *** Fix lockup
+;; This fixes a lockup that sometimes happens. I think this has to do with flycheck-mode
 (add-hook 'haskell-mode-hook '(lambda ()
 				;; Fixes lockups due to prettify-symbol I think
 				(setq-local syntax-propertize-function nil)))
 
-(when (not my/enable-basic-haskell-support)
+;; *** lsp-haskell
+(when my/haskell-hie-enable
   (straight-use-package 'lsp-haskell)
   (require 'lsp-haskell)
 
@@ -4420,11 +4431,55 @@ Borrowed from mozc.el."
 				  (setq-local lsp-use-native-json nil)
 				  (lsp))))
 
+;; *** Dante
+(when (not my/haskell-hie-enable)
+  (setq dante-tap-type-time 0)
+  (straight-use-package 'dante)
+  (require 'dante)
+
+  (add-hook 'haskell-mode-hook 'dante-mode))
+
+;; **** Add hlint to dante
+(when (not my/haskell-hie-enable)
+  (add-hook 'dante-mode-hook
+	    '(lambda () (flycheck-add-next-checker 'haskell-dante
+					      '(warning . haskell-hlint)))))
+
+;; **** Make dante not save all the time
+(when (not my/haskell-hie-enable)
+  (lcr-def dante-async-load-current-buffer (interpret)
+    "Load and maybe INTERPRET the temp file for current buffer.
+Interpreting puts all symbols from the current module in
+scope. Compiling to avoids re-interpreting the dependencies over
+and over."
+    (let* ((epoch (buffer-modified-tick))
+	   (unchanged (equal epoch dante-temp-epoch))
+	   (fname (buffer-file-name (current-buffer)))
+	   (buffer (lcr-call dante-session))
+	   (same-buffer (s-equals? (buffer-local-value 'dante-loaded-file buffer) fname)))
+      (if (and unchanged same-buffer) (buffer-local-value 'dante-load-message buffer) ; see #52
+	(setq dante-temp-epoch epoch)
+	;; (vc-before-save)
+	;; (basic-save-buffer-1) ;; save without re-triggering flycheck/flymake nor any save hook
+	;; (vc-after-save)
+	;; GHCi will interpret the buffer iff. both -fbyte-code and :l * are used.
+	(lcr-call dante-async-call (if interpret ":set -fbyte-code" ":set -fobject-code"))
+	(with-current-buffer buffer
+	  (dante-async-write (if (and (not interpret) same-buffer) ":r"
+			       (concat ":l " (if interpret "*" "") (dante-local-name fname))))
+	  (cl-destructuring-bind (_status err-messages _loaded-modules) (lcr-call dante-load-loop "" nil)
+	    (setq dante-loaded-file fname)
+	    (setq dante-load-message err-messages))))))
+
+  (add-hook 'dante-mode-hook '(lambda ()
+				;; Check on idle because sometimes the check on save is too slow
+				(setq-local flycheck-check-syntax-automatically '(mode-enabled save idle-change)))))
+
 ;; *** Flycheck
 ;; Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the standard ghc checker though, because it works fine if I don't have HIE. If I have HIE emacs should use that instead
 (setq flycheck-checkers (remove 'haskell-stack-ghc flycheck-checkers))
 
-(when (not my/enable-basic-haskell-support)
+(when my/haskell-hie-enable
   (setq flycheck-checkers (remove 'haskell-ghc flycheck-checkers))
   (setq flycheck-checkers (remove 'haskell-hlint flycheck-checkers)))
 
@@ -5099,7 +5154,7 @@ Borrowed from mozc.el."
 ;; ** With-editor
 (straight-use-package 'with-editor)
 
-(add-hook 'eshell-mode 'with-editor-export-editor)
+(add-hook 'eshell-mode-hook 'with-editor-export-editor)
 
 ;; ** Keys
 (define-key my/leader-map (kbd "[") 'my/eshell)
@@ -5752,7 +5807,7 @@ Borrowed from mozc.el."
 (eval-after-load 'exwm
   (progn
        ;;; Normal
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-d") 'exwm-edit--compose)
+    (evil-define-key '(insert visual normal motion) exwm-firefox-evil-mode-map (kbd "C-d") 'exwm-edit--compose)
 
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
@@ -6906,12 +6961,6 @@ Borrowed from mozc.el."
 
 ;; http://aspell.net/0.50-doc/man-html/4_Customizing.html#suggestion
 (setq ispell-extra-args (list "--sug-mode=bad-spellers" "--run-together"))
-;;(setq ispell-extra-args (list "--sug-mode=ultra" "--run-together"))
-;;(setq ispell-extra-args (list "--sug-mode=ultra" "--run-together"))
-
-;; flyspell-correct-ivy doesn't seem to do much
-;;(straight-use-package 'flyspell-correct-ivy)
-;; (setq flyspell-correct-interface #'flyspell-correct-ivy)
 
 ;; *** Key
 (my/evil-normal-define-key (kbd "C-d") 'flyspell-correct-at-point)
@@ -7077,8 +7126,8 @@ Borrowed from mozc.el."
   ("v" my/window-split-down nil)
   ("V" my/window-split-up nil)
 
-  ("i" my/clone-indirect-buffer-name nil)
-  ("I" my/clone-indirect-buffer-name-other-window nil)
+  ("i" my/clone-indirect-buffer nil)
+  ("I" my/clone-indirect-buffer-other-window nil)
 
   ;; Search
   ("C-s" swiper-all nil)
