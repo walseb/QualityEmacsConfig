@@ -3872,7 +3872,11 @@ Borrowed from mozc.el."
 
 ;; * Code
 ;; ** Generic
-;; *** Ivy-xref
+;; *** Xref
+;; By default xref always prompts with certain commands
+(setq xref-prompt-for-identifier nil)
+
+;; **** Ivy-xref
 (straight-use-package 'ivy-xref)
 
 (require 'ivy-xref)
@@ -3938,6 +3942,7 @@ Borrowed from mozc.el."
     ('c++-mode (call-interactively 'xref-find-definitions))
     ('objc-mode (call-interactively 'xref-find-definitions))
     ('csharp-mode (omnisharp-go-to-definition))
+    ('haskell-mode (call-interactively 'xref-find-definitions))
     (_
      (if lsp-mode
 	 (lsp-find-definition)
@@ -4385,12 +4390,10 @@ Borrowed from mozc.el."
 ;; *** Haskell-doc
 ;; Haskell-doc kind of fills in the holes where lsp-haskell doesn't work
 
-(setq haskell-doc-idle-delay 0)
+;; (setq haskell-doc-idle-delay 0)
 
-(defun my/haskell-doc-mode ()
-  ;; haskll-doc-mode is buggy if eldoc is on
-  (setq-local lsp-eldoc-enable-hover nil)
-  (haskell-doc-mode 1))
+;;(defun my/haskell-doc-mode ()
+;;  (haskell-doc-mode 1))
 
 ;; (add-hook 'haskell-mode-hook 'my/haskell-doc-mode)
 
@@ -4427,6 +4430,9 @@ Borrowed from mozc.el."
   (require 'lsp-haskell)
 
   (add-hook 'haskell-mode-hook '(lambda ()
+				  ;; haskll-doc-mode is buggy if eldoc is on
+				  (setq-local lsp-eldoc-enable-hover nil)
+
 				  ;; lsp-haskell doesn't work with native json
 				  (setq-local lsp-use-native-json nil)
 				  (lsp))))
@@ -4449,9 +4455,9 @@ Borrowed from mozc.el."
 (when (not my/haskell-hie-enable)
   (lcr-def dante-async-load-current-buffer (interpret)
     "Load and maybe INTERPRET the temp file for current buffer.
-Interpreting puts all symbols from the current module in
-scope. Compiling to avoids re-interpreting the dependencies over
-and over."
+  Interpreting puts all symbols from the current module in
+  scope. Compiling to avoids re-interpreting the dependencies over
+  and over."
     (let* ((epoch (buffer-modified-tick))
 	   (unchanged (equal epoch dante-temp-epoch))
 	   (fname (buffer-file-name (current-buffer)))
@@ -4471,9 +4477,15 @@ and over."
 	    (setq dante-loaded-file fname)
 	    (setq dante-load-message err-messages))))))
 
+  ;; ***** Fix flycheck
+  ;; Sometimes ghci takes too long to get the results, have a hook that runs 1 second after save to hopefully catch the late error
+  ;; Also disable idle-change since it should not be needed
   (add-hook 'dante-mode-hook '(lambda ()
-				;; Check on idle because sometimes the check on save is too slow
-				(setq-local flycheck-check-syntax-automatically '(mode-enabled save idle-change)))))
+				(add-hook 'after-save-hook
+					  '(lambda ()
+					     (run-with-timer 1 nil #'flycheck-buffer)) nil t)))
+  (add-hook 'dante-mode-hook '(lambda ()
+				(setq-local flycheck-check-syntax-automatically '(mode-enabled save)))))
 
 ;; *** Flycheck
 ;; Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the standard ghc checker though, because it works fine if I don't have HIE. If I have HIE emacs should use that instead
@@ -4646,6 +4658,7 @@ and over."
   (interactive)
   (pcase major-mode
     ('csharp-mode (omnisharp-current-type-documentation))
+    ('haskell-mode (call-interactively 'dante-info))
     (_
      (if lsp-mode
 	 (lsp-describe-thing-at-point)
@@ -5573,7 +5586,7 @@ and over."
 (require 'exwm-edit)
 (global-exwm-edit-mode 1)
 
-;; *** Removed header
+;; *** Remove header
 (add-hook 'exwm-edit-mode-hook '(lambda () (kill-local-variable 'header-line-format)))
 
 ;; *** Keys
@@ -5611,6 +5624,13 @@ and over."
 (defun my/exwm-buffer-give-name-title ()
   (when (my/exwm-should-use-title-for-buffer-name)
     (exwm-workspace-rename-buffer exwm-title)))
+
+;; ** Fix modeline in exwm buffers
+(add-hook 'exwm-floating-exit-hook '(lambda ()
+				      (kill-local-variable 'header-line-format)))
+
+;; ** Disable floating windows
+(setq exwm-manage-force-tiling t)
 
 ;; ** Multi-screen
 (if my/enable-randr
@@ -6696,7 +6716,7 @@ and over."
 
 ;; * System
 (define-prefix-command 'my/system-commands-map)
-(define-key my/leader-map (kbd "~") 'my/system-commands-map)
+(define-key my/leader-map (kbd "S") 'my/system-commands-map)
 
 ;; ** Suspend
  (define-prefix-command 'my/system-suspend-map)
@@ -6819,6 +6839,14 @@ and over."
 ;; * Networking
 (define-prefix-command 'my/net-utils-map)
 (define-key my/system-commands-map (kbd "n") 'my/net-utils-map)
+
+;; ** Network manager
+;; Right now enwc seems to only be able to switch wifi networks and display network status in modeline
+;; Also check out https://github.com/Kodkollektivet/emacs-nm
+(straight-use-package 'enwc)
+(setq enwc-default-backend 'nm)
+
+(define-key my/system-commands-map (kbd "c") 'enwc)
 
 ;; ** Tramp
 ;; (setq tramp-default-method "scpx")
@@ -7881,8 +7909,7 @@ and over."
   "Face for highlighting something in mode line")
 
 ;; *** Mode line contents
-;; Using header line to display
-;; Set mode line height
+;; Don't set it directly here, because the variable is needed to fix exwm
 (setq-default header-line-format
 	      (quote
 	       (
