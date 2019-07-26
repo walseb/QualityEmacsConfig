@@ -1912,7 +1912,9 @@ Borrowed from mozc.el."
       (use-local-map (copy-keymap org-mode-map))
       (local-set-key [remap my/save-and-backup-buffer] '(lambda () (interactive)
 							  ;; Using write-region instead of write-file here makes it so that the scratch buffer doesn't get assigned to a file, which means it can be used without any problems in a direnv buffer
-							  (write-region (point-min) (point-max) (concat user-emacs-directory "scratch"))))))
+							  (save-restriction
+							    (widen)
+							    (write-region (point-min) (point-max) (concat user-emacs-directory "scratch")))))))
   (run-hooks 'my/open-map-hook))
 
   (define-key my/open-map (kbd "s") 'my/switch-to-scratch)
@@ -2336,8 +2338,8 @@ Borrowed from mozc.el."
 	(setq bot (point-max))))
     (evil-range top bot)))
 
-(define-key evil-outer-text-objects-map "h" 'evil-entire-entire-buffer)
-(define-key evil-inner-text-objects-map "h" 'evil-entire-entire-buffer)
+(define-key evil-outer-text-objects-map "h" 'evil-heading)
+(define-key evil-inner-text-objects-map "h" 'evil-heading)
 
 ;; ** Imenu
 (define-key my/leader-map (kbd "I") 'counsel-imenu)
@@ -2465,6 +2467,9 @@ Borrowed from mozc.el."
   (pcase major-mode
     ('org-mode (org-narrow-to-subtree))
     (_
+     ;; Fixes a bug where if cursor is at heading, the one above gets narrowed
+     (next-line)
+
      (outline-previous-visible-heading 1)
      (outshine-narrow-to-subtree))))
 
@@ -2713,6 +2718,10 @@ Borrowed from mozc.el."
 					     (current-buffer))))
 		  (flycheck-error-list-set-source source-buffer)
 		  (flycheck-error-list-reset-filter)
+
+		  ;; Finally, refresh the error list to show the most recent errors
+		  (flycheck-error-list-refresh)
+
 		  (revert-buffer t t t)
 		  (split-string (buffer-string) "\n" t)))
 	      :action (lambda (s &rest _)
@@ -3929,6 +3938,14 @@ Borrowed from mozc.el."
 ;; (setq highlight-indent-guides-responsive 'top)
 ;; (setq highlight-indent-guides-delay 0)
 
+;; *** Auto fix suggested
+;; (straight-use-package 'attrap)
+;;(defun my/auto-fix-suggested ()
+;;  (interactive)
+;;  (pcase major-mode
+;;
+					;    ))
+
 ;; *** Auto jump to definition
 (straight-use-package 'dumb-jump)
 
@@ -4442,8 +4459,54 @@ Borrowed from mozc.el."
   (setq dante-tap-type-time 0)
   (straight-use-package 'dante)
   (require 'dante)
+  (add-hook 'haskell-mode-hook 'dante-mode)
 
-  (add-hook 'haskell-mode-hook 'dante-mode))
+  ;; **** Add more warnings
+  ;; https://downloads.haskell.org/~ghc/master/users-guide/using-warnings.html?source=post_page---------------------------
+  ;; https://medium.com/mercury-bank/enable-all-the-warnings-a0517bc081c3
+  (setq my/ghc-warning-parameters
+	'(
+	  "-Weverything"
+	  "-Wincomplete-uni-patterns"
+	  "-Wincomplete-record-updates"
+
+	  ;; Don't warn if prelude is implicitly imported
+	  ;; "-Wimplicit-prelude"
+	  "-Wno-implicit-prelude"
+
+	  ;; Warns that you haven't defined an export list. Without an export list all functions in the file are accessible
+	  ;; "-Wmissing-export-lists"
+	  "-Wno-missing-export-lists"
+
+	  ;; Dante disables this by default
+	  ;; "-Wmissing-home-modules"
+	  "-Widentities"
+	  "-Wredundant-constraints"
+	  "-Wpartial-fields"
+
+	  ;; Normally there is a warning on every non-annotated top-level function https://gitlab.haskell.org/ghc/ghc/issues/14794?source=post_page---------------------------#ticket
+	  "-Wno-missing-exported-signatures"
+
+	  ;; Don't give warning when imports arent either qualified or imported using import lists
+	  "-Wno-missing-import-lists"
+
+	  ;; "When GHC can’t specialize a polymorphic function. No big deal and requires fixing underlying libraries to solve."
+	  "-Wno-missed-specialisations"
+
+	  ;; "Don’t use Safe Haskell warnings"
+	  "-Wno-unsafe"
+	  ;; "Don’t use Safe Haskell warnings"
+	  "-Wno-safe"
+	  ;; "Warning for polymorphic local bindings; nothing wrong with those"
+	  "-Wno-missing-local-signatures"
+	  ;; "Warn if the monomorphism restriction is used"
+	  "-Wmonomorphism-restriction"
+	  ))
+
+  (setq dante-load-flags (append dante-load-flags my/ghc-warning-parameters)))
+
+;; Remove duplicates if any
+;; (setq dante-load-flags (remove-duplicates dante-load-flags :test 'string=))
 
 ;; **** Add hlint to dante
 (when (not my/haskell-hie-enable)
@@ -4485,7 +4548,12 @@ Borrowed from mozc.el."
 					  '(lambda ()
 					     (run-with-timer 1 nil #'flycheck-buffer)) nil t)))
   (add-hook 'dante-mode-hook '(lambda ()
-				(setq-local flycheck-check-syntax-automatically '(mode-enabled save)))))
+				(setq-local flycheck-check-syntax-automatically '(mode-enabled save idle-change))))
+
+  ;; When hitting esc while in normal mode, refresh flycheck mode for when ghc is slow
+  (evil-define-key 'normal dante-mode-map (kbd "<escape>") '(lambda () (interactive)
+							      (flycheck-buffer)
+							      (evil-force-normal-state))))
 
 ;; *** Flycheck
 ;; Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the standard ghc checker though, because it works fine if I don't have HIE. If I have HIE emacs should use that instead
@@ -6837,8 +6905,8 @@ Borrowed from mozc.el."
 (define-key my/software-install-map (kbd "C-c") 'my/compile-config)
 
 ;; * Networking
-(define-prefix-command 'my/net-utils-map)
-(define-key my/system-commands-map (kbd "n") 'my/net-utils-map)
+(define-prefix-command 'my/network-map)
+(define-key my/system-commands-map (kbd "my/network-maps-map)
 
 ;; ** Network manager
 ;; Right now enwc seems to only be able to switch wifi networks and display network status in modeline
@@ -6846,7 +6914,7 @@ Borrowed from mozc.el."
 (straight-use-package 'enwc)
 (setq enwc-default-backend 'nm)
 
-(define-key my/system-commands-map (kbd "c") 'enwc)
+(define-key my/network-map (kbd "c") 'enwc)
 
 ;; ** Tramp
 ;; (setq tramp-default-method "scpx")
@@ -6860,9 +6928,10 @@ Borrowed from mozc.el."
 (add-hook 'net-utils-mode-hook 'my/net-utils-mode)
 
 ;; ** Keys
-(define-key my/net-utils-map (kbd "s") 'netstat)
-(define-key my/net-utils-map (kbd "p") 'ping)
-(define-key my/net-utils-map (kbd "i") 'ifconfig)
+(define-key my/network-map (kbd "s") 'netstat)
+(define-key my/network-map (kbd "p") 'ping)
+(define-key my/network-map (kbd "P") '(lambda () (interactive) (ping "8.8.8.8")))
+(define-key my/network-map (kbd "i") 'ifconfig)
 
 ;; * Hardware
 (define-prefix-command 'my/hardware-info-map)
@@ -7134,9 +7203,11 @@ Borrowed from mozc.el."
   ;; Resize down
   ("C-n" (evil-window-decrease-height 10) nil)
   ;; Resize right
-  ("<delete>" (evil-window-decrease-width 10) nil)
+  ;;("<delete>" (evil-window-decrease-width 10) nil)
+  ("<deletechar>" (evil-window-decrease-width 10) nil)
   ;; Resize left
-  ("\b" (evil-window-increase-width 10) nil)
+  ;;("\b" (evil-window-increase-width 10) nil)
+  ("C-h" (evil-window-increase-width 10) nil)
 
   ;; Resize up
   ("C-S-p" (evil-window-increase-height 40) nil)
