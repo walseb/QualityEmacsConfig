@@ -2329,8 +2329,8 @@ Borrowed from mozc.el."
 (add-hook 'prog-mode-hook 'outline-minor-mode)
 
 ;; ** Outline evil text object
-(evil-define-text-object evil-heading (count &optional beg end type)
-  "Select entire buffer"
+(evil-define-text-object evil-around-heading (count &optional beg end type)
+  "Select heading"
   (let ((top nil)
 	(bot nil))
     (save-restriction
@@ -2340,8 +2340,23 @@ Borrowed from mozc.el."
 	(setq bot (point-max))))
     (evil-range top bot)))
 
-(define-key evil-outer-text-objects-map "h" 'evil-heading)
-(define-key evil-inner-text-objects-map "h" 'evil-heading)
+(evil-define-text-object evil-inside-heading (count &optional beg end type)
+  "Select heading"
+  (let ((top nil)
+	(bot nil))
+    (save-restriction
+      (save-excursion
+	(my/auto-narrow-to-subtree)
+	(beginning-of-buffer)
+	(ignore-errors
+	  (next-line)
+	  (beginning-of-line))
+	(setq top (point))
+	(setq bot (point-max))))
+    (evil-range top bot)))
+
+(define-key evil-outer-text-objects-map "h" 'evil-around-heading)
+(define-key evil-inner-text-objects-map "h" 'evil-inside-heading)
 
 ;; ** Imenu
 (define-key my/leader-map (kbd "I") 'counsel-imenu)
@@ -4515,7 +4530,7 @@ Borrowed from mozc.el."
 		(s-trim str)
 	      nil))))))
 
-  ;; No idea why but somehow eldoc doesn't update when i go down a line in haskell-mode. This fixes it anyways
+  ;; Since eldoc runs way too fast after going up and down a line (lsp needs a few milliseconds to gather the types), do the eldoc calling by hand to add a delay when going up and down lines
   (add-hook 'haskell-mode-hook '(lambda ()
 				  (eldoc-mode -1)
 				  (setq-local eldoc-documentation-function 'my/haskell-lsp-eldoc-print)
@@ -4527,13 +4542,13 @@ Borrowed from mozc.el."
     '(lambda () (interactive)
        (setq my/haskell-lsp-eldoc-entries '())
        (call-interactively 'evil-next-line)
-       (run-with-timer 0.1 nil 'eldoc-print-current-symbol-info)))
+       (run-with-timer 0.3 nil 'eldoc-print-current-symbol-info)))
 
   (define-key haskell-mode-map [remap evil-previous-line]
     '(lambda () (interactive)
        (setq my/haskell-lsp-eldoc-entries '())
        (call-interactively 'evil-previous-line)
-       (run-with-timer 0.1 nil 'eldoc-print-current-symbol-info))))
+       (run-with-timer 0.3 nil 'eldoc-print-current-symbol-info))))
 
 ;; *** Dante
 (setq my/haskell-dante-fix nil)
