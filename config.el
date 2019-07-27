@@ -1820,23 +1820,25 @@ Borrowed from mozc.el."
 ;; *** Clone indirect buffer this window
 (defun my/clone-indirect-buffer ()
   (interactive)
-  (clone-indirect-buffer
-   (concat
-    "I: "
-    (buffer-name)
-    )
-   t))
+  (when (not exwm-mode)
+    (clone-indirect-buffer
+     (concat
+      "I: "
+      (buffer-name)
+      )
+     t)))
 
 ;; *** Clone indirect buffer other window
 (defun my/clone-indirect-buffer-other-window ()
   (interactive)
-  (clone-indirect-buffer-other-window
-   (concat
-    "I: "
-    (buffer-name)
-    )
-   t
-   ))
+  (when (not exwm-mode)
+    (clone-indirect-buffer-other-window
+     (concat
+      "I: "
+      (buffer-name)
+      )
+     t
+     )))
 
 ;; ** Build config
 (defun my/build-config-docs ()
@@ -4443,7 +4445,9 @@ Borrowed from mozc.el."
 
 ;; *** lsp-haskell
 (when my/haskell-hie-enable
-  (straight-use-package 'lsp-haskell)
+  ;; (straight-use-package 'lsp-haskell)
+  (straight-use-package '(lsp-haskell :type git :host github :repo "walseb/lsp-haskell"))
+
   (require 'lsp-haskell)
 
   (add-hook 'haskell-mode-hook '(lambda ()
@@ -4451,13 +4455,97 @@ Borrowed from mozc.el."
 				  (setq-local lsp-eldoc-enable-hover nil)
 
 				  ;; lsp-haskell doesn't work with native json
-				  (setq-local lsp-use-native-json nil)
+				  ;; (setq-local lsp-use-native-json nil)
 				  (lsp))))
 
+;; **** Make it start in nix-shell
+(setq lsp-haskell-process-wrapper-function '(lambda (argv)
+					      (append
+					       (append (list "nix-shell" "-I" "." "--command" )
+						       (list (mapconcat 'identity argv " ")))
+					       (list (concat (lsp-haskell--get-root) "/shell.nix")))))
+;; **** Hack in eldoc support
+(when my/haskell-hie-enable
+  (setq my/haskell-lsp-eldoc-entries '())
+
+  ;; This function modifies what's displayed in lsp-ui-sideline. Here it is redefined so that it takes what's supposed to be displayed in the sideline, and instead sends it to an eldoc cache
+  (defun lsp-ui-sideline--push-info (symbol tag bounds info bol eol)
+    (when (and (= tag (lsp-ui-sideline--calculate-tag))
+	       (not (lsp-ui-sideline--stop-p)))
+      (let* ((info (concat (thread-first (gethash "contents" info)
+			     lsp-ui-sideline--extract-info
+			     lsp-ui-sideline--format-info)))
+	     (current (and (>= (point) (car bounds)) (<= (point) (cdr bounds)))))
+	(when (and (> (length info) 0)
+		   (lsp-ui-sideline--check-duplicate symbol info))
+	  (let* ((final-string (lsp-ui-sideline--make-display-string info symbol current))
+		 (pos-ov (lsp-ui-sideline--find-line (length final-string) bol eol))
+		 (ov (when pos-ov (make-overlay (car pos-ov) (car pos-ov)))))
+
+	    ;; My changes:
+	    (let ((final-string-formatted (substring-no-properties final-string)))
+	      (add-to-list 'my/haskell-lsp-eldoc-entries final-string-formatted))
+
+	    (when pos-ov
+	      ;; (overlay-put ov 'info info)
+	      ;; (overlay-put ov 'symbol symbol)
+	      (overlay-put ov 'bounds bounds)
+	      (overlay-put ov 'current current)
+	      ;;(overlay-put ov 'after-string final-string)
+	      (overlay-put ov 'window (get-buffer-window))
+	      (overlay-put ov 'kind 'info)
+	      (push ov lsp-ui-sideline--ovs)))))))
+
+  (defun my/haskell-lsp-eldoc-print ()
+    (when my/haskell-lsp-eldoc-entries
+      (let ((at-point (thing-at-point 'symbol t)))
+	(when at-point
+	  (let ((str (seq-find
+		      (lambda (candidate)
+			(let ((candidate-last-word (string-match (rx (not whitespace) (regexp "*") space eol) candidate)))
+			  (if candidate-last-word
+			      (progn
+				(string=
+				 (substring candidate candidate-last-word (- (length candidate) 1))
+				 at-point))
+			    nil)))
+		      my/haskell-lsp-eldoc-entries)))
+
+	    (if str
+		(s-trim str)
+	      nil))))))
+
+  ;; No idea why but somehow eldoc doesn't update when i go down a line in haskell-mode. This fixes it anyways
+  (add-hook 'haskell-mode-hook '(lambda ()
+				  (eldoc-mode -1)
+				  (setq-local eldoc-documentation-function 'my/haskell-lsp-eldoc-print)
+
+				  (add-hook 'post-command-hook
+					    'eldoc-print-current-symbol-info nil t)))
+
+  (define-key haskell-mode-map [remap evil-next-line]
+    '(lambda () (interactive)
+       (setq my/haskell-lsp-eldoc-entries '())
+       (call-interactively 'evil-next-line)
+       (run-with-timer 0.1 nil 'eldoc-print-current-symbol-info)))
+
+  (define-key haskell-mode-map [remap evil-previous-line]
+    '(lambda () (interactive)
+       (setq my/haskell-lsp-eldoc-entries '())
+       (call-interactively 'evil-previous-line)
+       (run-with-timer 0.1 nil 'eldoc-print-current-symbol-info))))
+
 ;; *** Dante
+(setq my/haskell-dante-fix nil)
+
 (when (not my/haskell-hie-enable)
   (setq dante-tap-type-time 0)
-  (straight-use-package 'dante)
+
+  (if my/haskell-dante-fix
+      (straight-use-package '(dante :type git :host github :repo "purcell/dante" :branch "better-temp-files"))
+    ;; (straight-use-package '(dante :type git :host github :repo "soupi/dante" :branch "with-temp-files"))
+    (straight-use-package 'dante))
+
   (require 'dante)
   (add-hook 'haskell-mode-hook 'dante-mode)
 
@@ -4515,45 +4603,45 @@ Borrowed from mozc.el."
 					      '(warning . haskell-hlint)))))
 
 ;; **** Make dante not save all the time
-(when (not my/haskell-hie-enable)
-  (lcr-def dante-async-load-current-buffer (interpret)
-    "Load and maybe INTERPRET the temp file for current buffer.
+(when (and (not my/haskell-dante-fix) (not my/haskell-hie-enable))
+(lcr-def dante-async-load-current-buffer (interpret)
+	 "Load and maybe INTERPRET the temp file for current buffer.
   Interpreting puts all symbols from the current module in
   scope. Compiling to avoids re-interpreting the dependencies over
   and over."
-    (let* ((epoch (buffer-modified-tick))
-	   (unchanged (equal epoch dante-temp-epoch))
-	   (fname (buffer-file-name (current-buffer)))
-	   (buffer (lcr-call dante-session))
-	   (same-buffer (s-equals? (buffer-local-value 'dante-loaded-file buffer) fname)))
-      (if (and unchanged same-buffer) (buffer-local-value 'dante-load-message buffer) ; see #52
-	(setq dante-temp-epoch epoch)
-	;; (vc-before-save)
-	;; (basic-save-buffer-1) ;; save without re-triggering flycheck/flymake nor any save hook
-	;; (vc-after-save)
-	;; GHCi will interpret the buffer iff. both -fbyte-code and :l * are used.
-	(lcr-call dante-async-call (if interpret ":set -fbyte-code" ":set -fobject-code"))
-	(with-current-buffer buffer
-	  (dante-async-write (if (and (not interpret) same-buffer) ":r"
-			       (concat ":l " (if interpret "*" "") (dante-local-name fname))))
-	  (cl-destructuring-bind (_status err-messages _loaded-modules) (lcr-call dante-load-loop "" nil)
-	    (setq dante-loaded-file fname)
-	    (setq dante-load-message err-messages))))))
+	 (let* ((epoch (buffer-modified-tick))
+		(unchanged (equal epoch dante-temp-epoch))
+		(fname (buffer-file-name (current-buffer)))
+		(buffer (lcr-call dante-session))
+		(same-buffer (s-equals? (buffer-local-value 'dante-loaded-file buffer) fname)))
+	   (if (and unchanged same-buffer) (buffer-local-value 'dante-load-message buffer) ; see #52
+	     (setq dante-temp-epoch epoch)
+	     ;; (vc-before-save)
+	     ;; (basic-save-buffer-1) ;; save without re-triggering flycheck/flymake nor any save hook
+	     ;; (vc-after-save)
+	     ;; GHCi will interpret the buffer iff. both -fbyte-code and :l * are used.
+	     (lcr-call dante-async-call (if interpret ":set -fbyte-code" ":set -fobject-code"))
+	     (with-current-buffer buffer
+	       (dante-async-write (if (and (not interpret) same-buffer) ":r"
+				    (concat ":l " (if interpret "*" "") (dante-local-name fname))))
+	       (cl-destructuring-bind (_status err-messages _loaded-modules) (lcr-call dante-load-loop "" nil)
+		 (setq dante-loaded-file fname)
+		 (setq dante-load-message err-messages))))))
 
-  ;; ***** Fix flycheck
-  ;; Sometimes ghci takes too long to get the results, have a hook that runs 1 second after save to hopefully catch the late error
-  ;; Also disable idle-change since it should not be needed
-  (add-hook 'dante-mode-hook '(lambda ()
-				(add-hook 'after-save-hook
-					  '(lambda ()
-					     (run-with-timer 1 nil #'flycheck-buffer)) nil t)))
-  (add-hook 'dante-mode-hook '(lambda ()
-				(setq-local flycheck-check-syntax-automatically '(mode-enabled save idle-change))))
+;; ***** Fix flycheck
+;; Sometimes ghci takes too long to get the results, have a hook that runs 1 second after save to hopefully catch the late error
+;; Also disable idle-change since it should not be needed
+(add-hook 'dante-mode-hook '(lambda ()
+			      (add-hook 'after-save-hook
+					'(lambda ()
+					   (run-with-timer 1 nil #'flycheck-buffer)) nil t)))
+(add-hook 'dante-mode-hook '(lambda ()
+			      (setq-local flycheck-check-syntax-automatically '(mode-enabled save idle-change))))
 
-  ;; When hitting esc while in normal mode, refresh flycheck mode for when ghc is slow
-  (evil-define-key 'normal dante-mode-map (kbd "<escape>") '(lambda () (interactive)
-							      (flycheck-buffer)
-							      (evil-force-normal-state))))
+;; When hitting esc while in normal mode, refresh flycheck mode for when ghc is slow
+(evil-define-key 'normal dante-mode-map (kbd "<escape>") '(lambda () (interactive)
+							    (flycheck-buffer)
+							    (evil-force-normal-state))))
 
 ;; *** Flycheck
 ;; Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the standard ghc checker though, because it works fine if I don't have HIE. If I have HIE emacs should use that instead
@@ -6906,7 +6994,7 @@ Borrowed from mozc.el."
 
 ;; * Networking
 (define-prefix-command 'my/network-map)
-(define-key my/system-commands-map (kbd "my/network-maps-map)
+(define-key my/system-commands-map (kbd "n") 'my/network-map)
 
 ;; ** Network manager
 ;; Right now enwc seems to only be able to switch wifi networks and display network status in modeline
@@ -7280,10 +7368,11 @@ Borrowed from mozc.el."
   ("u" winner-undo nil)
   ("C-r" winner-redo nil)
 
-  ("R" rename-buffer nil))
+  ("R" rename-buffer nil)
 
-;; Add this to not auto exit insert mode after closing the hydra
-;; ("<escape>" nil))
+  ;; Add this to not auto exit insert mode after closing the hydra
+  ;; ("<escape>" nil)
+  )
 
 ;; ** Structural navigation
 ;; *** Evil-lispy
@@ -8368,6 +8457,7 @@ Borrowed from mozc.el."
 ;; ***** Reload battery display mode
 (defun my/battery-display-mode-reload ()
   (interactive)
+  (display-battery-mode -1)
   (setq battery-status-function
 	(cond ((and (eq system-type 'gnu/linux)
 		    (file-readable-p "/proc/apm"))
@@ -8391,7 +8481,8 @@ Borrowed from mozc.el."
 		      (error nil)))
 	       #'battery-pmset)
 	      ((fboundp 'w32-battery-status)
-	       #'w32-battery-status))))
+	       #'w32-battery-status)))
+  (display-battery-mode 1))
 
 ;; **** Date and time
 ;; Display time and date in good format (also displays CPU load)
