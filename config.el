@@ -593,6 +593,8 @@
 
 ;; ** Fix so that you can use counsel-yank in minibuffer again
 
+;; ** Make evil-commentary also comment multiple empty lines
+
 ;; * First
 ;; Things to do first
 (setq mode-line-format nil)
@@ -1109,12 +1111,36 @@
 
 ;; *** Evil commentary
 (straight-use-package 'evil-commentary)
-(evil-commentary-mode)
 
 (evil-define-key 'normal evil-commentary-mode-map ":" 'evil-commentary-line)
 (evil-define-key 'normal evil-commentary-mode-map ";" 'evil-commentary)
 
 (evil-define-key 'normal evil-commentary-mode-map "gY" 'evil-commentary-yank-line)
+
+;; **** Allow commenting empty line
+;; Because of some reason emacs crashes with undo tree error if this isn't run late
+(add-hook 'after-init-hook
+	  '(lambda ()
+	     (evil-commentary-mode)
+
+	     (evil-define-operator evil-commentary-line (beg end type)
+	       "Comment or uncomment [count] lines."
+	       :motion evil-line
+	       :move-point nil
+	       (interactive "<R>")
+	       (when (evil-visual-state-p)
+		 (unless (memq type '(line block))
+		   (let ((range (evil-expand beg end 'line)))
+		     (setq beg (evil-range-beginning range)
+			   end (evil-range-end range)
+			   type (evil-type range))))
+		 (evil-exit-visual-state))
+	       ;; If current line is blank
+	       (if (save-excursion
+		     (beginning-of-line)
+		     (looking-at "[[:space:]]*$"))
+		   (insert comment-start)
+		 (evil-commentary beg end type)))))
 
 ;; *** Evil-surround
 (straight-use-package 'evil-surround)
@@ -1820,7 +1846,7 @@ Borrowed from mozc.el."
 ;; *** Clone indirect buffer this window
 (defun my/clone-indirect-buffer ()
   (interactive)
-  (when (not exwm-mode)
+  (when (not (string= major-mode 'exwm-mode))
     (clone-indirect-buffer
      (concat
       "I: "
@@ -1831,7 +1857,7 @@ Borrowed from mozc.el."
 ;; *** Clone indirect buffer other window
 (defun my/clone-indirect-buffer-other-window ()
   (interactive)
-  (when (not exwm-mode)
+  (when (not (string= major-mode 'exwm-mode))
     (clone-indirect-buffer-other-window
      (concat
       "I: "
@@ -3976,7 +4002,7 @@ Borrowed from mozc.el."
     ('c++-mode (call-interactively 'xref-find-definitions))
     ('objc-mode (call-interactively 'xref-find-definitions))
     ('csharp-mode (omnisharp-go-to-definition))
-    ('haskell-mode (call-interactively 'xref-find-definitions))
+    ;; ('haskell-mode (call-interactively 'xref-find-definitions))
     (_
      (if lsp-mode
 	 (lsp-find-definition)
@@ -4497,6 +4523,7 @@ Borrowed from mozc.el."
 		 (pos-ov (lsp-ui-sideline--find-line (length final-string) bol eol))
 		 (ov (when pos-ov (make-overlay (car pos-ov) (car pos-ov)))))
 
+	    (message "test")
 	    ;; My changes:
 	    (let ((final-string-formatted (substring-no-properties final-string)))
 	      (add-to-list 'my/haskell-lsp-eldoc-entries final-string-formatted))
@@ -4512,6 +4539,7 @@ Borrowed from mozc.el."
 	      (push ov lsp-ui-sideline--ovs)))))))
 
   (defun my/haskell-lsp-eldoc-print ()
+    (interactive)
     (when my/haskell-lsp-eldoc-entries
       (let ((at-point (thing-at-point 'symbol t)))
 	(when at-point
@@ -4530,25 +4558,13 @@ Borrowed from mozc.el."
 		(s-trim str)
 	      nil))))))
 
-  ;; Since eldoc runs way too fast after going up and down a line (lsp needs a few milliseconds to gather the types), do the eldoc calling by hand to add a delay when going up and down lines
+  ;; No idea why but eldoc doesn't run the documentation function unless i press escape, this fixes that
   (add-hook 'haskell-mode-hook '(lambda ()
 				  (eldoc-mode -1)
 				  (setq-local eldoc-documentation-function 'my/haskell-lsp-eldoc-print)
 
 				  (add-hook 'post-command-hook
-					    'eldoc-print-current-symbol-info nil t)))
-
-  (define-key haskell-mode-map [remap evil-next-line]
-    '(lambda () (interactive)
-       (setq my/haskell-lsp-eldoc-entries '())
-       (call-interactively 'evil-next-line)
-       (run-with-timer 0.3 nil 'eldoc-print-current-symbol-info)))
-
-  (define-key haskell-mode-map [remap evil-previous-line]
-    '(lambda () (interactive)
-       (setq my/haskell-lsp-eldoc-entries '())
-       (call-interactively 'evil-previous-line)
-       (run-with-timer 0.3 nil 'eldoc-print-current-symbol-info))))
+					    'eldoc-print-current-symbol-info nil t))))
 
 ;; *** Dante
 (setq my/haskell-dante-fix nil)
@@ -4829,7 +4845,7 @@ Borrowed from mozc.el."
   (interactive)
   (pcase major-mode
     ('csharp-mode (omnisharp-current-type-documentation))
-    ('haskell-mode (call-interactively 'dante-info))
+    ;;('haskell-mode (call-interactively 'dante-info))
     (_
      (if lsp-mode
 	 (lsp-describe-thing-at-point)
