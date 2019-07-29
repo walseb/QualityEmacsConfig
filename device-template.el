@@ -22,3 +22,5 @@
 (setq ellocate-scan-dirs '(("~/" "~/ellocate-home-db")))
 
 (defvar my/haskell-hie-enable nil)
+
+(defvar my/use-w3m nil)

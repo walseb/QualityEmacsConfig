@@ -715,7 +715,7 @@
   (if (executable-find (symbol-name package))
       (symbol-name package)
     (message (concat "Package: " (symbol-name package) " not installed"))
-    ()))
+    nil))
 
 ;; *** Set exec-path by system
 ;; (if (string-match-p "guixsd" (system-name))
@@ -892,8 +892,8 @@
 (defvar fully-compatible-system (or (eq system-type 'gnu/linux)(eq system-type 'gnu)(eq system-type 'gnu/kfreebsd)))
 
 ;; ** Redshift
-(if (my/is-system-package-installed 'redshift)
-    (start-process "redshift" nil "redshift"))
+(when (my/is-system-package-installed 'redshift)
+  (start-process "redshift" nil "redshift"))
 
 ;; ** Garbage collection
 (setq garbage-collection-messages t)
@@ -2079,9 +2079,10 @@ Borrowed from mozc.el."
 ;; ** Open eww
 (defun my/launch-eww ()
   (interactive)
-  (eww-browse-url (concat "https://www.google.com/search?q=" (completing-read "search: " nil))))
+  (eww-browse-url (my/launch-browser) t))
 
-;;(define-key my/leader-map (kbd "b") 'my/launch-eww)
+(when (not my/use-w3m)
+  (define-key my/leader-map (kbd "b") 'my/launch-eww))
 
 ;; ** Suggest
 (define-key my/leader-map (kbd "s") 'suggest)
@@ -4865,23 +4866,23 @@ Borrowed from mozc.el."
 ;; *** Auto format
 (defun my/auto-format-buffer ()
   (interactive)
-  (pcase major-mode
-    ('csharp-mode (omnisharp-code-format-entire-file))
-    ('nix-mode (nix-mode-format))
-    ('haskell-mode (haskell-mode-stylish-buffer))
-    (_ ())))
+  (if (string= evil-state 'visual)
+      (my/auto-format-region)
+    (pcase major-mode
+      ('csharp-mode (omnisharp-code-format-entire-file))
+      ('nix-mode (nix-mode-format))
+      ('haskell-mode (haskell-mode-stylish-buffer))
+      (_ ()))))
 
 (defun my/auto-format-region ()
   (interactive)
   (pcase major-mode
     ('csharp-mode (omnisharp-code-format-region))
+    ('emacs-lisp-mode (elisp-format-region))
     (_ ())))
 
 (define-key my/leader-map (kbd "<") 'my/auto-format-buffer)
 (define-key my/leader-map (kbd ">") 'my/auto-format-buffer)
-(define-key my/leader-map (kbd ",") 'my/auto-format-region)
-(define-key my/leader-map (kbd ".") 'my/auto-format-region)
-
 
 ;; ** C#
 (straight-use-package 'csharp-mode)
@@ -4892,7 +4893,9 @@ Borrowed from mozc.el."
 ;; *** REPL
 (defun my/csharp-run-repl()
   (interactive)
-  (eshell) (insert "csharp") (eshell-send-input))
+  (eshell)
+  (insert "csharp")
+  (eshell-send-input))
 
 ;; *** Omnisharp-emacs
 (straight-use-package 'omnisharp)
@@ -5911,11 +5914,22 @@ Borrowed from mozc.el."
 	(browse-url url))))))
 
 ;; * Browser
+(defun my/launch-browser ()
+  (interactive)
+  (let ((search (completing-read "search: " nil)))
+    ;; Don't do a google search for anything that has a dot then a letter
+    ;; There are two (not whitespace) here because otherwise the * wildcard would accept strings without any char after a dot
+    (if (or
+	 (string-match-p (rx whitespace) search)
+	 (not (string-match-p (rx (regexp "\\.") (not whitespace) (not whitespace) (regexp "*") eol) search)))
+	(concat "https://www.google.com/search?q=" search)
+      search)))
+
 ;; ** w3m
 (straight-use-package 'w3m)
-(require 'w3m)
-
-(w3m-display-mode 'plain)
+(when (and (my/is-system-package-installed 'w3m) my/use-w3m)
+  (require 'w3m)
+  (w3m-display-mode 'plain))
 
 (setq w3m-use-title-buffer-name t)
 
@@ -5930,15 +5944,10 @@ Borrowed from mozc.el."
 
 ;; *** Launch w3m
 (defun my/launch-w3m ()
-  (interactive)
-  (w3m (let ((search (completing-read "search: " nil)))
-	 ;; Don't do a google search for anything that has a dot then a letter
-	 ;; There are two (not whitespace) here because otherwise the * wildcard would accept strings without any char after a dot
-	 (if (not (string-match-p (rx (literal ".") (not whitespace) (not whitespace) (regexp "*") eol) search))
-	     (concat "https://www.google.com/search?q=" search)
-	   search)) t))
+  (w3m (my/launch-browser) t))
 
-(define-key my/leader-map (kbd "b") 'my/launch-w3m)
+(when my/use-w3m
+  (define-key my/leader-map (kbd "b") 'my/launch-w3m))
 
 ;; *** Switch w3m buffer
 (defun my/switch-w3m-buffer ()
@@ -6096,8 +6105,9 @@ Borrowed from mozc.el."
 ;; )
 
 ;; ** Set default browser
-;;(setq-default browse-url-browser-function 'eww-browse-url)
-(setq-default browse-url-browser-function 'w3m-browse-url)
+(if my/use-w3m
+    (setq-default browse-url-browser-function 'w3m-browse-url)
+  (setq-default browse-url-browser-function 'eww-browse-url))
 
 ;; * Version control
 ;; ** Ediff
@@ -6705,18 +6715,18 @@ Borrowed from mozc.el."
 	       "\t"
 	       ;; Date as specified by `gnus-user-date-format-alist`
 	       "%&user-date; \t"
-	    ;; Linecount, leave -5,5 spacing
-	    "%-5,5L"
-	    ;; Sender taken from header, leave -20,20 spacing
-	    "%-20,20n"
+	       ;; Linecount, leave -5,5 spacing
+	       "%-5,5L"
+	       ;; Sender taken from header, leave -20,20 spacing
+	       "%-20,20n"
 
-	    "\t"
-	    ;; Reply tree
-	    "%B"
-	    ;; Article subject string
-	    "%-80,80S"
-	    ;; End
-	    "\n"))
+	       "\t"
+	       ;; Reply tree
+	       "%B"
+	       ;; Article subject string
+	       "%-80,80S"
+	       ;; End
+	       "\n"))
 
 (setq gnus-user-date-format-alist '((t . "%Y-%m-%d %H:%M")))
 (setq gnus-thread-sort-functions '(gnus-thread-sort-by-date))
