@@ -5036,13 +5036,11 @@ Borrowed from mozc.el."
     (name-last-kbd-macro (intern macro-name))
     (add-to-list 'my/macro-store macro-name)))
 
-(defun my/macro-run (count)
+(defun my/macro-run (&optional count)
+  "COUNT is a repeat count, or nil for once, or 0 for infinite loop."
   (interactive "P")
   (let ((to-run (completing-read "Run macro: " my/macro-store)))
-    (if count
-	(dotimes (i count)
-	  (execute-extended-command nil to-run))
-      (execute-extended-command nil to-run))))
+    (execute-kbd-macro (symbol-function (intern to-run)) count)))
 
 (defun my/macro-modify (&optional prefix)
   (interactive "P")
@@ -5053,11 +5051,22 @@ Borrowed from mozc.el."
     ;;            Anything other than this and nil is not accepted it seems
     (edit-kbd-macro 'execute-extended-command prefix)))
 
+;; *** Evil operator
+(evil-define-operator evil-macro-run (beg end type)
+  "Run macro on BEG to END."
+  (interactive "<R>")
+  (evil-normal-state)
+  (save-restriction
+    (goto-char (point-min))
+    (narrow-to-region beg end)
+    (my/macro-run 0)))
+
+;; *** Keys
 (my/evil-normal-define-key "q" 'my/macro-record-toggle)
 (my/evil-visual-define-key "q" 'my/macro-record-toggle)
 
-(my/evil-normal-define-key "Q" 'my/macro-run)
-(my/evil-visual-define-key "Q" 'my/macro-run)
+(my/evil-normal-define-key "Q" 'evil-macro-run)
+(my/evil-visual-define-key "Q" 'evil-macro-run)
 
 (my/evil-normal-define-key "C-q" 'my/macro-modify)
 (my/evil-visual-define-key "C-q" 'my/macro-modify)
