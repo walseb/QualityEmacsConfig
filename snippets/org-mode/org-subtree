@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: org-subtree-node
+# key: n
+# --
+`(make-string (org-current-level) ?*)` $1

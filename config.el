@@ -3113,17 +3113,12 @@ Borrowed from mozc.el."
 
 (setq company-backends (mapcar #'company-mode/backend-with-yas company-backends))
 
+;; *** Ivy integration
+(straight-use-package 'ivy-yasnippet)
+(define-key my/leader-map (kbd "i") 'ivy-yasnippet)
+
 ;; *** Keys
 (defvar my/yas-init nil)
-
-(defun my/yas-insert-snippet ()
-  (interactive)
-  (when (not my/yas-init)
-    (yas-reload-all)
-    (setq my/yas-init t))
-  (call-interactively 'yas-insert-snippet))
-
-(define-key my/leader-map (kbd "i") 'my/yas-insert-snippet)
 
 ;; Maybe unbind yas-expand in normal mode, since you only really do it in insert mode
 (my/evil-normal-define-key "TAB" #'yas-expand)
@@ -9007,8 +9002,8 @@ Borrowed from mozc.el."
   (set-face-attribute 'org-meta-line nil :background nil)
 
   ;; Used by org-src block borders, currently just using the comment face
-;;  (set-face-attribute 'org-block-begin-line nil :background my/background-color-3)
-;;  (set-face-attribute 'org-block-end-line nil :background my/background-color-3)
+  ;;  (set-face-attribute 'org-block-begin-line nil :background my/background-color-3)
+  ;;  (set-face-attribute 'org-block-end-line nil :background my/background-color-3)
 
   ;; Used by org src-blocks when in use, might also be used for other things
   (set-face-attribute 'secondary-selection nil :background (color-darken-name my/background-color 5))
@@ -9101,6 +9096,9 @@ Borrowed from mozc.el."
   (set-face-attribute 'ivy-minibuffer-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
   (set-face-attribute 'ivy-minibuffer-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
   (set-face-attribute 'ivy-minibuffer-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
+
+  ;;; Ivy yasnippet
+  (set-face-attribute 'ivy-yasnippet-key nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
 
 ;;; Ivy rich
   (set-face-attribute 'my/ivy-rich-doc-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)

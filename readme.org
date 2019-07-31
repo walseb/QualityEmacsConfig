@@ -597,6 +597,8 @@ You could easily create prompts when creating the config files that modify the p
 
 ** Fix so that you can use counsel-yank in minibuffer again
 
+** Make evil-commentary also comment multiple empty lines
+
 * First
 Things to do first
 #+begin_src emacs-lisp
@@ -750,7 +752,7 @@ Checks variable =exec-path= for package
   (if (executable-find (symbol-name package))
       (symbol-name package)
     (message (concat "Package: " (symbol-name package) " not installed"))
-    ()))
+    nil))
 #+end_src
 
 *** Set exec-path by system
@@ -953,8 +955,8 @@ Buffers that I don't want popping up by default
 
 ** Redshift
 #+begin_src emacs-lisp
-(if (my/is-system-package-installed 'redshift)
-    (start-process "redshift" nil "redshift"))
+(when (my/is-system-package-installed 'redshift)
+  (start-process "redshift" nil "redshift"))
 #+end_src
 
 ** Garbage collection
@@ -1183,6 +1185,7 @@ https://github.com/syohex/evil-textobj-line
 (evil-define-text-object my/evil-a-line (count &optional beg end type)
   "Select range between a character by which the command is followed."
   (my/evil-line-range count beg end type t))
+
 (evil-define-text-object my/evil-inner-line (count &optional beg end type)
   "Select inner range between a character by which the command is followed."
   (my/evil-line-range count beg end type))
@@ -1227,12 +1230,38 @@ Allows for using indention as text objects
 *** Evil commentary
 #+begin_src emacs-lisp
 (straight-use-package 'evil-commentary)
-(evil-commentary-mode)
 
 (evil-define-key 'normal evil-commentary-mode-map ":" 'evil-commentary-line)
-(evil-define-key 'normal evil-commentary-mode-map ";" 'evil-commentary)
+(evil-define-key '(normal visual) evil-commentary-mode-map ";" 'evil-commentary)
 
 (evil-define-key 'normal evil-commentary-mode-map "gY" 'evil-commentary-yank-line)
+#+end_src
+
+**** Allow commenting empty line
+Because of some reason emacs crashes with undo tree error if this isn't run late
+#+begin_src emacs-lisp
+(add-hook 'after-init-hook
+	  '(lambda ()
+	     (evil-commentary-mode)
+
+	     (evil-define-operator evil-commentary-line (beg end type)
+	       "Comment or uncomment [count] lines."
+	       :motion evil-line
+	       :move-point nil
+	       (interactive "<R>")
+	       (when (evil-visual-state-p)
+		 (unless (memq type '(line block))
+		   (let ((range (evil-expand beg end 'line)))
+		     (setq beg (evil-range-beginning range)
+			   end (evil-range-end range)
+			   type (evil-type range))))
+		 (evil-exit-visual-state))
+	       ;; If current line is blank
+	       (if (save-excursion
+		     (beginning-of-line)
+		     (looking-at "[[:space:]]*$"))
+		   (insert comment-start)
+		 (evil-commentary beg end type)))))
 #+end_src
 
 *** Evil-surround
@@ -2080,28 +2109,29 @@ Enable and show minibuffer recursive depth
 ** Clone indirect buffer name
 *** Clone indirect buffer this window
 #+begin_src emacs-lisp
-(defun my/clone-indirect-buffer-name ()
+(defun my/clone-indirect-buffer ()
   (interactive)
-  (clone-indirect-buffer
-   (concat
-    (buffer-name)
-    " | "
-    (completing-read "Buffer name: " nil))
-   t
-   ))
+  (when (not (string= major-mode 'exwm-mode))
+    (clone-indirect-buffer
+     (concat
+      "I: "
+      (buffer-name)
+      )
+     t)))
 #+end_src
 
 *** Clone indirect buffer other window
 #+begin_src emacs-lisp
-(defun my/clone-indirect-buffer-name-other-window ()
+(defun my/clone-indirect-buffer-other-window ()
   (interactive)
-  (clone-indirect-buffer-other-window
-   (concat
-    (buffer-name)
-    " | "
-    (completing-read "Buffer name: " nil))
-   t
-   ))
+  (when (not (string= major-mode 'exwm-mode))
+    (clone-indirect-buffer-other-window
+     (concat
+      "I: "
+      (buffer-name)
+      )
+     t
+     )))
 #+end_src
 
 ** Build config
@@ -2199,7 +2229,9 @@ Kill the initial scratch buffer
       (use-local-map (copy-keymap org-mode-map))
       (local-set-key [remap my/save-and-backup-buffer] '(lambda () (interactive)
 							  ;; Using write-region instead of write-file here makes it so that the scratch buffer doesn't get assigned to a file, which means it can be used without any problems in a direnv buffer
-							  (write-region (point-min) (point-max) (concat user-emacs-directory "scratch"))))))
+							  (save-restriction
+							    (widen)
+							    (write-region (point-min) (point-max) (concat user-emacs-directory "scratch")))))))
   (run-hooks 'my/open-map-hook))
 
   (define-key my/open-map (kbd "s") 'my/switch-to-scratch)
@@ -2364,10 +2396,11 @@ Kill the initial scratch buffer
 #+begin_src emacs-lisp
 (defun my/launch-eww ()
   (interactive)
-  (eww-browse-url (concat "https://www.google.com/search?q=" (completing-read "search: " nil))))
-#+end_src
+  (eww-browse-url (my/launch-browser) t))
 
-(define-key my/leader-map (kbd "b") 'my/launch-eww)
+(when (not my/use-w3m)
+  (define-key my/leader-map (kbd "b") 'my/launch-eww))
+#+end_src
 
 ** Suggest
 #+begin_src emacs-lisp
@@ -2710,6 +2743,38 @@ Required by outorg
 (add-hook 'prog-mode-hook 'outline-minor-mode)
 #+end_src
 
+** Outline evil text object
+#+begin_src emacs-lisp
+(evil-define-text-object evil-around-heading (count &optional beg end type)
+  "Select heading"
+  (let ((top nil)
+	(bot nil))
+    (save-restriction
+      (save-excursion
+	(my/auto-narrow-to-subtree)
+	(setq top (point-min))
+	(setq bot (point-max))))
+    (evil-range top bot)))
+
+(evil-define-text-object evil-inside-heading (count &optional beg end type)
+  "Select heading"
+  (let ((top nil)
+	(bot nil))
+    (save-restriction
+      (save-excursion
+	(my/auto-narrow-to-subtree)
+	(beginning-of-buffer)
+	(ignore-errors
+	  (next-line)
+	  (beginning-of-line))
+	(setq top (point))
+	(setq bot (point-max))))
+    (evil-range top bot)))
+
+(define-key evil-outer-text-objects-map "h" 'evil-around-heading)
+(define-key evil-inner-text-objects-map "h" 'evil-inside-heading)
+#+end_src
+
 ** Imenu
 #+begin_src emacs-lisp
 (define-key my/leader-map (kbd "I") 'counsel-imenu)
@@ -2826,42 +2891,40 @@ Clean outshine-mode-map
 #+end_src
 
 ** Narrowing
-#+begin_src emacs-lisp
 (define-prefix-command 'my/narrow-map)
 (define-key my/leader-map (kbd "n") 'my/narrow-map)
 
+*** Narrow indirect
+#+begin_src emacs-lisp
+(defun my/narrow-indirect (beg end)
+  (my/clone-indirect-buffer)
+  (narrow-to-region beg end))
+#+end_src
+
+*** Evil narrow
+#+begin_src emacs-lisp
+(evil-define-operator evil-narrow-indirect (beg end type)
+  "Indirectly narrow the region from BEG to END."
+  (interactive "<R>")
+  (evil-normal-state)
+  (my/narrow-indirect beg end))
+
+(define-key evil-normal-state-map "m" 'evil-narrow-indirect)
+(define-key evil-visual-state-map "m" 'evil-narrow-indirect)
+#+end_src
+
+*** Universal narrow function
+#+begin_src emacs-lisp
 (defun my/narrow-widen ()
   (interactive)
   (if loccur-mode
       (loccur-mode -1)
     (widen)))
-
-(defun my/narrow-paren ()
-  (interactive)
-  (let ((paren-beg nil)
-	(paren-end nil))
-    (save-excursion
-      (backward-up-list)
-      (setq paren-beg (point))
-      (call-interactively #'evil-jump-item)
-      (setq paren-end (point)))
-    (narrow-to-region paren-beg (+ 1 paren-end))))
-
-(defun my/narrow-to-region ()
-  (interactive)
-  (if (string= evil-state 'visual)
-      (call-interactively 'narrow-to-region)
-    (narrow-to-region (line-beginning-position) (line-end-position))))
+#+end_src
 
 (define-key my/narrow-map (kbd "w") 'my/narrow-widen)
-(define-key my/narrow-map (kbd "r") 'my/narrow-to-region)
-
-(define-key my/narrow-map (kbd "s") 'narrow-to-page)
-(define-key my/narrow-map (kbd "d") 'narrow-to-defun)
-
-(define-key my/narrow-map (kbd "p") 'my/narrow-paren)
-
-(define-key my/narrow-map (kbd "i") 'my/auto-narrow-to-subtree)
+#+begin_src emacs-lisp
+(define-key my/leader-map (kbd "n") 'my/narrow-widen)
 #+end_src
 
 *** Narrow to subtree
@@ -2871,9 +2934,14 @@ Clean outshine-mode-map
   (pcase major-mode
     ('org-mode (org-narrow-to-subtree))
     (_
+     ;; Fixes a bug where if cursor is at heading, the one above gets narrowed
+     (next-line)
+
      (outline-previous-visible-heading 1)
      (outshine-narrow-to-subtree))))
 #+end_src
+
+(define-key my/narrow-map (kbd "i") 'my/auto-narrow-to-subtree)
 
 ** Outline ellipsis
 #+begin_src emacs-lisp
@@ -3029,8 +3097,8 @@ Enable avy movements in ivy buffer
 (evil-define-key '(motion normal) ivy-minibuffer-map (kbd "n") 'ivy-next-line)
 (evil-define-key '(motion normal) ivy-minibuffer-map (kbd "p") 'ivy-previous-line)
 
-(evil-define-key 'insert ivy-minibuffer-map (kbd "C-n") 'ivy-next-line)
-(evil-define-key 'insert ivy-minibuffer-map (kbd "C-p") 'ivy-previous-line)
+(evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-n") 'ivy-next-line)
+(evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-p") 'ivy-previous-line)
 
 (evil-define-key '(motion normal) ivy-minibuffer-map (kbd "C-y") 'ivy-call)
 
@@ -3129,20 +3197,24 @@ Delete text under selection when pasing just like with normal evil paste
   (counsel-ag nil default-directory))
 #+end_src
 
+*** Remove dups
+**** Remove duplicate entries in kill ring
+#+begin_src emacs-lisp
+(advice-add #'counsel-yank-pop :before (lambda (&optional arg) (delete-dups kill-ring)))
+#+end_src
+
+**** Remove duplicate entries in yank ring
+#+begin_src emacs-lisp
+(advice-add #'counsel-mark-ring :before (lambda (&optional arg) (delete-dups mark-ring)))
+#+end_src
+
 *** Keys
-#+begin_src emacs-lisp
 (define-key my/leader-map (kbd "g") 'counsel-M-x)
-#+end_src
-(global-set-key (kbd "M-x") 'counsel-M-x)
-
 #+begin_src emacs-lisp
-(define-key my/leader-map (kbd "k") 'counsel-yank-pop)
+(global-set-key (kbd "M-c") 'counsel-M-x)
+
 (global-set-key (kbd "M-k") 'counsel-yank-pop)
-#+end_src
 
-(define-key ivy-minibuffer-map [remap backward-delete-char] 'ivy-backward-delete-char)
-(define-key ivy-minibuffer-map [remap evil-delete-backward-char-and-join] 'ivy-backward-delete-char)
-#+begin_src emacs-lisp
 (define-key ivy-minibuffer-map (kbd "DEL") 'ivy-backward-delete-char)
 #+end_src
 
@@ -3167,6 +3239,10 @@ Delete text under selection when pasing just like with normal evil paste
 					     (current-buffer))))
 		  (flycheck-error-list-set-source source-buffer)
 		  (flycheck-error-list-reset-filter)
+
+		  ;; Finally, refresh the error list to show the most recent errors
+		  (flycheck-error-list-refresh)
+
 		  (revert-buffer t t t)
 		  (split-string (buffer-string) "\n" t)))
 	      :action (lambda (s &rest _)
@@ -3464,6 +3540,11 @@ fsharp mode auto-enables quickhelp by default, disable it
 (define-key company-active-map (kbd "C-w") 'company-next-page)
 #+end_src
 
+Complete on tab
+#+begin_src emacs-lisp
+(define-key company-active-map (kbd "TAB") 'company-complete-selection)
+#+end_src
+
 using C-h is better in every way
 #+begin_src emacs-lisp
 (define-key company-active-map (kbd "<f1>") 'nil)
@@ -3473,7 +3554,6 @@ Force autocomplete
 #+begin_src emacs-lisp
 (my/evil-universal-define-key "C-." 'company-complete)
 #+end_src
-
 
 ** Company-box
 Company with icons
@@ -3561,18 +3641,31 @@ Flycheck with extra correction for elisp packages
 (yas-global-mode 1)
 #+end_src
 
+*** Company integration
+https://emacs.stackexchange.com/questions/10431/get-company-to-show-suggestions-for-yasnippet-names
+
+#+begin_src emacs-lisp
+(defvar company-mode/enable-yas t
+  "Enable yasnippet for all backends.")
+
+(defun company-mode/backend-with-yas (backend)
+  (if (or (not company-mode/enable-yas) (and (listp backend) (member 'company-yasnippet backend)))
+      backend
+    (append (if (consp backend) backend (list backend))
+	    '(:with company-yasnippet))))
+
+(setq company-backends (mapcar #'company-mode/backend-with-yas company-backends))
+#+end_src
+
+*** Ivy integration
+#+begin_src emacs-lisp
+(straight-use-package 'ivy-yasnippet)
+(define-key my/leader-map (kbd "i") 'ivy-yasnippet)
+#+end_src
+
 *** Keys
 #+begin_src emacs-lisp
 (defvar my/yas-init nil)
-
-(defun my/yas-insert-snippet ()
-  (interactive)
-  (when (not my/yas-init)
-    (yas-reload-all)
-    (setq my/yas-init t))
-  (call-interactively 'yas-insert-snippet))
-
-(define-key my/leader-map (kbd "i") 'my/yas-insert-snippet)
 #+end_src
 
 Maybe unbind yas-expand in normal mode, since you only really do it in insert mode
@@ -3701,8 +3794,8 @@ https://emacs.stackexchange.com/questions/20900/navigate-by-indentation
 #+begin_src emacs-lisp
 (defun indentation-get-next-good-line (direction skip good)
   "Moving in direction `direction', and skipping over blank lines and lines that
-  satisfy relation `skip' between their indentation and the original indentation,
-  finds the first line whose indentation satisfies predicate `good'."
+    satisfy relation `skip' between their indentation and the original indentation,
+    finds the first line whose indentation satisfies predicate `good'."
   (let ((starting-indentation (current-indentation))
 	(lines-moved direction))
     (save-excursion
@@ -4521,7 +4614,13 @@ eldoc-box-hover-mode eldoc-box-hover-mode)
 
 * Code
 ** Generic
-*** Ivy-xref
+*** Xref
+By default xref always prompts with certain commands
+#+begin_src emacs-lisp
+(setq xref-prompt-for-identifier nil)
+#+end_src
+
+**** Ivy-xref
 #+begin_src emacs-lisp
 (straight-use-package 'ivy-xref)
 
@@ -4582,6 +4681,16 @@ eldoc-box-hover-mode eldoc-box-hover-mode)
 (setq highlight-indent-guides-responsive 'top)
 (setq highlight-indent-guides-delay 0)
 
+*** Auto fix suggested
+(straight-use-package 'attrap)
+(defun my/auto-fix-suggested ()
+ (interactive)
+ (pcase major-mode
+
+#+begin_src emacs-lisp
+					;    ))
+#+end_src
+
 *** Auto jump to definition
 #+begin_src emacs-lisp
 (straight-use-package 'dumb-jump)
@@ -4596,6 +4705,7 @@ eldoc-box-hover-mode eldoc-box-hover-mode)
     ('c++-mode (call-interactively 'xref-find-definitions))
     ('objc-mode (call-interactively 'xref-find-definitions))
     ('csharp-mode (omnisharp-go-to-definition))
+    ;; ('haskell-mode (call-interactively 'xref-find-definitions))
     (_
      (if lsp-mode
 	 (lsp-find-definition)
@@ -4905,9 +5015,9 @@ TODO I have to load the package fully here to set the fonts later
 	(progn
 	  (my/backward-sexp)
 	  (if (save-match-data (looking-at "#;"))
-	      (+ (point) 2)
-	    (point)))
-      (scan-error (user-error "There isn't a complete s-expression before point")))))
+    (+ (point) 2)
+    (point)))
+  (scan-error (user-error "There isn't a complete s-expression before point")))))
 #+end_src
 
 *** Emacs-lisp
@@ -5124,16 +5234,12 @@ or
 *** Haskell-doc
 Haskell-doc kind of fills in the holes where lsp-haskell doesn't work
 
-#+begin_src emacs-lisp
 (setq haskell-doc-idle-delay 0)
 
 (defun my/haskell-doc-mode ()
-  ;; haskll-doc-mode is buggy if eldoc is on
-  (setq-local lsp-eldoc-enable-hover nil)
-  (haskell-doc-mode 1))
+ (haskell-doc-mode 1))
 
 (add-hook 'haskell-mode-hook 'my/haskell-doc-mode)
-#+end_src
 
 *** Project management
 **** Stack
@@ -5164,20 +5270,218 @@ Use nix-haskell-mode for automatic project management
 (straight-use-package 'company-cabal)
 #+end_src
 
-*** lsp-haskell
+*** Fix lockup
+This fixes a lockup that sometimes happens. I think this has to do with flycheck-mode
 #+begin_src emacs-lisp
 (add-hook 'haskell-mode-hook '(lambda ()
 				;; Fixes lockups due to prettify-symbol I think
 				(setq-local syntax-propertize-function nil)))
+#+end_src
 
-(when (not my/enable-basic-haskell-support)
-  (straight-use-package 'lsp-haskell)
+*** lsp-haskell
+#+begin_src emacs-lisp
+(when my/haskell-hie-enable
+  ;; (straight-use-package 'lsp-haskell)
+  (straight-use-package '(lsp-haskell :type git :host github :repo "walseb/lsp-haskell"))
+
   (require 'lsp-haskell)
 
   (add-hook 'haskell-mode-hook '(lambda ()
+				  ;; haskll-doc-mode is buggy if eldoc is on
+				  (setq-local lsp-eldoc-enable-hover nil)
+
 				  ;; lsp-haskell doesn't work with native json
-				  (setq-local lsp-use-native-json nil)
+				  ;; (setq-local lsp-use-native-json nil)
 				  (lsp))))
+#+end_src
+
+**** Make it start in nix-shell
+#+begin_src emacs-lisp
+(setq lsp-haskell-process-wrapper-function '(lambda (argv)
+					      (append
+					       (append (list "nix-shell" "-I" "." "--command" )
+						       (list (mapconcat 'identity argv " ")))
+					       (list (concat (lsp-haskell--get-root) "/shell.nix")))))
+#+end_src
+**** Hack in eldoc support
+#+begin_src emacs-lisp
+(when my/haskell-hie-enable
+  (setq my/haskell-lsp-eldoc-entries '())
+
+  ;; This function modifies what's displayed in lsp-ui-sideline. Here it is redefined so that it takes what's supposed to be displayed in the sideline, and instead sends it to an eldoc cache
+  (defun lsp-ui-sideline--push-info (symbol tag bounds info bol eol)
+    (when (and (= tag (lsp-ui-sideline--calculate-tag))
+	       (not (lsp-ui-sideline--stop-p)))
+      (let* ((info (concat (thread-first (gethash "contents" info)
+			     lsp-ui-sideline--extract-info
+			     lsp-ui-sideline--format-info)))
+	     (current (and (>= (point) (car bounds)) (<= (point) (cdr bounds)))))
+	(when (and (> (length info) 0)
+		   (lsp-ui-sideline--check-duplicate symbol info))
+	  (let* ((final-string (lsp-ui-sideline--make-display-string info symbol current))
+		 (pos-ov (lsp-ui-sideline--find-line (length final-string) bol eol))
+		 (ov (when pos-ov (make-overlay (car pos-ov) (car pos-ov)))))
+
+	    (message "test")
+	    ;; My changes:
+	    (let ((final-string-formatted (substring-no-properties final-string)))
+	      (add-to-list 'my/haskell-lsp-eldoc-entries final-string-formatted))
+
+	    (when pos-ov
+	      ;; (overlay-put ov 'info info)
+	      ;; (overlay-put ov 'symbol symbol)
+	      (overlay-put ov 'bounds bounds)
+	      (overlay-put ov 'current current)
+	      ;;(overlay-put ov 'after-string final-string)
+	      (overlay-put ov 'window (get-buffer-window))
+	      (overlay-put ov 'kind 'info)
+	      (push ov lsp-ui-sideline--ovs)))))))
+
+  (defun my/haskell-lsp-eldoc-print ()
+    (interactive)
+    (when my/haskell-lsp-eldoc-entries
+      (let ((at-point (thing-at-point 'symbol t)))
+	(when at-point
+	  (let ((str (seq-find
+		      (lambda (candidate)
+			(let ((candidate-last-word (string-match (rx (not whitespace) (regexp "*") space eol) candidate)))
+			  (if candidate-last-word
+			      (progn
+				(string=
+				 (substring candidate candidate-last-word (- (length candidate) 1))
+				 at-point))
+			    nil)))
+		      my/haskell-lsp-eldoc-entries)))
+
+	    (if str
+		(s-trim str)
+	      nil))))))
+
+  ;; No idea why but eldoc doesn't run the documentation function unless i press escape, this fixes that
+  (add-hook 'haskell-mode-hook '(lambda ()
+				  (eldoc-mode -1)
+				  (setq-local eldoc-documentation-function 'my/haskell-lsp-eldoc-print)
+
+				  (add-hook 'post-command-hook
+					    'eldoc-print-current-symbol-info nil t))))
+#+end_src
+
+*** Dante
+#+begin_src emacs-lisp
+(setq my/haskell-dante-fix nil)
+
+(when (not my/haskell-hie-enable)
+  (setq dante-tap-type-time 0)
+
+  (if my/haskell-dante-fix
+      (straight-use-package '(dante :type git :host github :repo "purcell/dante" :branch "better-temp-files"))
+    ;; (straight-use-package '(dante :type git :host github :repo "soupi/dante" :branch "with-temp-files"))
+    (straight-use-package 'dante))
+
+  (require 'dante)
+  (add-hook 'haskell-mode-hook 'dante-mode)
+
+  ;; **** Add more warnings
+  ;; https://downloads.haskell.org/~ghc/master/users-guide/using-warnings.html?source=post_page---------------------------
+  ;; https://medium.com/mercury-bank/enable-all-the-warnings-a0517bc081c3
+  (setq my/ghc-warning-parameters
+	'(
+	  "-Weverything"
+	  "-Wincomplete-uni-patterns"
+	  "-Wincomplete-record-updates"
+
+	  ;; Don't warn if prelude is implicitly imported
+	  ;; "-Wimplicit-prelude"
+	  "-Wno-implicit-prelude"
+
+	  ;; Warns that you haven't defined an export list. Without an export list all functions in the file are accessible
+	  ;; "-Wmissing-export-lists"
+	  "-Wno-missing-export-lists"
+
+	  ;; Dante disables this by default
+	  ;; "-Wmissing-home-modules"
+	  "-Widentities"
+	  "-Wredundant-constraints"
+	  "-Wpartial-fields"
+
+	  ;; Normally there is a warning on every non-annotated top-level function https://gitlab.haskell.org/ghc/ghc/issues/14794?source=post_page---------------------------#ticket
+	  "-Wno-missing-exported-signatures"
+
+	  ;; Don't give warning when imports arent either qualified or imported using import lists
+	  "-Wno-missing-import-lists"
+
+	  ;; "When GHC can’t specialize a polymorphic function. No big deal and requires fixing underlying libraries to solve."
+	  "-Wno-missed-specialisations"
+
+	  ;; "Don’t use Safe Haskell warnings"
+	  "-Wno-unsafe"
+	  ;; "Don’t use Safe Haskell warnings"
+	  "-Wno-safe"
+	  ;; "Warning for polymorphic local bindings; nothing wrong with those"
+	  "-Wno-missing-local-signatures"
+	  ;; "Warn if the monomorphism restriction is used"
+	  "-Wmonomorphism-restriction"
+	  ))
+
+  (setq dante-load-flags (append dante-load-flags my/ghc-warning-parameters)))
+#+end_src
+
+Remove duplicates if any
+(setq dante-load-flags (remove-duplicates dante-load-flags :test 'string=))
+
+**** Add hlint to dante
+#+begin_src emacs-lisp
+(when (not my/haskell-hie-enable)
+  (add-hook 'dante-mode-hook
+	    '(lambda () (flycheck-add-next-checker 'haskell-dante
+					      '(warning . haskell-hlint)))))
+#+end_src
+
+**** Make dante not save all the time
+#+begin_src emacs-lisp
+(when (and (not my/haskell-dante-fix) (not my/haskell-hie-enable))
+(lcr-def dante-async-load-current-buffer (interpret)
+	 "Load and maybe INTERPRET the temp file for current buffer.
+  Interpreting puts all symbols from the current module in
+  scope. Compiling to avoids re-interpreting the dependencies over
+  and over."
+	 (let* ((epoch (buffer-modified-tick))
+		(unchanged (equal epoch dante-temp-epoch))
+		(fname (buffer-file-name (current-buffer)))
+		(buffer (lcr-call dante-session))
+		(same-buffer (s-equals? (buffer-local-value 'dante-loaded-file buffer) fname)))
+	   (if (and unchanged same-buffer) (buffer-local-value 'dante-load-message buffer) ; see #52
+	     (setq dante-temp-epoch epoch)
+	     ;; (vc-before-save)
+	     ;; (basic-save-buffer-1) ;; save without re-triggering flycheck/flymake nor any save hook
+	     ;; (vc-after-save)
+	     ;; GHCi will interpret the buffer iff. both -fbyte-code and :l * are used.
+	     (lcr-call dante-async-call (if interpret ":set -fbyte-code" ":set -fobject-code"))
+	     (with-current-buffer buffer
+	       (dante-async-write (if (and (not interpret) same-buffer) ":r"
+				    (concat ":l " (if interpret "*" "") (dante-local-name fname))))
+	       (cl-destructuring-bind (_status err-messages _loaded-modules) (lcr-call dante-load-loop "" nil)
+		 (setq dante-loaded-file fname)
+		 (setq dante-load-message err-messages))))))
+#+end_src
+
+***** Fix flycheck
+Sometimes ghci takes too long to get the results, have a hook that runs 1 second after save to hopefully catch the late error
+Also disable idle-change since it should not be needed
+#+begin_src emacs-lisp
+(add-hook 'dante-mode-hook '(lambda ()
+			      (add-hook 'after-save-hook
+					'(lambda ()
+					   (run-with-timer 1 nil #'flycheck-buffer)) nil t)))
+(add-hook 'dante-mode-hook '(lambda ()
+			      (setq-local flycheck-check-syntax-automatically '(mode-enabled save idle-change))))
+#+end_src
+
+When hitting esc while in normal mode, refresh flycheck mode for when ghc is slow
+#+begin_src emacs-lisp
+(evil-define-key 'normal dante-mode-map (kbd "<escape>") '(lambda () (interactive)
+							    (flycheck-buffer)
+							    (evil-force-normal-state))))
 #+end_src
 
 *** Flycheck
@@ -5185,7 +5489,7 @@ Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the
 #+begin_src emacs-lisp
 (setq flycheck-checkers (remove 'haskell-stack-ghc flycheck-checkers))
 
-(when (not my/enable-basic-haskell-support)
+(when my/haskell-hie-enable
   (setq flycheck-checkers (remove 'haskell-ghc flycheck-checkers))
   (setq flycheck-checkers (remove 'haskell-hlint flycheck-checkers)))
 #+end_src
@@ -5364,6 +5668,7 @@ Run out of function
   (interactive)
   (pcase major-mode
     ('csharp-mode (omnisharp-current-type-documentation))
+    ;;('haskell-mode (call-interactively 'dante-info))
     (_
      (if lsp-mode
 	 (lsp-describe-thing-at-point)
@@ -5387,24 +5692,24 @@ Run out of function
 #+begin_src emacs-lisp
 (defun my/auto-format-buffer ()
   (interactive)
-  (pcase major-mode
-    ('csharp-mode (omnisharp-code-format-entire-file))
-    ('nix-mode (nix-mode-format))
-    ('haskell-mode (haskell-mode-stylish-buffer))
-    (_ ())))
+  (if (string= evil-state 'visual)
+      (my/auto-format-region)
+    (pcase major-mode
+      ('csharp-mode (omnisharp-code-format-entire-file))
+      ('nix-mode (nix-mode-format))
+      ('haskell-mode (haskell-mode-stylish-buffer))
+      (_ ()))))
 
 (defun my/auto-format-region ()
   (interactive)
   (pcase major-mode
     ('csharp-mode (omnisharp-code-format-region))
+    ('emacs-lisp-mode (elisp-format-region))
     (_ ())))
 
 (define-key my/leader-map (kbd "<") 'my/auto-format-buffer)
 (define-key my/leader-map (kbd ">") 'my/auto-format-buffer)
-(define-key my/leader-map (kbd ",") 'my/auto-format-region)
-(define-key my/leader-map (kbd ".") 'my/auto-format-region)
 #+end_src
-
 
 ** C#
 #+begin_src emacs-lisp
@@ -5420,7 +5725,9 @@ csharp-maybe-insert-codedoc
 #+begin_src emacs-lisp
 (defun my/csharp-run-repl()
   (interactive)
-  (eshell) (insert "csharp") (eshell-send-input))
+  (eshell)
+  (insert "csharp")
+  (eshell-send-input))
 #+end_src
 
 *** Omnisharp-emacs
@@ -5591,13 +5898,11 @@ Messes with .cs files???
     (name-last-kbd-macro (intern macro-name))
     (add-to-list 'my/macro-store macro-name)))
 
-(defun my/macro-run (count)
+(defun my/macro-run (&optional count)
+  "COUNT is a repeat count, or nil for once, or 0 for infinite loop."
   (interactive "P")
   (let ((to-run (completing-read "Run macro: " my/macro-store)))
-    (if count
-	(dotimes (i count)
-	  (execute-extended-command nil to-run))
-      (execute-extended-command nil to-run))))
+    (execute-kbd-macro (symbol-function (intern to-run)) count)))
 
 (defun my/macro-modify (&optional prefix)
   (interactive "P")
@@ -5607,12 +5912,27 @@ Messes with .cs files???
     (setq unread-command-events (listify-key-sequence (concat chosen-macro "\C-a")))
     ;;            Anything other than this and nil is not accepted it seems
     (edit-kbd-macro 'execute-extended-command prefix)))
+#+end_src
 
+*** Evil operator
+#+begin_src emacs-lisp
+(evil-define-operator evil-macro-run (beg end type)
+  "Run macro on BEG to END."
+  (interactive "<R>")
+  (evil-normal-state)
+  (save-restriction
+    (goto-char (point-min))
+    (narrow-to-region beg end)
+    (my/macro-run 0)))
+#+end_src
+
+*** Keys
+#+begin_src emacs-lisp
 (my/evil-normal-define-key "q" 'my/macro-record-toggle)
 (my/evil-visual-define-key "q" 'my/macro-record-toggle)
 
-(my/evil-normal-define-key "Q" 'my/macro-run)
-(my/evil-visual-define-key "Q" 'my/macro-run)
+(my/evil-normal-define-key "Q" 'evil-macro-run)
+(my/evil-visual-define-key "Q" 'evil-macro-run)
 
 (my/evil-normal-define-key "C-q" 'my/macro-modify)
 (my/evil-visual-define-key "C-q" 'my/macro-modify)
@@ -5954,7 +6274,7 @@ Default eshell/clear only spams newlines
 #+begin_src emacs-lisp
 (straight-use-package 'with-editor)
 
-(add-hook 'eshell-mode 'with-editor-export-editor)
+(add-hook 'eshell-mode-hook 'with-editor-export-editor)
 #+end_src
 
 ** Keys
@@ -6454,7 +6774,7 @@ enable exwm
 (global-exwm-edit-mode 1)
 #+end_src
 
-*** Removed header
+*** Remove header
 #+begin_src emacs-lisp
 (add-hook 'exwm-edit-mode-hook '(lambda () (kill-local-variable 'header-line-format)))
 #+end_src
@@ -6499,6 +6819,17 @@ We use class names for all windows expect for Java applications and GIMP (becaus
 (defun my/exwm-buffer-give-name-title ()
   (when (my/exwm-should-use-title-for-buffer-name)
     (exwm-workspace-rename-buffer exwm-title)))
+#+end_src
+
+** Fix modeline in exwm buffers
+#+begin_src emacs-lisp
+(add-hook 'exwm-floating-exit-hook '(lambda ()
+				      (kill-local-variable 'header-line-format)))
+#+end_src
+
+** Disable floating windows
+#+begin_src emacs-lisp
+(setq exwm-manage-force-tiling t)
 #+end_src
 
 ** Multi-screen
@@ -6611,12 +6942,25 @@ Redefine function to attempt to open image if link at point wasn't found
 #+end_src
 
 * Browser
+#+begin_src emacs-lisp
+(defun my/launch-browser ()
+  (interactive)
+  (let ((search (completing-read "search: " nil)))
+    ;; Don't do a google search for anything that has a dot then a letter
+    ;; There are two (not whitespace) here because otherwise the * wildcard would accept strings without any char after a dot
+    (if (or
+	 (string-match-p (rx whitespace) search)
+	 (not (string-match-p (rx (regexp "\\.") (not whitespace) (not whitespace) (regexp "*") eol) search)))
+	(concat "https://www.google.com/search?q=" search)
+      search)))
+#+end_src
+
 ** w3m
 #+begin_src emacs-lisp
 (straight-use-package 'w3m)
-(require 'w3m)
-
-(w3m-display-mode 'plain)
+(when (and (my/is-system-package-installed 'w3m) my/use-w3m)
+  (require 'w3m)
+  (w3m-display-mode 'plain))
 
 (setq w3m-use-title-buffer-name t)
 
@@ -6635,15 +6979,10 @@ Make images load instantly
 *** Launch w3m
 #+begin_src emacs-lisp
 (defun my/launch-w3m ()
-  (interactive)
-  (w3m (let ((search (completing-read "search: " nil)))
-	 ;; Don't do a google search for anything that has a dot then a letter
-	 ;; There are two (not whitespace) here because otherwise the * wildcard would accept strings without any char after a dot
-	 (if (not (string-match-p (rx (literal ".") (not whitespace) (not whitespace) (regexp "*") eol) search))
-	     (concat "https://www.google.com/search?q=" search)
-	   search)) t))
+  (w3m (my/launch-browser) t))
 
-(define-key my/leader-map (kbd "b") 'my/launch-w3m)
+(when my/use-w3m
+  (define-key my/leader-map (kbd "b") 'my/launch-w3m))
 #+end_src
 
 *** Switch w3m buffer
@@ -6733,7 +7072,7 @@ Make images load instantly
 (eval-after-load 'exwm
   (progn
        ;;; Normal
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-d") 'exwm-edit--compose)
+    (evil-define-key '(insert visual normal motion) exwm-firefox-evil-mode-map (kbd "C-d") 'exwm-edit--compose)
 
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
@@ -6816,9 +7155,10 @@ Make images load instantly
 )
 
 ** Set default browser
-(setq-default browse-url-browser-function 'eww-browse-url)
 #+begin_src emacs-lisp
-(setq-default browse-url-browser-function 'w3m-browse-url)
+(if my/use-w3m
+    (setq-default browse-url-browser-function 'w3m-browse-url)
+  (setq-default browse-url-browser-function 'eww-browse-url))
 #+end_src
 
 * Version control
@@ -7546,18 +7886,18 @@ https://www.gnu.org/software/emacs/manual/html_node/gnus/Summary-Buffer-Lines.ht
 	       "\t"
 	       ;; Date as specified by `gnus-user-date-format-alist`
 	       "%&user-date; \t"
-	    ;; Linecount, leave -5,5 spacing
-	    "%-5,5L"
-	    ;; Sender taken from header, leave -20,20 spacing
-	    "%-20,20n"
+	       ;; Linecount, leave -5,5 spacing
+	       "%-5,5L"
+	       ;; Sender taken from header, leave -20,20 spacing
+	       "%-20,20n"
 
-	    "\t"
-	    ;; Reply tree
-	    "%B"
-	    ;; Article subject string
-	    "%-80,80S"
-	    ;; End
-	    "\n"))
+	       "\t"
+	       ;; Reply tree
+	       "%B"
+	       ;; Article subject string
+	       "%-80,80S"
+	       ;; End
+	       "\n"))
 
 (setq gnus-user-date-format-alist '((t . "%Y-%m-%d %H:%M")))
 (setq gnus-thread-sort-functions '(gnus-thread-sort-by-date))
@@ -7778,7 +8118,7 @@ Mode for writing mail
 * System
 #+begin_src emacs-lisp
 (define-prefix-command 'my/system-commands-map)
-(define-key my/leader-map (kbd "~") 'my/system-commands-map)
+(define-key my/leader-map (kbd "S") 'my/system-commands-map)
 #+end_src
 
 ** Suspend
@@ -7925,8 +8265,18 @@ make"))
 
 * Networking
 #+begin_src emacs-lisp
-(define-prefix-command 'my/net-utils-map)
-(define-key my/system-commands-map (kbd "n") 'my/net-utils-map)
+(define-prefix-command 'my/network-map)
+(define-key my/system-commands-map (kbd "n") 'my/network-map)
+#+end_src
+
+** Network manager
+Right now enwc seems to only be able to switch wifi networks and display network status in modeline
+Also check out https://github.com/Kodkollektivet/emacs-nm
+#+begin_src emacs-lisp
+(straight-use-package 'enwc)
+(setq enwc-default-backend 'nm)
+
+(define-key my/network-map (kbd "c") 'enwc)
 #+end_src
 
 ** Tramp
@@ -7944,9 +8294,10 @@ make"))
 
 ** Keys
 #+begin_src emacs-lisp
-(define-key my/net-utils-map (kbd "s") 'netstat)
-(define-key my/net-utils-map (kbd "p") 'ping)
-(define-key my/net-utils-map (kbd "i") 'ifconfig)
+(define-key my/network-map (kbd "s") 'netstat)
+(define-key my/network-map (kbd "p") 'ping)
+(define-key my/network-map (kbd "P") '(lambda () (interactive) (ping "8.8.8.8")))
+(define-key my/network-map (kbd "i") 'ifconfig)
 #+end_src
 
 * Hardware
@@ -8100,12 +8451,6 @@ http://aspell.net/0.50-doc/man-html/4_Customizing.html#suggestion
 #+begin_src emacs-lisp
 (setq ispell-extra-args (list "--sug-mode=bad-spellers" "--run-together"))
 #+end_src
-(setq ispell-extra-args (list "--sug-mode=ultra" "--run-together"))
-(setq ispell-extra-args (list "--sug-mode=ultra" "--run-together"))
-
-flyspell-correct-ivy doesn't seem to do much
-(straight-use-package 'flyspell-correct-ivy)
-(setq flyspell-correct-interface #'flyspell-correct-ivy)
 
 *** Key
 #+begin_src emacs-lisp
@@ -8179,9 +8524,9 @@ https://www.emacswiki.org/emacs/ArtistMode
 #+end_src
 
 ** Keys
-#+begin_src emacs-lisp
 (define-key my/leader-map (kbd "k") 'artist-mode)
 
+#+begin_src emacs-lisp
 (define-prefix-command 'my/artist-mode-map)
 (evil-define-key 'normal artist-mode-map (kbd (concat my/leader-map-key " a")) 'my/artist-mode-map)
 
@@ -8270,9 +8615,11 @@ https://www.emacswiki.org/emacs/ArtistMode
   ;; Resize down
   ("C-n" (evil-window-decrease-height 10) nil)
   ;; Resize right
-  ("<delete>" (evil-window-decrease-width 10) nil)
+  ;;("<delete>" (evil-window-decrease-width 10) nil)
+  ("<deletechar>" (evil-window-decrease-width 10) nil)
   ;; Resize left
-  ("\b" (evil-window-increase-width 10) nil)
+  ;;("\b" (evil-window-increase-width 10) nil)
+  ("C-h" (evil-window-increase-width 10) nil)
 
   ;; Resize up
   ("C-S-p" (evil-window-increase-height 40) nil)
@@ -8290,8 +8637,8 @@ https://www.emacswiki.org/emacs/ArtistMode
   ("v" my/window-split-down nil)
   ("V" my/window-split-up nil)
 
-  ("i" my/clone-indirect-buffer-name nil)
-  ("I" my/clone-indirect-buffer-name-other-window nil)
+  ("i" my/clone-indirect-buffer nil)
+  ("I" my/clone-indirect-buffer-other-window nil)
 
   ;; Search
   ("C-s" swiper-all nil)
@@ -8345,11 +8692,12 @@ https://www.emacswiki.org/emacs/ArtistMode
   ("u" winner-undo nil)
   ("C-r" winner-redo nil)
 
-  ("R" rename-buffer nil))
-#+end_src
+  ("R" rename-buffer nil)
 
-Add this to not auto exit insert mode after closing the hydra
-("<escape>" nil))
+  ;; Add this to not auto exit insert mode after closing the hydra
+  ;; ("<escape>" nil)
+  )
+#+end_src
 
 ** Structural navigation
 *** Evil-lispy
@@ -9164,8 +9512,7 @@ Make mode line appear in echo area instead of in the mode line area. This saves 
 #+end_src
 
 *** Mode line contents
-Using header line to display
-Set mode line height
+Don't set it directly here, because the variable is needed to fix exwm
 #+begin_src emacs-lisp
 (setq-default header-line-format
 	      (quote
@@ -9588,6 +9935,7 @@ If there is a battery, display it in the mode line
 #+begin_src emacs-lisp
 (defun my/battery-display-mode-reload ()
   (interactive)
+  (display-battery-mode -1)
   (setq battery-status-function
 	(cond ((and (eq system-type 'gnu/linux)
 		    (file-readable-p "/proc/apm"))
@@ -9611,7 +9959,8 @@ If there is a battery, display it in the mode line
 		      (error nil)))
 	       #'battery-pmset)
 	      ((fboundp 'w32-battery-status)
-	       #'w32-battery-status))))
+	       #'w32-battery-status)))
+  (display-battery-mode 1))
 #+end_src
 
 **** Date and time
@@ -9754,7 +10103,8 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
 	     (insert-file-contents "/proc/meminfo")
 	     (setq my/mem-string (buffer-string))
-	     (string-match "MemAvailable:.*\s" my/mem-string))))
+	     (ignore-error
+		 (string-match "MemAvailable:.*\s" my/mem-string)))))
     (setq my/mode-line-enable-available-mem t))
 
 (defvar my/available-mem-formatted "nil")
@@ -9766,12 +10116,16 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     (insert-file-contents "/proc/meminfo")
     (setq my/mem-string (buffer-string))
 
-    (string-match "MemAvailable:.*\s" my/mem-string)
-    (setq my/mem-string (match-string 0 my/mem-string))
+    (when (ignore-error
+	      (string-match "MemAvailable:.*\s" my/mem-string))
+      (setq my/mem-string (match-string 0 my/mem-string))
 
-    ;; Default returns kb, *1000 to get it to bytes
-    (setq my/available-mem (* 1000(string-to-number (substring my/mem-string (string-match "[0-9]" my/mem-string) -1))))
-    (setq my/available-mem-formatted (my/file-size-human-readable my/available-mem nil t))))
+      ;; Default returns kb, *1000 to get it to bytes
+      (setq my/available-mem
+	    (* 1000 (string-to-number
+		     (substring my/mem-string (string-match "[0-9]" my/mem-string) -1))))
+
+      (setq my/available-mem-formatted (my/file-size-human-readable my/available-mem nil t)))))
 
 (if my/mode-line-enable-available-mem
     (my/lv-line-allocate-update-time 'my/linux-update-available-mem))
@@ -10095,11 +10449,9 @@ mode-line-format
   (set-face-attribute 'org-meta-line nil :background nil)
 
   ;; Used by org-src block borders, currently just using the comment face
-#+end_src
- (set-face-attribute 'org-block-begin-line nil :background my/background-color-3)
- (set-face-attribute 'org-block-end-line nil :background my/background-color-3)
+  ;;  (set-face-attribute 'org-block-begin-line nil :background my/background-color-3)
+  ;;  (set-face-attribute 'org-block-end-line nil :background my/background-color-3)
 
-#+begin_src emacs-lisp
   ;; Used by org src-blocks when in use, might also be used for other things
   (set-face-attribute 'secondary-selection nil :background (color-darken-name my/background-color 5))
 
@@ -10191,6 +10543,9 @@ mode-line-format
   (set-face-attribute 'ivy-minibuffer-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
   (set-face-attribute 'ivy-minibuffer-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
   (set-face-attribute 'ivy-minibuffer-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
+
+  ;;; Ivy yasnippet
+  (set-face-attribute 'ivy-yasnippet-key nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
 #+end_src
 
 Ivy rich
