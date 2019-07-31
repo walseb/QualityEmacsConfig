@@ -3115,6 +3115,8 @@ Borrowed from mozc.el."
 
 ;; *** Ivy integration
 (straight-use-package 'ivy-yasnippet)
+;; Needed because its font isn't loaded on install, but is needed in theme
+(require 'ivy-yasnippet)
 (define-key my/leader-map (kbd "i") 'ivy-yasnippet)
 
 ;; *** Keys
