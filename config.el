@@ -1113,7 +1113,7 @@
 (straight-use-package 'evil-commentary)
 
 (evil-define-key 'normal evil-commentary-mode-map ":" 'evil-commentary-line)
-(evil-define-key 'normal evil-commentary-mode-map ";" 'evil-commentary)
+(evil-define-key '(normal visual) evil-commentary-mode-map ";" 'evil-commentary)
 
 (evil-define-key 'normal evil-commentary-mode-map "gY" 'evil-commentary-yank-line)
 
@@ -2648,8 +2648,8 @@ Borrowed from mozc.el."
 (evil-define-key '(motion normal) ivy-minibuffer-map (kbd "n") 'ivy-next-line)
 (evil-define-key '(motion normal) ivy-minibuffer-map (kbd "p") 'ivy-previous-line)
 
-(evil-define-key 'insert ivy-minibuffer-map (kbd "C-n") 'ivy-next-line)
-(evil-define-key 'insert ivy-minibuffer-map (kbd "C-p") 'ivy-previous-line)
+(evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-n") 'ivy-next-line)
+(evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-p") 'ivy-previous-line)
 
 (evil-define-key '(motion normal) ivy-minibuffer-map (kbd "C-y") 'ivy-call)
 
@@ -2731,15 +2731,19 @@ Borrowed from mozc.el."
   (interactive)
   (counsel-ag nil default-directory))
 
-;; *** Keys
-(define-key my/leader-map (kbd "g") 'counsel-M-x)
-;;(global-set-key (kbd "M-x") 'counsel-M-x)
+;; *** Remove dups
+;; **** Remove duplicate entries in kill ring
+(advice-add #'counsel-yank-pop :before (lambda (&optional arg) (delete-dups kill-ring)))
 
-(define-key my/leader-map (kbd "k") 'counsel-yank-pop)
+;; **** Remove duplicate entries in yank ring
+(advice-add #'counsel-mark-ring :before (lambda (&optional arg) (delete-dups mark-ring)))
+
+;; *** Keys
+;; (define-key my/leader-map (kbd "g") 'counsel-M-x)
+(global-set-key (kbd "M-c") 'counsel-M-x)
+
 (global-set-key (kbd "M-k") 'counsel-yank-pop)
 
-;;(define-key ivy-minibuffer-map [remap backward-delete-char] 'ivy-backward-delete-char)
-;;(define-key ivy-minibuffer-map [remap evil-delete-backward-char-and-join] 'ivy-backward-delete-char)
 (define-key ivy-minibuffer-map (kbd "DEL") 'ivy-backward-delete-char)
 
 ;; ** Counsel flycheck
@@ -3014,12 +3018,14 @@ Borrowed from mozc.el."
 (define-key company-active-map (kbd "C-u") 'company-previous-page)
 (define-key company-active-map (kbd "C-w") 'company-next-page)
 
+;; Complete on tab
+(define-key company-active-map (kbd "TAB") 'company-complete-selection)
+
 ;; using C-h is better in every way
 (define-key company-active-map (kbd "<f1>") 'nil)
 
 ;; Force autocomplete
 (my/evil-universal-define-key "C-." 'company-complete)
-
 
 ;; ** Company-box
 ;; Company with icons
@@ -3092,6 +3098,20 @@ Borrowed from mozc.el."
 (straight-use-package 'yasnippet-snippets)
 
 (yas-global-mode 1)
+
+;; *** Company integration
+;; https://emacs.stackexchange.com/questions/10431/get-company-to-show-suggestions-for-yasnippet-names
+
+(defvar company-mode/enable-yas t
+  "Enable yasnippet for all backends.")
+
+(defun company-mode/backend-with-yas (backend)
+  (if (or (not company-mode/enable-yas) (and (listp backend) (member 'company-yasnippet backend)))
+      backend
+    (append (if (consp backend) backend (list backend))
+	    '(:with company-yasnippet))))
+
+(setq company-backends (mapcar #'company-mode/backend-with-yas company-backends))
 
 ;; *** Keys
 (defvar my/yas-init nil)
@@ -7259,7 +7279,7 @@ Borrowed from mozc.el."
 (setq-default picture-mode-map (make-sparse-keymap))
 
 ;; ** Keys
-(define-key my/leader-map (kbd "k") 'artist-mode)
+;; (define-key my/leader-map (kbd "k") 'artist-mode)
 
 (define-prefix-command 'my/artist-mode-map)
 (evil-define-key 'normal artist-mode-map (kbd (concat my/leader-map-key " a")) 'my/artist-mode-map)
@@ -8659,7 +8679,8 @@ Borrowed from mozc.el."
 
 	     (insert-file-contents "/proc/meminfo")
 	     (setq my/mem-string (buffer-string))
-	     (string-match "MemAvailable:.*\s" my/mem-string))))
+	     (ignore-error
+		 (string-match "MemAvailable:.*\s" my/mem-string)))))
     (setq my/mode-line-enable-available-mem t))
 
 (defvar my/available-mem-formatted "nil")
@@ -8671,12 +8692,16 @@ Borrowed from mozc.el."
     (insert-file-contents "/proc/meminfo")
     (setq my/mem-string (buffer-string))
 
-    (string-match "MemAvailable:.*\s" my/mem-string)
-    (setq my/mem-string (match-string 0 my/mem-string))
+    (when (ignore-error
+	      (string-match "MemAvailable:.*\s" my/mem-string))
+      (setq my/mem-string (match-string 0 my/mem-string))
 
-    ;; Default returns kb, *1000 to get it to bytes
-    (setq my/available-mem (* 1000(string-to-number (substring my/mem-string (string-match "[0-9]" my/mem-string) -1))))
-    (setq my/available-mem-formatted (my/file-size-human-readable my/available-mem nil t))))
+      ;; Default returns kb, *1000 to get it to bytes
+      (setq my/available-mem
+	    (* 1000 (string-to-number
+		     (substring my/mem-string (string-match "[0-9]" my/mem-string) -1))))
+
+      (setq my/available-mem-formatted (my/file-size-human-readable my/available-mem nil t)))))
 
 (if my/mode-line-enable-available-mem
     (my/lv-line-allocate-update-time 'my/linux-update-available-mem))
