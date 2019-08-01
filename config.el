@@ -8675,8 +8675,8 @@ Borrowed from mozc.el."
 
 	     (insert-file-contents "/proc/meminfo")
 	     (setq my/mem-string (buffer-string))
-	     (ignore-error
-		 (string-match "MemAvailable:.*\s" my/mem-string)))))
+	     (ignore-errors
+	       (string-match "MemAvailable:.*\s" my/mem-string)))))
     (setq my/mode-line-enable-available-mem t))
 
 (defvar my/available-mem-formatted "nil")
@@ -8688,8 +8688,8 @@ Borrowed from mozc.el."
     (insert-file-contents "/proc/meminfo")
     (setq my/mem-string (buffer-string))
 
-    (when (ignore-error
-	      (string-match "MemAvailable:.*\s" my/mem-string))
+    (when (ignore-errors
+	    (string-match "MemAvailable:.*\s" my/mem-string))
       (setq my/mem-string (match-string 0 my/mem-string))
 
       ;; Default returns kb, *1000 to get it to bytes
