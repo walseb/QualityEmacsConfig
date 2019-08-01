@@ -7184,17 +7184,16 @@ Borrowed from mozc.el."
 				 term-mode
 
 				 wdired-mode
-
-				 ;; Because of some reason, w3m doesn't get read only until very late, which activates spell checking
-				 w3m-mode
 				 ))
 
 (defun my/flyspell-mode-auto-select ()
-  (if (derived-mode-p 'prog-mode)
-      (flyspell-prog-mode)
-    ;; It has to be both writable and not a part of the do not check list for spell checking to activate
-    (when (and (not buffer-read-only) (not (member major-mode my/flyspell-do-not-check)))
-      (flyspell-mode 1))))
+  ;; Don't run this right when flyspell mode is on, the mode might not have changed yet. Instead wait a millisecond until the mode has been decided and then check for prog-mode
+  (run-with-timer 0.1 nil (lambda ()
+			    (if (derived-mode-p 'prog-mode)
+				(flyspell-prog-mode)
+			      ;; It has to be both writable and not a part of the do not check list for spell checking to activate
+			      (when (and (not buffer-read-only) (not (member major-mode my/flyspell-do-not-check)))
+				(flyspell-mode 1))))))
 
 (define-globalized-minor-mode global-my/flyspell-mode
   nil my/flyspell-mode-auto-select)
@@ -8884,7 +8883,7 @@ Borrowed from mozc.el."
 	(setq my/mark-color-6 (color-darken-name my/diff-changed-color 30))
 
 	(setq my/foreground-color "#E6E1DC")
-	;;(setq my/foreground-color (color-darken-name my/foreground-color 10))
+	(setq my/foreground-color (color-darken-name my/foreground-color 10))
 	(setq my/foreground-color-1 (color-darken-name my/foreground-color 5))
 	(setq my/foreground-color-2 (color-darken-name my/foreground-color 10))
 	(setq my/foreground-color-3 (color-darken-name my/foreground-color 15))
@@ -8892,8 +8891,8 @@ Borrowed from mozc.el."
 	(setq my/foreground-color-5 (color-darken-name my/foreground-color 25))
 	(setq my/foreground-color-6 (color-darken-name my/foreground-color 30))
 
-	(setq my/background-color "#232323")
-	;;(setq my/background-color "#000000")
+	;; (setq my/background-color "#232323")
+	(setq my/background-color "#000000")
 	(setq my/background-color-1 (color-lighten-name my/background-color 5))
 	(setq my/background-color-2 (color-lighten-name my/background-color 10))
 	(setq my/background-color-3 (color-lighten-name my/background-color 15))
