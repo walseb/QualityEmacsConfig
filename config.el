@@ -1961,7 +1961,7 @@ Borrowed from mozc.el."
 							    (write-region (point-min) (point-max) (concat user-emacs-directory "scratch")))))))
   (run-hooks 'my/open-map-hook))
 
-  (define-key my/open-map (kbd "s") 'my/switch-to-scratch)
+(define-key my/open-map (kbd "s") 'my/switch-to-scratch)
 
 ;; ** Backup
 (defun my/backups-visit ()
@@ -3452,7 +3452,7 @@ Borrowed from mozc.el."
 ;; ** Jammer
 (straight-use-package 'jammer)
 (setq jammer-repeat-delay 0.5)
- (setq jammer-repeat-window 1)
+(setq jammer-repeat-window 1)
 (setq jammer-type 'repeat)
 (setq jammer-block-type 'blacklist)
 (setq jammer-block-list '(
@@ -4057,23 +4057,23 @@ Borrowed from mozc.el."
 (define-key my/leader-map (kbd "u") 'my/auto-find-usages)
 
 ;; *** Auto eval
- (defun my/auto-eval ()
-   (interactive)
-   (if (string= evil-state 'visual)
-       (my/auto-eval-region)
-     (pcase major-mode
-       ;; Silent result
-       ('org-mode (org-babel-execute-src-block nil nil '((:result-params . ("none")))))
-       ('scheme-mode (geiser-eval-definition nil))
-       ('clojure-mode (cider-eval-last-sexp))
-       ('racket-mode (racket-eval-last-sexp))
-       ('plantuml-mode (plantuml-preview-region 0 (line-beginning-position) (line-end-position)))
-       ('fsharp-mode (fsharp-eval-phrase))
-       ('c-mode (cling-send-region (line-beginning-position) (line-end-position)))
-       ('c++-mode (cling-send-region (line-beginning-position) (line-end-position)))
-       ('csharp-mode (my/csharp-run-repl))
-       ('haskell-mode (haskell-interactive-copy-to-prompt))
-       (_ (call-interactively 'eros-eval-last-sexp)))))
+(defun my/auto-eval ()
+  (interactive)
+  (if (string= evil-state 'visual)
+      (my/auto-eval-region)
+    (pcase major-mode
+      ;; Silent result
+      ('org-mode (org-babel-execute-src-block nil nil '((:result-params . ("none")))))
+      ('scheme-mode (geiser-eval-definition nil))
+      ('clojure-mode (cider-eval-last-sexp))
+      ('racket-mode (racket-eval-last-sexp))
+      ('plantuml-mode (plantuml-preview-region 0 (line-beginning-position) (line-end-position)))
+      ('fsharp-mode (fsharp-eval-phrase))
+      ('c-mode (cling-send-region (line-beginning-position) (line-end-position)))
+      ('c++-mode (cling-send-region (line-beginning-position) (line-end-position)))
+      ('csharp-mode (my/csharp-run-repl))
+      ('haskell-mode (haskell-interactive-copy-to-prompt))
+      (_ (call-interactively 'eros-eval-last-sexp)))))
 
 (defun my/auto-eval-region (beg end)
   (interactive)
@@ -4299,9 +4299,9 @@ Borrowed from mozc.el."
 	(progn
 	  (my/backward-sexp)
 	  (if (save-match-data (looking-at "#;"))
-    (+ (point) 2)
-    (point)))
-  (scan-error (user-error "There isn't a complete s-expression before point")))))
+	      (+ (point) 2)
+	    (point)))
+      (scan-error (user-error "There isn't a complete s-expression before point")))))
 
 ;; *** Emacs-lisp
 ;; **** Eros
@@ -4448,6 +4448,52 @@ Borrowed from mozc.el."
   (setq-local evil-shift-width 2))
 
 (add-hook 'haskell-mode-hook 'my/haskell-mode)
+
+;; *** GHC flags
+(setq my/ghc-flags
+      '(
+	"-Weverything"
+	"-Wincomplete-uni-patterns"
+	"-Wincomplete-record-updates"
+
+	;; Don't warn if prelude is implicitly imported
+	;; "-Wimplicit-prelude"
+	"-Wno-implicit-prelude"
+
+	;; Dante disables this by default
+	"-Wmissing-home-modules"
+
+	"-Widentities"
+	"-Wredundant-constraints"
+	"-Wpartial-fields"
+
+	;; Normally there is a warning on every non-annotated top-level function https://gitlab.haskell.org/ghc/ghc/issues/14794?source=post_page---------------------------#ticket
+	"-Wno-missing-exported-signatures"
+
+	;; Warns that you haven't defined an export list. Without an export list all functions in the file are accessible
+	;; "-Wmissing-export-lists"
+	"-Wno-missing-export-lists"
+
+	;; Don't give warning when imports arent either qualified or imported using import lists
+	"-Wno-missing-import-lists"
+
+	;; "Don’t use Safe Haskell warnings"
+	"-Wno-unsafe"
+	;; "Don’t use Safe Haskell warnings"
+	"-Wno-safe"
+	;; "Warning for polymorphic local bindings; nothing wrong with those"
+	"-Wno-missing-local-signatures"
+	;; "Warn if the monomorphism restriction is used"
+	"-Wmonomorphism-restriction"
+
+	;; Warns if haskell has problems inlining
+	"-Wall-missed-specialisations"
+	))
+
+(defun my/cabal-ghc-flags-insert ()
+  (interactive)
+  (insert "ghc-options: ")
+  (insert (mapconcat 'identity my/ghc-flags " ")))
 
 ;; *** Hoogle
 ;; **** Ivy
@@ -4618,43 +4664,8 @@ Borrowed from mozc.el."
   ;; https://downloads.haskell.org/~ghc/master/users-guide/using-warnings.html?source=post_page---------------------------
   ;; https://medium.com/mercury-bank/enable-all-the-warnings-a0517bc081c3
   (setq my/ghc-warning-parameters
-	'(
-	  "-Weverything"
-	  "-Wincomplete-uni-patterns"
-	  "-Wincomplete-record-updates"
-
-	  ;; Don't warn if prelude is implicitly imported
-	  ;; "-Wimplicit-prelude"
-	  "-Wno-implicit-prelude"
-
-	  ;; Warns that you haven't defined an export list. Without an export list all functions in the file are accessible
-	  ;; "-Wmissing-export-lists"
-	  "-Wno-missing-export-lists"
-
-	  ;; Dante disables this by default
-	  ;; "-Wmissing-home-modules"
-	  "-Widentities"
-	  "-Wredundant-constraints"
-	  "-Wpartial-fields"
-
-	  ;; Normally there is a warning on every non-annotated top-level function https://gitlab.haskell.org/ghc/ghc/issues/14794?source=post_page---------------------------#ticket
-	  "-Wno-missing-exported-signatures"
-
-	  ;; Don't give warning when imports arent either qualified or imported using import lists
-	  "-Wno-missing-import-lists"
-
-	  ;; "When GHC can’t specialize a polymorphic function. No big deal and requires fixing underlying libraries to solve."
-	  "-Wno-missed-specialisations"
-
-	  ;; "Don’t use Safe Haskell warnings"
-	  "-Wno-unsafe"
-	  ;; "Don’t use Safe Haskell warnings"
-	  "-Wno-safe"
-	  ;; "Warning for polymorphic local bindings; nothing wrong with those"
-	  "-Wno-missing-local-signatures"
-	  ;; "Warn if the monomorphism restriction is used"
-	  "-Wmonomorphism-restriction"
-	  ))
+	;; Dante disables this by default, so remove it
+	(remove "-Wmissing-home-modules" my/ghc-flags))
 
   (setq dante-load-flags (append dante-load-flags my/ghc-warning-parameters)))
 
@@ -4665,48 +4676,48 @@ Borrowed from mozc.el."
 (when (not my/haskell-hie-enable)
   (add-hook 'dante-mode-hook
 	    '(lambda () (flycheck-add-next-checker 'haskell-dante
-					      '(warning . haskell-hlint)))))
+						   '(warning . haskell-hlint)))))
 
 ;; **** Make dante not save all the time
 (when (and (not my/haskell-dante-fix) (not my/haskell-hie-enable))
-(lcr-def dante-async-load-current-buffer (interpret)
-	 "Load and maybe INTERPRET the temp file for current buffer.
+  (lcr-def dante-async-load-current-buffer (interpret)
+	   "Load and maybe INTERPRET the temp file for current buffer.
   Interpreting puts all symbols from the current module in
   scope. Compiling to avoids re-interpreting the dependencies over
   and over."
-	 (let* ((epoch (buffer-modified-tick))
-		(unchanged (equal epoch dante-temp-epoch))
-		(fname (buffer-file-name (current-buffer)))
-		(buffer (lcr-call dante-session))
-		(same-buffer (s-equals? (buffer-local-value 'dante-loaded-file buffer) fname)))
-	   (if (and unchanged same-buffer) (buffer-local-value 'dante-load-message buffer) ; see #52
-	     (setq dante-temp-epoch epoch)
-	     ;; (vc-before-save)
-	     ;; (basic-save-buffer-1) ;; save without re-triggering flycheck/flymake nor any save hook
-	     ;; (vc-after-save)
-	     ;; GHCi will interpret the buffer iff. both -fbyte-code and :l * are used.
-	     (lcr-call dante-async-call (if interpret ":set -fbyte-code" ":set -fobject-code"))
-	     (with-current-buffer buffer
-	       (dante-async-write (if (and (not interpret) same-buffer) ":r"
-				    (concat ":l " (if interpret "*" "") (dante-local-name fname))))
-	       (cl-destructuring-bind (_status err-messages _loaded-modules) (lcr-call dante-load-loop "" nil)
-		 (setq dante-loaded-file fname)
-		 (setq dante-load-message err-messages))))))
+	   (let* ((epoch (buffer-modified-tick))
+		  (unchanged (equal epoch dante-temp-epoch))
+		  (fname (buffer-file-name (current-buffer)))
+		  (buffer (lcr-call dante-session))
+		  (same-buffer (s-equals? (buffer-local-value 'dante-loaded-file buffer) fname)))
+	     (if (and unchanged same-buffer) (buffer-local-value 'dante-load-message buffer) ; see #52
+	       (setq dante-temp-epoch epoch)
+	       ;; (vc-before-save)
+	       ;; (basic-save-buffer-1) ;; save without re-triggering flycheck/flymake nor any save hook
+	       ;; (vc-after-save)
+	       ;; GHCi will interpret the buffer iff. both -fbyte-code and :l * are used.
+	       (lcr-call dante-async-call (if interpret ":set -fbyte-code" ":set -fobject-code"))
+	       (with-current-buffer buffer
+		 (dante-async-write (if (and (not interpret) same-buffer) ":r"
+				      (concat ":l " (if interpret "*" "") (dante-local-name fname))))
+		 (cl-destructuring-bind (_status err-messages _loaded-modules) (lcr-call dante-load-loop "" nil)
+		   (setq dante-loaded-file fname)
+		   (setq dante-load-message err-messages))))))
 
-;; ***** Fix flycheck
-;; Sometimes ghci takes too long to get the results, have a hook that runs 1 second after save to hopefully catch the late error
-;; Also disable idle-change since it should not be needed
-(add-hook 'dante-mode-hook '(lambda ()
-			      (add-hook 'after-save-hook
-					'(lambda ()
-					   (run-with-timer 1 nil #'flycheck-buffer)) nil t)))
-(add-hook 'dante-mode-hook '(lambda ()
-			      (setq-local flycheck-check-syntax-automatically '(mode-enabled save idle-change))))
+  ;; ***** Fix flycheck
+  ;; Sometimes ghci takes too long to get the results, have a hook that runs 1 second after save to hopefully catch the late error
+  ;; Also disable idle-change since it should not be needed
+  (add-hook 'dante-mode-hook '(lambda ()
+				(add-hook 'after-save-hook
+					  '(lambda ()
+					     (run-with-timer 1 nil #'flycheck-buffer)) nil t)))
+  (add-hook 'dante-mode-hook '(lambda ()
+				(setq-local flycheck-check-syntax-automatically '(mode-enabled save idle-change))))
 
-;; When hitting esc while in normal mode, refresh flycheck mode for when ghc is slow
-(evil-define-key 'normal dante-mode-map (kbd "<escape>") '(lambda () (interactive)
-							    (flycheck-buffer)
-							    (evil-force-normal-state))))
+  ;; When hitting esc while in normal mode, refresh flycheck mode for when ghc is slow
+  (evil-define-key 'normal dante-mode-map (kbd "<escape>") '(lambda () (interactive)
+							      (flycheck-buffer)
+							      (evil-force-normal-state))))
 
 ;; *** Flycheck
 ;; Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the standard ghc checker though, because it works fine if I don't have HIE. If I have HIE emacs should use that instead
@@ -6958,13 +6969,13 @@ Borrowed from mozc.el."
 (define-key my/leader-map (kbd "S") 'my/system-commands-map)
 
 ;; ** Suspend
- (define-prefix-command 'my/system-suspend-map)
- (define-key my/system-commands-map (kbd "s") 'my/system-suspend-map)
+(define-prefix-command 'my/system-suspend-map)
+(define-key my/system-commands-map (kbd "s") 'my/system-suspend-map)
 
- (defun my/systemd-suspend-PC()
-   (interactive)
-   (shell-command "systemctl suspend"))
- (define-key my/system-suspend-map (kbd "C-s") 'my/systemd-suspend-PC)
+(defun my/systemd-suspend-PC()
+  (interactive)
+  (shell-command "systemctl suspend"))
+(define-key my/system-suspend-map (kbd "C-s") 'my/systemd-suspend-PC)
 
 ;;(defun my/systemd-hibernate-PC()
 ;;  (interactive)
@@ -7204,12 +7215,12 @@ Borrowed from mozc.el."
 
 (defun my/flyspell-mode-auto-select ()
   ;; Don't run this right when flyspell mode is on, the mode might not have changed yet. Instead wait a millisecond until the mode has been decided and then check for prog-mode
-;;   (run-with-timer 0.5 nil (lambda ()
-;;			    (if (derived-mode-p 'prog-mode)
-;;				(flyspell-prog-mode)
-;;			      ;; It has to be both writable and not a part of the do not check list for spell checking to activate
-;;			      (when (and (not buffer-read-only) (not (member major-mode my/flyspell-do-not-check)))
-;;				(flyspell-mode 1)))))
+  ;;   (run-with-timer 0.5 nil (lambda ()
+  ;;			    (if (derived-mode-p 'prog-mode)
+  ;;				(flyspell-prog-mode)
+  ;;			      ;; It has to be both writable and not a part of the do not check list for spell checking to activate
+  ;;			      (when (and (not buffer-read-only) (not (member major-mode my/flyspell-do-not-check)))
+  ;;				(flyspell-mode 1)))))
   )
 
 (define-globalized-minor-mode global-my/flyspell-mode
