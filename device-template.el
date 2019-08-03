@@ -9,8 +9,6 @@
 
 (defvar my/device/maildir (concat user-emacs-directory "Maildir"))
 
-(defvar my/ivy-youtube-key nil)
-
 (defvar my/enable-randr t)
 
 (defvar my/run-command-on-boot nil)

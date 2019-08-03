@@ -921,6 +921,18 @@
 ;; (fset 'evil-visual-update-x-selection 'ignore)
 (evil-mode)
 
+;; ** Evil-goggles support
+(straight-use-package 'evil-goggles)
+(require 'evil-goggles)
+
+(add-hook 'after-init-hook 'evil-goggles-mode)
+
+;; Disable pulse which both fixes so that you can set foreground color on the pulse font and saves on performance
+(setq evil-goggles-pulse nil)
+(setq evil-goggles-duration 60)
+
+(evil-goggles-use-diff-faces)
+
 ;; ** Minibuffer
 ;; Enable evil in minibuffer
 (setq evil-want-minibuffer t)
@@ -1142,6 +1154,19 @@
 		   (insert comment-start)
 		 (evil-commentary beg end type)))))
 
+;; *** Evil-eval operator
+(evil-define-operator evil-eval (beg end type)
+  "Run eval on BEG to END."
+  (interactive "<R>")
+  (message (concat "beg: " (number-to-string beg) " end: " (number-to-string end)))
+  (my/auto-eval-region beg end))
+
+(my/evil-normal-define-key "/" 'evil-eval)
+(my/evil-normal-define-key "?" 'my/auto-eval)
+
+;; **** Add evil-goggle command
+(add-to-list 'evil-goggles--commands '(evil-eval :face evil-goggles-yank-face :switch evil-goggles-enable-yank :advice evil-goggles--generic-async-advice))
+
 ;; *** Evil-surround
 (straight-use-package 'evil-surround)
 (global-evil-surround-mode 1)
@@ -1156,15 +1181,6 @@
 ;; ** Evil-lion
 (straight-use-package 'evil-lion)
 (evil-lion-mode)
-
-;; ** Evil-goggles
-(straight-use-package 'evil-goggles)
-(evil-goggles-mode)
-;; Disable pulse which both fixes so that you can set foreground color on the pulse font and saves on performance
-(setq evil-goggles-pulse nil)
-(setq evil-goggles-duration 60)
-
-(evil-goggles-use-diff-faces)
 
 ;; ** Match paren
 ;; The normal evil-jump-item gives up easily. This tries to get to a paren more
@@ -2485,7 +2501,7 @@ Borrowed from mozc.el."
   (my/clone-indirect-buffer)
   (narrow-to-region beg end))
 
-;; *** Evil narrow
+;; *** Evil operator
 (evil-define-operator evil-narrow-indirect (beg end type)
   "Indirectly narrow the region from BEG to END."
   (interactive "<R>")
@@ -2494,6 +2510,9 @@ Borrowed from mozc.el."
 
 (define-key evil-normal-state-map "m" 'evil-narrow-indirect)
 (define-key evil-visual-state-map "m" 'evil-narrow-indirect)
+
+;; **** Evil-goggle support
+(add-to-list 'evil-goggles--commands '(evil-narrow-indirect :face evil-goggles-yank-face :switch evil-goggles-enable-yank :advice evil-goggles--generic-async-advice))
 
 ;; *** Universal narrow function
 (defun my/narrow-widen ()
@@ -3591,9 +3610,7 @@ Borrowed from mozc.el."
   (if (active-minibuffer-window)
       (progn
 	(if (string= major-mode "minibuffer-inactive-mode")
-	    (progn
-	      (message "HERE")
-	      (select-window (previous-window)))
+	    (select-window (previous-window))
 	  (select-window (active-minibuffer-window))))
     (error "Minibuffer is not active")))
 
@@ -4040,39 +4057,39 @@ Borrowed from mozc.el."
 (define-key my/leader-map (kbd "u") 'my/auto-find-usages)
 
 ;; *** Auto eval
-(defun my/auto-eval ()
-  (interactive)
-  (if (string= evil-state 'visual)
-      (my/auto-eval-region)
-    (pcase major-mode
-      ;; Silent result
-      ('org-mode (org-babel-execute-src-block nil nil '((:result-params . ("none")))))
-      ('scheme-mode (geiser-eval-definition nil))
-      ('clojure-mode (cider-eval-last-sexp))
-      ('racket-mode (racket-eval-last-sexp))
-      ('plantuml-mode (plantuml-preview-region 0 (line-beginning-position) (line-end-position)))
-      ('fsharp-mode (fsharp-eval-phrase))
-      ('c-mode (cling-send-region (line-beginning-position) (line-end-position)))
-      ('c++-mode (cling-send-region (line-beginning-position) (line-end-position)))
-      ('csharp-mode (my/csharp-run-repl))
-      ('haskell-mode (haskell-interactive-copy-to-prompt))
-      (_ (call-interactively 'eros-eval-last-sexp)))))
+ (defun my/auto-eval ()
+   (interactive)
+   (if (string= evil-state 'visual)
+       (my/auto-eval-region)
+     (pcase major-mode
+       ;; Silent result
+       ('org-mode (org-babel-execute-src-block nil nil '((:result-params . ("none")))))
+       ('scheme-mode (geiser-eval-definition nil))
+       ('clojure-mode (cider-eval-last-sexp))
+       ('racket-mode (racket-eval-last-sexp))
+       ('plantuml-mode (plantuml-preview-region 0 (line-beginning-position) (line-end-position)))
+       ('fsharp-mode (fsharp-eval-phrase))
+       ('c-mode (cling-send-region (line-beginning-position) (line-end-position)))
+       ('c++-mode (cling-send-region (line-beginning-position) (line-end-position)))
+       ('csharp-mode (my/csharp-run-repl))
+       ('haskell-mode (haskell-interactive-copy-to-prompt))
+       (_ (call-interactively 'eros-eval-last-sexp)))))
 
-(defun my/auto-eval-region ()
+(defun my/auto-eval-region (beg end)
   (interactive)
   (pcase major-mode
-    ('clojure-mode (cider-eval-region (point) (mark)))
-    ('plantuml-mode (plantuml-preview-region 0 (point) (mark)))
-    ('fsharp-mode (fsharp-eval-region (point) (mark)))
-    ('c-mode (cling-send-region (point) (mark)))
-    ('c++-mode (cling-send-region (point) (mark)))
+    ('clojure-mode (cider-eval-region beg end))
+    ('plantuml-mode (plantuml-preview-region 0 beg end))
+    ('fsharp-mode (fsharp-eval-region beg end))
+    ('c-mode (cling-send-region beg end))
+    ('c++-mode (cling-send-region beg end))
     ('csharp-mode (my/csharp-run-repl))
     ('haskell-mode (haskell-interactive-copy-to-prompt))
     (_
      ;; eval-region doesn't return anything, just prints to the minibuffer so eros can't be used here
-     ;;(eros--eval-overlay
-     (eval-region (mark) (point) t)
-     ;;(point))
+     (eros--eval-overlay
+      (eval-region beg end t)
+      end)
      )))
 
 (defun my/auto-eval-buffer ()
@@ -4097,8 +4114,8 @@ Borrowed from mozc.el."
     ('csharp-mode (haskell-interactive-copy-to-prompt))
     (_ (eval-print-last-sexp nil))))
 
-(define-key my/leader-map (kbd "e") 'my/auto-eval)
-(define-key my/leader-map (kbd "E") 'my/auto-eval-buffer)
+;; (define-key my/leader-map (kbd "e") 'my/auto-eval)
+(define-key my/leader-map (kbd "e") 'my/auto-eval-buffer)
 (define-key my/leader-map (kbd "M-e") 'my/auto-eval-print)
 
 ;; *** Auto debug
@@ -4541,7 +4558,6 @@ Borrowed from mozc.el."
 		 (pos-ov (lsp-ui-sideline--find-line (length final-string) bol eol))
 		 (ov (when pos-ov (make-overlay (car pos-ov) (car pos-ov)))))
 
-	    (message "test")
 	    ;; My changes:
 	    (let ((final-string-formatted (substring-no-properties final-string)))
 	      (add-to-list 'my/haskell-lsp-eldoc-entries final-string-formatted))
@@ -7188,12 +7204,13 @@ Borrowed from mozc.el."
 
 (defun my/flyspell-mode-auto-select ()
   ;; Don't run this right when flyspell mode is on, the mode might not have changed yet. Instead wait a millisecond until the mode has been decided and then check for prog-mode
-  (run-with-timer 0.1 nil (lambda ()
-			    (if (derived-mode-p 'prog-mode)
-				(flyspell-prog-mode)
-			      ;; It has to be both writable and not a part of the do not check list for spell checking to activate
-			      (when (and (not buffer-read-only) (not (member major-mode my/flyspell-do-not-check)))
-				(flyspell-mode 1))))))
+;;   (run-with-timer 0.5 nil (lambda ()
+;;			    (if (derived-mode-p 'prog-mode)
+;;				(flyspell-prog-mode)
+;;			      ;; It has to be both writable and not a part of the do not check list for spell checking to activate
+;;			      (when (and (not buffer-read-only) (not (member major-mode my/flyspell-do-not-check)))
+;;				(flyspell-mode 1)))))
+  )
 
 (define-globalized-minor-mode global-my/flyspell-mode
   nil my/flyspell-mode-auto-select)
