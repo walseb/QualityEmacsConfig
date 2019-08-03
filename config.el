@@ -4488,6 +4488,8 @@ Borrowed from mozc.el."
 
 	;; Warns if haskell has problems inlining
 	"-Wall-missed-specialisations"
+
+	"-Wcpp-undef"
 	))
 
 (defun my/cabal-ghc-flags-insert ()
