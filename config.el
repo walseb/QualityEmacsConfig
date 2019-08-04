@@ -8933,7 +8933,7 @@ Borrowed from mozc.el."
 	(setq my/mark-color-6 (color-darken-name my/diff-changed-color 30))
 
 	(setq my/foreground-color "#E6E1DC")
-	(setq my/foreground-color (color-darken-name my/foreground-color 10))
+	;; (setq my/foreground-color (color-darken-name my/foreground-color 10))
 	(setq my/foreground-color-1 (color-darken-name my/foreground-color 5))
 	(setq my/foreground-color-2 (color-darken-name my/foreground-color 10))
 	(setq my/foreground-color-3 (color-darken-name my/foreground-color 15))
@@ -8941,8 +8941,10 @@ Borrowed from mozc.el."
 	(setq my/foreground-color-5 (color-darken-name my/foreground-color 25))
 	(setq my/foreground-color-6 (color-darken-name my/foreground-color 30))
 
+	(setq my/background-color "#121212")
+	;; (setq my/background-color "#212121")
 	;; (setq my/background-color "#232323")
-	(setq my/background-color "#000000")
+	;; (setq my/background-color "#000000")
 	(setq my/background-color-1 (color-lighten-name my/background-color 5))
 	(setq my/background-color-2 (color-lighten-name my/background-color 10))
 	(setq my/background-color-3 (color-lighten-name my/background-color 15))
@@ -8998,7 +9000,7 @@ Borrowed from mozc.el."
 
   (set-face-attribute 'font-lock-comment-face nil :foreground (color-lighten-name my/background-color 30) :background my/background-color) ;;:height my/comment-face-height)
 
-  (set-face-attribute 'font-lock-comment-delimiter-face nil :foreground (color-lighten-name my/background-color 60) :background my/background-color)
+  (set-face-attribute 'font-lock-comment-delimiter-face nil :foreground (color-lighten-name my/background-color 50) :background my/background-color)
 
   (my/set-face-to-default 'font-lock-string-face t)
 
