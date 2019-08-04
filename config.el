@@ -4103,7 +4103,9 @@ Borrowed from mozc.el."
     ('c++-mode (cling-send-buffer))
     ('csharp-mode (my/csharp-run-repl))
     ('haskell-mode (haskell-process-load-file))
-    (_ (eval-buffer nil))))
+    ;; For now disable elisp evaluation
+    (_ nil;;(eval-buffer nil)
+       )))
 
 (defun my/auto-eval-print ()
   (interactive)
@@ -4450,6 +4452,8 @@ Borrowed from mozc.el."
 (add-hook 'haskell-mode-hook 'my/haskell-mode)
 
 ;; *** GHC flags
+;; https://downloads.haskell.org/~ghc/master/users-guide/using-warnings.html?source=post_page---------------------------
+;; https://medium.com/mercury-bank/enable-all-the-warnings-a0517bc081c3
 (setq my/ghc-flags
       '(
 	"-Weverything"
@@ -4490,6 +4494,9 @@ Borrowed from mozc.el."
 	"-Wall-missed-specialisations"
 
 	"-Wcpp-undef"
+
+	;; By default you get a warning when you don't include type signature when writing function, disable that
+	"-Wno-missing-signatures"
 	))
 
 (defun my/cabal-ghc-flags-insert ()
@@ -4663,8 +4670,6 @@ Borrowed from mozc.el."
   (add-hook 'haskell-mode-hook 'dante-mode)
 
   ;; **** Add more warnings
-  ;; https://downloads.haskell.org/~ghc/master/users-guide/using-warnings.html?source=post_page---------------------------
-  ;; https://medium.com/mercury-bank/enable-all-the-warnings-a0517bc081c3
   (setq my/ghc-warning-parameters
 	;; Dante disables this by default, so remove it
 	(remove "-Wmissing-home-modules" my/ghc-flags))
@@ -7349,11 +7354,14 @@ Borrowed from mozc.el."
 				 :pre (setq my/window-hydra/hint
 					    (concat "next: "
 						    (let ((list (ivy--buffer-list "")))
-						      (if (string= (car list) (buffer-name))
-							  (substring-no-properties
-							   (nth 1 list))
-							(substring-no-properties
-							 (car list)))))))
+						      (when
+							  (if (and (string= (car list) (buffer-name))
+								   ;; If there is only 1 buffer in emacs
+								   (> (length list) 1))
+							      (substring-no-properties
+							       (nth 1 list))
+							    (substring-no-properties
+							     (car list))))))))
   "movement"
 
   ;; Move focus
@@ -7865,11 +7873,23 @@ Borrowed from mozc.el."
     ("||" . ?∨)))
 
 (defvar my/pretty-comment-symbol ?|)
-;; https://www.w3schools.com/charsets/ref_utf_block.asp
+
 (when window-system
+  ;; https://www.w3schools.com/charsets/ref_utf_block.asp
+  ;; █ comment
+  ;; ▉ comment
+  ;; ▊ comment
+  ;; ▋ comment
+  ;; ▌ comment
+  ;; ▌ comment
+  ;; ▍ comment
+  ;; ▎ comment
+  ;; ▏ comment
+  ;; ▐ comment
+
   ;;(setq my/pretty-comment-symbol ?▏)
   ;; (setq my/pretty-comment-symbol ?█)
-  (setq my/pretty-comment-symbol ?▶))
+  (setq my/pretty-comment-symbol ?▐))
 
 (defun my/prettify-comment ()
   `((,(string-trim comment-start) . ,my/pretty-comment-symbol)))
@@ -8977,6 +8997,8 @@ Borrowed from mozc.el."
   (set-face-attribute 'font-lock-doc-face nil :foreground my/foreground-color :background my/background-color-4)
 
   (set-face-attribute 'font-lock-comment-face nil :foreground (color-lighten-name my/background-color 30) :background my/background-color) ;;:height my/comment-face-height)
+
+  (set-face-attribute 'font-lock-comment-delimiter-face nil :foreground (color-lighten-name my/background-color 60) :background my/background-color)
 
   (my/set-face-to-default 'font-lock-string-face t)
 
