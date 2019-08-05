@@ -2501,18 +2501,29 @@ Borrowed from mozc.el."
   (my/clone-indirect-buffer)
   (narrow-to-region beg end))
 
-;; *** Evil operator
-(evil-define-operator evil-narrow-indirect (beg end type)
+;; **** Evil operator
+(evil-define-operator my/evil-narrow-indirect (beg end type)
   "Indirectly narrow the region from BEG to END."
   (interactive "<R>")
   (evil-normal-state)
   (my/narrow-indirect beg end))
 
-(define-key evil-normal-state-map "m" 'evil-narrow-indirect)
-(define-key evil-visual-state-map "m" 'evil-narrow-indirect)
+(define-key evil-normal-state-map "m" 'my/evil-narrow-indirect)
+(define-key evil-visual-state-map "m" 'my/evil-narrow-indirect)
 
 ;; **** Evil-goggle support
-(add-to-list 'evil-goggles--commands '(evil-narrow-indirect :face evil-goggles-yank-face :switch evil-goggles-enable-yank :advice evil-goggles--generic-async-advice))
+(add-to-list 'evil-goggles--commands '(my/evil-narrow-indirect :face evil-goggles-yank-face :switch evil-goggles-enable-yank :advice evil-goggles--generic-async-advice))
+
+;; *** Narrow
+;; **** Evil operator
+(evil-define-operator my/evil-narrow (beg end type)
+  "Indirectly narrow the region from BEG to END."
+  (interactive "<R>")
+  (evil-normal-state)
+  (narrow-to-region beg end))
+
+(define-key evil-normal-state-map "M" 'my/evil-narrow)
+(define-key evil-visual-state-map "M" 'my/evil-narrow)
 
 ;; *** Universal narrow function
 (defun my/narrow-widen ()
@@ -7893,6 +7904,7 @@ Borrowed from mozc.el."
 
 (when window-system
   ;; https://www.w3schools.com/charsets/ref_utf_block.asp
+  ;; https://en.wikipedia.org/wiki/Block_Elements
   ;; █ comment
   ;; ▉ comment
   ;; ▊ comment
@@ -7907,7 +7919,8 @@ Borrowed from mozc.el."
   ;; (setq my/pretty-comment-symbol ?\x2502)
   ;; (setq my/pretty-comment-symbol ?█)
   ;; (setq my/pretty-comment-symbol ?▏)
-  (setq my/pretty-comment-symbol ?▐)
+  ;; (setq my/pretty-comment-symbol ?▐)
+  (setq my/pretty-comment-symbol ?▍)
   )
 
 (defun my/prettify-comment ()
