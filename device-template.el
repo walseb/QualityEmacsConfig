@@ -1,10 +1,12 @@
 (defvar my/default-face-height 160)
 
 ;;(defvar my/device/monitor-setup '(1 "DVI-D-1" 0 "DP-1" 2 "DVI-I-1"))
+;; For this to work every monitor has to be listed I think
 ;; Get from doing "xrandr" in shell
 (defvar my/device/monitor-setup nil)
 
 ;; Xrandr command to run
+;; xrandr --auto && xrandr --output LVDS-1 --off to disable laptop screen
 (defvar my/device/monitor-setup-command "")
 
 (defvar my/device/maildir (concat user-emacs-directory "Maildir"))
