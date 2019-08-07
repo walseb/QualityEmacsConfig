@@ -3598,7 +3598,7 @@ Borrowed from mozc.el."
 
 (defun my/add-window-config ()
   (interactive)
-  (setq my/selected-window-config (my/select-window-config "Add window config "))
+  (setq my/selected-window-config (my/select-window-config "Add window config: "))
 
   (setq my/selected-window-config-position (my/get-selected-window-config-position my/selected-window-config))
 
