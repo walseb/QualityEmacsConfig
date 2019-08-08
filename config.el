@@ -3129,23 +3129,6 @@ Borrowed from mozc.el."
 
 (yas-global-mode 1)
 
-;; *** Fix for emacs 27
-;; Yasnippet is broken on emacs 27 with error:
-;; yascroll: (wrong-number-of-arguments (left-width right-width outside-margins) 4)
-;; This fixes that
-(when (>= emacs-major-version 27)
-  (defun yascroll:choose-scroll-bar ()
-    (when (memq window-system yascroll:enabled-window-systems)
-      (cl-destructuring-bind (left-width right-width outside-margins pers)
-	  (window-fringes)
-	(cl-loop for scroll-bar in (yascroll:listify yascroll:scroll-bar)
-		 if (or (eq scroll-bar 'text-area)
-			(and (eq scroll-bar 'left-fringe)
-			     (> left-width 0))
-			(and (eq scroll-bar 'right-fringe)
-			     (> right-width 0)))
-		 return scroll-bar)))))
-
 ;; *** Company integration
 ;; https://emacs.stackexchange.com/questions/10431/get-company-to-show-suggestions-for-yasnippet-names
 
@@ -8151,6 +8134,23 @@ Borrowed from mozc.el."
 (global-yascroll-bar-mode)
 (setq yascroll:scroll-bar '(left-fringe))
 
+;; *** Fix for emacs 27
+;; Yasnippet is broken on emacs 27 with error:
+;; yascroll: (wrong-number-of-arguments (left-width right-width outside-margins) 4)
+;; This fixes that
+(when (>= emacs-major-version 27)
+  (defun yascroll:choose-scroll-bar ()
+    (when (memq window-system yascroll:enabled-window-systems)
+      (cl-destructuring-bind (left-width right-width outside-margins pers)
+	  (window-fringes)
+	(cl-loop for scroll-bar in (yascroll:listify yascroll:scroll-bar)
+		 if (or (eq scroll-bar 'text-area)
+			(and (eq scroll-bar 'left-fringe)
+			     (> left-width 0))
+			(and (eq scroll-bar 'right-fringe)
+			     (> right-width 0)))
+		 return scroll-bar)))))
+
 ;; ** Hl-Todo
 (straight-use-package 'hl-todo)
 
@@ -9320,7 +9320,8 @@ Borrowed from mozc.el."
   (set-face-attribute 'lsp-ui-sideline-symbol-info nil :foreground my/mark-color :background my/background-color)
 
      ;;;; Lens
-  (set-face-attribute 'lsp-lens-face nil :foreground my/foreground-color :background my/mark-color-4 :height 0.8))
+  ;; (set-face-attribute 'lsp-lens-face nil :foreground my/foreground-color :background my/mark-color-4 :height 0.8)
+  (set-face-attribute 'lsp-lens-face nil :foreground 'unspecified :background my/background-color :inherit font-lock-comment-face))
 
 ;;; Flyspell
 (when window-system
