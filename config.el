@@ -192,6 +192,11 @@
 ;; or restart emacs
 
 ;; ** Gnus
+
+;; *** Disable state
+;; Gnus normally stores random state inside =~/.newsrc-dribble=, this prevents that from happening
+(setq gnus-use-dribble-file nil)
+
 ;; *** Setup mail with dovecot
 ;; 1. Use nixos config
 ;; 2. run my/write-mail-configs
@@ -563,12 +568,6 @@
 ;; ** Fix unicode fonts
 ;; Right now unicode fonts are most of the time taller than the normal fonts
 
-;; ** Fix haskell
-;; Maybe also add hlive to config?
-
-;; ** Direnv binds
-;; Maybe add direnv bind for creating a .envrc with content "use nix"
-
 ;; ** Outlines
 ;; Fix the heading font-lock so that it also covers the comment part
 ;; *** Highlight to end of window
@@ -592,6 +591,16 @@
 ;; ** Fix so that you can use counsel-yank in minibuffer again
 
 ;; ** Make evil-commentary also comment multiple empty lines
+
+;; ** Haskell
+;; *** Get ghc-imported-from
+;; Currently broken
+
+;; *** Get hlive
+;; Currently broken
+
+;; *** Direnv binds
+;; Maybe add direnv bind for creating a .envrc with content "use nix"
 
 ;; * First
 ;; Things to do first
@@ -4457,6 +4466,11 @@ Borrowed from mozc.el."
   (setq-local evil-shift-width 2))
 
 (add-hook 'haskell-mode-hook 'my/haskell-mode)
+
+;; *** nix-haskell-mode
+(straight-use-package 'nix-haskell-mode)
+(require 'nix-haskell-mode)
+(add-hook 'haskell-mode-hook 'nix-haskell-mode)
 
 ;; *** GHC flags
 ;; https://downloads.haskell.org/~ghc/master/users-guide/using-warnings.html?source=post_page---------------------------
