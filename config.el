@@ -104,9 +104,6 @@
 ;; *** GPG pinentry
 ;; =gpg2= =pinentry=
 
-;; *** Misc
-;; =redshift=
-
 ;; ** Firefox vimium
 ;; *** Config
 ;; #+begin_src
@@ -198,10 +195,11 @@
 ;; *** Setup mail with dovecot
 ;; 1. Use nixos config
 ;; 2. run my/write-mail-configs
-;; 3. Change permissions =chmod 600 ~/.dovecot-pass= =chmod 600 ~/.msmtprc= =chmod 600 ~/.mbsyncrc=
-;; 4. Enter google app password, etc into mbsync and msmtp config now in your home directory
-;; 5. Put your user password, etc into .dovecot-pass file in your home dir
-;; 6. Restart emacs
+;; 3. Change permissions =chmod 600 ~/.dovecot-pass; chmod 600 ~/.msmtprc; chmod 600 ~/.mbsyncrc;=
+;; 4. Enter google app password, etc into ~/.msmtprc, ~/.mbsyncrc Don't modify .dovecot-pass
+;; 5.
+;; 6. Enable mail in device.el
+;; 7. Restart emacs, restart dovecot, etc
 
 ;; *** How to setup name and password without dovecot
 ;; Create authinfo.pgp file. It is auto encrypted/decrypted
@@ -890,10 +888,6 @@
 
 ;; ** Check if OS is fully compatible
 (defvar fully-compatible-system (or (eq system-type 'gnu/linux)(eq system-type 'gnu)(eq system-type 'gnu/kfreebsd)))
-
-;; ** Redshift
-(when (my/is-system-package-installed 'redshift)
-  (start-process "redshift" nil "redshift"))
 
 ;; ** Garbage collection
 (setq garbage-collection-messages t)
@@ -1603,7 +1597,9 @@ Borrowed from mozc.el."
 (defun my/write-mbsync-config ()
   (let* ((source-dir (concat user-emacs-directory "configs/mail/mbsync/.mbsyncrc"))
 	 (target-dir "~/.mbsyncrc"))
-    (copy-file source-dir target-dir)))
+    (copy-file source-dir target-dir))
+  (make-directory "~/Maildir")
+  (make-directory "~/Maildir/main-gmail"))
 
 (defun my/write-msmtp-config ()
   (let* ((source-dir (concat user-emacs-directory "configs/mail/msmtp/.msmtprc"))
@@ -6943,8 +6939,7 @@ Borrowed from mozc.el."
 	   (shell-command (concat
 			   "mbsync -a "
 			   "--config "
-			   mbsync-config))
-	   )
+			   mbsync-config)))
 	 (lambda (result)
 	   (run-hooks 'my/sync-mail-hook))))
     (message "mbsync config not created")))
@@ -8135,21 +8130,22 @@ Borrowed from mozc.el."
 (setq yascroll:scroll-bar '(left-fringe))
 
 ;; *** Fix for emacs 27
-;; Yasnippet is broken on emacs 27 with error:
-;; yascroll: (wrong-number-of-arguments (left-width right-width outside-margins) 4)
-;; This fixes that
-(when (>= emacs-major-version 27)
-  (defun yascroll:choose-scroll-bar ()
-    (when (memq window-system yascroll:enabled-window-systems)
-      (cl-destructuring-bind (left-width right-width outside-margins pers)
-	  (window-fringes)
-	(cl-loop for scroll-bar in (yascroll:listify yascroll:scroll-bar)
-		 if (or (eq scroll-bar 'text-area)
-			(and (eq scroll-bar 'left-fringe)
-			     (> left-width 0))
-			(and (eq scroll-bar 'right-fringe)
-			     (> right-width 0)))
-		 return scroll-bar)))))
+;; Seems like this doesn't apply any more to latest?
+;; ;; Yasnippet is broken on emacs 27 with error:
+;; ;; yascroll: (wrong-number-of-arguments (left-width right-width outside-margins) 4)
+;; ;; This fixes that
+;; (when (>= emacs-major-version 27)
+;;   (defun yascroll:choose-scroll-bar ()
+;;     (when (memq window-system yascroll:enabled-window-systems)
+;;       (cl-destructuring-bind (left-width right-width outside-margins pers)
+;;	  (window-fringes)
+;;	(cl-loop for scroll-bar in (yascroll:listify yascroll:scroll-bar)
+;;		 if (or (eq scroll-bar 'text-area)
+;;			(and (eq scroll-bar 'left-fringe)
+;;			     (> left-width 0))
+;;			(and (eq scroll-bar 'right-fringe)
+;;			     (> right-width 0)))
+;;		 return scroll-bar)))))
 
 ;; ** Hl-Todo
 (straight-use-package 'hl-todo)

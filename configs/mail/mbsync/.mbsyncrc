@@ -7,7 +7,7 @@ IMAPAccount main-gmail
 Host imap.gmail.com
 User INSERT-USERNAME-WITHOUT-@
 PassCmd "gpg2 -q --for-your-eyes-only --no-tty -d ~/.mbsyncpassword.gpg"
-# Plaintext: "Pass INSERTPASSWORD"
+# Pass "PlaintextPassword"
 # Password protect it "PassCmd gpg2 -q --for-your-eyes-only --no-tty -d ~/.mbsyncpassword.gpg"
 # OR maybe  "gpg -d ~/mbsyncpassword.gpg"
 # Use SSL
