@@ -20,7 +20,11 @@
 (defvar my/run-mail-on-boot nil)
 
 (setq ellocate-scan-dirs '(("~/" "~/ellocate-home-db")
-			   ("/run/" "~/ellocate-nix-run")
+			   ("/run/" "~/ellocate-nix-run-db")
+			   ("/etc/" "~/ellocate-etc-db")
+			   ("/bin/" "~/ellocate-bin-db")
+			   ("/var/" "~/ellocate-var-db")
+			   ("/tmp/" nil)
 			   ("/mnt/" nil)))
 
 (defvar my/haskell-hie-enable nil)
