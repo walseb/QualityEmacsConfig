@@ -5328,8 +5328,8 @@ Borrowed from mozc.el."
 ;; * Eshell
 ;;  https://github.com/howardabrams/dot-files/blob/master/emacs-eshell.org
 (require 'eshell)
-;; Change to temporary name before renaming
-(setq eshell-buffer-name "eshell")
+;; Change to temporary name before renaming. This has to be unique. If it isn't the buffer with the same name will get its major mode changed to eshell
+(setq eshell-buffer-name "*eshell-temp-name*")
 
 (setq-default eshell-status-in-mode-line nil)
 
@@ -5472,9 +5472,12 @@ Borrowed from mozc.el."
       (evil-digit-argument-or-evil-beginning-of-line))))
 
 ;; ** With-editor
-;; (straight-use-package 'with-editor)
+(straight-use-package 'with-editor)
 
-;; (add-hook 'eshell-mode-hook 'with-editor-export-editor)
+(add-hook 'eshell-mode-hook '(lambda ()
+			       (with-editor-export-editor)
+			       ;; Clear echo area to remove annoying messages. A problem with this is that it also hides error messages
+			       (message nil)))
 
 ;; ** Keys
 (define-key my/leader-map (kbd "[") 'my/eshell)
