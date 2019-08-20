@@ -7915,10 +7915,15 @@ Borrowed from mozc.el."
 ;; https://github.com/enomsg/vim-haskellConcealPlus/blob/master/after/syntax/haskell.vim
 (defconst my/generic-arrow-symbols
   '(
-    ("-<" . ?↢)
-    (">-" . ?↣)
-    ;; ("-<" . ?⤙)
-    ;; (">-" . ?⤚)
+    ;; Fish here is a bit wrong but there isn't a proper double arrowed one in the utf spec that I could find
+    ;; ("<=<" . ?↢)
+    ;; (">=>" . ?↣)
+
+    ("<-<" . ?↢)
+    (">->" . ?↣)
+
+    ("-<" . ?⤙)
+    (">-" . ?⤚)
 
     ("~>" . ?⇝)
     ("<~" . ?⇜)
