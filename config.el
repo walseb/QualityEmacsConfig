@@ -1984,7 +1984,15 @@ Borrowed from mozc.el."
   (find-file "/etc/nixos/configuration.nix")
   (run-hooks 'my/open-map-hook))
 
-(define-key my/open-map (kbd "n") 'my/nixos-config-visit)
+(define-key my/open-map (kbd "N") 'my/nixos-config-visit)
+
+;; ** Visit notes
+(defun my/nixos-notes-visit ()
+  (interactive)
+  (find-file "~/Notes/")
+  (run-hooks 'my/open-map-hook))
+
+(define-key my/open-map (kbd "n") 'my/nixos-notes-visit)
 
 ;; ** Visit config
 (defun my/config-visit ()
@@ -8447,7 +8455,8 @@ Borrowed from mozc.el."
 		  (frame-root-window) -1 'above))))
 	(switch-to-buffer my/lv-line--buffer)
 	(my/lv-line-set-buffer)
-	(select-window original-window))))
+	(select-window original-window)))
+  (my/frame-width-update))
 
 ;; (defun my/lv-line-create ()
 ;; "Ensure that LV window is live and return it."
@@ -9139,7 +9148,8 @@ Borrowed from mozc.el."
 	 ;;;  Org
   ;; =make this bold=
   (set-face-attribute 'org-verbatim nil :weight 'bold)
-  (set-face-attribute 'org-code nil)
+  (set-face-attribute 'org-code nil :background (color-darken-name my/background-color 5))
+  (set-face-attribute 'org-block nil :background (color-darken-name my/background-color 1))
 
   (set-face-attribute 'org-quote nil :slant 'italic)
 
