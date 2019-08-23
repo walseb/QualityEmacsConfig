@@ -3075,8 +3075,8 @@ Borrowed from mozc.el."
 ;; Flycheck with extra correction for elisp packages
 (straight-use-package 'flycheck-package)
 
-(eval-after-load 'flycheck
-  '(flycheck-package-setup))
+(with-eval-after-load 'flycheck
+  (flycheck-package-setup))
 
 ;; ** Which-key
 (straight-use-package 'which-key)
@@ -4702,28 +4702,28 @@ Borrowed from mozc.el."
 ;; **** Make dante not save all the time
 (when (and (not my/haskell-dante-fix) (not my/haskell-hie-enable))
   (lcr-def dante-async-load-current-buffer (interpret)
-	   "Load and maybe INTERPRET the temp file for current buffer.
+    "Load and maybe INTERPRET the temp file for current buffer.
   Interpreting puts all symbols from the current module in
   scope. Compiling to avoids re-interpreting the dependencies over
   and over."
-	   (let* ((epoch (buffer-modified-tick))
-		  (unchanged (equal epoch dante-temp-epoch))
-		  (fname (buffer-file-name (current-buffer)))
-		  (buffer (lcr-call dante-session))
-		  (same-buffer (s-equals? (buffer-local-value 'dante-loaded-file buffer) fname)))
-	     (if (and unchanged same-buffer) (buffer-local-value 'dante-load-message buffer) ; see #52
-	       (setq dante-temp-epoch epoch)
-	       ;; (vc-before-save)
-	       ;; (basic-save-buffer-1) ;; save without re-triggering flycheck/flymake nor any save hook
-	       ;; (vc-after-save)
-	       ;; GHCi will interpret the buffer iff. both -fbyte-code and :l * are used.
-	       (lcr-call dante-async-call (if interpret ":set -fbyte-code" ":set -fobject-code"))
-	       (with-current-buffer buffer
-		 (dante-async-write (if (and (not interpret) same-buffer) ":r"
-				      (concat ":l " (if interpret "*" "") (dante-local-name fname))))
-		 (cl-destructuring-bind (_status err-messages _loaded-modules) (lcr-call dante-load-loop "" nil)
-		   (setq dante-loaded-file fname)
-		   (setq dante-load-message err-messages))))))
+    (let* ((epoch (buffer-modified-tick))
+	   (unchanged (equal epoch dante-temp-epoch))
+	   (fname (buffer-file-name (current-buffer)))
+	   (buffer (lcr-call dante-session))
+	   (same-buffer (s-equals? (buffer-local-value 'dante-loaded-file buffer) fname)))
+      (if (and unchanged same-buffer) (buffer-local-value 'dante-load-message buffer) ; see #52
+	(setq dante-temp-epoch epoch)
+	;; (vc-before-save)
+	;; (basic-save-buffer-1) ;; save without re-triggering flycheck/flymake nor any save hook
+	;; (vc-after-save)
+	;; GHCi will interpret the buffer iff. both -fbyte-code and :l * are used.
+	(lcr-call dante-async-call (if interpret ":set -fbyte-code" ":set -fobject-code"))
+	(with-current-buffer buffer
+	  (dante-async-write (if (and (not interpret) same-buffer) ":r"
+			       (concat ":l " (if interpret "*" "") (dante-local-name fname))))
+	  (cl-destructuring-bind (_status err-messages _loaded-modules) (lcr-call dante-load-loop "" nil)
+	    (setq dante-loaded-file fname)
+	    (setq dante-load-message err-messages))))))
 
   ;; ***** Fix flycheck
   ;; Sometimes ghci takes too long to get the results, have a hook that runs 1 second after save to hopefully catch the late error
@@ -4769,14 +4769,14 @@ Borrowed from mozc.el."
 ;; **** Flycheck-irony
 ;; (straight-use-package 'flycheck-irony)
 
-;; (eval-after-load 'flycheck
-;; '(add-hook 'flycheck-mode-hook #'flycheck-irony-setup))
+;; (with-eval-after-load 'flycheck
+;;   (add-hook 'flycheck-mode-hook #'flycheck-irony-setup))
 
 ;; **** Company-irony
 ;; (straight-use-package 'company-irony)
 
-;; (eval-after-load 'company
-;; '(add-to-list 'company-backends 'company-irony))
+;; (with-eval-after-load 'company
+;;   (add-to-list 'company-backends 'company-irony))
 
 ;; **** Eldoc-irony
 ;; (straight-use-package 'irony-eldoc)
@@ -4967,8 +4967,8 @@ Borrowed from mozc.el."
 
 ;; (add-hook 'csharp-mode-hook (lambda () (push 'company-omnisharp company-backends)))
 
-(eval-after-load 'company
-  '(add-to-list 'company-backends #'company-omnisharp))
+(with-eval-after-load 'company
+  (add-to-list 'company-backends #'company-omnisharp))
 
 ;; This hack fixes omnisharp on arch linux
 ;; Read https://github.com/OmniSharp/omnisharp-emacs/issues/459
@@ -5315,9 +5315,9 @@ Borrowed from mozc.el."
 (setq eshell-history-size 10000)
 
 ;; *** Clean history
-(eval-after-load 'em-hist
-  '(let ((content (shell-command-to-string (concat "cat " eshell-history-file-name " | awk '{$1=$1};1' | sort | uniq"))))
-     (write-region content nil eshell-history-file-name)))
+(with-eval-after-load 'em-hist
+  (let ((content (shell-command-to-string (concat "cat " eshell-history-file-name " | awk '{$1=$1};1' | sort | uniq"))))
+    (write-region content nil eshell-history-file-name)))
 
 ;; *** Append history
 ;; https://emacs.stackexchange.com/questions/18564/merge-history-from-multiple-eshells
@@ -6089,19 +6089,19 @@ Borrowed from mozc.el."
 ;; (define-key my/eww-mode-map (kbd "C-c") 'my/eww-toggle-code-highlighting)
 
 ;; ** Firefox exwm integration
-(eval-after-load 'exwm
-  '(progn
-     (straight-use-package '(exwm-firefox-core :type git :host github :repo "walseb/exwm-firefox-core"  :branch "new-exwm-edit-version"))
-     (straight-use-package '(exwm-firefox-evil :type git :host github :repo "walseb/exwm-firefox-evil"  :branch "new-exwm-edit-version"))
-     ;;    (straight-use-package 'exwm-firefox-core)
-     ;;    (straight-use-package 'exwm-firefox-evil)
-     (require 'exwm-firefox-evil)
+(with-eval-after-load 'exwm
+  (progn
+    (straight-use-package '(exwm-firefox-core :type git :host github :repo "walseb/exwm-firefox-core"  :branch "new-exwm-edit-version"))
+    (straight-use-package '(exwm-firefox-evil :type git :host github :repo "walseb/exwm-firefox-evil"  :branch "new-exwm-edit-version"))
+    ;;    (straight-use-package 'exwm-firefox-core)
+    ;;    (straight-use-package 'exwm-firefox-evil)
+    (require 'exwm-firefox-evil)
 
-     ;; Auto enable exwm-firefox-evil-mode on all firefox buffers
-     (add-hook 'exwm-manage-finish-hook 'exwm-firefox-evil-activate-if-firefox)
+    ;; Auto enable exwm-firefox-evil-mode on all firefox buffers
+    (add-hook 'exwm-manage-finish-hook 'exwm-firefox-evil-activate-if-firefox)
 
-     ;; Run firefox buffers in normal mode
-     (add-hook 'exwm-firefox-evil-mode-hook 'exwm-firefox-evil-normal)))
+    ;; Run firefox buffers in normal mode
+    (add-hook 'exwm-firefox-evil-mode-hook 'exwm-firefox-evil-normal)))
 
 (setq exwm-firefox-core-search-bookmarks '(("google.com")
 					   ("youtube.com")
@@ -6136,81 +6136,81 @@ Borrowed from mozc.el."
       (ivy-read "Activate tab: " ivy-hash :action cb))))
 
 ;; *** Keys
-(eval-after-load 'exwm
-  '(progn
+(with-eval-after-load 'exwm
+  (progn
        ;;; Normal
-     (evil-define-key '(insert visual normal motion) exwm-firefox-evil-mode-map (kbd "C-d") 'exwm-edit--compose)
+    (evil-define-key '(insert visual normal motion) exwm-firefox-evil-mode-map (kbd "C-d") 'exwm-edit--compose)
 
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up)
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down)
 
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "l") 'exwm-firefox-core-right)
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "h") 'exwm-firefox-core-left)
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<deletechar>") 'exwm-firefox-core-right)
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-h") 'exwm-firefox-core-left)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "l") 'exwm-firefox-core-right)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "h") 'exwm-firefox-core-left)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<deletechar>") 'exwm-firefox-core-right)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-h") 'exwm-firefox-core-left)
 
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "e") 'my/browser-activate-tab)
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "N") 'exwm-firefox-core-tab-next)
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "P") 'exwm-firefox-core-tab-previous)
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "k") 'exwm-firefox-core-tab-close)
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "g n") 'exwm-firefox-core-find-next)
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "g p") 'exwm-firefox-core-find-previous)
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-s") 'exwm-firefox-core-quick-find)
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "t") 'exwm-firefox-core-tab-new)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "e") 'my/browser-activate-tab)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "N") 'exwm-firefox-core-tab-next)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "P") 'exwm-firefox-core-tab-previous)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "k") 'exwm-firefox-core-tab-close)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "g n") 'exwm-firefox-core-find-next)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "g p") 'exwm-firefox-core-find-previous)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-s") 'exwm-firefox-core-quick-find)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "t") 'exwm-firefox-core-tab-new)
 
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "s") 'exwm-firefox-core-find)
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "S") 'exwm-firefox-core-find)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "s") 'exwm-firefox-core-find)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "S") 'exwm-firefox-core-find)
 
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<prior>") 'exwm-firefox-core-page-up)
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<next>") 'exwm-firefox-core-page-down)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<prior>") 'exwm-firefox-core-page-up)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<next>") 'exwm-firefox-core-page-down)
 
 
-     (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-find-next)
-     (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-find-previous)
+    (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-find-next)
+    (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-find-previous)
 
-     ;; Bind tab
-     (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "TAB") '(lambda () (interactive)
-											       (exwm-input--fake-key 'tab)))
+    ;; Bind tab
+    (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "TAB") '(lambda () (interactive)
+											      (exwm-input--fake-key 'tab)))
 
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "f") 'exwm-firefox-evil-link-hint)
-     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "F") 'exwm-firefox-evil-link-hint-new-tab)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "f") 'exwm-firefox-evil-link-hint)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "F") 'exwm-firefox-evil-link-hint-new-tab)
 
        ;;; Visual
-     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up-select)
-     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down-select)
+    (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up-select)
+    (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down-select)
 
-     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down-select)
+    (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down-select)
 
-     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "j") 'exwm-firefox-core-find-next)
-     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "J") 'exwm-firefox-core-find-previous)
+    (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "j") 'exwm-firefox-core-find-next)
+    (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "J") 'exwm-firefox-core-find-previous)
 
-     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
-     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
+    (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
+    (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
 
        ;;; Insert
-     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-u") '(lambda () (interactive) (exwm-firefox-evil-normal) (exwm-firefox-core-half-page-up)))
-     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-w") '(lambda () (interactive) (exwm-firefox-evil-normal) (exwm-firefox-core-half-page-down)))
-     ;;
-     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-f") '(lambda () (interactive) (my/exwm-fake-key "å")))
-     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-u") '(lambda () (interactive) (my/exwm-fake-key "ä")))
-     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-b") '(lambda () (interactive) (my/exwm-fake-key "ö")))
-     ;;
-     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-F") '(lambda () (interactive) (my/exwm-fake-key "Å")))
-     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-U") '(lambda () (interactive) (my/exwm-fake-key "Ä")))
-     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-B") '(lambda () (interactive) (my/exwm-fake-key "Ö")))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-u") '(lambda () (interactive) (exwm-firefox-evil-normal) (exwm-firefox-core-half-page-up)))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-w") '(lambda () (interactive) (exwm-firefox-evil-normal) (exwm-firefox-core-half-page-down)))
+    ;;
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-f") '(lambda () (interactive) (my/exwm-fake-key "å")))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-u") '(lambda () (interactive) (my/exwm-fake-key "ä")))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-b") '(lambda () (interactive) (my/exwm-fake-key "ö")))
+    ;;
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-F") '(lambda () (interactive) (my/exwm-fake-key "Å")))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-U") '(lambda () (interactive) (my/exwm-fake-key "Ä")))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-B") '(lambda () (interactive) (my/exwm-fake-key "Ö")))
 
-     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-,") '(lambda () (interactive) (exwm-input--fake-key ?ä)))
-     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "ä") '(lambda () (interactive) (exwm-input--fake-key ?ä)))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-,") '(lambda () (interactive) (exwm-input--fake-key ?ä)))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "ä") '(lambda () (interactive) (exwm-input--fake-key ?ä)))
 
-     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
-     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
-     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-l") '(lambda () (interactive) (exwm-input--fake-key 'delete)))
-     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "<backspace>") '(lambda () (interactive) (exwm-input--fake-key 'backspace)))))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-l") '(lambda () (interactive) (exwm-input--fake-key 'delete)))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "<backspace>") '(lambda () (interactive) (exwm-input--fake-key 'backspace)))))
 
 ;; ** Next browser
 ;; (defun my/write-next-config ()
