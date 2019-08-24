@@ -9152,13 +9152,15 @@ Borrowed from mozc.el."
 (defun my/theme-org-colors ()
   ;; =affects this text=
   (set-face-attribute 'org-verbatim nil :weight 'bold)
-  (set-face-attribute 'org-code nil)
   (set-face-attribute 'org-quote nil :slant 'italic)
   (set-face-attribute 'org-mode-line-clock nil :foreground my/foreground-color :background my/foreground-color :height 'unspecified)
   (set-face-attribute 'org-mode-line-clock-overrun nil :foreground my/foreground-color :background "red" :height 'unspecified)
   (set-face-attribute 'org-agenda-filter-effort nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
   (set-face-attribute 'org-agenda-filter-regexp nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
   (set-face-attribute 'org-agenda-filter-tags nil :foreground my/foreground-color :background my/background-color :height 'unspecified) (set-face-attribute 'org-agenda-filter-category nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
+
+  (set-face-attribute 'org-code nil :background (color-darken-name my/background-color 5) :underline t)
+  (set-face-attribute 'org-block nil :background my/background-color-1)
 
   ;; Disable right of header background coloring
   (set-face-attribute 'org-meta-line nil :background nil)
