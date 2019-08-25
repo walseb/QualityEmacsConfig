@@ -5364,14 +5364,15 @@ Borrowed from mozc.el."
 
 ;; ** Eldoc
 ;; *** Eshell-eldoc
-(straight-use-package '(eshell-eldoc :type git :host github :repo "defaultxr/eshell-eldoc"))
-(add-hook 'eshell-mode-hook 'eshell-eldoc-enable-for-buffer)
+;; (straight-use-package '(eshell-eldoc :type git :host github :repo "defaultxr/eshell-eldoc"))
+;; (add-hook 'eshell-mode-hook 'eshell-eldoc-enable-for-buffer)
 
 ;; *** Eshell-help
 ;; (straight-use-package 'esh-help)
+(straight-use-package '(esh-help :type git :host github :repo "defaultxr/esh-help"))
 
-;; (require 'esh-help)
-;; (setup-esh-help-eldoc)
+(require 'esh-help)
+(setup-esh-help-eldoc)
 
 ;; ** Did you mean
 ;; (straight-use-package 'eshell-did-you-mean)
