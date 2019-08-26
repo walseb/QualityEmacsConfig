@@ -104,6 +104,12 @@
 ;; *** GPG pinentry
 ;; =gpg2= =pinentry=
 
+;; ** Emacs events
+;; *** Key to number
+;; Run:
+;; (read-event)
+;; Then press a key
+
 ;; ** Firefox vimium
 ;; *** Config
 ;; #+begin_src
@@ -2059,7 +2065,7 @@ Borrowed from mozc.el."
 ;; ** Open eww
 (defun my/launch-eww ()
   (interactive)
-  (eww-browse-url (my/launch-browser) t))
+  (eww-browse-url (my/get-search-url) t))
 
 (when (not my/use-w3m)
   (define-key my/leader-map (kbd "b") 'my/launch-eww))
@@ -4171,7 +4177,10 @@ Borrowed from mozc.el."
 (defun my/auto-docs ()
   (interactive)
   (pcase major-mode
-    ('haskell-mode (my/ivy-hoogle))
+    ('haskell-mode
+     ;; (let ((browse-url-browser-function 'eww-browse-url))
+     (my/ivy-hoogle))
+
     ('nix-mode (my/nixos-options-ivy))))
 
 (define-key my/leader-map (kbd "h") help-map)
@@ -5106,6 +5115,8 @@ Borrowed from mozc.el."
   "COUNT is a repeat count, or nil for once, or 0 for infinite loop."
   (interactive "P")
   (let ((to-run (completing-read "Run macro: " my/macro-store)))
+    ;; (funcall (symbol-function (intern to-run)))))
+    ;; (execute-kbd-macro (intern macro-test)) (intern "macro-test")) count)))
     (execute-kbd-macro (symbol-function (intern to-run)) count)))
 
 (defun my/macro-modify (&optional prefix)
@@ -6006,7 +6017,7 @@ Borrowed from mozc.el."
 	(browse-url url))))))
 
 ;; * Browser
-(defun my/launch-browser ()
+(defun my/get-search-url ()
   (interactive)
   (let ((search (completing-read "search: " nil)))
     ;; Don't do a google search for anything that has a dot then a letter
@@ -6035,8 +6046,21 @@ Borrowed from mozc.el."
 (setq w3m-idle-images-show-interval 0)
 
 ;; *** Launch w3m
+(defun my/w3m-get-search-url ()
+  "Custom w3m search function"
+  (interactive)
+  (let ((search (completing-read "search: " nil)))
+    ;; Don't do a google search for anything that has a dot then a letter
+    ;; There are two (not whitespace) here because otherwise the * wildcard would accept strings without any char after a dot
+    (if (or
+	 (string-match-p (rx whitespace) search)
+	 (not (string-match-p (rx (regexp "\\.") (not whitespace) (not whitespace) (regexp "*") eol) search)))
+	(w3m-search "google" "test")
+      (w3m search t))))
+
 (defun my/launch-w3m ()
-  (w3m (my/launch-browser) t))
+  (interactive)
+  (my/w3m-get-search-url))
 
 (when my/use-w3m
   (define-key my/leader-map (kbd "b") 'my/launch-w3m))
@@ -7893,7 +7917,7 @@ Borrowed from mozc.el."
 ;; Read =reference-point-alist= to understand how to merge characters and add spaces to characters
 
 ;; *** Generic
-(defconst my/generic-equal-symbols
+(defconst my/generic-equality-symbols
   '(
     ("==" . ?≡)
     ("/=" . ?≢)
@@ -7902,7 +7926,6 @@ Borrowed from mozc.el."
     ("<=" . ?≤)
     ))
 
-;; https://github.com/enomsg/vim-haskellConcealPlus/blob/master/after/syntax/haskell.vim
 (defconst my/generic-arrow-symbols
   '(
     ;; Fish here is a bit wrong but there isn't a proper double arrowed one in the utf spec that I could find
@@ -7922,7 +7945,8 @@ Borrowed from mozc.el."
     ("<-" . ?←)
 
     ("=>" . ?⇒)
-    ("<=" . ?⇐)
+    ;; Conflicting with equality symbols
+    ;; ("<=" . ?⇐)
 
     ("->>" . ?↠)
     ("<<-" . ?↞)
@@ -7932,6 +7956,11 @@ Borrowed from mozc.el."
 
     ("<<" . ?≪)
     (">>" . ?≫)
+
+    ("<<<" . ?⋘)
+    (">>>" . ?⋙)
+
+    ("><" . ?⋈)
     ))
 
 (defconst my/generic-greek-symbols
@@ -8006,6 +8035,10 @@ Borrowed from mozc.el."
   (list))
 
 ;; *** Haskell
+;; https://github.com/roelvandijk/base-unicode-symbols
+;; https://github.com/enomsg/vim-haskellConcealPlus/blob/master/after/syntax/haskell.vim
+;; http://haskell.github.io/haskell-mode/manual/latest/Unicode-support.html#Unicode-support
+;; https://github.com/roelvandijk/emacs-haskell-unicode-input-method/blob/master/haskell-unicode-input-method.el
 (defconst my/haskell-symbols
   '(("\\" . ?λ)
     ("()" . ?∅)
@@ -8013,12 +8046,41 @@ Borrowed from mozc.el."
     ("sqrt" . ?√)
     ("undefined" . ?⊥)
     ("pi" . ?π)
+    ("not" . ?¬)
     ;;("::" . ?∷)
+    ("exists" . ?∃)
+
     ;; Here we construct a custom symbol that has the spaces that are removed when replacing " . " with a single char
     (" . " . (?\s (Br . Bl) ?\s (Bc . Bc) ?\s (Br . Bl) ?\s (Bc . Bc) ?∘)) ; "○"
     ;; Doesn't work?
     ;;haskell-font-lock-dot-is-not-composition)
-    ("forall" . ?∀)))
+    ("forall" . ?∀)
+
+    ;; ("(*)" . ?×)
+
+    ;; Foldable
+    ("elem" . ?∈)
+    ("notElem" . ?∉)
+
+    ;; List
+    ("[]" . ?ε)
+    ("++" . ?⧺)
+    ("union" . ?∪)
+    ("intersect" . ?∩)
+    ("isSubsetOf" . ?⊆)
+    ("isProperSubsetOf" . ?⊂)
+
+    ;; ("\\" . ?∖)
+
+    ;; Monoid
+    ("mempty" . ?∅)
+    ("mappend" . ?⊕)
+
+    ;; Arrows
+    ("***" . ?⁂)
+    ("|||" . ?⫴)
+    ("+++" . ?⧻)
+    ))
 
 (defconst my/haskell-type-symbols
   '(
@@ -8043,7 +8105,7 @@ Borrowed from mozc.el."
 		    my/haskell-symbols
 		    my/haskell-type-symbols
 		    my/generic-greek-symbols
-		    my/generic-equal-symbols
+		    my/generic-equality-symbols
 		    my/generic-arrow-symbols
 		    my/generic-logic-symbols
 		    (my/prettify-outline-heading)))
@@ -8051,7 +8113,7 @@ Borrowed from mozc.el."
 		   (my/prettify-comment)
 		   my/fsharp-symbols
 		   my/generic-greek-symbols
-		   my/generic-equal-symbols
+		   my/generic-equality-symbols
 		   my/generic-arrow-symbols
 		   (my/prettify-outline-heading)
 		   ))
@@ -8059,7 +8121,7 @@ Borrowed from mozc.el."
 		       (my/prettify-comment-lisp)
 		       my/elisp-symbols
 		       my/generic-greek-symbols
-		       my/generic-equal-symbols
+		       my/generic-equality-symbols
 		       my/generic-arrow-symbols
 		       (my/prettify-outline-heading-lisp)
 		       ;; (my/prettify-outline-heading-lisp-classic)
@@ -8068,7 +8130,7 @@ Borrowed from mozc.el."
 			     (my/prettify-comment-lisp)
 			     my/elisp-symbols
 			     my/generic-greek-symbols
-			     my/generic-equal-symbols
+			     my/generic-equality-symbols
 			     my/generic-arrow-symbols
 			     (my/prettify-outline-heading-lisp)
 			     ;; (my/prettify-outline-heading-lisp-classic)
@@ -8077,7 +8139,7 @@ Borrowed from mozc.el."
     (_ (append
 	(my/prettify-comment)
 	my/generic-greek-symbols
-	my/generic-equal-symbols
+	my/generic-equality-symbols
 	my/generic-arrow-symbols
 	my/generic-logic-symbols
 	(my/prettify-outline-heading)
