@@ -39,7 +39,8 @@ https://addons.mozilla.org/en-US/firefox/addon/vim-vixen/
   },
   "blacklist": [
   ]
-}#+end_src
+}
+#+end_src
 
 **** System packages
 plasma-browser-integration
@@ -104,8 +105,11 @@ M-x =pdf-tools-install=
 *** GPG pinentry
 =gpg2= =pinentry=
 
-*** Misc
-=redshift=
+** Emacs events
+*** Key to number
+Run:
+(read-event)
+Then press a key
 
 ** Firefox vimium
 *** Config
@@ -198,10 +202,11 @@ or restart emacs
 *** Setup mail with dovecot
 1. Use nixos config
 2. run my/write-mail-configs
-3. Change permissions =chmod 600 ~/.dovecot-pass= =chmod 600 ~/.msmtprc= =chmod 600 ~/.mbsyncrc=
-4. Enter google app password, etc into mbsync and msmtp config now in your home directory
-5. Put your user password, etc into .dovecot-pass file in your home dir
-6. Restart emacs
+3. Change permissions =chmod 600 ~/.dovecot-pass; chmod 600 ~/.msmtprc; chmod 600 ~/.mbsyncrc;=
+4. Enter google app password, etc into ~/.msmtprc, ~/.mbsyncrc Don't modify .dovecot-pass
+5.
+6. Enable mail in device.el
+7. Restart emacs, restart dovecot, etc
 
 *** How to setup name and password without dovecot
 Create authinfo.pgp file. It is auto encrypted/decrypted
@@ -389,8 +394,6 @@ just run
 #+END_SRC
 always instead
 
-
-
 * Todo
 ** Packages to try
 nix-buffer
@@ -406,37 +409,7 @@ Need to find how to use the "inside" operator, etc
 #+end_src
 
 ** Firefox
-*** Tabs
-http://doc.rix.si/cce/cce-browsers.html
-
-#+begin_src emacs-lisp
-(require 'dbus)
-#+end_src
-(require 'dash)
-
-#+begin_src emacs-lisp
-(defun my/browser-activate-tabs-cb (dbus ivy-hash choice)
-  (funcall dbus "Activate" :int32 (truncate (string-to-number (gethash choice ivy-hash)))))
-
-(defun my/browser-activate-tab ()
-  "Activate a browser tab using Ivy. Requires plasma-browser integration"
-  (interactive)
-  (let ((ivy-hash (make-hash-table :test 'equal))
-	(dbus (apply-partially 'dbus-call-method :session
-			       "org.kde.plasma.browser_integration" "/TabsRunner"
-			       "org.kde.plasma.browser_integration.TabsRunner")))
-    (let ((cb (-partial #'my/browser-activate-tabs-cb dbus ivy-hash))
-	  (res (funcall dbus "GetTabs")))
-      (mapc
-       (lambda (obj)
-	 (let ((id (number-to-string (car (car (alist-get "id" (car obj) nil nil #'equal)))))
-	       (title (car (car (alist-get "title" (car obj) nil nil #'equal)))))
-	   (puthash title id ivy-hash)))
-       res)
-      (ivy-read "Activate tab: " ivy-hash :action cb))))
-#+end_src
-
-** Bookmarks
+*** Bookmarks
 https://www.reddit.com/r/emacs/comments/9bly3d/linkmarksel_use_orgmode_links_for_bookmarks/
 https://www.emacswiki.org/emacs/BookMarks
 
@@ -569,12 +542,6 @@ It's currently full of unused keys
 ** Fix unicode fonts
 Right now unicode fonts are most of the time taller than the normal fonts
 
-** Fix haskell
-Maybe also add hlive to config?
-
-** Direnv binds
-Maybe add direnv bind for creating a .envrc with content "use nix"
-
 ** Outlines
 Fix the heading font-lock so that it also covers the comment part
 *** Highlight to end of window
@@ -598,6 +565,16 @@ You could easily create prompts when creating the config files that modify the p
 ** Fix so that you can use counsel-yank in minibuffer again
 
 ** Make evil-commentary also comment multiple empty lines
+
+** Haskell
+*** Get ghc-imported-from
+Currently broken
+
+*** Get hlive
+Currently broken
+
+*** Direnv binds
+Maybe add direnv bind for creating a .envrc with content "use nix"
 
 * First
 Things to do first
@@ -691,22 +668,6 @@ Emacs 27 doesn't support :init-value, :keymap, etc
 
 (add-to-list 'emulation-mode-map-alists `((my/keys-mode . ,my/keys-mode-map)))
 #+end_src
-
-** Mode specific settings
-Disable keys in minibuffers such as ivy, etc
-(add-hook 'minibuffer-setup-hook 'my/keys-mode-turn-off)
-(add-hook 'messages-buffer-mode-hook 'my/keys-mode-turn-on)
-
-* Global setting
-Define my mode for setting global settings in all buffers
-(define-minor-mode my/mode nil t nil nil)
-
-(define-globalized-minor-mode my/global-mode my/mode
-(lambda ()
-(setq my/truncate-lines nil)))
-;;(toggle-truncate-lines -1)))
-
-(my/global-mode 1)
 
 * Generic functions and variables
 ** File management
@@ -953,12 +914,6 @@ Buffers that I don't want popping up by default
 (defvar fully-compatible-system (or (eq system-type 'gnu/linux)(eq system-type 'gnu)(eq system-type 'gnu/kfreebsd)))
 #+end_src
 
-** Redshift
-#+begin_src emacs-lisp
-(when (my/is-system-package-installed 'redshift)
-  (start-process "redshift" nil "redshift"))
-#+end_src
-
 ** Garbage collection
 #+begin_src emacs-lisp
 (setq garbage-collection-messages t)
@@ -993,6 +948,22 @@ Makes swiper A LOT faster
 (fset 'evil-visual-update-x-selection 'ignore)
 #+begin_src emacs-lisp
 (evil-mode)
+#+end_src
+
+** Evil-goggles support
+#+begin_src emacs-lisp
+(straight-use-package 'evil-goggles)
+(require 'evil-goggles)
+
+(add-hook 'after-init-hook 'evil-goggles-mode)
+#+end_src
+
+Disable pulse which both fixes so that you can set foreground color on the pulse font and saves on performance
+#+begin_src emacs-lisp
+(setq evil-goggles-pulse nil)
+(setq evil-goggles-duration 60)
+
+(evil-goggles-use-diff-faces)
 #+end_src
 
 ** Minibuffer
@@ -1264,6 +1235,23 @@ Because of some reason emacs crashes with undo tree error if this isn't run late
 		 (evil-commentary beg end type)))))
 #+end_src
 
+*** Evil-eval operator
+#+begin_src emacs-lisp
+(evil-define-operator evil-eval (beg end type)
+  "Run eval on BEG to END."
+  (interactive "<R>")
+  (message (concat "beg: " (number-to-string beg) " end: " (number-to-string end)))
+  (my/auto-eval-region beg end))
+
+(my/evil-normal-define-key "/" 'evil-eval)
+(my/evil-normal-define-key "?" 'my/auto-eval)
+#+end_src
+
+**** Add evil-goggle command
+#+begin_src emacs-lisp
+(add-to-list 'evil-goggles--commands '(evil-eval :face evil-goggles-yank-face :switch evil-goggles-enable-yank :advice evil-goggles--generic-async-advice))
+#+end_src
+
 *** Evil-surround
 #+begin_src emacs-lisp
 (straight-use-package 'evil-surround)
@@ -1285,19 +1273,6 @@ bind evil-args text objects
 #+begin_src emacs-lisp
 (straight-use-package 'evil-lion)
 (evil-lion-mode)
-#+end_src
-
-** Evil-goggles
-#+begin_src emacs-lisp
-(straight-use-package 'evil-goggles)
-(evil-goggles-mode)
-#+end_src
-Disable pulse which both fixes so that you can set foreground color on the pulse font and saves on performance
-#+begin_src emacs-lisp
-(setq evil-goggles-pulse nil)
-(setq evil-goggles-duration 60)
-
-(evil-goggles-use-diff-faces)
 #+end_src
 
 ** Match paren
@@ -1776,7 +1751,9 @@ This swaps capslock and ctrl
 (defun my/write-mbsync-config ()
   (let* ((source-dir (concat user-emacs-directory "configs/mail/mbsync/.mbsyncrc"))
 	 (target-dir "~/.mbsyncrc"))
-    (copy-file source-dir target-dir)))
+    (copy-file source-dir target-dir))
+  (make-directory "~/Maildir")
+  (make-directory "~/Maildir/main-gmail"))
 
 (defun my/write-msmtp-config ()
   (let* ((source-dir (concat user-emacs-directory "configs/mail/msmtp/.msmtprc"))
@@ -2234,7 +2211,7 @@ Kill the initial scratch buffer
 							    (write-region (point-min) (point-max) (concat user-emacs-directory "scratch")))))))
   (run-hooks 'my/open-map-hook))
 
-  (define-key my/open-map (kbd "s") 'my/switch-to-scratch)
+(define-key my/open-map (kbd "s") 'my/switch-to-scratch)
 #+end_src
 
 ** Backup
@@ -2261,7 +2238,17 @@ Kill the initial scratch buffer
   (find-file "/etc/nixos/configuration.nix")
   (run-hooks 'my/open-map-hook))
 
-(define-key my/open-map (kbd "n") 'my/nixos-config-visit)
+(define-key my/open-map (kbd "N") 'my/nixos-config-visit)
+#+end_src
+
+** Visit notes
+#+begin_src emacs-lisp
+(defun my/nixos-notes-visit ()
+  (interactive)
+  (find-file "~/Notes/")
+  (run-hooks 'my/open-map-hook))
+
+(define-key my/open-map (kbd "n") 'my/nixos-notes-visit)
 #+end_src
 
 ** Visit config
@@ -2396,7 +2383,7 @@ Kill the initial scratch buffer
 #+begin_src emacs-lisp
 (defun my/launch-eww ()
   (interactive)
-  (eww-browse-url (my/launch-browser) t))
+  (eww-browse-url (my/get-search-url) t))
 
 (when (not my/use-w3m)
   (define-key my/leader-map (kbd "b") 'my/launch-eww))
@@ -2901,16 +2888,34 @@ Clean outshine-mode-map
   (narrow-to-region beg end))
 #+end_src
 
-*** Evil narrow
+**** Evil operator
 #+begin_src emacs-lisp
-(evil-define-operator evil-narrow-indirect (beg end type)
+(evil-define-operator my/evil-narrow-indirect (beg end type)
   "Indirectly narrow the region from BEG to END."
   (interactive "<R>")
   (evil-normal-state)
   (my/narrow-indirect beg end))
 
-(define-key evil-normal-state-map "m" 'evil-narrow-indirect)
-(define-key evil-visual-state-map "m" 'evil-narrow-indirect)
+(define-key evil-normal-state-map "m" 'my/evil-narrow-indirect)
+(define-key evil-visual-state-map "m" 'my/evil-narrow-indirect)
+#+end_src
+
+**** Evil-goggle support
+#+begin_src emacs-lisp
+(add-to-list 'evil-goggles--commands '(my/evil-narrow-indirect :face evil-goggles-yank-face :switch evil-goggles-enable-yank :advice evil-goggles--generic-async-advice))
+#+end_src
+
+*** Narrow
+**** Evil operator
+#+begin_src emacs-lisp
+(evil-define-operator my/evil-narrow (beg end type)
+  "Indirectly narrow the region from BEG to END."
+  (interactive "<R>")
+  (evil-normal-state)
+  (narrow-to-region beg end))
+
+(define-key evil-normal-state-map "M" 'my/evil-narrow)
+(define-key evil-visual-state-map "M" 'my/evil-narrow)
 #+end_src
 
 *** Universal narrow function
@@ -3589,35 +3594,37 @@ Decrease delay
 #+end_src
 
 *** Flycheck at cursor
-**** Flycheck posframe
+**** Flycheck-posframe
+#+begin_src emacs-lisp
 (straight-use-package 'flycheck-posframe)
+(require 'flycheck-posframe)
 
 (with-eval-after-load 'flycheck
- (require 'flycheck-posframe)
- (add-hook 'flycheck-mode-hook #'flycheck-posframe-mode))
+  (add-hook 'flycheck-mode-hook #'flycheck-posframe-mode))
 
-(setq-default flycheck-posframe-prefix ">")
-(setq-default flycheck-posframe-warning-prefix ">")
-(setq-default flycheck-posframe-info-prefix ">")
-(setq-default flycheck-posframe-error-prefix ">")
+(setq my/flycheck-posframe-symbol "→ ")
+
+(setq flycheck-posframe-error-prefix my/flycheck-posframe-symbol)
+(setq flycheck-posframe-info-prefix my/flycheck-posframe-symbol)
+(setq flycheck-posframe-prefix my/flycheck-posframe-symbol)
+(setq flycheck-posframe-warning-prefix my/flycheck-posframe-symbol)
+#+end_src
 
 **** Flycheck inline
-#+begin_src emacs-lisp
 (straight-use-package 'flycheck-inline)
 
 (require 'flycheck-inline)
 
 (with-eval-after-load 'flycheck
-  (add-hook 'flycheck-mode-hook #'turn-on-flycheck-inline))
-#+end_src
+  '(add-hook 'flycheck-mode-hook #'turn-on-flycheck-inline))
 
 *** Flycheck-package
 Flycheck with extra correction for elisp packages
 #+begin_src emacs-lisp
 (straight-use-package 'flycheck-package)
 
-(eval-after-load 'flycheck
-  '(flycheck-package-setup))
+(with-eval-after-load 'flycheck
+  (flycheck-package-setup))
 #+end_src
 
 ** Which-key
@@ -3660,6 +3667,10 @@ https://emacs.stackexchange.com/questions/10431/get-company-to-show-suggestions-
 *** Ivy integration
 #+begin_src emacs-lisp
 (straight-use-package 'ivy-yasnippet)
+#+end_src
+Needed because its font isn't loaded on install, but is needed in theme
+#+begin_src emacs-lisp
+(require 'ivy-yasnippet)
 (define-key my/leader-map (kbd "i") 'ivy-yasnippet)
 #+end_src
 
@@ -4022,7 +4033,7 @@ Disable highlighting when avy is used. Doesn't work on 16 color terminals
 #+begin_src emacs-lisp
 (straight-use-package 'jammer)
 (setq jammer-repeat-delay 0.5)
- (setq jammer-repeat-window 1)
+(setq jammer-repeat-window 1)
 (setq jammer-type 'repeat)
 (setq jammer-block-type 'blacklist)
 (setq jammer-block-list '(
@@ -4152,7 +4163,7 @@ doesn't work
 
 (defun my/add-window-config ()
   (interactive)
-  (setq my/selected-window-config (my/select-window-config "Add window config "))
+  (setq my/selected-window-config (my/select-window-config "Add window config: "))
 
   (setq my/selected-window-config-position (my/get-selected-window-config-position my/selected-window-config))
 
@@ -4196,9 +4207,7 @@ Remove default keys
   (if (active-minibuffer-window)
       (progn
 	(if (string= major-mode "minibuffer-inactive-mode")
-	    (progn
-	      (message "HERE")
-	      (select-window (previous-window)))
+	    (select-window (previous-window))
 	  (select-window (active-minibuffer-window))))
     (error "Minibuffer is not active")))
 
@@ -4431,6 +4440,7 @@ Bind =Backspace= to go up one directory
 (evil-define-key '(normal insert) dired-mode-map(kbd "C") 'dired-do-copy)
 (evil-define-key '(normal insert) dired-mode-map (kbd "D") 'dired-do-delete)
 (evil-define-key '(normal insert) dired-mode-map  (kbd "j") 'dired-do-rename)
+(evil-define-key '(normal insert) dired-mode-map  (kbd "J") 'dired-do-rename)
 (evil-define-key '(normal insert) dired-mode-map  (kbd "!") 'dired-do-shell-command)
 (evil-define-key '(normal insert) dired-mode-map  (kbd "&") 'dired-do-async-shell-command)
 (evil-define-key '(normal insert) dired-mode-map  (kbd "Z") 'dired-atool-do-unpack-with-subdirectory)
@@ -4598,14 +4608,28 @@ nil))
 (eldoc-message (funcall eldoc-documentation-function))))))
 
 ** Box
-(straight-use-package '(eldoc-box :type git :host github :repo "casouri/eldoc-box"))
+(straight-use-package 'eldoc-box)
 
-(define-globalized-minor-mode global-eldoc-box-mode
-eldoc-box-hover-mode eldoc-box-hover-mode)
-(global-eldoc-box-mode)
+(add-hook 'eldoc-mode-hook 'eldoc-box-hover-mode)
 
- eldoc-box-hover-at-point-mode needs to be enabled after eldoc-box-hover-mode is done, otherwise problems can appear
+eldoc-box-hover-at-point-mode needs to be enabled after eldoc-box-hover-mode is done, otherwise problems can appear
 (defadvice eldoc-box-hover-mode (after eldoc-box-hover-mode activate) (eldoc-box-hover-at-point-mode 1))
+
+*** Force remove header
+(defun eldoc-box--display (str)
+  "Display STR in childframe."
+  (unless (equal str "") ; WORKAROUND lsp returns empty string from time to time
+    (let ((doc-buffer (get-buffer-create eldoc-box--buffer)))
+      (with-current-buffer doc-buffer
+	(setq mode-line-format nil)
+	(setq header-line-format nil)
+	;; without this, clicking childframe will make doc buffer the current buffer
+	;; and `eldoc-box--maybe-cleanup' in `eldoc-box--cleanup-timer' will clear the childframe
+	(setq eldoc-box-hover-mode t)
+	(erase-buffer)
+	(insert str)
+	(goto-char (point-min)))
+      (eldoc-box--get-frame doc-buffer))))
 
 ** Inline
 (straight-use-package 'eldoc-overlay)
@@ -4747,21 +4771,21 @@ By default xref always prompts with certain commands
       ('haskell-mode (haskell-interactive-copy-to-prompt))
       (_ (call-interactively 'eros-eval-last-sexp)))))
 
-(defun my/auto-eval-region ()
+(defun my/auto-eval-region (beg end)
   (interactive)
   (pcase major-mode
-    ('clojure-mode (cider-eval-region (point) (mark)))
-    ('plantuml-mode (plantuml-preview-region 0 (point) (mark)))
-    ('fsharp-mode (fsharp-eval-region (point) (mark)))
-    ('c-mode (cling-send-region (point) (mark)))
-    ('c++-mode (cling-send-region (point) (mark)))
+    ('clojure-mode (cider-eval-region beg end))
+    ('plantuml-mode (plantuml-preview-region 0 beg end))
+    ('fsharp-mode (fsharp-eval-region beg end))
+    ('c-mode (cling-send-region beg end))
+    ('c++-mode (cling-send-region beg end))
     ('csharp-mode (my/csharp-run-repl))
     ('haskell-mode (haskell-interactive-copy-to-prompt))
     (_
      ;; eval-region doesn't return anything, just prints to the minibuffer so eros can't be used here
-     ;;(eros--eval-overlay
-     (eval-region (mark) (point) t)
-     ;;(point))
+     (eros--eval-overlay
+      (eval-region beg end t)
+      end)
      )))
 
 (defun my/auto-eval-buffer ()
@@ -4775,7 +4799,9 @@ By default xref always prompts with certain commands
     ('c++-mode (cling-send-buffer))
     ('csharp-mode (my/csharp-run-repl))
     ('haskell-mode (haskell-process-load-file))
-    (_ (eval-buffer nil))))
+    ;; For now disable elisp evaluation
+    (_ nil;;(eval-buffer nil)
+       )))
 
 (defun my/auto-eval-print ()
   (interactive)
@@ -4785,9 +4811,11 @@ By default xref always prompts with certain commands
     ('clojure-mode (cider-eval-print-last-sexp))
     ('csharp-mode (haskell-interactive-copy-to-prompt))
     (_ (eval-print-last-sexp nil))))
+#+end_src
 
 (define-key my/leader-map (kbd "e") 'my/auto-eval)
-(define-key my/leader-map (kbd "E") 'my/auto-eval-buffer)
+#+begin_src emacs-lisp
+(define-key my/leader-map (kbd "e") 'my/auto-eval-buffer)
 (define-key my/leader-map (kbd "M-e") 'my/auto-eval-print)
 #+end_src
 
@@ -4859,7 +4887,10 @@ By default xref always prompts with certain commands
 (defun my/auto-docs ()
   (interactive)
   (pcase major-mode
-    ('haskell-mode (my/ivy-hoogle))
+    ('haskell-mode
+     ;; (let ((browse-url-browser-function 'eww-browse-url))
+     (my/ivy-hoogle))
+
     ('nix-mode (my/nixos-options-ivy))))
 
 (define-key my/leader-map (kbd "h") help-map)
@@ -5015,9 +5046,9 @@ TODO I have to load the package fully here to set the fonts later
 	(progn
 	  (my/backward-sexp)
 	  (if (save-match-data (looking-at "#;"))
-    (+ (point) 2)
-    (point)))
-  (scan-error (user-error "There isn't a complete s-expression before point")))))
+	      (+ (point) 2)
+	    (point)))
+      (scan-error (user-error "There isn't a complete s-expression before point")))))
 #+end_src
 
 *** Emacs-lisp
@@ -5196,6 +5227,72 @@ or
 (add-hook 'haskell-mode-hook 'my/haskell-mode)
 #+end_src
 
+*** haskell-interactive-mode
+#+begin_src emacs-lisp
+(add-hook 'haskell-mode-hook '(lambda () (add-hook 'after-save-hook 'haskell-process-load-file nil t)))
+#+end_src
+
+*** nix-haskell-mode
+It's buggy for me
+(straight-use-package 'nix-haskell-mode)
+(require 'nix-haskell-mode)
+(add-hook 'haskell-mode-hook 'nix-haskell-mode)
+
+*** GHC flags
+https://downloads.haskell.org/~ghc/master/users-guide/using-warnings.html?source=post_page---------------------------
+https://medium.com/mercury-bank/enable-all-the-warnings-a0517bc081c3
+#+begin_src emacs-lisp
+(setq my/ghc-flags
+      '(
+	"-Weverything"
+	"-Wincomplete-uni-patterns"
+	"-Wincomplete-record-updates"
+
+	;; Don't warn if prelude is implicitly imported
+	;; "-Wimplicit-prelude"
+	"-Wno-implicit-prelude"
+
+	;; Dante disables this by default
+	"-Wmissing-home-modules"
+
+	"-Widentities"
+	"-Wredundant-constraints"
+	"-Wpartial-fields"
+
+	;; Normally there is a warning on every non-annotated top-level function https://gitlab.haskell.org/ghc/ghc/issues/14794?source=post_page---------------------------#ticket
+	"-Wno-missing-exported-signatures"
+
+	;; Warns that you haven't defined an export list. Without an export list all functions in the file are accessible
+	;; "-Wmissing-export-lists"
+	"-Wno-missing-export-lists"
+
+	;; Don't give warning when imports arent either qualified or imported using import lists
+	"-Wno-missing-import-lists"
+
+	;; "Don’t use Safe Haskell warnings"
+	"-Wno-unsafe"
+	;; "Don’t use Safe Haskell warnings"
+	"-Wno-safe"
+	;; "Warning for polymorphic local bindings; nothing wrong with those"
+	"-Wno-missing-local-signatures"
+	;; "Warn if the monomorphism restriction is used"
+	"-Wmonomorphism-restriction"
+
+	;; Warns if haskell has problems inlining
+	"-Wall-missed-specialisations"
+
+	"-Wcpp-undef"
+
+	;; By default you get a warning when you don't include type signature when writing function, disable that
+	"-Wno-missing-signatures"
+	))
+
+(defun my/cabal-ghc-flags-insert ()
+  (interactive)
+  (insert "ghc-options: ")
+  (insert (mapconcat 'identity my/ghc-flags " ")))
+#+end_src
+
 *** Hoogle
 **** Ivy
 (straight-use-package '(ivy-hoogle :type git :host github :repo "sjsch/ivy-hoogle"))
@@ -5220,7 +5317,8 @@ or
   (ivy-read "Hoogle: "
 	    #'my/ivy-hoogle--do-search
 	    :dynamic-collection t
-	    :preselect (counsel-symbol-at-point)
+	    :preselect (symbol-at-point)
+	    ;; :preselect (counsel-symbol-at-point)
 	    :re-builder #'regexp-quote
 	    :action (lambda (str)
 		      (browse-url
@@ -5286,13 +5384,25 @@ This fixes a lockup that sometimes happens. I think this has to do with flycheck
 
   (require 'lsp-haskell)
 
-  (add-hook 'haskell-mode-hook '(lambda ()
-				  ;; haskll-doc-mode is buggy if eldoc is on
-				  (setq-local lsp-eldoc-enable-hover nil)
+  (defun my/haskell-lsp-mode ()
+    ;; haskll-doc-mode is buggy if eldoc is on
+    (setq-local lsp-eldoc-enable-hover nil)
 
-				  ;; lsp-haskell doesn't work with native json
-				  ;; (setq-local lsp-use-native-json nil)
-				  (lsp))))
+    ;; (setq-local lsp-ui-flycheck-enable nil)
+
+    ;; lsp-haskell doesn't work with native json
+    ;; (setq-local lsp-use-native-json nil)
+
+    (lsp)
+
+    ;; Disable flycheck because errors are generated by haskell-interactive-mode anyways
+    ;; (flycheck-disable-checker 'lsp-ui)
+    (setq-local flycheck-checker 'haskell-ghc)
+
+    ;; (setq-local flycheck-checkers (remove 'lsp-ui flycheck-checkers))
+    )
+
+  (add-hook 'haskell-mode-hook 'my/haskell-lsp-mode))
 #+end_src
 
 **** Make it start in nix-shell
@@ -5322,7 +5432,6 @@ This fixes a lockup that sometimes happens. I think this has to do with flycheck
 		 (pos-ov (lsp-ui-sideline--find-line (length final-string) bol eol))
 		 (ov (when pos-ov (make-overlay (car pos-ov) (car pos-ov)))))
 
-	    (message "test")
 	    ;; My changes:
 	    (let ((final-string-formatted (substring-no-properties final-string)))
 	      (add-to-list 'my/haskell-lsp-eldoc-entries final-string-formatted))
@@ -5382,46 +5491,9 @@ This fixes a lockup that sometimes happens. I think this has to do with flycheck
   (add-hook 'haskell-mode-hook 'dante-mode)
 
   ;; **** Add more warnings
-  ;; https://downloads.haskell.org/~ghc/master/users-guide/using-warnings.html?source=post_page---------------------------
-  ;; https://medium.com/mercury-bank/enable-all-the-warnings-a0517bc081c3
   (setq my/ghc-warning-parameters
-	'(
-	  "-Weverything"
-	  "-Wincomplete-uni-patterns"
-	  "-Wincomplete-record-updates"
-
-	  ;; Don't warn if prelude is implicitly imported
-	  ;; "-Wimplicit-prelude"
-	  "-Wno-implicit-prelude"
-
-	  ;; Warns that you haven't defined an export list. Without an export list all functions in the file are accessible
-	  ;; "-Wmissing-export-lists"
-	  "-Wno-missing-export-lists"
-
-	  ;; Dante disables this by default
-	  ;; "-Wmissing-home-modules"
-	  "-Widentities"
-	  "-Wredundant-constraints"
-	  "-Wpartial-fields"
-
-	  ;; Normally there is a warning on every non-annotated top-level function https://gitlab.haskell.org/ghc/ghc/issues/14794?source=post_page---------------------------#ticket
-	  "-Wno-missing-exported-signatures"
-
-	  ;; Don't give warning when imports arent either qualified or imported using import lists
-	  "-Wno-missing-import-lists"
-
-	  ;; "When GHC can’t specialize a polymorphic function. No big deal and requires fixing underlying libraries to solve."
-	  "-Wno-missed-specialisations"
-
-	  ;; "Don’t use Safe Haskell warnings"
-	  "-Wno-unsafe"
-	  ;; "Don’t use Safe Haskell warnings"
-	  "-Wno-safe"
-	  ;; "Warning for polymorphic local bindings; nothing wrong with those"
-	  "-Wno-missing-local-signatures"
-	  ;; "Warn if the monomorphism restriction is used"
-	  "-Wmonomorphism-restriction"
-	  ))
+	;; Dante disables this by default, so remove it
+	(remove "-Wmissing-home-modules" my/ghc-flags))
 
   (setq dante-load-flags (append dante-load-flags my/ghc-warning-parameters)))
 #+end_src
@@ -5434,65 +5506,61 @@ Remove duplicates if any
 (when (not my/haskell-hie-enable)
   (add-hook 'dante-mode-hook
 	    '(lambda () (flycheck-add-next-checker 'haskell-dante
-					      '(warning . haskell-hlint)))))
+						   '(warning . haskell-hlint)))))
 #+end_src
 
 **** Make dante not save all the time
 #+begin_src emacs-lisp
 (when (and (not my/haskell-dante-fix) (not my/haskell-hie-enable))
-(lcr-def dante-async-load-current-buffer (interpret)
-	 "Load and maybe INTERPRET the temp file for current buffer.
+  (lcr-def dante-async-load-current-buffer (interpret)
+    "Load and maybe INTERPRET the temp file for current buffer.
   Interpreting puts all symbols from the current module in
   scope. Compiling to avoids re-interpreting the dependencies over
   and over."
-	 (let* ((epoch (buffer-modified-tick))
-		(unchanged (equal epoch dante-temp-epoch))
-		(fname (buffer-file-name (current-buffer)))
-		(buffer (lcr-call dante-session))
-		(same-buffer (s-equals? (buffer-local-value 'dante-loaded-file buffer) fname)))
-	   (if (and unchanged same-buffer) (buffer-local-value 'dante-load-message buffer) ; see #52
-	     (setq dante-temp-epoch epoch)
-	     ;; (vc-before-save)
-	     ;; (basic-save-buffer-1) ;; save without re-triggering flycheck/flymake nor any save hook
-	     ;; (vc-after-save)
-	     ;; GHCi will interpret the buffer iff. both -fbyte-code and :l * are used.
-	     (lcr-call dante-async-call (if interpret ":set -fbyte-code" ":set -fobject-code"))
-	     (with-current-buffer buffer
-	       (dante-async-write (if (and (not interpret) same-buffer) ":r"
-				    (concat ":l " (if interpret "*" "") (dante-local-name fname))))
-	       (cl-destructuring-bind (_status err-messages _loaded-modules) (lcr-call dante-load-loop "" nil)
-		 (setq dante-loaded-file fname)
-		 (setq dante-load-message err-messages))))))
-#+end_src
+    (let* ((epoch (buffer-modified-tick))
+	   (unchanged (equal epoch dante-temp-epoch))
+	   (fname (buffer-file-name (current-buffer)))
+	   (buffer (lcr-call dante-session))
+	   (same-buffer (s-equals? (buffer-local-value 'dante-loaded-file buffer) fname)))
+      (if (and unchanged same-buffer) (buffer-local-value 'dante-load-message buffer) ; see #52
+	(setq dante-temp-epoch epoch)
+	;; (vc-before-save)
+	;; (basic-save-buffer-1) ;; save without re-triggering flycheck/flymake nor any save hook
+	;; (vc-after-save)
+	;; GHCi will interpret the buffer iff. both -fbyte-code and :l * are used.
+	(lcr-call dante-async-call (if interpret ":set -fbyte-code" ":set -fobject-code"))
+	(with-current-buffer buffer
+	  (dante-async-write (if (and (not interpret) same-buffer) ":r"
+			       (concat ":l " (if interpret "*" "") (dante-local-name fname))))
+	  (cl-destructuring-bind (_status err-messages _loaded-modules) (lcr-call dante-load-loop "" nil)
+	    (setq dante-loaded-file fname)
+	    (setq dante-load-message err-messages))))))
 
-***** Fix flycheck
-Sometimes ghci takes too long to get the results, have a hook that runs 1 second after save to hopefully catch the late error
-Also disable idle-change since it should not be needed
-#+begin_src emacs-lisp
-(add-hook 'dante-mode-hook '(lambda ()
-			      (add-hook 'after-save-hook
-					'(lambda ()
-					   (run-with-timer 1 nil #'flycheck-buffer)) nil t)))
-(add-hook 'dante-mode-hook '(lambda ()
-			      (setq-local flycheck-check-syntax-automatically '(mode-enabled save idle-change))))
-#+end_src
+  ;; ***** Fix flycheck
+  ;; Sometimes ghci takes too long to get the results, have a hook that runs 1 second after save to hopefully catch the late error
+  ;; Also disable idle-change since it should not be needed
+  (add-hook 'dante-mode-hook '(lambda ()
+				(add-hook 'after-save-hook
+					  '(lambda ()
+					     (run-with-timer 1 nil #'flycheck-buffer)) nil t)))
+  (add-hook 'dante-mode-hook '(lambda ()
+				(setq-local flycheck-check-syntax-automatically '(mode-enabled save idle-change))))
 
-When hitting esc while in normal mode, refresh flycheck mode for when ghc is slow
-#+begin_src emacs-lisp
-(evil-define-key 'normal dante-mode-map (kbd "<escape>") '(lambda () (interactive)
-							    (flycheck-buffer)
-							    (evil-force-normal-state))))
+  ;; When hitting esc while in normal mode, refresh flycheck mode for when ghc is slow
+  (evil-define-key 'normal dante-mode-map (kbd "<escape>") '(lambda () (interactive)
+							      (flycheck-buffer)
+							      (evil-force-normal-state))))
 #+end_src
 
 *** Flycheck
 Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the standard ghc checker though, because it works fine if I don't have HIE. If I have HIE emacs should use that instead
 #+begin_src emacs-lisp
 (setq flycheck-checkers (remove 'haskell-stack-ghc flycheck-checkers))
+#+end_src
 
 (when my/haskell-hie-enable
-  (setq flycheck-checkers (remove 'haskell-ghc flycheck-checkers))
-  (setq flycheck-checkers (remove 'haskell-hlint flycheck-checkers)))
-#+end_src
+(setq flycheck-checkers (remove 'haskell-ghc flycheck-checkers))
+(setq flycheck-checkers (remove 'haskell-hlint flycheck-checkers)))
 
 ** C/CPP
 *** Irony
@@ -5515,14 +5583,14 @@ Windows performance tweaks
 **** Flycheck-irony
 (straight-use-package 'flycheck-irony)
 
-(eval-after-load 'flycheck
-'(add-hook 'flycheck-mode-hook #'flycheck-irony-setup))
+(with-eval-after-load 'flycheck
+  (add-hook 'flycheck-mode-hook #'flycheck-irony-setup))
 
 **** Company-irony
 (straight-use-package 'company-irony)
 
-(eval-after-load 'company
-'(add-to-list 'company-backends 'company-irony))
+(with-eval-after-load 'company
+  (add-to-list 'company-backends 'company-irony))
 
 **** Eldoc-irony
 (straight-use-package 'irony-eldoc)
@@ -5738,7 +5806,8 @@ csharp-maybe-insert-codedoc
 (add-hook 'csharp-mode-hook (lambda () (push 'company-omnisharp company-backends)))
 
 #+begin_src emacs-lisp
-(eval-after-load 'company '(add-to-list 'company-backends #'company-omnisharp))
+(with-eval-after-load 'company
+  (add-to-list 'company-backends #'company-omnisharp))
 #+end_src
 
 This hack fixes omnisharp on arch linux
@@ -5902,6 +5971,8 @@ Messes with .cs files???
   "COUNT is a repeat count, or nil for once, or 0 for infinite loop."
   (interactive "P")
   (let ((to-run (completing-read "Run macro: " my/macro-store)))
+    ;; (funcall (symbol-function (intern to-run)))))
+    ;; (execute-kbd-macro (intern macro-test)) (intern "macro-test")) count)))
     (execute-kbd-macro (symbol-function (intern to-run)) count)))
 
 (defun my/macro-modify (&optional prefix)
@@ -6113,9 +6184,9 @@ Enable org mode for .org.gpg files
 #+begin_src emacs-lisp
 (require 'eshell)
 #+end_src
-Change to temporary name before renaming
+Change to temporary name before renaming. This has to be unique. If it isn't the buffer with the same name will get its major mode changed to eshell
 #+begin_src emacs-lisp
-(setq eshell-buffer-name "eshell")
+(setq eshell-buffer-name "*eshell-temp-name*")
 
 (setq-default eshell-status-in-mode-line nil)
 
@@ -6125,11 +6196,23 @@ Change to temporary name before renaming
   (my/give-buffer-unique-name "*eshell*"))
 #+end_src
 
+** Allow to delete prompt
+#+begin_src emacs-lisp
+(add-hook 'eshell-mode-hook '(lambda () (setq-local inhibit-read-only t)))
+#+end_src
+
 ** History
 #+begin_src emacs-lisp
 (setq eshell-highlight-prompt t)
 (setq eshell-hist-ignoredups t)
 (setq eshell-history-size 10000)
+#+end_src
+
+*** Clean history
+#+begin_src emacs-lisp
+(with-eval-after-load 'em-hist
+  (let ((content (shell-command-to-string (concat "cat " eshell-history-file-name " | awk '{$1=$1};1' | sort | uniq"))))
+    (write-region content nil eshell-history-file-name)))
 #+end_src
 
 *** Append history
@@ -6180,10 +6263,18 @@ https://emacs.stackexchange.com/questions/18564/merge-history-from-multiple-eshe
 (add-to-list 'company-backends 'company-eshell-history)
 
 ** Eldoc
+*** Eshell-eldoc
+(straight-use-package '(eshell-eldoc :type git :host github :repo "defaultxr/eshell-eldoc"))
+(add-hook 'eshell-mode-hook 'eshell-eldoc-enable-for-buffer)
+
+*** Eshell-help
 (straight-use-package 'esh-help)
+#+begin_src emacs-lisp
+(straight-use-package '(esh-help :type git :host github :repo "defaultxr/esh-help"))
 
 (require 'esh-help)
 (setup-esh-help-eldoc)
+#+end_src
 
 ** Did you mean
 (straight-use-package 'eshell-did-you-mean)
@@ -6274,7 +6365,10 @@ Default eshell/clear only spams newlines
 #+begin_src emacs-lisp
 (straight-use-package 'with-editor)
 
-(add-hook 'eshell-mode-hook 'with-editor-export-editor)
+(add-hook 'eshell-mode-hook '(lambda ()
+			       (with-editor-export-editor)
+			       ;; Clear echo area to remove annoying messages. A problem with this is that it also hides error messages
+			       (message nil)))
 #+end_src
 
 ** Keys
@@ -6943,7 +7037,7 @@ Redefine function to attempt to open image if link at point wasn't found
 
 * Browser
 #+begin_src emacs-lisp
-(defun my/launch-browser ()
+(defun my/get-search-url ()
   (interactive)
   (let ((search (completing-read "search: " nil)))
     ;; Don't do a google search for anything that has a dot then a letter
@@ -6978,8 +7072,21 @@ Make images load instantly
 
 *** Launch w3m
 #+begin_src emacs-lisp
+(defun my/w3m-get-search-url ()
+  "Custom w3m search function"
+  (interactive)
+  (let ((search (completing-read "search: " nil)))
+    ;; Don't do a google search for anything that has a dot then a letter
+    ;; There are two (not whitespace) here because otherwise the * wildcard would accept strings without any char after a dot
+    (if (or
+	 (string-match-p (rx whitespace) search)
+	 (not (string-match-p (rx (regexp "\\.") (not whitespace) (not whitespace) (regexp "*") eol) search)))
+	(w3m-search "google" "test")
+      (w3m search t))))
+
 (defun my/launch-w3m ()
-  (w3m (my/launch-browser) t))
+  (interactive)
+  (my/w3m-get-search-url))
 
 (when my/use-w3m
   (define-key my/leader-map (kbd "b") 'my/launch-w3m))
@@ -7045,7 +7152,7 @@ Make images load instantly
 
 ** Firefox exwm integration
 #+begin_src emacs-lisp
-(eval-after-load 'exwm
+(with-eval-after-load 'exwm
   (progn
     (straight-use-package '(exwm-firefox-core :type git :host github :repo "walseb/exwm-firefox-core"  :branch "new-exwm-edit-version"))
     (straight-use-package '(exwm-firefox-evil :type git :host github :repo "walseb/exwm-firefox-evil"  :branch "new-exwm-edit-version"))
@@ -7067,9 +7174,36 @@ Make images load instantly
 (setq exwm-firefox-evil-link-hint-end-key nil)
 #+end_src
 
+*** Tabs
+http://doc.rix.si/cce/cce-browsers.html
+
+#+begin_src emacs-lisp
+(require 'dbus)
+
+(defun my/browser-activate-tabs-cb (dbus ivy-hash choice)
+  (funcall dbus "Activate" :int32 (truncate (string-to-number (gethash choice ivy-hash)))))
+
+(defun my/browser-activate-tab ()
+  "Activate a browser tab using Ivy. Requires plasma-browser integration"
+  (interactive)
+  (let ((ivy-hash (make-hash-table :test 'equal))
+	(dbus (apply-partially 'dbus-call-method :session
+			       "org.kde.plasma.browser_integration" "/TabsRunner"
+			       "org.kde.plasma.browser_integration.TabsRunner")))
+    (let ((cb (-partial #'my/browser-activate-tabs-cb dbus ivy-hash))
+	  (res (funcall dbus "GetTabs")))
+      (mapc
+       (lambda (obj)
+	 (let ((id (number-to-string (car (car (alist-get "id" (car obj) nil nil #'equal)))))
+	       (title (car (car (alist-get "title" (car obj) nil nil #'equal)))))
+	   (puthash title id ivy-hash)))
+       res)
+      (ivy-read "Activate tab: " ivy-hash :action cb))))
+#+end_src
+
 *** Keys
 #+begin_src emacs-lisp
-(eval-after-load 'exwm
+(with-eval-after-load 'exwm
   (progn
        ;;; Normal
     (evil-define-key '(insert visual normal motion) exwm-firefox-evil-mode-map (kbd "C-d") 'exwm-edit--compose)
@@ -7663,6 +7797,12 @@ Encrypt passwords
 (setq gnus-use-full-window nil)
 #+end_src
 
+*** Disable state
+Gnus normally stores random state inside =~/.newsrc-dribble=, this prevents that from happening
+#+begin_src emacs-lisp
+(setq gnus-use-dribble-file nil)
+#+end_src
+
 *** Sources
 #+begin_src emacs-lisp
 (if (my/is-system-package-installed 'dovecot)
@@ -7945,6 +8085,12 @@ Supposed to be better
 (evil-define-key 'normal gnus-summary-mode-map (kbd "i") 'nil)
 (evil-define-key 'normal gnus-summary-mode-map (kbd "RET") 'gnus-summary-scroll-up)
 
+(evil-define-key 'insert gnus-summary-mode-map (kbd "n") 'gnus-summary-next-article)
+(evil-define-key 'insert gnus-summary-mode-map (kbd "p") 'gnus-summary-prev-article)
+
+(evil-define-key 'insert gnus-summary-mode-map (kbd "N") 'gnus-summary-next-unread-article)
+(evil-define-key 'insert gnus-summary-mode-map (kbd "P") 'gnus-summary-prev-unread-article)
+
 (defun my/gnus-summary-show-all-mail ()
   "Show all mail"
   (interactive)
@@ -7955,13 +8101,12 @@ Supposed to be better
 
 *** Article mode
 Mode for reading contents of mail
-#+begin_src emacs-lisp
 (defun my/gnus-article-mode ()
-  ;; Font lock mode disables colors in html mail for whatever reason
-  (font-lock-mode -1))
+Font lock mode disables colors in html mail for whatever reason
+(font-lock-mode -1))
+)
 
 (add-hook 'gnus-article-mode-hook 'my/gnus-article-mode)
-#+end_src
 
 (defun my/gnus-article-display-mode ()
  (gnus-article-de-quoted-unreadable)
@@ -7982,7 +8127,6 @@ Mode for reading contents of mail
 
 **** Date headers
 Make date headers better with timezone calculation and time passed
-
 #+begin_src emacs-lisp
 (setq gnus-article-date-headers '(user-defined)
       gnus-article-time-format
@@ -8073,8 +8217,7 @@ Mode for writing mail
 	   (shell-command (concat
 			   "mbsync -a "
 			   "--config "
-			   mbsync-config))
-	   )
+			   mbsync-config)))
 	 (lambda (result)
 	   (run-hooks 'my/sync-mail-hook))))
     (message "mbsync config not created")))
@@ -8123,13 +8266,13 @@ Mode for writing mail
 
 ** Suspend
 #+begin_src emacs-lisp
- (define-prefix-command 'my/system-suspend-map)
- (define-key my/system-commands-map (kbd "s") 'my/system-suspend-map)
+(define-prefix-command 'my/system-suspend-map)
+(define-key my/system-commands-map (kbd "s") 'my/system-suspend-map)
 
- (defun my/systemd-suspend-PC()
-   (interactive)
-   (shell-command "systemctl suspend"))
- (define-key my/system-suspend-map (kbd "C-s") 'my/systemd-suspend-PC)
+(defun my/systemd-suspend-PC()
+  (interactive)
+  (shell-command "systemctl suspend"))
+(define-key my/system-suspend-map (kbd "C-s") 'my/systemd-suspend-PC)
 #+end_src
 
 (defun my/systemd-hibernate-PC()
@@ -8282,6 +8425,9 @@ Also check out https://github.com/Kodkollektivet/emacs-nm
 ** Tramp
 (setq tramp-default-method "scpx")
 
+*** Performance
+https://gist.github.com/ralt/a36288cd748ce185b26237e6b85b27bb
+
 ** Netstat
 #+begin_src emacs-lisp
 (defun my/net-utils-mode ()
@@ -8415,17 +8561,16 @@ List of major modes not to check
 				 term-mode
 
 				 wdired-mode
-
-				 ;; Because of some reason, w3m doesn't get read only until very late, which activates spell checking
-				 w3m-mode
 				 ))
 
 (defun my/flyspell-mode-auto-select ()
-  (if (derived-mode-p 'prog-mode)
-      (flyspell-prog-mode)
-    ;; It has to be both writable and not a part of the do not check list for spell checking to activate
-    (when (and (not buffer-read-only) (not (member major-mode my/flyspell-do-not-check)))
-      (flyspell-mode 1))))
+  ;; Don't run this right when flyspell mode is on, the mode might not have changed yet. Instead wait a millisecond until the mode has been decided and then check for prog-mode
+  (run-with-timer 0.5 nil (lambda ()
+			    (if (derived-mode-p 'prog-mode)
+				(flyspell-prog-mode)
+			      ;; It has to be both writable and not a part of the do not check list for spell checking to activate
+			      (when (and (not buffer-read-only) (not (member major-mode my/flyspell-do-not-check)))
+				(flyspell-mode 1))))))
 
 (define-globalized-minor-mode global-my/flyspell-mode
   nil my/flyspell-mode-auto-select)
@@ -8577,11 +8722,14 @@ https://www.emacswiki.org/emacs/ArtistMode
 				 :pre (setq my/window-hydra/hint
 					    (concat "next: "
 						    (let ((list (ivy--buffer-list "")))
-						      (if (string= (car list) (buffer-name))
-							  (substring-no-properties
-							   (nth 1 list))
-							(substring-no-properties
-							 (car list)))))))
+						      (when
+							  (if (and (string= (car list) (buffer-name))
+								   ;; If there is only 1 buffer in emacs
+								   (> (length list) 1))
+							      (substring-no-properties
+							       (nth 1 list))
+							    (substring-no-properties
+							     (car list))))))))
   "movement"
 
   ;; Move focus
@@ -9015,8 +9163,7 @@ Make animated images loop
 #+begin_src emacs-lisp
 (straight-use-package 'blimp)
 
-(with-eval-after-load 'eimp
-  (setq eimp-enable-undo t))
+(setq eimp-enable-undo t)
 
 (add-hook 'image-mode-hook 'blimp-mode)
 #+end_src
@@ -9105,7 +9252,7 @@ Read =reference-point-alist= to understand how to merge characters and add space
 
 *** Generic
 #+begin_src emacs-lisp
-(defconst my/generic-equal-symbols
+(defconst my/generic-equality-symbols
   '(
     ("==" . ?≡)
     ("/=" . ?≢)
@@ -9113,16 +9260,18 @@ Read =reference-point-alist= to understand how to merge characters and add space
     (">=" . ?≥)
     ("<=" . ?≤)
     ))
-#+end_src
 
-https://github.com/enomsg/vim-haskellConcealPlus/blob/master/after/syntax/haskell.vim
-#+begin_src emacs-lisp
 (defconst my/generic-arrow-symbols
   '(
-    ("-<" . ?↢)
-    (">-" . ?↣)
-    ;; ("-<" . ?⤙)
-    ;; (">-" . ?⤚)
+    ;; Fish here is a bit wrong but there isn't a proper double arrowed one in the utf spec that I could find
+    ;; ("<=<" . ?↢)
+    ;; (">=>" . ?↣)
+
+    ("<-<" . ?↢)
+    (">->" . ?↣)
+
+    ("-<" . ?⤙)
+    (">-" . ?⤚)
 
     ("~>" . ?⇝)
     ("<~" . ?⇜)
@@ -9131,7 +9280,8 @@ https://github.com/enomsg/vim-haskellConcealPlus/blob/master/after/syntax/haskel
     ("<-" . ?←)
 
     ("=>" . ?⇒)
-    ("<=" . ?⇐)
+    ;; Conflicting with equality symbols
+    ;; ("<=" . ?⇐)
 
     ("->>" . ?↠)
     ("<<-" . ?↞)
@@ -9141,6 +9291,11 @@ https://github.com/enomsg/vim-haskellConcealPlus/blob/master/after/syntax/haskel
 
     ("<<" . ?≪)
     (">>" . ?≫)
+
+    ("<<<" . ?⋘)
+    (">>>" . ?⋙)
+
+    ("><" . ?⋈)
     ))
 
 (defconst my/generic-greek-symbols
@@ -9150,14 +9305,28 @@ https://github.com/enomsg/vim-haskellConcealPlus/blob/master/after/syntax/haskel
   '(("&&" . ?∧)
     ("||" . ?∨)))
 
-(defvar my/pretty-comment-symbol ?|)
-#+end_src
-https://www.w3schools.com/charsets/ref_utf_block.asp
-#+begin_src emacs-lisp
+(setq my/pretty-comment-symbol ?|)
+
 (when window-system
-  ;;(setq my/pretty-comment-symbol ?▏)
+  ;; https://www.w3schools.com/charsets/ref_utf_block.asp
+  ;; https://en.wikipedia.org/wiki/Block_Elements
+  ;; █ comment
+  ;; ▉ comment
+  ;; ▊ comment
+  ;; ▋ comment
+  ;; ▌ comment
+  ;; ▌ comment
+  ;; ▍ comment
+  ;; ▎ comment
+  ;; ▏ comment
+  ;; ▐ comment
+
+  ;; (setq my/pretty-comment-symbol ?\x2502)
   ;; (setq my/pretty-comment-symbol ?█)
-  (setq my/pretty-comment-symbol ?▶))
+  ;; (setq my/pretty-comment-symbol ?▏)
+  ;; (setq my/pretty-comment-symbol ?▐)
+  (setq my/pretty-comment-symbol ?▍)
+  )
 
 (defun my/prettify-comment ()
   `((,(string-trim comment-start) . ,my/pretty-comment-symbol)))
@@ -9204,6 +9373,10 @@ https://www.w3schools.com/charsets/ref_utf_block.asp
 #+end_src
 
 *** Haskell
+https://github.com/roelvandijk/base-unicode-symbols
+https://github.com/enomsg/vim-haskellConcealPlus/blob/master/after/syntax/haskell.vim
+http://haskell.github.io/haskell-mode/manual/latest/Unicode-support.html#Unicode-support
+https://github.com/roelvandijk/emacs-haskell-unicode-input-method/blob/master/haskell-unicode-input-method.el
 #+begin_src emacs-lisp
 (defconst my/haskell-symbols
   '(("\\" . ?λ)
@@ -9212,12 +9385,41 @@ https://www.w3schools.com/charsets/ref_utf_block.asp
     ("sqrt" . ?√)
     ("undefined" . ?⊥)
     ("pi" . ?π)
+    ("not" . ?¬)
     ;;("::" . ?∷)
+    ("exists" . ?∃)
+
     ;; Here we construct a custom symbol that has the spaces that are removed when replacing " . " with a single char
     (" . " . (?\s (Br . Bl) ?\s (Bc . Bc) ?\s (Br . Bl) ?\s (Bc . Bc) ?∘)) ; "○"
     ;; Doesn't work?
     ;;haskell-font-lock-dot-is-not-composition)
-    ("forall" . ?∀)))
+    ("forall" . ?∀)
+
+    ;; ("(*)" . ?×)
+
+    ;; Foldable
+    ("elem" . ?∈)
+    ("notElem" . ?∉)
+
+    ;; List
+    ("[]" . ?ε)
+    ("++" . ?⧺)
+    ("union" . ?∪)
+    ("intersect" . ?∩)
+    ("isSubsetOf" . ?⊆)
+    ("isProperSubsetOf" . ?⊂)
+
+    ;; ("\\" . ?∖)
+
+    ;; Monoid
+    ("mempty" . ?∅)
+    ("mappend" . ?⊕)
+
+    ;; Arrows
+    ("***" . ?⁂)
+    ("|||" . ?⫴)
+    ("+++" . ?⧻)
+    ))
 
 (defconst my/haskell-type-symbols
   '(
@@ -9246,7 +9448,7 @@ https://www.w3schools.com/charsets/ref_utf_block.asp
 		    my/haskell-symbols
 		    my/haskell-type-symbols
 		    my/generic-greek-symbols
-		    my/generic-equal-symbols
+		    my/generic-equality-symbols
 		    my/generic-arrow-symbols
 		    my/generic-logic-symbols
 		    (my/prettify-outline-heading)))
@@ -9254,7 +9456,7 @@ https://www.w3schools.com/charsets/ref_utf_block.asp
 		   (my/prettify-comment)
 		   my/fsharp-symbols
 		   my/generic-greek-symbols
-		   my/generic-equal-symbols
+		   my/generic-equality-symbols
 		   my/generic-arrow-symbols
 		   (my/prettify-outline-heading)
 		   ))
@@ -9262,25 +9464,25 @@ https://www.w3schools.com/charsets/ref_utf_block.asp
 		       (my/prettify-comment-lisp)
 		       my/elisp-symbols
 		       my/generic-greek-symbols
-		       my/generic-equal-symbols
+		       my/generic-equality-symbols
 		       my/generic-arrow-symbols
 		       (my/prettify-outline-heading-lisp)
-		       (my/prettify-outline-heading-lisp-classic)
+		       ;; (my/prettify-outline-heading-lisp-classic)
 		       ))
     ('lisp-interaction-mode (append
 			     (my/prettify-comment-lisp)
 			     my/elisp-symbols
 			     my/generic-greek-symbols
-			     my/generic-equal-symbols
+			     my/generic-equality-symbols
 			     my/generic-arrow-symbols
 			     (my/prettify-outline-heading-lisp)
-			     (my/prettify-outline-heading-lisp-classic)
+			     ;; (my/prettify-outline-heading-lisp-classic)
 			     ))
 
     (_ (append
 	(my/prettify-comment)
 	my/generic-greek-symbols
-	my/generic-equal-symbols
+	my/generic-equality-symbols
 	my/generic-arrow-symbols
 	my/generic-logic-symbols
 	(my/prettify-outline-heading)
@@ -9426,6 +9628,24 @@ Highlights surrounding parens
 (setq yascroll:scroll-bar '(left-fringe))
 #+end_src
 
+*** Fix for emacs 27
+Seems like this doesn't apply any more to latest?
+;; Yasnippet is broken on emacs 27 with error:
+;; yascroll: (wrong-number-of-arguments (left-width right-width outside-margins) 4)
+;; This fixes that
+(when (>= emacs-major-version 27)
+  (defun yascroll:choose-scroll-bar ()
+    (when (memq window-system yascroll:enabled-window-systems)
+      (cl-destructuring-bind (left-width right-width outside-margins pers)
+	  (window-fringes)
+	(cl-loop for scroll-bar in (yascroll:listify yascroll:scroll-bar)
+		 if (or (eq scroll-bar 'text-area)
+			(and (eq scroll-bar 'left-fringe)
+			     (> left-width 0))
+			(and (eq scroll-bar 'right-fringe)
+			     (> right-width 0)))
+		 return scroll-bar)))))
+
 ** Hl-Todo
 #+begin_src emacs-lisp
 (straight-use-package 'hl-todo)
@@ -9497,6 +9717,15 @@ Doesn't seem to work fully, there are still lots of keywords left
 
 ** Modeline
 Make mode line appear in echo area instead of in the mode line area. This saves space and makes it so that the mode line can't be split
+
+*** Calculate frame width
+#+begin_src emacs-lisp
+(defvar my/frame-width (frame-width))
+
+(defun my/frame-width-update()
+  (interactive)
+  (setq my/frame-width (frame-width)))
+#+end_src
 
 *** Disable mode line
 #+begin_src emacs-lisp
@@ -9682,7 +9911,8 @@ Use lv-line to create a mode line on the top of the screen
 		  (frame-root-window) -1 'above))))
 	(switch-to-buffer my/lv-line--buffer)
 	(my/lv-line-set-buffer)
-	(select-window original-window))))
+	(select-window original-window)))
+  (my/frame-width-update))
 #+end_src
 
 (defun my/lv-line-create ()
@@ -10031,11 +10261,11 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 (defun my/modeline-update-git-changes (changes)
   "CHANGES is generated by `(diff-hl-changes)'"
   (my/mode-line-update-git-changes-string-reset)
-  (mapc '(lambda (entry)
-	   (pcase (nth 2 entry)
-	     ('insert (setq my/vc-insert-count (+ my/vc-insert-count (nth 1 entry))))
-	     ('change (setq my/vc-change-count (+ my/vc-change-count (nth 1 entry))))
-	     ('delete (setq my/vc-delete-count (+ my/vc-delete-count (nth 1 entry))))))
+  (mapc #'(lambda (entry)
+	    (pcase (nth 2 entry)
+	      ('insert (setq my/vc-insert-count (+ my/vc-insert-count (nth 1 entry))))
+	      ('change (setq my/vc-change-count (+ my/vc-change-count (nth 1 entry))))
+	      ('delete (setq my/vc-delete-count (+ my/vc-delete-count (nth 1 entry))))))
 	changes)
   (my/mode-line-update-git-changes-string))
 #+end_src
@@ -10103,8 +10333,8 @@ When projectile-mode is on, project name is updated on every keypress, here it i
 
 	     (insert-file-contents "/proc/meminfo")
 	     (setq my/mem-string (buffer-string))
-	     (ignore-error
-		 (string-match "MemAvailable:.*\s" my/mem-string)))))
+	     (ignore-errors
+	       (string-match "MemAvailable:.*\s" my/mem-string)))))
     (setq my/mode-line-enable-available-mem t))
 
 (defvar my/available-mem-formatted "nil")
@@ -10116,8 +10346,8 @@ When projectile-mode is on, project name is updated on every keypress, here it i
     (insert-file-contents "/proc/meminfo")
     (setq my/mem-string (buffer-string))
 
-    (when (ignore-error
-	      (string-match "MemAvailable:.*\s" my/mem-string))
+    (when (ignore-errors
+	    (string-match "MemAvailable:.*\s" my/mem-string))
       (setq my/mem-string (match-string 0 my/mem-string))
 
       ;; Default returns kb, *1000 to get it to bytes
@@ -10178,14 +10408,6 @@ In seconds
 #+end_src
 
 *** Mode line format
-#+begin_src emacs-lisp
-(defvar my/frame-width (frame-width))
-
-(defun my/frame-width-update()
-  (interactive)
-  (setq my/frame-width (frame-width)))
-#+end_src
-
 Only applicable to X since terminal never stretches, etc
 #+begin_src emacs-lisp
 (add-hook 'exwm-workspace-switch-hook 'my/frame-width-update)
@@ -10298,73 +10520,84 @@ mode-line-format
   (add-to-list 'my/default-face-list face-name)
   ;; Reset face
   (set-face-attribute face-name nil :family 'unspecified :foundry 'unspecified :width 'unspecified :height 'unspecified :weight 'unspecified :slant 'unspecified :foreground 'unspecified :background 'unspecified :underline 'unspecified :overline 'unspecified :strike-through 'unspecified :box 'unspecified :stipple 'unspecified :font 'unspecified :inherit 'default))
+#+end_src
 
-(defun my/theme ()
-  (interactive)
+** Define colors
+#+begin_src emacs-lisp
+(setq my/diff-added-color "#335533")
+(setq my/diff-added-hl-color (color-lighten-name "#335533" 20))
+
+(setq my/diff-changed-color "#aaaa22")
+(setq my/diff-changed-hl-color (color-lighten-name "#aaaa22" 20))
+
+(setq my/diff-removed-color "#553333")
+(setq my/diff-removed-hl-color (color-lighten-name "#553333" 20))
+
+(setq my/diff-ancestor-color "#5f06b26ccd93")
+(setq my/diff-ancestor-hl-color (color-lighten-name "#5f06b26ccd93" 20))
+
+(if window-system
+    (progn
+      (setq my/mark-color my/diff-changed-color)
+      (setq my/mark-color-1 (color-darken-name my/diff-changed-color 5))
+      (setq my/mark-color-2 (color-darken-name my/diff-changed-color 10))
+      (setq my/mark-color-3 (color-darken-name my/diff-changed-color 15))
+      (setq my/mark-color-4 (color-darken-name my/diff-changed-color 20))
+      (setq my/mark-color-5 (color-darken-name my/diff-changed-color 25))
+      (setq my/mark-color-6 (color-darken-name my/diff-changed-color 30))
+
+      (setq my/foreground-color "#E6E1DC")
+      ;; (setq my/foreground-color (color-darken-name my/foreground-color 10))
+      (setq my/foreground-color-1 (color-darken-name my/foreground-color 5))
+      (setq my/foreground-color-2 (color-darken-name my/foreground-color 10))
+      (setq my/foreground-color-3 (color-darken-name my/foreground-color 15))
+      (setq my/foreground-color-4 (color-darken-name my/foreground-color 20))
+      (setq my/foreground-color-5 (color-darken-name my/foreground-color 25))
+      (setq my/foreground-color-6 (color-darken-name my/foreground-color 30))
+
+      (setq my/background-color "#121212")
+      ;; (setq my/background-color "#212121")
+      ;; (setq my/background-color "#232323")
+      ;; (setq my/background-color "#000000")
+      (setq my/background-color-1 (color-lighten-name my/background-color 5))
+      (setq my/background-color-2 (color-lighten-name my/background-color 10))
+      (setq my/background-color-3 (color-lighten-name my/background-color 15))
+      (setq my/background-color-4 (color-lighten-name my/background-color 20)))
+
+  (setq my/mark-color "yellow")
+
+  (setq my/foreground-color "white")
+  (setq my/foreground-color-1 "white")
+  (setq my/foreground-color-2 "white")
+  (setq my/foreground-color-3 "white")
+  (setq my/foreground-color-4 "white")
+  (setq my/foreground-color-5 "white")
+  (setq my/foreground-color-6 "white")
+
+  (setq my/background-color "black")
+  (setq my/background-color-1 "black")
+  (setq my/background-color-2 "black")
+  (setq my/background-color-3 "black")
+  (setq my/background-color-4 "black")
+
+  (setq my/diff-added-color "green")
+  (setq my/diff-changed-color "yellow")
+  (setq my/diff-removed-color "red"))
+#+end_src
+
+** Remove color
+#+begin_src emacs-lisp
+(defun my/theme-remove-color ()
   (cl-loop for face in (face-list) do
 	   ;; Don't change magit faces
 	   (if (and (not (string-match "magit" (symbol-name face))) (not (string-match "w3m" (symbol-name face))))
-	       (set-face-attribute face nil :foreground nil :background nil)))
+	       (set-face-attribute face nil :foreground nil :background nil))))
+#+end_src
 
-  (setq my/diff-added-color "#335533")
-  (setq my/diff-added-hl-color (color-lighten-name "#335533" 20))
-
-  (setq my/diff-changed-color "#aaaa22")
-  (setq my/diff-changed-hl-color (color-lighten-name "#aaaa22" 20))
-
-  (setq my/diff-removed-color "#553333")
-  (setq my/diff-removed-hl-color (color-lighten-name "#553333" 20))
-
-  (setq my/diff-ancestor-color "#5f06b26ccd93")
-  (setq my/diff-ancestor-hl-color (color-lighten-name "#5f06b26ccd93" 20))
-
-  (if window-system
-      (progn
-	(setq my/mark-color my/diff-changed-color)
-	(setq my/mark-color-1 (color-darken-name my/diff-changed-color 5))
-	(setq my/mark-color-2 (color-darken-name my/diff-changed-color 10))
-	(setq my/mark-color-3 (color-darken-name my/diff-changed-color 15))
-	(setq my/mark-color-4 (color-darken-name my/diff-changed-color 20))
-	(setq my/mark-color-5 (color-darken-name my/diff-changed-color 25))
-	(setq my/mark-color-6 (color-darken-name my/diff-changed-color 30))
-
-	(setq my/foreground-color "#E6E1DC")
-	;;(setq my/foreground-color (color-darken-name my/foreground-color 10))
-	(setq my/foreground-color-1 (color-darken-name my/foreground-color 5))
-	(setq my/foreground-color-2 (color-darken-name my/foreground-color 10))
-	(setq my/foreground-color-3 (color-darken-name my/foreground-color 15))
-	(setq my/foreground-color-4 (color-darken-name my/foreground-color 20))
-	(setq my/foreground-color-5 (color-darken-name my/foreground-color 25))
-	(setq my/foreground-color-6 (color-darken-name my/foreground-color 30))
-
-	(setq my/background-color "#232323")
-	;;(setq my/background-color "#000000")
-	(setq my/background-color-1 (color-lighten-name my/background-color 5))
-	(setq my/background-color-2 (color-lighten-name my/background-color 10))
-	(setq my/background-color-3 (color-lighten-name my/background-color 15))
-	(setq my/background-color-4 (color-lighten-name my/background-color 20)))
-
-    (setq my/mark-color "yellow")
-
-    (setq my/foreground-color "white")
-    (setq my/foreground-color-1 "white")
-    (setq my/foreground-color-2 "white")
-    (setq my/foreground-color-3 "white")
-    (setq my/foreground-color-4 "white")
-    (setq my/foreground-color-5 "white")
-    (setq my/foreground-color-6 "white")
-
-    (setq my/background-color "black")
-    (setq my/background-color-1 "black")
-    (setq my/background-color-2 "black")
-    (setq my/background-color-3 "black")
-    (setq my/background-color-4 "black")
-
-    (setq my/diff-added-color "green")
-    (setq my/diff-changed-color "yellow")
-    (setq my/diff-removed-color "red"))
-
-	 ;;; Emacs
+** Set colors
+*** Default colors
+#+begin_src emacs-lisp
+(defun my/theme-default-colors ()
   (set-face-attribute 'default nil :foreground my/foreground-color :background my/background-color)
   (set-face-attribute 'link nil :foreground my/background-color :background my/foreground-color)
   (set-face-attribute 'highlight nil :foreground my/foreground-color :background my/mark-color)
@@ -10372,258 +10605,24 @@ mode-line-format
   (set-face-attribute 'error nil :foreground "#c6350b" :background)
   (set-face-attribute 'warning nil :foreground "DarkOrange" :background)
 
-  ;; Syntax
-
-  ;;font-lock-builtin-face
-  ;;  font-lock-comment-delimiter-face
-  ;;  font-lock-comment-face
-  ;;  font-lock-constant-face
-  ;;  font-lock-doc-face
-  ;;  font-lock-function-name-face
-  ;;  font-lock-keyword-face
-  ;;  font-lock-negation-char-face
-  ;;  font-lock-preprocessor-face
-  ;;  font-lock-regexp-grouping-backslash
-  ;;  font-lock-regexp-grouping-construct
-  ;;  font-lock-string-face
-  ;;  font-lock-type-face
-  ;;  font-lock-variable-name-face
-  ;;  font-lock-warning-face
-
   (set-face-attribute 'font-lock-doc-face nil :foreground my/foreground-color :background my/background-color-4)
-
-  (set-face-attribute 'font-lock-comment-face nil :foreground (color-lighten-name my/background-color 30) :background my/background-color) ;;:height my/comment-face-height)
-
+  ;; (set-face-attribute 'font-lock-comment-face nil :foreground (color-lighten-name my/background-color 30) :background my/background-color)
+  (set-face-attribute 'font-lock-comment-face nil :foreground (color-lighten-name my/background-color 30) :background (color-lighten-name my/background-color 2))
+  (set-face-attribute 'font-lock-comment-delimiter-face nil :foreground (color-lighten-name my/background-color 15) :background my/background-color)
   (my/set-face-to-default 'font-lock-string-face t)
+  (my/set-face-to-default 'font-lock-function-name-face t))
 
-  (my/set-face-to-default 'font-lock-function-name-face t)
+(defun my/theme-outline-colors ()
+  (set-face-attribute 'outline-1 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 2))
+  (set-face-attribute 'outline-2 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 2))
+  (set-face-attribute 'outline-3 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 2))
+  (set-face-attribute 'outline-4 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 2))
+  (set-face-attribute 'outline-5 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 2))
+  (set-face-attribute 'outline-6 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 2))
+  (set-face-attribute 'outline-7 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 2))
+  (set-face-attribute 'outline-8 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 2)))
 
-  (require 'hl-line)
-  (set-face-attribute 'hl-line nil :foreground my/foreground-color :background my/background-color-2 :underline nil)
-
-  (set-face-attribute 'outline-1 nil :foreground my/background-color :background my/foreground-color-6)
-  (set-face-attribute 'outline-2 nil :foreground my/background-color :background my/foreground-color-6)
-  (set-face-attribute 'outline-3 nil :foreground my/background-color :background my/foreground-color-6)
-  (set-face-attribute 'outline-4 nil :foreground my/background-color :background my/foreground-color-6)
-  (set-face-attribute 'outline-5 nil :foreground my/background-color :background my/foreground-color-6)
-  (set-face-attribute 'outline-6 nil :foreground my/background-color :background my/foreground-color-6)
-  (set-face-attribute 'outline-7 nil :foreground my/background-color :background my/foreground-color-6)
-  (set-face-attribute 'outline-8 nil :foreground my/background-color :background my/foreground-color-6)
-
-  ;; Evil
-  (setq evil-emacs-state-cursor '("purple" box))
-  (setq evil-normal-state-cursor '("red" box))
-  (setq evil-visual-state-cursor '("yellow" box))
-  (setq evil-insert-state-cursor '("orange" box))
-  (setq evil-replace-state-cursor '("green" box))
-  (setq evil-operator-state-cursor '("white" hollow))
-
-  ;; On-screen
-  ;;(set-face-attribute 'on-screen-shadow nil :foreground nil :background (color-lighten-name my/background-color 2))
-  ;;(set-face-attribute 'on-screen-fringe nil :foreground my/foreground-color :background my/background-color)
-
-  ;; Hl current line
-  ;; Underlines part of current line
-  ;;(set-face-attribute 'hl-line nil :foreground my/foreground-color :background nil :underline t)
-
-	 ;;;  Org
-  ;; =make this bold=
-  (set-face-attribute 'org-verbatim nil :weight 'bold)
-  (set-face-attribute 'org-code nil)
-
-  (set-face-attribute 'org-quote nil :slant 'italic)
-
-  (set-face-attribute 'org-mode-line-clock nil :foreground my/foreground-color :background my/foreground-color :height 'unspecified)
-
-  (set-face-attribute 'org-mode-line-clock-overrun nil :foreground my/foreground-color :background "red" :height 'unspecified)
-
-  (set-face-attribute 'org-agenda-filter-effort nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
-
-  (set-face-attribute 'org-agenda-filter-regexp nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
-
-  (set-face-attribute 'org-agenda-filter-tags nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
-
-  (set-face-attribute 'org-agenda-filter-category nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
-
-  ;; Disable right of header background coloring
-  (set-face-attribute 'org-meta-line nil :background nil)
-
-  ;; Used by org-src block borders, currently just using the comment face
-  ;;  (set-face-attribute 'org-block-begin-line nil :background my/background-color-3)
-  ;;  (set-face-attribute 'org-block-end-line nil :background my/background-color-3)
-
-  ;; Used by org src-blocks when in use, might also be used for other things
-  (set-face-attribute 'secondary-selection nil :background (color-darken-name my/background-color 5))
-
-	 ;;; Diff
-  (set-face-attribute 'diff-added nil  :background my/diff-added-color)
-  (set-face-attribute 'diff-changed nil :background my/diff-changed-color)
-  (set-face-attribute 'diff-removed nil :background my/diff-removed-color)
-
-  (set-face-attribute 'diff-refine-added nil  :background my/diff-added-hl-color)
-  (set-face-attribute 'diff-refine-changed nil :background my/diff-changed-hl-color)
-  (set-face-attribute 'diff-refine-removed nil :background my/diff-removed-hl-color)
-
-       ;;; Ediff
-  (set-face-attribute 'ediff-current-diff-A nil :background my/diff-removed-color)
-  (set-face-attribute 'ediff-current-diff-Ancestor nil :background my/diff-ancestor-color)
-  (set-face-attribute 'ediff-current-diff-B nil :background my/diff-added-color)
-  (set-face-attribute 'ediff-current-diff-C nil :background my/diff-changed-color)
-  (set-face-attribute 'ediff-even-diff-A nil :background (color-darken-name my/diff-removed-color 18))
-  (set-face-attribute 'ediff-even-diff-Ancestor nil :background (color-darken-name my/diff-ancestor-color 30))
-  (set-face-attribute 'ediff-even-diff-B nil :background (color-darken-name my/diff-added-color 18))
-  (set-face-attribute 'ediff-even-diff-C nil :background (color-darken-name my/diff-changed-color 18))
-  (set-face-attribute 'ediff-fine-diff-A nil :background my/diff-removed-hl-color)
-  (set-face-attribute 'ediff-fine-diff-Ancestor nil :background my/diff-ancestor-hl-color)
-  (set-face-attribute 'ediff-fine-diff-B nil :background my/diff-added-hl-color)
-  (set-face-attribute 'ediff-fine-diff-C nil :background my/diff-changed-hl-color)
-  (set-face-attribute 'ediff-odd-diff-A nil :background (color-darken-name my/diff-removed-color 20))
-  (set-face-attribute 'ediff-odd-diff-Ancestor nil :background (color-darken-name my/diff-ancestor-color 50))
-  (set-face-attribute 'ediff-odd-diff-B nil :background (color-darken-name my/diff-added-color 20))
-  (set-face-attribute 'ediff-odd-diff-C nil :background (color-darken-name my/diff-changed-color 20))
-
-     ;;;  Show-paren
-  (set-face-attribute 'show-paren-match nil :background my/background-color :foreground my/foreground-color)
-  (set-face-attribute 'show-paren-match-expression nil :background my/foreground-color :foreground my/background-color)
-  (set-face-attribute 'my/show-paren-offscreen-face nil :inherit 'highlight)
-
-     ;;; Wgrep
-  (set-face-attribute 'wgrep-file-face nil :background my/foreground-color-6 :foreground my/background-color)
-
-     ;;; Ivy grep
-  (set-face-attribute 'ivy-grep-info nil :background my/foreground-color-6 :foreground my/background-color)
-
-	 ;;; Symbol overlay
-  (if window-system
-      (set-face-attribute 'symbol-overlay-default-face nil :foreground my/foreground-color :background my/mark-color-5))
-
-	 ;;; Dired
-  (set-face-attribute 'dired-directory nil :foreground my/background-color :background my/foreground-color)
-  (my/set-face-to-default 'dired-perm-write 't)
-
-	 ;;; Spray
-  ;;  (set-face-attribute 'spray-accent-face nil :foreground "red" :background my/background-color)
-  (set-face-attribute 'spray-accent-face nil :foreground my/foreground-color :background my/background-color :underline t)
-
-	 ;;; Isearch
-  (set-face-attribute 'isearch nil :foreground my/background-color :background my/foreground-color)
-  (set-face-attribute 'lazy-highlight nil :foreground my/background-color :background my/foreground-color)
-  ;;; Haskell
-  (set-face-attribute 'haskell-literate-comment-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-
-	 ;;; Highlight thing
-  ;;(set-face-attribute 'symbol-overlay nil :foreground my/foreground-color :background my/mark-color)
-
-	 ;;; Company
-  (set-face-attribute 'company-scrollbar-bg nil :background my/background-color)
-  (set-face-attribute 'company-scrollbar-fg nil :background my/foreground-color)
-
-  ;; Selected entry
-  (set-face-attribute 'company-tooltip-selection nil :background my/foreground-color :foreground my/background-color)
-  ;; All unmatching text
-  (set-face-attribute 'company-tooltip nil :foreground my/foreground-color :background my/background-color-1)
-  ;; All matching text
-  (set-face-attribute 'company-tooltip-common nil :foreground my/background-color :background my/foreground-color)
-
-	 ;;; Popup menu
-  ;; Selected entry
-  (require 'popup)
-  (set-face-attribute 'popup-menu-selection-face nil :foreground my/background-color :background my/foreground-color)
-  ;; All unmatching text
-  (set-face-attribute 'popup-menu-face nil :foreground my/foreground-color :background my/background-color-1)
-
-	 ;;; Ivy
-  ;; Ivy also uses "font-lock-doc-face" for the documentation
-  (set-face-attribute 'ivy-current-match nil :foreground my/background-color :background my/foreground-color)
-  (set-face-attribute 'ivy-cursor nil :foreground my/background-color :background my/foreground-color)
-  (set-face-attribute 'ivy-minibuffer-match-highlight nil :foreground my/background-color :background my/foreground-color)
-  ;;(set-face-attribute 'ivy-separator nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-
-  (set-face-attribute 'ivy-minibuffer-match-face-1 nil :foreground my/background-color :background my/foreground-color)
-  (set-face-attribute 'ivy-minibuffer-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
-  (set-face-attribute 'ivy-minibuffer-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
-  (set-face-attribute 'ivy-minibuffer-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
-
-  ;;; Ivy yasnippet
-  (set-face-attribute 'ivy-yasnippet-key nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-#+end_src
-
-Ivy rich
-#+begin_src emacs-lisp
-  (set-face-attribute 'my/ivy-rich-doc-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-  (set-face-attribute 'my/ivy-rich-switch-buffer-indicator-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-  (set-face-attribute 'my/ivy-rich-switch-buffer-major-mode-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-  (set-face-attribute 'my/ivy-rich-switch-buffer-size-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-  (set-face-attribute 'my/ivy-rich-switch-buffer-path-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-  (set-face-attribute 'my/ivy-rich-switch-buffer-project-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-  (set-face-attribute 'my/ivy-rich-find-file-symlink-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-
-	 ;;; Swiper
-  (set-face-attribute 'swiper-match-face-1 nil :foreground my/background-color :background my/foreground-color)
-  (set-face-attribute 'swiper-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
-  (set-face-attribute 'swiper-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
-  (set-face-attribute 'swiper-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
-
-	 ;;; Avy
-  (set-face-attribute 'avy-lead-face nil :foreground my/background-color :background my/foreground-color-6)
-  (set-face-attribute 'avy-lead-face-0 nil :foreground my/background-color :background my/foreground-color-2)
-  (set-face-attribute 'avy-lead-face-1 nil :foreground my/background-color :background my/foreground-color-4)
-  (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background my/foreground-color-6)
-
-	 ;;; Eshell
-  (require 'em-prompt)
-  (if window-system
-      (set-face-attribute 'eshell-prompt nil :foreground "purple" :background my/background-color)
-    (set-face-attribute 'eshell-prompt nil :foreground "magenta" :background my/background-color))
-
-	 ;;; Yascroll
-  (set-face-attribute 'yascroll:thumb-fringe nil :background "slateblue" :foreground "slateblue")
-  (set-face-attribute 'yascroll:thumb-text-area nil :background "slateblue")
-
-	 ;;; Term
-  (set-face-attribute 'term-color-black nil :foreground "black" :background "black")
-  (set-face-attribute 'term-color-blue nil :foreground "blue" :background "blue")
-  (set-face-attribute 'term-color-cyan nil :foreground "cyan" :background "cyan")
-  (set-face-attribute 'term-color-green nil :foreground "green" :background "green")
-  (set-face-attribute 'term-color-magenta nil :foreground "magenta" :background "magenta")
-  (set-face-attribute 'term-color-red nil :foreground "red" :background "red")
-  (set-face-attribute 'term-color-white nil :foreground "white" :background "white")
-  (set-face-attribute 'term-color-yellow nil :foreground "yellow" :background "yellow")
-
-	 ;;; Litable
-  ;;  (set-face-attribute 'litable-result-face nil :foreground my/foreground-color :background my/background-color :weight 'bold)
-  ;;  (set-face-attribute 'litable-substitution-face nil :foreground my/foreground-color :background my/background-color :weight 'bold)
-
-	 ;;; Evil-goggles
-	 ;;;; 2 color approach
-  ;; (set-face-attribute 'evil-goggles-change-face nil :foreground my/background-color :background my/foreground-color)
-  ;; (set-face-attribute 'evil-goggles-commentary-face nil :foreground my/background-color :background my/foreground-color)
-  ;; (set-face-attribute 'evil-goggles-delete-face nil :foreground my/background-color :background my/foreground-color)
-  ;; (set-face-attribute 'evil-goggles-fill-and-move-face nil :foreground my/background-color :background my/foreground-color)
-  ;; (set-face-attribute 'evil-goggles-indent-face nil :foreground my/background-color :background my/foreground-color)
-  ;; (set-face-attribute 'evil-goggles-join-face nil :foreground my/background-color :background my/foreground-color)
-  ;; (set-face-attribute 'evil-goggles-paste-face nil :foreground my/background-color :background my/foreground-color)
-  ;; (set-face-attribute 'evil-goggles-record-macro-face nil :foreground my/background-color :background my/foreground-color)
-  ;; (set-face-attribute 'evil-goggles-replace-with-register-face nil :foreground my/background-color :background my/foreground-color)
-  ;; (set-face-attribute 'evil-goggles-set-marker-face nil :foreground my/background-color :background my/foreground-color)
-  ;; (set-face-attribute 'evil-goggles-shift-face nil :foreground my/background-color :background my/foreground-color)
-  ;; (set-face-attribute 'evil-goggles-surround-face nil :foreground my/background-color :background my/foreground-color)
-  ;; (set-face-attribute 'evil-goggles-yank-face nil :foreground my/background-color :background my/foreground-color)
-
-
-  ;; (set-face-attribute 'diff-added nil  :background "green")
-  ;; (set-face-attribute 'diff-changed nil :background "yellow")
-  ;; (set-face-attribute 'diff-removed nil :background "red")
-
-  ;; Diff-hl
-  (set-face-attribute 'diff-hl-change nil :background (face-attribute 'diff-changed :background))
-
-  ;; Paren highlight
-  ;;(set-face-attribute 'show-paren-match nil :foreground my/foreground-color :background my/mark-color-5)
-  (set-face-attribute 'show-paren-match nil :foreground my/background-color :background my/foreground-color)
-  (set-face-attribute 'show-paren-mismatch nil :background "red")
-
-   ;;; Mode line
+(defun my/theme-header-line-color ()
   (set-face-attribute 'header-line nil
 		      :foreground my/foreground-color
 		      ;;:background "#063000"
@@ -10642,18 +10641,212 @@ Ivy rich
   ;;  (set-face-attribute 'mode-line-inactive nil
   ;;                      :foreground my/foreground-color
   ;;                      :background my/background-color)
+  )
 
-  ;; Highlight faces
-  ;;(highlight-indent-guides-auto-set-faces)
+(defun my/theme-evil-colors ()
+  ;; Evil
+  (setq evil-emacs-state-cursor '("purple" box))
+  (setq evil-normal-state-cursor '("red" box))
+  (setq evil-visual-state-cursor '("yellow" box))
+  (setq evil-insert-state-cursor '("orange" box))
+  (setq evil-replace-state-cursor '("green" box))
+  (setq evil-operator-state-cursor '("white" hollow))
+  (setq evil-operator-state-cursor '("white" hollow)))
 
-     ;;; lsp
+(defun my/theme-diff-colors ()
+  ;; Diff
+  (set-face-attribute 'diff-added nil  :background my/diff-added-color)
+  (set-face-attribute 'diff-changed nil :background my/diff-changed-color)
+  (set-face-attribute 'diff-removed nil :background my/diff-removed-color)
+
+  (set-face-attribute 'diff-refine-added nil  :background my/diff-added-hl-color)
+  (set-face-attribute 'diff-refine-changed nil :background my/diff-changed-hl-color)
+  (set-face-attribute 'diff-refine-removed nil :background my/diff-removed-hl-color)
+
+  ;; Ediff
+  (set-face-attribute 'ediff-current-diff-A nil :background my/diff-removed-color)
+  (set-face-attribute 'ediff-current-diff-Ancestor nil :background my/diff-ancestor-color)
+  (set-face-attribute 'ediff-current-diff-B nil :background my/diff-added-color)
+  (set-face-attribute 'ediff-current-diff-C nil :background my/diff-changed-color)
+  (set-face-attribute 'ediff-even-diff-A nil :background (color-darken-name my/diff-removed-color 18))
+  (set-face-attribute 'ediff-even-diff-Ancestor nil :background (color-darken-name my/diff-ancestor-color 30))
+  (set-face-attribute 'ediff-even-diff-B nil :background (color-darken-name my/diff-added-color 18))
+  (set-face-attribute 'ediff-even-diff-C nil :background (color-darken-name my/diff-changed-color 18))
+  (set-face-attribute 'ediff-fine-diff-A nil :background my/diff-removed-hl-color)
+  (set-face-attribute 'ediff-fine-diff-Ancestor nil :background my/diff-ancestor-hl-color)
+  (set-face-attribute 'ediff-fine-diff-B nil :background my/diff-added-hl-color)
+  (set-face-attribute 'ediff-fine-diff-C nil :background my/diff-changed-hl-color)
+  (set-face-attribute 'ediff-odd-diff-A nil :background (color-darken-name my/diff-removed-color 20))
+  (set-face-attribute 'ediff-odd-diff-Ancestor nil :background (color-darken-name my/diff-ancestor-color 50))
+  (set-face-attribute 'ediff-odd-diff-B nil :background (color-darken-name my/diff-added-color 20))
+  (set-face-attribute 'ediff-odd-diff-C nil :background (color-darken-name my/diff-changed-color 20)))
+
+(defun my/theme-org-colors ()
+  ;; =affects this text=
+  (set-face-attribute 'org-verbatim nil :weight 'bold)
+  (set-face-attribute 'org-quote nil :slant 'italic)
+  (set-face-attribute 'org-mode-line-clock nil :foreground my/foreground-color :background my/foreground-color :height 'unspecified)
+  (set-face-attribute 'org-mode-line-clock-overrun nil :foreground my/foreground-color :background "red" :height 'unspecified)
+  (set-face-attribute 'org-agenda-filter-effort nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
+  (set-face-attribute 'org-agenda-filter-regexp nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
+  (set-face-attribute 'org-agenda-filter-tags nil :foreground my/foreground-color :background my/background-color :height 'unspecified) (set-face-attribute 'org-agenda-filter-category nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
+
+  (set-face-attribute 'org-code nil :background (color-darken-name my/background-color 5) :underline t)
+  (set-face-attribute 'org-block nil :background my/background-color-1)
+
+  ;; Disable right of header background coloring
+  (set-face-attribute 'org-meta-line nil :background nil)
+
+  ;; Used by org-src block borders, by default it uses the comment face
+  ;;  (set-face-attribute 'org-block-begin-line nil :background my/background-color-3)
+  ;;  (set-face-attribute 'org-block-end-line nil :background my/background-color-3)
+
+  ;; Used by org src-blocks when in use, might also be used for other things
+  (set-face-attribute 'secondary-selection nil :background (color-darken-name my/background-color 5)))
+#+end_src
+
+*** Package colors
+#+begin_src emacs-lisp
+(defun my/theme-package-colors ()
+  (when (require 'hl-line nil 'noerror)
+    (set-face-attribute 'hl-line nil :foreground my/foreground-color :background my/background-color-2 :underline nil))
+
+
+  ;;  Show-paren
+  (set-face-attribute 'show-paren-match nil :background my/background-color :foreground my/foreground-color)
+  (set-face-attribute 'show-paren-match-expression nil :background my/foreground-color :foreground my/background-color)
+  (set-face-attribute 'my/show-paren-offscreen-face nil :inherit 'highlight)
+
+  ;; Wgrep
+  (set-face-attribute 'wgrep-file-face nil :background my/foreground-color-6 :foreground my/background-color)
+
+  ;; Ivy grep
+  (set-face-attribute 'ivy-grep-info nil :background my/foreground-color-6 :foreground my/background-color)
+
+  ;; Symbol overlay
+  (if window-system
+      (set-face-attribute 'symbol-overlay-default-face nil :foreground my/foreground-color :background my/mark-color-5))
+
+  ;; Dired
+  (set-face-attribute 'dired-directory nil :foreground my/background-color :background my/foreground-color)
+  (my/set-face-to-default 'dired-perm-write 't)
+
+  ;; Spray
+  ;;  (set-face-attribute 'spray-accent-face nil :foreground "red" :background my/background-color)
+  (set-face-attribute 'spray-accent-face nil :foreground my/foreground-color :background my/background-color :underline t)
+
+  ;; Isearch
+  (set-face-attribute 'isearch nil :foreground my/background-color :background my/foreground-color)
+  (set-face-attribute 'lazy-highlight nil :foreground my/background-color :background my/foreground-color)
+  ;; Haskell
+  (set-face-attribute 'haskell-literate-comment-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
+
+  ;; Highlight thing
+  ;;(set-face-attribute 'symbol-overlay nil :foreground my/foreground-color :background my/mark-color)
+
+  ;; Company
+  (set-face-attribute 'company-scrollbar-bg nil :background my/background-color)
+  (set-face-attribute 'company-scrollbar-fg nil :background my/foreground-color)
+  ;; Selected entry
+  (set-face-attribute 'company-tooltip-selection nil :background my/foreground-color :foreground my/background-color)
+  ;; All unmatching text
+  (set-face-attribute 'company-tooltip nil :foreground my/foreground-color :background my/background-color-1)
+  ;; All matching text
+  (set-face-attribute 'company-tooltip-common nil :foreground my/background-color :background my/foreground-color)
+
+  ;; Popup menu
+  ;; Selected entry
+  (when (require 'popup nil 'noerror)
+    (set-face-attribute 'popup-menu-selection-face nil :foreground my/background-color :background my/foreground-color)
+    ;; All unmatching text
+    (set-face-attribute 'popup-menu-face nil :foreground my/foreground-color :background my/background-color-1))
+
+  ;; Ivy
+  ;; Ivy also uses "font-lock-doc-face" for the documentation
+  (set-face-attribute 'ivy-current-match nil :foreground my/background-color :background my/foreground-color)
+  (set-face-attribute 'ivy-cursor nil :foreground my/background-color :background my/foreground-color)
+  (set-face-attribute 'ivy-minibuffer-match-highlight nil :foreground my/background-color :background my/foreground-color)
+  ;;(set-face-attribute 'ivy-separator nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
+
+  (set-face-attribute 'ivy-minibuffer-match-face-1 nil :foreground my/background-color :background my/foreground-color)
+  (set-face-attribute 'ivy-minibuffer-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
+  (set-face-attribute 'ivy-minibuffer-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
+  (set-face-attribute 'ivy-minibuffer-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
+
+  ;; Ivy yasnippet
+  (set-face-attribute 'ivy-yasnippet-key nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
+
+  ;; Ivy rich
+  (set-face-attribute 'my/ivy-rich-doc-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
+  (set-face-attribute 'my/ivy-rich-switch-buffer-indicator-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
+  (set-face-attribute 'my/ivy-rich-switch-buffer-major-mode-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
+  (set-face-attribute 'my/ivy-rich-switch-buffer-size-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
+  (set-face-attribute 'my/ivy-rich-switch-buffer-path-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
+  (set-face-attribute 'my/ivy-rich-switch-buffer-project-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
+  (set-face-attribute 'my/ivy-rich-find-file-symlink-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
+
+  ;; Swiper
+  (set-face-attribute 'swiper-match-face-1 nil :foreground my/background-color :background my/foreground-color)
+  (set-face-attribute 'swiper-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
+  (set-face-attribute 'swiper-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
+  (set-face-attribute 'swiper-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
+
+  ;; Avy
+  (set-face-attribute 'avy-lead-face nil :foreground my/background-color :background my/foreground-color-6)
+  (set-face-attribute 'avy-lead-face-0 nil :foreground my/background-color :background my/foreground-color-2)
+  (set-face-attribute 'avy-lead-face-1 nil :foreground my/background-color :background my/foreground-color-4)
+  (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background my/foreground-color-6)
+
+  ;; Eshell
+  (require 'em-prompt)
+  (if window-system
+      (set-face-attribute 'eshell-prompt nil :foreground "purple" :background my/background-color)
+    (set-face-attribute 'eshell-prompt nil :foreground "magenta" :background my/background-color))
+
+  ;; Yascroll
+  (set-face-attribute 'yascroll:thumb-fringe nil :background "slateblue" :foreground "slateblue")
+  (set-face-attribute 'yascroll:thumb-text-area nil :background "slateblue")
+
+  ;; Term
+  (set-face-attribute 'term-color-black nil :foreground "black" :background "black")
+  (set-face-attribute 'term-color-blue nil :foreground "blue" :background "blue")
+  (set-face-attribute 'term-color-cyan nil :foreground "cyan" :background "cyan")
+  (set-face-attribute 'term-color-green nil :foreground "green" :background "green")
+  (set-face-attribute 'term-color-magenta nil :foreground "magenta" :background "magenta")
+  (set-face-attribute 'term-color-red nil :foreground "red" :background "red")
+  (set-face-attribute 'term-color-white nil :foreground "white" :background "white")
+  (set-face-attribute 'term-color-yellow nil :foreground "yellow" :background "yellow")
+
+  ;; Flyspell
+  (when window-system
+    (set-face-attribute 'flyspell-incorrect nil :underline '(:style wave :color "Blue"))
+    (set-face-attribute 'flyspell-duplicate nil :underline '(:style wave :color "LightBlue")))
+
+  ;; Litable
+  (when (require 'litable nil 'noerror)
+    (set-face-attribute 'litable-result-face nil :foreground my/foreground-color :background my/background-color :weight 'bold)
+    (set-face-attribute 'litable-substitution-face nil :foreground my/foreground-color :background my/background-color :weight 'bold))
+
+  ;; Diff-hl
+  (set-face-attribute 'diff-hl-change nil :background (face-attribute 'diff-changed :background))
+
+  ;; Paren highlight
+  ;;(set-face-attribute 'show-paren-match nil :foreground my/foreground-color :background my/mark-color-5)
+  (set-face-attribute 'show-paren-match nil :foreground my/background-color :background my/foreground-color)
+  (set-face-attribute 'show-paren-mismatch nil :background "red")
+
+  ;; Flycheck-posframe
+  (set-face-attribute 'flycheck-posframe-background-face nil :foreground my/foreground-color :background "#000000")
+
+  ;; lsp
   (my/set-face-to-default 'lsp-ui-doc-background nil)
   ;;(set-face-attribute 'lsp-ui-doc-background nil :foreground my/foreground-color :background my/background-color)
-     ;;;; Doc
+
+  ;; lsp Doc
   (set-face-attribute 'lsp-ui-doc-header nil :foreground my/foreground-color :background my/background-color-4)
   (set-face-attribute 'lsp-ui-doc-url nil :foreground my/background-color :background my/foreground-color)
 
-     ;;;; Sideline
+  ;; lsp Sideline
   (my/set-face-to-default 'lsp-ui-peek-filename nil)
   (my/set-face-to-default 'lsp-ui-peek-footer nil)
   (my/set-face-to-default 'lsp-ui-peek-header nil)
@@ -10680,25 +10873,29 @@ Ivy rich
   (set-face-attribute 'lsp-ui-sideline-symbol nil :foreground my/background-color :background my/foreground-color)
   (set-face-attribute 'lsp-ui-sideline-symbol-info nil :foreground my/mark-color :background my/background-color)
 
-     ;;;; Lens
-  (set-face-attribute 'lsp-lens-face nil :foreground my/foreground-color :background my/mark-color-4 :height 0.8))
-#+end_src
+  ;; lsp lens
+  ;; (set-face-attribute 'lsp-lens-face nil :foreground my/foreground-color :background my/mark-color-4 :height 0.8)
+  (set-face-attribute 'lsp-lens-face nil :foreground 'unspecified :background my/background-color :inherit font-lock-comment-face)
 
-Flyspell
-#+begin_src emacs-lisp
-(when window-system
-  (set-face-attribute 'flyspell-incorrect nil :underline '(:style wave :color "Blue"))
-  (set-face-attribute 'flyspell-duplicate nil :underline '(:style wave :color "LightBlue")))
+  ;; Highlight faces
+  (when (require 'highlight-indent-guides nil 'noerror)
+    (highlight-indent-guides-auto-set-faces)))
 
-   ;;; Which-key
+(defun my/theme ()
+  (interactive)
+  (my/theme-remove-color)
+  (my/theme-default-colors)
+  (my/theme-outline-colors)
+  (my/theme-header-line-color)
+  (my/theme-evil-colors)
+  (my/theme-diff-colors)
+  (my/theme-org-colors)
+  (my/theme-package-colors))
+
 (if window-system
     (add-hook 'exwm-init-hook 'my/theme)
   (add-hook 'after-init-hook 'my/theme))
-#+end_src
 
-(counsel-faces)
-
-#+begin_src emacs-lisp
 (define-key my/leader-map (kbd "M-c") 'my/theme)
 #+end_src
 
@@ -10796,23 +10993,13 @@ Fixes errors
 #+begin_src emacs-lisp
 (setq undo-tree-enable-undo-in-region nil)
 (setq-default undo-tree-enable-undo-in-region nil)
-#+end_src
 
-(setq undo-tree-auto-save-history t)
-(setq-default undo-tree-auto-save-history t)
-
-#+begin_src emacs-lisp
 (setq undo-tree-visualizer-lazy-drawing nil)
 (setq-default undo-tree-visualizer-lazy-drawing nil)
 
 (setq undo-tree-visualizer-timestamps t)
 (setq undo-tree-visualizer-diff t)
 #+end_src
-
-(setq undo-tree-auto-save-history t)
-
-(setq undo-tree-history-directory-alist '(("." . "~/.emacs.d/saves")))
-(make-directory (concat spacemacs-cache-directory "undo"))
 
 *** Keys
 #+begin_src emacs-lisp

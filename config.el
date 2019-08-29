@@ -39,7 +39,8 @@
 ;;   },
 ;;   "blacklist": [
 ;;   ]
-;; }#+end_src
+;; }
+;; #+end_src
 
 ;; **** System packages
 ;; plasma-browser-integration
@@ -7197,6 +7198,9 @@ Borrowed from mozc.el."
 
 ;; ** Tramp
 ;; (setq tramp-default-method "scpx")
+
+;; *** Performance
+;; https://gist.github.com/ralt/a36288cd748ce185b26237e6b85b27bb
 
 ;; ** Netstat
 (defun my/net-utils-mode ()
