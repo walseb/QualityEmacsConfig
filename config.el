@@ -992,7 +992,6 @@
 ;; Example
 (setq evil-insert-state-modes nil)
 
-
 (cl-loop for (mode . state) in '(
 				 ;; So i C-leader works for exwm windows
 				 (exwm-mode . emacs)
@@ -2116,6 +2115,9 @@ Borrowed from mozc.el."
   (add-hook 'org-mode-hook (lambda () (interactive) (org-bullets-mode))))
 
 ;; ** Visuals
+;; *** Highlight whole heading line
+(setq org-fontify-whole-heading-line t)
+
 ;; *** Hide emphasis markers
 ;; The equal signs =here= to make it bold should not be visible
 (setq org-hide-emphasis-markers t)
@@ -2454,6 +2456,7 @@ Borrowed from mozc.el."
 ;; ** Visuals
 (setq counsel-outline-face-style nil)
 
+;; *** Set outshine fonts to inherit from outline
 (set-face-attribute 'outshine-level-1 nil :inherit 'outline-1) ;;:height my/org-level-1-height)
 (set-face-attribute 'outshine-level-2 nil :inherit 'outline-2) ;;:height my/org-level-2-height)
 (set-face-attribute 'outshine-level-3 nil :inherit 'outline-3) ;;:height my/org-level-3-height)
@@ -2462,6 +2465,10 @@ Borrowed from mozc.el."
 (set-face-attribute 'outshine-level-6 nil :inherit 'outline-6) ;;:height my/org-level-6-height)
 (set-face-attribute 'outshine-level-7 nil :inherit 'outline-7) ;;:height my/org-level-7-height)
 (set-face-attribute 'outshine-level-8 nil :inherit 'outline-8) ;;:height my/org-level-8-height)
+
+;; *** Fontify whole line
+;; This makes it so the whole line the heading is on has the heading background color
+(setq outshine-fontify-whole-heading-line t)
 
 ;; ** Narrowing
 ;;(define-prefix-command 'my/narrow-map)
@@ -7939,6 +7946,8 @@ Borrowed from mozc.el."
     ("<-<" . ?↢)
     (">->" . ?↣)
 
+    ;; (">=>" . (?\s (Br . Bl) ?\s (Br . Bl) #Xe146))
+
     ("-<" . ?⤙)
     (">-" . ?⤚)
 
@@ -8043,6 +8052,7 @@ Borrowed from mozc.el."
 ;; https://github.com/enomsg/vim-haskellConcealPlus/blob/master/after/syntax/haskell.vim
 ;; http://haskell.github.io/haskell-mode/manual/latest/Unicode-support.html#Unicode-support
 ;; https://github.com/roelvandijk/emacs-haskell-unicode-input-method/blob/master/haskell-unicode-input-method.el
+;; https://emacs.nasy.moe/#orgf407c8c
 (defconst my/haskell-symbols
   '(("\\" . ?λ)
     ("()" . ?∅)
@@ -8086,6 +8096,7 @@ Borrowed from mozc.el."
     ("+++" . ?⧻)
     ))
 
+;; https://en.wikipedia.org/wiki/Mathematical_operators_and_symbols_in_Unicode
 (defconst my/haskell-type-symbols
   '(
     ("Bool" . ?𝔹)
@@ -8094,6 +8105,8 @@ Borrowed from mozc.el."
     ("Natural" . ?ℕ)
     ("Rational" . ?ℚ)
     ("Irrational" . ?ℙ)
+    ("False" . ?𝔽)
+    ("True" . ?𝕋)
     ))
 
 ;; *** Elisp
@@ -9054,7 +9067,7 @@ Borrowed from mozc.el."
 (setq c-font-lock-keywords-3 '())
 
 
-;; * Set theme
+;; * Theme
 (defvar my/default-face-list '())
 
 (defun my/set-face-to-default (face-name is-syntax)
@@ -9148,14 +9161,24 @@ Borrowed from mozc.el."
   (my/set-face-to-default 'font-lock-function-name-face t))
 
 (defun my/theme-outline-colors ()
-  (set-face-attribute 'outline-1 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 2))
-  (set-face-attribute 'outline-2 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 2))
-  (set-face-attribute 'outline-3 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 2))
-  (set-face-attribute 'outline-4 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 2))
-  (set-face-attribute 'outline-5 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 2))
-  (set-face-attribute 'outline-6 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 2))
-  (set-face-attribute 'outline-7 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 2))
-  (set-face-attribute 'outline-8 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 2)))
+  (set-face-attribute 'outline-1 nil :foreground (color-lighten-name my/background-color 2) :background (color-darken-name my/foreground-color 50))
+  (set-face-attribute 'outline-2 nil :foreground (color-lighten-name my/background-color 2) :background (color-darken-name my/foreground-color 50))
+  (set-face-attribute 'outline-3 nil :foreground (color-lighten-name my/background-color 2) :background (color-darken-name my/foreground-color 50))
+  (set-face-attribute 'outline-4 nil :foreground (color-lighten-name my/background-color 2) :background (color-darken-name my/foreground-color 50))
+  (set-face-attribute 'outline-5 nil :foreground (color-lighten-name my/background-color 2) :background (color-darken-name my/foreground-color 50))
+  (set-face-attribute 'outline-6 nil :foreground (color-lighten-name my/background-color 2) :background (color-darken-name my/foreground-color 50))
+  (set-face-attribute 'outline-7 nil :foreground (color-lighten-name my/background-color 2) :background (color-darken-name my/foreground-color 50))
+  (set-face-attribute 'outline-8 nil :foreground (color-lighten-name my/background-color 2) :background (color-darken-name my/foreground-color 50)))
+
+;; (defun my/theme-outline-colors ()
+;;   (set-face-attribute 'outline-1 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 10))
+;;   (set-face-attribute 'outline-2 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 10))
+;;   (set-face-attribute 'outline-3 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 10))
+;;   (set-face-attribute 'outline-4 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 10))
+;;   (set-face-attribute 'outline-5 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 10))
+;;   (set-face-attribute 'outline-6 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 10))
+;;   (set-face-attribute 'outline-7 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 10))
+;;   (set-face-attribute 'outline-8 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 10)))
 
 (defun my/theme-header-line-color ()
   (set-face-attribute 'header-line nil
@@ -9226,7 +9249,7 @@ Borrowed from mozc.el."
   (set-face-attribute 'org-agenda-filter-regexp nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
   (set-face-attribute 'org-agenda-filter-tags nil :foreground my/foreground-color :background my/background-color :height 'unspecified) (set-face-attribute 'org-agenda-filter-category nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
 
-  (set-face-attribute 'org-code nil :background (color-darken-name my/background-color 5) :underline t)
+  (set-face-attribute 'org-code nil :background my/background-color-3)
   (set-face-attribute 'org-block nil :background my/background-color-1)
 
   ;; Disable right of header background coloring
