@@ -1629,7 +1629,7 @@ Borrowed from mozc.el."
 
 ;; ** Smooth scroll
 ;; Scroll 1 line at a time when cursor goes outside screen
-(setq scroll-conservatively 100)
+(setq scroll-conservatively 200)
 
 ;; ** Bell
 ;; Disable bell
@@ -8024,7 +8024,7 @@ Borrowed from mozc.el."
 ;; Problem seems to be that the syntax specific comment-delimiter overides it
 ;; Annother problem is that the contrast between comment and this is really bad, so you are barely able to see the bullets
 (add-hook 'prog-mode-hook '(lambda ()
-			     (ov-set comment-start `(face (:foreground ,my/background-color-4 :background ,my/background-color-2)))))
+			     (ov-set (s-trim-right comment-start) `(face (:foreground ,my/background-color-4 :background ,my/background-color-2)))))
 
 (defun my/prettify-comment ()
   `((,(string-trim comment-start) . ,my/pretty-comment-symbol)))
@@ -8336,11 +8336,7 @@ START should be at the beginning of a line."
 (setq yascroll:scroll-bar '(left-fringe))
 
 ;; *** Fix for emacs 27
-;; Seems like this doesn't apply any more to latest?
-;; ;; Yasnippet is broken on emacs 27 with error:
-;; ;; yascroll: (wrong-number-of-arguments (left-width right-width outside-margins) 4)
-;; ;; This fixes that
-;; (when (>= emacs-major-version 27)
+;; The function ~window-fringes~ returns a list of 4 results on some versions of emacs because of some reason. This fixes that
 ;;   (defun yascroll:choose-scroll-bar ()
 ;;     (when (memq window-system yascroll:enabled-window-systems)
 ;;       (cl-destructuring-bind (left-width right-width outside-margins pers)
@@ -8351,7 +8347,7 @@ START should be at the beginning of a line."
 ;;			     (> left-width 0))
 ;;			(and (eq scroll-bar 'right-fringe)
 ;;			     (> right-width 0)))
-;;		 return scroll-bar)))))
+;;		 return scroll-bar))))
 
 ;; ** Hl-Todo
 (straight-use-package 'hl-todo)
