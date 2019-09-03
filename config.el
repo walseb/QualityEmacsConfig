@@ -5120,12 +5120,16 @@ Borrowed from mozc.el."
     (add-to-list 'my/macro-store macro-name)))
 
 (defun my/macro-run (&optional count)
-  "COUNT is a repeat count, or nil for once, or 0 for infinite loop."
-  (interactive "P")
-  (let ((to-run (completing-read "Run macro: " my/macro-store)))
-    ;; (funcall (symbol-function (intern to-run)))))
-    ;; (execute-kbd-macro (intern macro-test)) (intern "macro-test")) count)))
-    (execute-kbd-macro (symbol-function (intern to-run)) count)))
+  "If COUNT is a number repeat that amount of times, otherwise if it's nil run the macro until an error is thrown."
+  (let* ((to-run-string (completing-read "Run macro: " my/macro-store))
+	 (to-run (symbol-function (intern to-run-string))))
+    (if count
+	(dotimes (i count)
+	  (funcall to-run))
+      (while (ignore-errors (funcall to-run))))))
+;; This seems to be a better way to call the macros, but I can't get it to work
+;; (execute-kbd-macro (intern macro-test)) (intern "macro-test")) count)))
+;; (execute-kbd-macro (symbol-function (intern to-run)) count)))
 
 (defun my/macro-modify (&optional prefix)
   (interactive "P")
@@ -5138,13 +5142,14 @@ Borrowed from mozc.el."
 
 ;; *** Evil operator
 (evil-define-operator evil-macro-run (beg end type)
-  "Run macro on BEG to END."
-  (interactive "<R>")
-  (evil-normal-state)
-  (save-restriction
-    (goto-char (point-min))
-    (narrow-to-region beg end)
-    (my/macro-run 0)))
+"Run macro on BEG to END."
+(interactive "<R>")
+(evil-normal-state)
+(save-restriction
+  (goto-char (point-min))
+  (narrow-to-region beg end)
+  ;; current-prefix-arg here is used because I don't know how to access the universal argument in this function
+  (my/macro-run current-prefix-arg)))
 
 ;; *** Keys
 (my/evil-normal-define-key "q" 'my/macro-record-toggle)
@@ -7983,6 +7988,9 @@ Borrowed from mozc.el."
   '(("&&" . ?∧)
     ("||" . ?∨)))
 
+;; *** Comment delimiter
+;; Font lock automatically handles comment highlighting through the function font-lock-fontify-syntactically-region
+;; (setq my/pretty-comment-symbol ?|)
 (setq my/pretty-comment-symbol ?|)
 
 (when window-system
@@ -8003,8 +8011,20 @@ Borrowed from mozc.el."
   ;; (setq my/pretty-comment-symbol ?█)
   ;; (setq my/pretty-comment-symbol ?▏)
   ;; (setq my/pretty-comment-symbol ?▐)
-  (setq my/pretty-comment-symbol ?▍)
+
+  ;; (setq my/pretty-comment-symbol ?▍)
+  (setq my/pretty-comment-symbol ? )
   )
+
+(straight-use-package 'ov)
+
+(require 'ov)
+
+;; I need to uses font lock here instead so that it can update as you type
+;; Problem seems to be that the syntax specific comment-delimiter overides it
+;; Annother problem is that the contrast between comment and this is really bad, so you are barely able to see the bullets
+(add-hook 'prog-mode-hook '(lambda ()
+			     (ov-set comment-start `(face (:foreground ,my/background-color-4 :background ,my/background-color-2)))))
 
 (defun my/prettify-comment ()
   `((,(string-trim comment-start) . ,my/pretty-comment-symbol)))
@@ -8012,6 +8032,50 @@ Borrowed from mozc.el."
 (defun my/prettify-comment-lisp ()
   `((,(concat (string-trim comment-start) (string-trim comment-start)) . ,my/pretty-comment-symbol)))
 
+;; **** Disable comment auto highlightning
+(defun font-lock-fontify-syntactically-region (start end &optional loudly)
+  "Put proper face on each string and comment between START and END.
+START should be at the beginning of a line."
+  (syntax-propertize end)  ; Apply any needed syntax-table properties.
+  (with-syntax-table (or syntax-ppss-table (syntax-table))
+    (let ((comment-end-regexp
+	   (or font-lock-comment-end-skip
+	       (regexp-quote
+		(replace-regexp-in-string "^ *" "" comment-end))))
+	  ;; Find the `start' state.
+	  (state (syntax-ppss start))
+	  face beg)
+      (if loudly (message "Fontifying %s... (syntactically...)" (buffer-name)))
+      ;;
+      ;; Find each interesting place between here and `end'.
+      (while
+	  (progn
+	    (when (or (nth 3 state) (nth 4 state))
+	      (setq face (funcall font-lock-syntactic-face-function state))
+	      (setq beg (max (nth 8 state) start))
+	      (setq state (parse-partial-sexp (point) end nil nil state
+					      'syntax-table))
+	      (when face (put-text-property beg (point) 'face face))
+	      ;; (when (and (eq face 'font-lock-comment-face)
+	      ;;			 (or font-lock-comment-start-skip
+	      ;;			     comment-start-skip))
+	      ;;		;; Find the comment delimiters
+	      ;;		;; and use font-lock-comment-delimiter-face for them.
+	      ;;		(save-excursion
+	      ;;		  (goto-char beg)
+	      ;;		  (if (looking-at (or font-lock-comment-start-skip
+	      ;;				      comment-start-skip))
+	      ;;		      (put-text-property beg (match-end 0) 'face
+	      ;;					 font-lock-comment-delimiter-face)))
+	      ;;		(if (looking-back comment-end-regexp (point-at-bol) t)
+	      ;;		    (put-text-property (match-beginning 0) (point) 'face
+	      ;;				       font-lock-comment-delimiter-face)))
+	      )
+	    (< (point) end))
+	(setq state (parse-partial-sexp (point) end nil nil state
+					'syntax-table))))))
+
+;; *** Outline headings
 (defun my/prettify-outline-heading ()
   `(
     (,(concat (string-trim comment-start) " *") . ?◉)
