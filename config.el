@@ -9,7 +9,7 @@
 ;; *** Firefox
 ;; **** Plugins
 ;; https://addons.mozilla.org/en-US/firefox/addon/plasma-integration/
-;;
+
 ;; https://addons.mozilla.org/en-US/firefox/addon/yet-another-hints-extension/
 ;; OR
 ;; https://addons.mozilla.org/en-US/firefox/addon/vim-vixen/
@@ -354,9 +354,7 @@
 
 ;; ** Nix
 ;; *** Create project with cabal2nix
-;; #+BEGIN_SRC emacs-lisp
 ;; cabal init
-;; #+END_SRC
 
 ;; Setup cabal2nix
 ;; #+BEGIN_SRC shell
@@ -1373,15 +1371,17 @@ Borrowed from mozc.el."
 (defun my/alert-fringe-restore ()
   (set-face-attribute 'fringe nil :foreground nil :background nil))
 
+(defvar my/alert-updated-hook nil)
+
 (defun my/alert-reset ()
   (interactive)
   (setq my/past-alerts (list))
-  (my/lv-line-update))
+  (run-hooks 'my/alert-updated-hook))
 
 (defun my/alert-remove ()
   (interactive)
   (setq my/past-alerts (remove (completing-read "Remove entry" my/past-alerts) my/past-alerts))
-  (my/lv-line-update))
+  (run-hooks 'my/alert-updated-hook))
 
 ;; * Package management
 ;; ** Guix
@@ -1585,7 +1585,7 @@ Borrowed from mozc.el."
 ;; ** Scratch buffer
 ;; *** Disable scratch buffer on startup
 ;; We need to do this because the scratch buffer created by emacs is temporary, the one in this config is a file
-;;(kill-buffer "*scratch*")
+;; (kill-buffer "*scratch*")
 
 ;; *** Disable initial scratch buffer message
 (setq initial-scratch-message nil)
@@ -1801,7 +1801,8 @@ Borrowed from mozc.el."
   (switch-to-buffer (car (cdr (ivy--buffer-list "")))))
 
 ;; ** Echo keypresses instantly
-(setq echo-keystrokes 0.01)
+;; (setq echo-keystrokes 0.001)
+(setq echo-keystrokes 0)
 
 ;; ** Configure mouse
 (define-key minibuffer-inactive-mode-map [mouse-1] #'ignore)
@@ -2323,7 +2324,7 @@ Borrowed from mozc.el."
 
 (define-key my/org-mode-map (kbd "d") 'org-deadline)
 
-;;(define-key org-mode-map "\t" 'nil)
+;; (define-key org-mode-map "\t" 'nil)
 
 ;; *** Show map
 (define-prefix-command 'my/org-show-mode-map)
@@ -2471,8 +2472,8 @@ Borrowed from mozc.el."
 (setq outshine-fontify-whole-heading-line t)
 
 ;; ** Narrowing
-;;(define-prefix-command 'my/narrow-map)
-;;(define-key my/leader-map (kbd "n") 'my/narrow-map)
+;; (define-prefix-command 'my/narrow-map)
+;; (define-key my/leader-map (kbd "n") 'my/narrow-map)
 
 ;; *** Narrow indirect
 (defun my/narrow-indirect (beg end)
@@ -2613,11 +2614,11 @@ Borrowed from mozc.el."
 (setq ivy-use-selectable-prompt t)
 
 ;; *** Visuals
-;;;;;; Ivy height
+;; Ivy height
 (setq ivy-height 20)
 
 ;; Make counsel-yank-pop use default height
-;;(delete `(counsel-yank-pop . 5) ivy-height-alist)
+;; (delete `(counsel-yank-pop . 5) ivy-height-alist)
 ;; Disable set height depending on command
 (add-hook 'after-init-hook '(lambda ()
 			      (setq ivy-height-alist nil)
@@ -3467,7 +3468,7 @@ Borrowed from mozc.el."
 (straight-use-package 'goto-chg)
 
 ;; ** My find file
-;;(defun my/find-file ()
+;; (defun my/find-file ()
 ;;  (interactive)
 ;;  (find-file (let ((dir (ignore-errors (dired-current-directory))))
 ;;	       (if dir
@@ -3485,14 +3486,14 @@ Borrowed from mozc.el."
 ;; (my/evil-normal-define-key "M-f" 'avy-goto-char-in-line)
 ;; (define-key my/leader-map (kbd "f") 'avy-goto-char-in-line)
 
-;;(my/evil-normal-define-key "M-w" 'my/avy-goto-word-0-in-line)
-;;(define-key my/leader-map (kbd "w") 'my/avy-goto-word-0-in-line)
+;; (my/evil-normal-define-key "M-w" 'my/avy-goto-word-0-in-line)
+;; (define-key my/leader-map (kbd "w") 'my/avy-goto-word-0-in-line)
 
-;;(my/evil-normal-define-key "M-g" 'avy-goto-char-2)
-;;(define-key my/leader-map (kbd "g") 'avy-goto-char-2)
-;;
-;;(my/evil-normal-define-key "M-g" 'avy-goto-char-2)
-;;(define-key my/leader-map (kbd "g") 'avy-goto-char-2)
+;; (my/evil-normal-define-key "M-g" 'avy-goto-char-2)
+;; (define-key my/leader-map (kbd "g") 'avy-goto-char-2)
+
+;; (my/evil-normal-define-key "M-g" 'avy-goto-char-2)
+;; (define-key my/leader-map (kbd "g") 'avy-goto-char-2)
 
 ;; (my/evil-normal-define-key "M-n" 'avy-goto-word-0-below)
 ;;   (define-key evil-normal-state-map (kbd "M-p") 'avy-goto-word-0-above)
@@ -3613,8 +3614,10 @@ Borrowed from mozc.el."
 (defun my/delete-other-windows()
   (interactive)
   (delete-other-windows)
-  (my/lv-line-create)
-  (run-hooks 'my/switch-buffer-hook))
+  ;; TODO add this back in using a better method. Hooks don't work
+  ;; (my/lv-line-create)
+  (run-hooks 'my/switch-buffer-hook)
+  )
 
 ;; ** Switch window hook
 
@@ -4024,10 +4027,10 @@ Borrowed from mozc.el."
 
 ;; *** Auto fix suggested
 ;; (straight-use-package 'attrap)
-;;(defun my/auto-fix-suggested ()
+;; (defun my/auto-fix-suggested ()
 ;;  (interactive)
 ;;  (pcase major-mode
-;;
+
 					;    ))
 
 ;; *** Auto jump to definition
@@ -4524,7 +4527,7 @@ Borrowed from mozc.el."
 
 ;; *** Hoogle
 ;; **** Ivy
-;;(straight-use-package '(ivy-hoogle :type git :host github :repo "sjsch/ivy-hoogle"))
+;; (straight-use-package '(ivy-hoogle :type git :host github :repo "sjsch/ivy-hoogle"))
 
 (defvar my/ivy-hoogle-max-entries 100)
 
@@ -4561,7 +4564,7 @@ Borrowed from mozc.el."
 
 ;; (setq haskell-doc-idle-delay 0)
 
-;;(defun my/haskell-doc-mode ()
+;; (defun my/haskell-doc-mode ()
 ;;  (haskell-doc-mode 1))
 
 ;; (add-hook 'haskell-mode-hook 'my/haskell-doc-mode)
@@ -4578,7 +4581,7 @@ Borrowed from mozc.el."
 ;; (straight-use-package 'nix-haskell-mode)
 
 ;; *** Formatting
-;;(setq haskell-stylish-on-save t)
+;; (setq haskell-stylish-on-save t)
 (setq haskell-mode-stylish-haskell-path "brittany")
 
 ;; *** Extension management
@@ -5364,8 +5367,8 @@ Borrowed from mozc.el."
 (setq eshell-prefer-lisp-variables nil)
 
 ;; ** Use tramp for sudo
-;;(require 'em-tramp)
-;;(defalias 'sudo 'eshell/sudo)
+;; (require 'em-tramp)
+;; (defalias 'sudo 'eshell/sudo)
 
 ;; ** Autocompletion
 ;; (defun company-eshell-history (command &optional arg &rest ignored)
@@ -5546,7 +5549,7 @@ Borrowed from mozc.el."
 (define-key key-translation-map (kbd "<backspace>") (kbd "C-="))
 
 ;; Don't split up tabs on delete
-;;(global-set-key (kbd "DEL") 'backward-delete-char)
+;; (global-set-key (kbd "DEL") 'backward-delete-char)
 
 ;; *** Rebind delete with
 (define-key key-translation-map (kbd "C-l") (kbd "<deletechar>"))
@@ -5878,12 +5881,12 @@ Borrowed from mozc.el."
 
 (exwm-input-set-key (kbd "M-x") 'counsel-M-x)
 
-;;(exwm-input-set-key (kbd "DEL") '(lambda () (interactive) (exwm-input--fake-key 'backspace)))
-;;(exwm-input-set-key (kbd "<deletechar>") '(lambda () (interactive) (exwm-input--fake-key 'delete)))
+;; (exwm-input-set-key (kbd "DEL") '(lambda () (interactive) (exwm-input--fake-key 'backspace)))
+;; (exwm-input-set-key (kbd "<deletechar>") '(lambda () (interactive) (exwm-input--fake-key 'delete)))
 
-;;(exwm-input-set-key (kbd "M-w") '(lambda () (interactive) (exwm-input--fake-key ?\å)))
-;;(exwm-input-set-key (kbd "M-r") '(lambda () (interactive) (exwm-input--fake-key ?\ä)))
-;;(exwm-input-set-key (kbd "M-j") '(lambda () (interactive) (exwm-input--fake-key ?\ö)))
+;; (exwm-input-set-key (kbd "M-w") '(lambda () (interactive) (exwm-input--fake-key ?\å)))
+;; (exwm-input-set-key (kbd "M-r") '(lambda () (interactive) (exwm-input--fake-key ?\ä)))
+;; (exwm-input-set-key (kbd "M-j") '(lambda () (interactive) (exwm-input--fake-key ?\ö)))
 
 ;; ** Exwm-edit
 (setq exwm-edit-bind-default-keys
@@ -6327,7 +6330,7 @@ Borrowed from mozc.el."
 (setq magit-commit-show-diff nil)
 
 ;; *** Diff
-;;(require 'magit-diff)
+;; (require 'magit-diff)
 (setq-default magit-diff-refine-hunk 'all)
 ;; (setq-default magit-diff-refine-ignore-whitespace nil)
 
@@ -6979,7 +6982,7 @@ Borrowed from mozc.el."
 
 ;; **** Mail renderers, etc
 ;; html renderer
-;;(setq mm-text-html-renderer 'shr)
+;; (setq mm-text-html-renderer 'shr)
 (setq mm-text-html-renderer 'w3m)
 ;; Inline images?
 (setq mm-attachment-override-types '("image/.*"))
@@ -7087,11 +7090,11 @@ Borrowed from mozc.el."
   (shell-command "systemctl suspend"))
 (define-key my/system-suspend-map (kbd "C-s") 'my/systemd-suspend-PC)
 
-;;(defun my/systemd-hibernate-PC()
+;; (defun my/systemd-hibernate-PC()
 ;;  (interactive)
 ;;  (shell-command "systemctl hibernate"))
 ;; Never used
-;;(define-key my/system-suspend-map (kbd "C-h") 'my/systemd-hibernate-PC)
+;; (define-key my/system-suspend-map (kbd "C-h") 'my/systemd-hibernate-PC)
 
 ;; ** Multi-monitor
 (define-prefix-command 'my/system-monitor-map)
@@ -7311,7 +7314,7 @@ Borrowed from mozc.el."
 
 ;; * Spelling
 (define-prefix-command 'my/spell-map)
-;;(define-key my/leader-map (kbd "S") 'my/spell-map)
+;; (define-key my/leader-map (kbd "S") 'my/spell-map)
 
 (define-key my/spell-map (kbd "d") 'ispell-change-dictionary)
 (define-key my/spell-map (kbd "s") 'flyspell-mode)
@@ -7745,14 +7748,14 @@ Borrowed from mozc.el."
 (my/evil-universal-define-key my/mod-window-leader-key 'my/window-hydra/body)
 (my/evil-universal-define-key my/window-leader-key 'my/window-hydra/body)
 
-;;(defun my/structural-navigation-state ()
+;; (defun my/structural-navigation-state ()
 ;;  (interactive)
 ;;  (pcase major-mode
 ;;    ('haskell-mode (my/structured-haskell-hydra/body))
 ;;    (_ (my/lispy-hydra/body))))
 
-;;(my/evil-visual-define-key "z" 'my/structural-navigation-state)
-;;(my/evil-normal-define-key "z" 'my/structural-navigation-state)
+;; (my/evil-visual-define-key "z" 'my/structural-navigation-state)
+;; (my/evil-normal-define-key "z" 'my/structural-navigation-state)
 
 (my/evil-visual-define-key "z" 'my/lispy-hydra/body)
 (my/evil-normal-define-key "z" 'my/lispy-hydra/body)
@@ -8023,8 +8026,9 @@ Borrowed from mozc.el."
 ;; I need to uses font lock here instead so that it can update as you type
 ;; Problem seems to be that the syntax specific comment-delimiter overides it
 ;; Annother problem is that the contrast between comment and this is really bad, so you are barely able to see the bullets
-(add-hook 'prog-mode-hook '(lambda ()
-			     (ov-set (s-trim-right comment-start) `(face (:foreground ,my/background-color-4 :background ,my/background-color-2)))))
+;; Problem: this makes it so that "o" in this file is very slow
+;; (add-hook 'prog-mode-hook '(lambda ()
+;;			     (ov-set (s-trim-right comment-start) `(face (:foreground ,my/background-color-4 :background ,my/background-color-2)))))
 
 (defun my/prettify-comment ()
   `((,(string-trim comment-start) . ,my/pretty-comment-symbol)))
@@ -8357,13 +8361,13 @@ START should be at the beginning of a line."
 ;; ** Hl-anything
 ;; Really buggy and makes buffer switching slow
 ;; (straight-use-package 'hl-anything)
-;;
+
 ;; (define-globalized-minor-mode global-hl-highlight-mode
 ;;   hl-highlight-mode hl-highlight-mode)
 ;; (hl-highlight-mode)
 ;; (global-hl-highlight-mode 1)
-;;
-;;(define-key my/leader-map (kbd "M") 'hl-highlight-thingatpt-local)
+
+;; (define-key my/leader-map (kbd "M") 'hl-highlight-thingatpt-local)
 
 ;; ** Disable blinking cursor
 (blink-cursor-mode 0)
@@ -8401,6 +8405,17 @@ START should be at the beginning of a line."
 (setq csharp-font-lock-keywords-1 '())
 (setq csharp-font-lock-keywords-2 '())
 (setq csharp-font-lock-keywords-3 '())
+
+;; **** C
+(setq cpp-font-lock-keywords '())
+(setq c++-font-lock-keywords '())
+(setq c++-font-lock-keywords-1 '())
+(setq c++-font-lock-keywords-2 '())
+(setq c++-font-lock-keywords-3 '())
+(setq c-font-lock-keywords '())
+(setq c-font-lock-keywords-1 '())
+(setq c-font-lock-keywords-2 '())
+(setq c-font-lock-keywords-3 '())
 
 ;; ** Modeline
 ;; Make mode line appear in echo area instead of in the mode line area. This saves space and makes it so that the mode line can't be split
@@ -8518,97 +8533,6 @@ START should be at the beginning of a line."
 		  ""))
 		)))
 
-;; *** LV-line (top modeline)
-;; Use lv-line to create a mode line on the top of the screen
-(defvar my/lv-line-format "")
-(defconst my/lv-line--buffer " *LV-line*")
-(defvar my/lv-line-window nil)
-
-;; **** Allocate lv line update timings
-(defvar my/lv-line-update-offset 8)
-(defvar my/lv-line-allocated-update-limit my/lv-line-update-offset)
-(defvar my/lv-line-allocated-update-current 0)
-
-(defun my/lv-line-allocate-update-time (task)
-  (if (> my/lv-line-allocated-update-current my/lv-line-allocated-update-limit)
-      (setq my/lv-line-allocated-update-current 0)
-    (setq my/lv-line-allocated-update-current (+ my/lv-line-allocated-update-current 1))
-    (run-with-timer my/lv-line-allocated-update-current 60 task)))
-
-;; **** LV-line update
-(defun my/lv-line-update ()
-  (interactive)
-  (let* ((buffer (get-buffer my/lv-line--buffer)))
-    (if (not buffer)
-	(progn
-	  (message "LV-line buffer not found - creating new one")
-	  (my/lv-line-create)))
-    (with-current-buffer buffer
-      (erase-buffer)
-      (insert (format-mode-line my/lv-line-format)))))
-
-;; **** Create LV-line at top
-(defun my/lv-line-set-buffer ()
-  (setq-local mode-line-format nil)
-  (setq-local header-line-format nil)
-  (setq indicate-empty-lines nil)
-  (set-window-hscroll my/lv-line-window 0)
-  (setq window-size-fixed t)
-  (setq truncate-lines t)
-  (visual-line-mode -1)
-
-  ;; Offset by 10 pixels to make text fit
-  ;;(set-window-fringes (selected-window) 10 0)
-
-  ;; Disable char at end of line
-  (set-display-table-slot standard-display-table 0 ?\ )
-
-  ;; Disable cursor
-  (setq cursor-type nil)
-  (setq cursor-in-non-selected-windows nil)
-
-  (set-window-dedicated-p my/lv-line-window t)
-  (set-window-parameter my/lv-line-window 'no-other-window t))
-
-(defun my/lv-line-create ()
-  (interactive)
-  (if (not (get-buffer my/lv-line--buffer))
-      (generate-new-buffer my/lv-line--buffer))
-  (if (not (window-live-p my/lv-line-window))
-      (let* ((original-window (selected-window)))
-	(setq my/lv-line-window
-	      (select-window
-	       (let ((ignore-window-parameters t))
-		 (split-window
-		  (frame-root-window) -1 'above))))
-	(switch-to-buffer my/lv-line--buffer)
-	(my/lv-line-set-buffer)
-	(select-window original-window)))
-  (my/frame-width-update))
-
-;; (defun my/lv-line-create ()
-;; "Ensure that LV window is live and return it."
-;; (if (window-live-p my/lv-line-window)
-;; my/lv-line-window
-;; (let ((ori (selected-window)) buf)
-;; (prog1 (setq my/lv-line-window
-;; (select-window
-;; (let ((ignore-window-parameters t))
-;; (split-window
-;; (frame-root-window) -1 'above))))
-;; (my/lv-line-create-buffer)
-;; (select-window ori)))))
-
-;; **** Update it
-(defun my/lv-line-start()
-  (my/lv-line-create)
-  (my/lv-line-update)
-  (run-with-timer my/lv-line-update-offset 60 'my/lv-line-update))
-
-(if window-system
-    (add-hook 'exwm-init-hook 'my/lv-line-start)
-  (my/lv-line-start))
-
 ;; *** Keys
 (define-prefix-command 'my/mode-line-map)
 (define-key my/leader-map (kbd "M-m") 'my/mode-line-map)
@@ -8623,6 +8547,16 @@ START should be at the beginning of a line."
 
 ;; *** Mode line modules
 ;; http://www.holgerschurig.de/en/emacs-tayloring-the-built-in-mode-line/
+
+;; **** Allocate status line update timings
+(defvar my/status-line-update-offset 8)
+(defvar my/status-line-allocated-update-current 0)
+
+(defun my/status-bar-allocate-update-time (task)
+  (if (> my/status-line-allocated-update-current my/status-line-update-offset)
+      (setq my/status-line-allocated-update-current 0)
+    (setq my/status-line-allocated-update-current (+ my/status-line-allocated-update-current 1))
+    (run-with-timer my/status-line-allocated-update-current 60 task)))
 ;; **** Cursor position
 (setq mode-line-position
       '(;; %p print percent of buffer above top of window, o Top, Bot or All
@@ -8717,7 +8651,7 @@ START should be at the beginning of a line."
   (setq my/cpu-temp (substring (match-string 0 (shell-command-to-string "sensors | grep \"Core 0:\"")) 0 -3)))
 
 (if my/mode-line-enable-cpu-temp
-    (my/lv-line-allocate-update-time 'my/update-cpu-temp))
+    (my/status-bar-allocate-update-time 'my/update-cpu-temp))
 
 ;; **** Disk space
 (defvar my/disk-space nil)
@@ -8754,7 +8688,7 @@ START should be at the beginning of a line."
   (setq my/rx my/rx-new))
 
 (if my/mode-line-enable-network-traffic
-    (my/lv-line-allocate-update-time 'my/linux-update-network-rx-delta))
+    (my/status-bar-allocate-update-time 'my/linux-update-network-rx-delta))
 
 (my/linux-update-network-rx-delta)
 
@@ -8781,12 +8715,14 @@ START should be at the beginning of a line."
   (setq my/tx my/tx-new))
 
 (if my/mode-line-enable-network-traffic
-    (my/lv-line-allocate-update-time 'my/linux-update-network-tx-delta))
+    (my/status-bar-allocate-update-time 'my/linux-update-network-tx-delta))
 
 (my/linux-update-network-tx-delta)
 
 ;; **** Mail
 (defvar my/gnus-unread-string nil)
+
+(defvar my/gnus-mail-counter-update-hook nil)
 
 (defun my/gnus-update-unread()
   (my/gnus-scan-unread)
@@ -8796,7 +8732,7 @@ START should be at the beginning of a line."
 	 (my/gnus-get-unread-mail-count)
 	 " > N:"
 	 (my/gnus-get-unread-news-count)))
-  (my/lv-line-update))
+  (run-hooks 'my/gnus-mail-counter-update-hook))
 
 (add-hook 'my/sync-mail-hook 'my/gnus-update-unread)
 (add-hook 'gnus-summary-exit-hook 'my/gnus-update-unread)
@@ -8851,7 +8787,7 @@ START should be at the beginning of a line."
   (interactive)
   (setq my/time (format-time-string "%H:%M")))
 
-(my/lv-line-allocate-update-time 'my/update-time)
+(my/status-bar-allocate-update-time 'my/update-time)
 (run-with-timer 0 3600 'my/update-date)
 
 ;; Update date now
@@ -8950,7 +8886,7 @@ START should be at the beginning of a line."
   (interactive)
   (setq my/load-average (/ (nth 0 (load-average)) 100.0)))
 
-(my/lv-line-allocate-update-time 'my/update-load-average)
+(my/status-bar-allocate-update-time 'my/update-load-average)
 
 (my/update-load-average)
 
@@ -8988,7 +8924,7 @@ START should be at the beginning of a line."
       (setq my/available-mem-formatted (my/file-size-human-readable my/available-mem nil t)))))
 
 (if my/mode-line-enable-available-mem
-    (my/lv-line-allocate-update-time 'my/linux-update-available-mem))
+    (my/status-bar-allocate-update-time 'my/linux-update-available-mem))
 
 ;; Update available mem on startup
 (my/linux-update-available-mem)
@@ -9007,7 +8943,7 @@ START should be at the beginning of a line."
   (interactive)
   (setq my/uptime-total-time-formated (my/get-uptime-formated-time)))
 
-(my/lv-line-allocate-update-time 'my/update-uptime-timer)
+(my/status-bar-allocate-update-time 'my/update-uptime-timer)
 
 ;; **** Break timer
 ;; In seconds
@@ -9030,10 +8966,12 @@ START should be at the beginning of a line."
 (when my/enable-breaks
   (my/break-timer-run))
 
-;; *** Mode line format
+;; *** Status line
+(setq my/status-bar 'mini-modeline)
+
+;; **** Status line format
 ;; Only applicable to X since terminal never stretches, etc
 (add-hook 'exwm-workspace-switch-hook 'my/frame-width-update)
-(add-hook 'exwm-init-hook (lambda () (interactive) (run-with-timer 1 nil '(lambda () (interactive) (my/frame-width-update) (my/lv-line-update)))) t)
 
 (defun my/mode-line-align (left right)
   "Return a string of `window-width' length containing LEFT, and RIGHT aligned respectively."
@@ -9041,7 +8979,7 @@ START should be at the beginning of a line."
     (format (format "%%s %%%ds" available-width) left right)))
 
 ;; mode-line-format
-(setq-default my/lv-line-format
+(setq-default my/status-line-format
 	      '(:eval
 		(my/mode-line-align
 		 (format-mode-line
@@ -9109,23 +9047,113 @@ START should be at the beginning of a line."
 		    (:eval my/date)
 		    ))))))
 
-;; **** Csharp
-(setq csharp-font-lock-keywords '())
-(setq csharp-font-lock-keywords-1 '())
-(setq csharp-font-lock-keywords-2 '())
-(setq csharp-font-lock-keywords-3 '())
+;; **** mini-modeline
+(when (string= my/status-bar 'mini-modeline)
+  (straight-use-package 'mini-modeline)
+  (require 'mini-modeline)
 
-;; **** C
-(setq cpp-font-lock-keywords '())
-(setq c++-font-lock-keywords '())
-(setq c++-font-lock-keywords-1 '())
-(setq c++-font-lock-keywords-2 '())
-(setq c++-font-lock-keywords-3 '())
-(setq c-font-lock-keywords '())
-(setq c-font-lock-keywords-1 '())
-(setq c-font-lock-keywords-2 '())
-(setq c-font-lock-keywords-3 '())
+  (setq mini-modeline-enhance-visual nil)
+  ;; Mini-modeline flashes during GC if this is t
+  (setq garbage-collection-messages nil)
 
+  (setq-default mini-modeline-r-format my/status-line-format)
+  ;; (mini-modeline-enable)
+  (add-hook 'exwm-init-hook (lambda () (interactive) (run-with-timer 1 nil '(lambda () (interactive) (mini-modeline-enable))) t)))
+
+;; **** LV-line (top modeline)
+;; Use lv-line to create a mode line on the top of the screen
+(defvar my/lv-line-format "")
+(defconst my/lv-line--buffer " *LV-line*")
+(defvar my/lv-line-window nil)
+
+(when (string= my/status-bar 'lv-line)
+  (setq my/lv-line-format my/status-line-format))
+
+;; ***** Init
+(when (string= my/status-bar 'lv-line)
+  (add-hook 'exwm-init-hook (lambda () (interactive) (run-with-timer 1 nil '(lambda () (interactive) (my/frame-width-update) (my/lv-line-update)))) t))
+
+;; ***** Create LV-line at top
+(defun my/lv-line-set-buffer ()
+  (setq-local mode-line-format nil)
+  (setq-local header-line-format nil)
+  (setq indicate-empty-lines nil)
+  (set-window-hscroll my/lv-line-window 0)
+  (setq window-size-fixed t)
+  (setq truncate-lines t)
+  (visual-line-mode -1)
+
+  ;; Offset by 10 pixels to make text fit
+  ;;(set-window-fringes (selected-window) 10 0)
+
+  ;; Disable char at end of line
+  (set-display-table-slot standard-display-table 0 ?\ )
+
+  ;; Disable cursor
+  (setq cursor-type nil)
+  (setq cursor-in-non-selected-windows nil)
+
+  (set-window-dedicated-p my/lv-line-window t)
+  (set-window-parameter my/lv-line-window 'no-other-window t))
+
+(defun my/lv-line-create ()
+  (interactive)
+  (if (not (get-buffer my/lv-line--buffer))
+      (generate-new-buffer my/lv-line--buffer))
+  (if (not (window-live-p my/lv-line-window))
+      (let* ((original-window (selected-window)))
+	(setq my/lv-line-window
+	      (select-window
+	       (let ((ignore-window-parameters t))
+		 (split-window
+		  (frame-root-window) -1 'above))))
+	(switch-to-buffer my/lv-line--buffer)
+	(my/lv-line-set-buffer)
+	(select-window original-window)))
+  (my/frame-width-update))
+
+;; (defun my/lv-line-create ()
+;; "Ensure that LV window is live and return it."
+;; (if (window-live-p my/lv-line-window)
+;; my/lv-line-window
+;; (let ((ori (selected-window)) buf)
+;; (prog1 (setq my/lv-line-window
+;; (select-window
+;; (let ((ignore-window-parameters t))
+;; (split-window
+;; (frame-root-window) -1 'above))))
+;; (my/lv-line-create-buffer)
+;; (select-window ori)))))
+
+;; ***** Update it
+(defun my/lv-line-update ()
+  (interactive)
+  (let* ((buffer (get-buffer my/lv-line--buffer)))
+    (if (not buffer)
+	(progn
+	  (message "LV-line buffer not found - creating new one")
+	  (my/lv-line-create)))
+    (with-current-buffer buffer
+      (erase-buffer)
+      (insert (format-mode-line my/lv-line-format)))))
+
+(defun my/lv-line-start ()
+  (my/lv-line-create)
+  (my/lv-line-update)
+  (run-with-timer my/status-line-update-offset 60 'my/lv-line-update))
+
+(when (string= my/status-bar 'lv-line)
+  (if window-system
+      (add-hook 'exwm-init-hook 'my/lv-line-start)
+    (my/lv-line-start)))
+
+;; ****** Update on new events
+(when (string= my/status-bar 'lv-line)
+  ;; Update on alert
+  (add-hook 'my/alert-updated-hook 'my/lv-line-update)
+
+  ;; Update on mail counter change
+  (add-hook 'my/gnus-mail-counter-update-hook 'my/lv-line-update))
 
 ;; * Theme
 (defvar my/default-face-list '())
