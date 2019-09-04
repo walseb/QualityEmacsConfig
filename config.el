@@ -4113,8 +4113,8 @@ Borrowed from mozc.el."
     ('csharp-mode (my/csharp-run-repl))
     ('haskell-mode (haskell-process-load-file))
     ;; For now disable elisp evaluation
-    (_ nil;;(eval-buffer nil)
-       )))
+    (_ (when (not (string= (buffer-name) "config.el"))
+	 (eval-buffer nil)))))
 
 (defun my/auto-eval-print ()
   (interactive)
@@ -9097,15 +9097,13 @@ START should be at the beginning of a line."
 ;; **** mini-modeline
 (when (string= my/status-bar 'mini-modeline)
   (straight-use-package 'mini-modeline)
-  (require 'mini-modeline)
 
   (setq mini-modeline-enhance-visual nil)
   ;; Mini-modeline flashes during GC if this is t
   (setq garbage-collection-messages nil)
 
   (setq-default mini-modeline-r-format my/status-line-format)
-  ;; (mini-modeline-enable)
-  (add-hook 'exwm-init-hook (lambda () (interactive) (run-with-timer 1 nil '(lambda () (interactive) (mini-modeline-enable))) t)))
+  (mini-modeline-enable))
 
 ;; **** LV-line (top modeline)
 ;; Use lv-line to create a mode line on the top of the screen
@@ -9318,8 +9316,9 @@ START should be at the beginning of a line."
 (defun my/theme-header-line-color ()
   (set-face-attribute 'header-line nil
 		      :foreground my/foreground-color
-		      ;;:background "#063000"
-		      :background "#001330")
+		      :background "#052000"
+		      ;; :background "#001330"
+		      )
 
   (set-face-attribute 'my/mode-line-highlight nil
 		      :foreground "#063000"
