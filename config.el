@@ -9047,6 +9047,53 @@ START should be at the beginning of a line."
 		    (:eval my/date)
 		    ))))))
 
+;; **** Posframe status line
+;; https://github.com/dakra/statusbar.el
+
+;; (posframe-delete-frame (get-buffer-create "*window*"))
+
+;; (posframe-show "*window*"
+;;	       :string "test"
+;;	       :x-pixel-offset 100
+;;	       :poshandler 'my/posframe-poshandler-right-side-minibuffer
+;;	       ;; :left-fringe 100
+;;	       :right-fringe 200
+;;	       )
+
+;; (defun my/posframe-poshandler-right-side-minibuffer (info)
+;;   (cons (- -1 (plist-get info :minibuffer-height) ) 0))
+
+;; (setq buf "*window*")
+
+;; (defun statusbar--line-length (buf)
+;;   "Return current line length of the statusbar text.
+;; BUF is the statusbar buffer."
+;;   (with-current-buffer buf
+;;     (point-max)))
+
+;; (defun statusbar--position-handler (info)
+;;   "Posframe position handler.
+;; INFO is the childframe plist from `posframe'.
+;; Position the statusbar in the bottom right over the minibuffer."
+;;   (let* ((font-width (plist-get info :font-width))
+;;	 (buf (plist-get info :posframe-buffer))
+;;	 (buf-width (* font-width (statusbar--line-length buf)))
+;;	 (parent-frame (plist-get info :parent-frame))
+;;	 (parent-frame-width (frame-pixel-width parent-frame))
+;;	 (exwm-systemtray-offset
+;;	  (if-let* ((tray-list (and (boundp 'exwm-systemtray--list) exwm-systemtray--list))
+;;		    (icon-size (+ exwm-systemtray--icon-min-size exwm-systemtray-icon-gap))
+;;		    (tray-width (* (length exwm-systemtray--list) icon-size)))
+;;	      tray-width
+;;	    0))
+;;	 (x-offset (plist-get info :x-pixel-offset))
+;;	 (x-pos (- parent-frame-width buf-width x-offset exwm-systemtray-offset))
+;;	 ;; (y-pos (+ exwm-floating--cursor-top-right))
+;;	 (font-height (plist-get info :font-width))
+;;     ;; (y-pos exwm-floating--cursor-top-right))
+;;     ;; (y-pos 2097070))
+;;     (cons x-pos y-pos)))
+
 ;; **** mini-modeline
 (when (string= my/status-bar 'mini-modeline)
   (straight-use-package 'mini-modeline)
