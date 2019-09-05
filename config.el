@@ -7439,7 +7439,6 @@ Borrowed from mozc.el."
 (evil-define-key 'normal artist-mode-map (kbd "p") 'artist-previous-line)
 (evil-define-key 'normal artist-mode-map (kbd "n") 'artist-next-line)
 
-
 (evil-define-key 'normal artist-mode-map (kbd "n") 'artist-next-line)
 
 (evil-define-key 'emacs artist-mode-map [down-mouse-1] 'artist-down-mouse-1)
@@ -7992,91 +7991,32 @@ Borrowed from mozc.el."
 
 ;; *** Comment delimiter
 ;; Font lock automatically handles comment highlighting through the function font-lock-fontify-syntactically-region
-;; (setq my/pretty-comment-symbol ?|)
-(setq my/pretty-comment-symbol ?|)
 
-(when window-system
-  ;; https://www.w3schools.com/charsets/ref_utf_block.asp
-  ;; https://en.wikipedia.org/wiki/Block_Elements
-  ;; █ comment
-  ;; ▉ comment
-  ;; ▊ comment
-  ;; ▋ comment
-  ;; ▌ comment
-  ;; ▌ comment
-  ;; ▍ comment
-  ;; ▎ comment
-  ;; ▏ comment
-  ;; ▐ comment
+;; https://www.w3schools.com/charsets/ref_utf_block.asp
+;; https://en.wikipedia.org/wiki/Block_Elements
+;; █ comment
+;; ▉ comment
+;; ▊ comment
+;; ▋ comment
+;; ▌ comment
+;; ▌ comment
+;; ▍ comment
+;; ▎ comment
+;; ▏ comment
+;; ▐ comment
+;; Here we just use prettify symbols mode to hide the comment so that font-lock can highlight its background
+;; Using prettify-symbol to display the comment box leaves gaps between them, using font lock doesn't
+(setq my/pretty-comment-symbol ? )
 
-  ;; (setq my/pretty-comment-symbol ?\x2502)
-  ;; (setq my/pretty-comment-symbol ?█)
-  ;; (setq my/pretty-comment-symbol ?▏)
-  ;; (setq my/pretty-comment-symbol ?▐)
-
-  ;; (setq my/pretty-comment-symbol ?▍)
-  (setq my/pretty-comment-symbol ? )
-  )
-
-(straight-use-package 'ov)
-
-(require 'ov)
-
-;; I need to uses font lock here instead so that it can update as you type
-;; Problem seems to be that the syntax specific comment-delimiter overides it
-;; Annother problem is that the contrast between comment and this is really bad, so you are barely able to see the bullets
-;; Problem: this makes it so that "o" in this file is very slow
-;; (add-hook 'prog-mode-hook '(lambda ()
-;;			     (ov-set (s-trim-right comment-start) `(face (:foreground ,my/background-color-4 :background ,my/background-color-2)))))
+;; Use font lock to
+(add-hook 'prog-mode-hook '(lambda ()
+			     (setq font-lock-comment-start-skip (concat comment-start "+"))))
 
 (defun my/prettify-comment ()
   `((,(string-trim comment-start) . ,my/pretty-comment-symbol)))
 
 (defun my/prettify-comment-lisp ()
   `((,(concat (string-trim comment-start) (string-trim comment-start)) . ,my/pretty-comment-symbol)))
-
-;; **** Disable comment auto highlightning
-(defun font-lock-fontify-syntactically-region (start end &optional loudly)
-  "Put proper face on each string and comment between START and END.
-START should be at the beginning of a line."
-  (syntax-propertize end)  ; Apply any needed syntax-table properties.
-  (with-syntax-table (or syntax-ppss-table (syntax-table))
-    (let ((comment-end-regexp
-	   (or font-lock-comment-end-skip
-	       (regexp-quote
-		(replace-regexp-in-string "^ *" "" comment-end))))
-	  ;; Find the `start' state.
-	  (state (syntax-ppss start))
-	  face beg)
-      (if loudly (message "Fontifying %s... (syntactically...)" (buffer-name)))
-      ;;
-      ;; Find each interesting place between here and `end'.
-      (while
-	  (progn
-	    (when (or (nth 3 state) (nth 4 state))
-	      (setq face (funcall font-lock-syntactic-face-function state))
-	      (setq beg (max (nth 8 state) start))
-	      (setq state (parse-partial-sexp (point) end nil nil state
-					      'syntax-table))
-	      (when face (put-text-property beg (point) 'face face))
-	      ;; (when (and (eq face 'font-lock-comment-face)
-	      ;;			 (or font-lock-comment-start-skip
-	      ;;			     comment-start-skip))
-	      ;;		;; Find the comment delimiters
-	      ;;		;; and use font-lock-comment-delimiter-face for them.
-	      ;;		(save-excursion
-	      ;;		  (goto-char beg)
-	      ;;		  (if (looking-at (or font-lock-comment-start-skip
-	      ;;				      comment-start-skip))
-	      ;;		      (put-text-property beg (match-end 0) 'face
-	      ;;					 font-lock-comment-delimiter-face)))
-	      ;;		(if (looking-back comment-end-regexp (point-at-bol) t)
-	      ;;		    (put-text-property (match-beginning 0) (point) 'face
-	      ;;				       font-lock-comment-delimiter-face)))
-	      )
-	    (< (point) end))
-	(setq state (parse-partial-sexp (point) end nil nil state
-					'syntax-table))))))
 
 ;; *** Outline headings
 (defun my/prettify-outline-heading ()
@@ -9288,7 +9228,8 @@ START should be at the beginning of a line."
   (set-face-attribute 'font-lock-doc-face nil :foreground my/foreground-color :background my/background-color-4)
   ;; (set-face-attribute 'font-lock-comment-face nil :foreground (color-lighten-name my/background-color 30) :background my/background-color)
   (set-face-attribute 'font-lock-comment-face nil :foreground (color-lighten-name my/background-color 30) :background (color-lighten-name my/background-color 2))
-  (set-face-attribute 'font-lock-comment-delimiter-face nil :foreground (color-lighten-name my/background-color 15) :background my/background-color)
+  ;; (set-face-attribute 'font-lock-comment-delimiter-face nil :foreground (color-lighten-name my/background-color 15) :background my/background-color)
+  (set-face-attribute 'font-lock-comment-delimiter-face nil :foreground my/background-color-4 :background my/background-color-2)
   (my/set-face-to-default 'font-lock-string-face t)
   (my/set-face-to-default 'font-lock-function-name-face t))
 
