@@ -7462,14 +7462,13 @@ Borrowed from mozc.el."
 				 :pre (setq my/window-hydra/hint
 					    (concat "next: "
 						    (let ((list (ivy--buffer-list "")))
-						      (when
-							  (if (and (string= (car list) (buffer-name))
-								   ;; If there is only 1 buffer in emacs
-								   (> (length list) 1))
-							      (substring-no-properties
-							       (nth 1 list))
-							    (substring-no-properties
-							     (car list))))))))
+						      (if (and (string= (car list) (buffer-name))
+							       ;; If there is only 1 buffer in emacs
+							       (> (length list) 1))
+							  (substring-no-properties
+							   (nth 1 list))
+							(substring-no-properties
+							 (car list)))))))
   "movement"
 
   ;; Move focus
