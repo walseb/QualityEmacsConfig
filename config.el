@@ -8010,7 +8010,7 @@ Borrowed from mozc.el."
 
 ;; Use font lock to
 (add-hook 'prog-mode-hook '(lambda ()
-			     (setq font-lock-comment-start-skip (concat (s-trim-right comment-start) "+"))))
+			     (setq-local font-lock-comment-start-skip (concat (s-trim-right comment-start) "+"))))
 
 (defun my/prettify-comment ()
   `((,(string-trim comment-start) . ,my/pretty-comment-symbol)))
