@@ -4026,12 +4026,19 @@ Borrowed from mozc.el."
 ;; (setq highlight-indent-guides-delay 0)
 
 ;; *** Auto fix suggested
-;; (straight-use-package 'attrap)
-;; (defun my/auto-fix-suggested ()
-;;  (interactive)
-;;  (pcase major-mode
+(defun my/auto-fix-suggested ()
+  (interactive)
+  (pcase major-mode
+    ('haskell-mode
+     (if my/haskell-hie-enable
+	 (lsp-ui-sideline-apply-code-actions)
+       (attrap-attrap)))
+    (_
+     (if lsp-mode
+	 (lsp-ui-sideline-apply-code-actions)
+       (attrap-attrap)))))
 
-					;    ))
+(define-key my/leader-map (kbd "RET") 'my/auto-fix-suggested)
 
 ;; *** Auto jump to definition
 (straight-use-package 'dumb-jump)
@@ -4046,7 +4053,10 @@ Borrowed from mozc.el."
     ('c++-mode (call-interactively 'xref-find-definitions))
     ('objc-mode (call-interactively 'xref-find-definitions))
     ('csharp-mode (omnisharp-go-to-definition))
-    ;; ('haskell-mode (call-interactively 'xref-find-definitions))
+    ('haskell-mode
+     (if my/haskell-hie-enable
+	 (lsp-find-definition)
+       (call-interactively 'xref-find-definitions)))
     (_
      (if lsp-mode
 	 (lsp-find-definition)
@@ -4133,6 +4143,7 @@ Borrowed from mozc.el."
 (defun my/auto-debug ()
   (interactive)
   ;;(load-library "realgud")
+
   (if (eq evil-state 'visual)
       (my/auto-debug-region)
     (pcase major-mode
@@ -4254,9 +4265,6 @@ Borrowed from mozc.el."
       lsp-ui-sideline-show-symbol t)
 
 (setq lsp-ui-sideline-delay 0)
-
-;; *** Keys
-(define-key my/leader-map (kbd "RET") 'lsp-ui-sideline-apply-code-actions)
 
 ;; ** Elgot
 ;; (straight-use-package 'eglot)
@@ -4455,11 +4463,16 @@ Borrowed from mozc.el."
 (add-to-list 'company-backends 'company-jedi)
 
 ;; ** Haskell
-(straight-use-package '(haskell-mode :type git :host github :repo "walseb/haskell-mode"))
+;; (straight-use-package '(haskell-mode :type git :host github :repo "walseb/haskell-mode"))
+(straight-use-package 'haskell-mode)
 
 (defun my/haskell-mode ()
   (interactive)
-  (setq-local evil-shift-width 2))
+  (setq-local evil-shift-width 2)
+
+  ;; Fix incorrect comment formatting
+  (setq-local comment-start "--")
+  (setq-local comment-padding 1))
 
 (add-hook 'haskell-mode-hook 'my/haskell-mode)
 
@@ -4559,15 +4572,10 @@ Borrowed from mozc.el."
 						(length str))))
 	    :caller 'my/ivy-hoogle))
 
-;; *** Haskell-doc
-;; Haskell-doc kind of fills in the holes where lsp-haskell doesn't work
-
-;; (setq haskell-doc-idle-delay 0)
-
-;; (defun my/haskell-doc-mode ()
-;;  (haskell-doc-mode 1))
-
-;; (add-hook 'haskell-mode-hook 'my/haskell-doc-mode)
+;; *** Disable haskell-doc
+;; Haskell-doc is loaded in as the eldoc-documentation-function.
+(add-hook 'haskell-mode-hook '(lambda ()
+				(setq-local eldoc-documentation-function nil)))
 
 ;; *** Project management
 ;; **** Stack
@@ -4690,20 +4698,27 @@ Borrowed from mozc.el."
 					    'eldoc-print-current-symbol-info nil t))))
 
 ;; *** Dante
-(setq my/haskell-dante-fix nil)
-
 (when (not my/haskell-hie-enable)
   (setq dante-tap-type-time 0)
 
-  (if my/haskell-dante-fix
-      (straight-use-package '(dante :type git :host github :repo "purcell/dante" :branch "better-temp-files"))
-    ;; (straight-use-package '(dante :type git :host github :repo "soupi/dante" :branch "with-temp-files"))
-    (straight-use-package 'dante))
+  (straight-use-package 'dante)
 
   (require 'dante)
   (add-hook 'haskell-mode-hook 'dante-mode)
 
-  ;; **** Add more warnings
+  (defun my/dante-mode ()
+    (my/dante-fix-flycheck-bugs))
+
+  (add-hook 'haskell-mode-hook 'my/dante-mode))
+
+;; **** Fix flycheck bugs
+(defun my/dante-fix-flycheck-bugs ()
+  (setq-local flymake-no-changes-timeout nil)
+  (setq-local flymake-start-syntax-check-on-newline nil)
+  (setq-local flycheck-check-syntax-automatically '(save mode-enabled)))
+
+;; **** Add more warnings
+(when (not my/haskell-hie-enable)
   (setq my/ghc-warning-parameters
 	;; Dante disables this by default, so remove it
 	(remove "-Wmissing-home-modules" my/ghc-flags))
@@ -4717,48 +4732,10 @@ Borrowed from mozc.el."
 (when (not my/haskell-hie-enable)
   (add-hook 'dante-mode-hook
 	    '(lambda () (flycheck-add-next-checker 'haskell-dante
-						   '(warning . haskell-hlint)))))
+					      '(warning . haskell-hlint)))))
 
-;; **** Make dante not save all the time
-(when (and (not my/haskell-dante-fix) (not my/haskell-hie-enable))
-  (lcr-def dante-async-load-current-buffer (interpret)
-    "Load and maybe INTERPRET the temp file for current buffer.
-  Interpreting puts all symbols from the current module in
-  scope. Compiling to avoids re-interpreting the dependencies over
-  and over."
-    (let* ((epoch (buffer-modified-tick))
-	   (unchanged (equal epoch dante-temp-epoch))
-	   (fname (buffer-file-name (current-buffer)))
-	   (buffer (lcr-call dante-session))
-	   (same-buffer (s-equals? (buffer-local-value 'dante-loaded-file buffer) fname)))
-      (if (and unchanged same-buffer) (buffer-local-value 'dante-load-message buffer) ; see #52
-	(setq dante-temp-epoch epoch)
-	;; (vc-before-save)
-	;; (basic-save-buffer-1) ;; save without re-triggering flycheck/flymake nor any save hook
-	;; (vc-after-save)
-	;; GHCi will interpret the buffer iff. both -fbyte-code and :l * are used.
-	(lcr-call dante-async-call (if interpret ":set -fbyte-code" ":set -fobject-code"))
-	(with-current-buffer buffer
-	  (dante-async-write (if (and (not interpret) same-buffer) ":r"
-			       (concat ":l " (if interpret "*" "") (dante-local-name fname))))
-	  (cl-destructuring-bind (_status err-messages _loaded-modules) (lcr-call dante-load-loop "" nil)
-	    (setq dante-loaded-file fname)
-	    (setq dante-load-message err-messages))))))
-
-  ;; ***** Fix flycheck
-  ;; Sometimes ghci takes too long to get the results, have a hook that runs 1 second after save to hopefully catch the late error
-  ;; Also disable idle-change since it should not be needed
-  (add-hook 'dante-mode-hook '(lambda ()
-				(add-hook 'after-save-hook
-					  '(lambda ()
-					     (run-with-timer 1 nil #'flycheck-buffer)) nil t)))
-  (add-hook 'dante-mode-hook '(lambda ()
-				(setq-local flycheck-check-syntax-automatically '(mode-enabled save idle-change))))
-
-  ;; When hitting esc while in normal mode, refresh flycheck mode for when ghc is slow
-  (evil-define-key 'normal dante-mode-map (kbd "<escape>") '(lambda () (interactive)
-							      (flycheck-buffer)
-							      (evil-force-normal-state))))
+;; **** Apply GHC hints
+(straight-use-package 'attrap)
 
 ;; *** Flycheck
 ;; Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the standard ghc checker though, because it works fine if I don't have HIE. If I have HIE emacs should use that instead
@@ -4931,11 +4908,14 @@ Borrowed from mozc.el."
   (interactive)
   (pcase major-mode
     ('csharp-mode (omnisharp-current-type-documentation))
-    ;;('haskell-mode (call-interactively 'dante-info))
+    ('haskell-mode
+     (if my/haskell-hie-enable
+	 (lsp-describe-thing-at-point)
+       (call-interactively 'dante-info)))
     (_
      (if lsp-mode
 	 (lsp-describe-thing-at-point)
-       (find-function-at-point)))))
+       (call-interactively 'describe-function)))))
 
 (define-key my/leader-map (kbd "d") 'my/auto-view-docs)
 
@@ -7913,6 +7893,7 @@ Borrowed from mozc.el."
 (define-key my/leader-map (kbd "M-v") 'spray-mode)
 
 ;; * Ligatures
+;; Check out prettify-utils
 (if window-system
     (global-prettify-symbols-mode 1))
 (setq prettify-symbols-unprettify-at-point 'right-edge)
