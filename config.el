@@ -1866,6 +1866,15 @@ Borrowed from mozc.el."
     ('gnus-summary-mode (gnus-summary-exit))
     (_ (kill-current-buffer))))
 
+;; ** Copy minibuffer contents
+(define-key my/leader-map (kbd "Y") '(lambda ()
+				       (interactive)
+				       ;; (kill-buffer " *Minibuf-0*")
+				       (let ((curr-buf (buffer-name)))
+					 (switch-to-buffer " *Minibuf-0*")
+					 (copy-region-as-kill (point-min) (point-max))
+					 (switch-to-buffer curr-buf))))
+
 ;; * File options
 (define-prefix-command 'my/file-options-map)
 (define-key my/leader-map (kbd "`") 'my/file-options-map)
@@ -3092,6 +3101,9 @@ Borrowed from mozc.el."
 
 (with-eval-after-load 'flycheck
   (flycheck-package-setup))
+
+;; *** Copy flycheck errors contents
+(define-key my/leader-map (kbd "y") 'flycheck-copy-errors-as-kill)
 
 ;; ** Which-key
 (straight-use-package 'which-key)
@@ -5125,14 +5137,14 @@ Borrowed from mozc.el."
 
 ;; *** Evil operator
 (evil-define-operator evil-macro-run (beg end type)
-"Run macro on BEG to END."
-(interactive "<R>")
-(evil-normal-state)
-(save-restriction
-  (goto-char (point-min))
-  (narrow-to-region beg end)
-  ;; current-prefix-arg here is used because I don't know how to access the universal argument in this function
-  (my/macro-run current-prefix-arg)))
+  "Run macro on BEG to END."
+  (interactive "<R>")
+  (evil-normal-state)
+  (save-restriction
+    (goto-char (point-min))
+    (narrow-to-region beg end)
+    ;; current-prefix-arg here is used because I don't know how to access the universal argument in this function
+    (my/macro-run current-prefix-arg)))
 
 ;; *** Keys
 (my/evil-normal-define-key "q" 'my/macro-record-toggle)
