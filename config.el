@@ -4044,11 +4044,11 @@ Borrowed from mozc.el."
     ('haskell-mode
      (if my/haskell-hie-enable
 	 (lsp-ui-sideline-apply-code-actions)
-       (attrap-attrap)))
+       (call-interactively 'attrap-attrap)))
     (_
      (if lsp-mode
 	 (lsp-ui-sideline-apply-code-actions)
-       (attrap-attrap)))))
+       (call-interactively 'attrap-attrap)))))
 
 (define-key my/leader-map (kbd "RET") 'my/auto-fix-suggested)
 
@@ -6663,7 +6663,7 @@ Borrowed from mozc.el."
 ;; https://github.com/gongzhitaao/GnusSolution
 ;; https://www.gnu.org/software/emacs/manual/html_node/gnus/Comparing-Mail-Back-Ends.html
 (require 'gnus)
-(define-key my/open-map (kbd "g") 'gnus)
+(define-key my/open-map (kbd "M") 'gnus)
 
 ;; Encrypt passwords
 (setq netrc-file "~/.authinfo.gpg")
