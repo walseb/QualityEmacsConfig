@@ -783,6 +783,12 @@
 			  ;;:fontset "fontset-default"
 			  :height my/default-face-height)))
 
+;; *** Set size
+(defun my/set-default-font-size ()
+  (if window-system
+      (set-face-attribute 'default nil
+			  :height 130)))
+
 ;; ** Overlay
 (defun my/inline-overlay-print (string)
   (let ((inline-overlay (make-overlay (point) (line-end-position))))
@@ -839,7 +845,8 @@
   ;; Set default font
   (add-to-list 'default-frame-alist (cons 'font my/font))
 
-  ;;(my/set-default-font my/font)
+  (my/set-default-font-size)
+  ;; (my/set-default-font my/font)
 
   ;; Set symbol font
   (set-fontset-font t 'symbol my/symbol-font))
