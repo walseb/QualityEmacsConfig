@@ -5760,8 +5760,8 @@ Borrowed from mozc.el."
 (straight-use-package 'company-nixos-options)
 ;; I can't find a pure add-to-list so i have to copy it so that company-backends isn't modified
 (add-hook 'nix-mode-hook (lambda () (interactive)
-			   (let ((list company-backends))
-			     (add-to-list 'list 'company-nixos-options)
+			   (let ((backends company-backends))
+			     (push 'backends 'company-nixos-options)
 			     (setq-local company-backends list))))
 
 ;; *** Ivy
@@ -9636,5 +9636,5 @@ Borrowed from mozc.el."
 ;; * Byte-compile the config
 ;; Byte compilation doesn't work before loading everything because of some reason, so do it now
 (unless (and (file-exists-p my/config-compiled-location) (my/is-file-more-up-to-date my/config-compiled-location my/config-location))
-  (byte-compile-file "~/.emacs.d/config.el")
+  (byte-compile-file "~/.emacs.d/config.el" nil)
   (message "Config is now byte compiled, restart to run it"))
