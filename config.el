@@ -1097,27 +1097,27 @@
 ;; **** Allow commenting empty line
 ;; Because of some reason emacs crashes with undo tree error if this isn't run late
 (add-hook 'after-init-hook
-	  '(lambda ()
-	     (evil-commentary-mode)
+	  (lambda ()
+	    (evil-commentary-mode)
 
-	     (evil-define-operator evil-commentary-line (beg end type)
-	       "Comment or uncomment [count] lines."
-	       :motion evil-line
-	       :move-point nil
-	       (interactive "<R>")
-	       (when (evil-visual-state-p)
-		 (unless (memq type '(line block))
-		   (let ((range (evil-expand beg end 'line)))
-		     (setq beg (evil-range-beginning range)
-			   end (evil-range-end range)
-			   type (evil-type range))))
-		 (evil-exit-visual-state))
-	       ;; If current line is blank
-	       (if (save-excursion
-		     (beginning-of-line)
-		     (looking-at "[[:space:]]*$"))
-		   (insert comment-start)
-		 (evil-commentary beg end type)))))
+	    (evil-define-operator evil-commentary-line (beg end type)
+	      "Comment or uncomment [count] lines."
+	      :motion evil-line
+	      :move-point nil
+	      (interactive "<R>")
+	      (when (evil-visual-state-p)
+		(unless (memq type '(line block))
+		  (let ((range (evil-expand beg end 'line)))
+		    (setq beg (evil-range-beginning range)
+			  end (evil-range-end range)
+			  type (evil-type range))))
+		(evil-exit-visual-state))
+	      ;; If current line is blank
+	      (if (save-excursion
+		    (beginning-of-line)
+		    (looking-at "[[:space:]]*$"))
+		  (insert comment-start)
+		(evil-commentary beg end type)))))
 
 ;; *** Evil-eval operator
 (evil-define-operator evil-eval (beg end type)
@@ -1314,9 +1314,9 @@ Borrowed from mozc.el."
 ;; *** Don't save chars deleted with x to clipboard
 (my/evil-normal-define-key "x" 'delete-char)
 (my/evil-normal-define-key "X"
-			   '(lambda () (interactive)
-			      (backward-char)
-			      (call-interactively #'delete-char)))
+			   (lambda () (interactive)
+			     (backward-char)
+			     (call-interactively #'delete-char)))
 
 ;; * Leader
 ;; When changing leader, change =my/leader-map-key=
@@ -1618,8 +1618,8 @@ Borrowed from mozc.el."
 
 ;; **** Toggle truncate lines
 (define-key my/leader-map (kbd "C-v")
-  '(lambda () (interactive)
-     (setq truncate-lines (not truncate-lines))))
+  (lambda () (interactive)
+    (setq truncate-lines (not truncate-lines))))
 
 ;; ** Visual line mode
 (global-visual-line-mode 1)
@@ -1703,17 +1703,17 @@ Borrowed from mozc.el."
 ;; (interactive)
 ;; (text-scale-set 0))
 ;; (define-key my/leader-map (kbd "+") ')
-;; (define-key my/leader-map (kbd "_") '(lambda () (interactive) (text-scale-set 0)))
+;; (define-key my/leader-map (kbd "_") (lambda () (interactive) (text-scale-set 0)))
 
-(define-key my/leader-map (kbd "-") '(lambda () (interactive) (text-scale-decrease 4)))
-(define-key my/leader-map (kbd "=") '(lambda () (interactive) (text-scale-increase 4)))
+(define-key my/leader-map (kbd "-") (lambda () (interactive) (text-scale-decrease 4)))
+(define-key my/leader-map (kbd "=") '(lambda() (interactive) (text-scale-increase 4)))
 
-(define-key my/leader-map (kbd "C--") '(lambda () (interactive) (text-scale-decrease 1)))
-(define-key my/leader-map (kbd "C-=") '(lambda () (interactive) (text-scale-increase 1)))
+(define-key my/leader-map (kbd "C--") (lambda () (interactive) (text-scale-decrease 1)))
+(define-key my/leader-map (kbd "C-=") (lambda () (interactive) (text-scale-increase 1)))
 
 
-(define-key my/leader-map (kbd "+") '(lambda () (interactive) (text-scale-mode 0)))
-(define-key my/leader-map (kbd "_") '(lambda () (interactive) (text-scale-mode 0)))
+(define-key my/leader-map (kbd "+") (lambda () (interactive) (text-scale-mode 0)))
+(define-key my/leader-map (kbd "_") (lambda () (interactive) (text-scale-mode 0)))
 
 ;; ** Exit emacs
 (define-key my/leader-map (kbd "C-z") 'save-buffers-kill-emacs)
@@ -1874,13 +1874,13 @@ Borrowed from mozc.el."
     (_ (kill-current-buffer))))
 
 ;; ** Copy minibuffer contents
-(define-key my/leader-map (kbd "Y") '(lambda ()
-				       (interactive)
-				       ;; (kill-buffer " *Minibuf-0*")
-				       (let ((curr-buf (buffer-name)))
-					 (switch-to-buffer " *Minibuf-0*")
-					 (copy-region-as-kill (point-min) (point-max))
-					 (switch-to-buffer curr-buf))))
+(define-key my/leader-map (kbd "Y") (lambda ()
+				      (interactive)
+				      ;; (kill-buffer " *Minibuf-0*")
+				      (let ((curr-buf (buffer-name)))
+					(switch-to-buffer " *Minibuf-0*")
+					(copy-region-as-kill (point-min) (point-max))
+					(switch-to-buffer curr-buf))))
 
 ;; * File options
 (define-prefix-command 'my/file-options-map)
@@ -1933,11 +1933,11 @@ Borrowed from mozc.el."
       ;; This generates a new mode map and uses it. This makes it possible to modify the current mode map without modifying the org mode map.
       (org-mode)
       (use-local-map (copy-keymap org-mode-map))
-      (local-set-key [remap my/save-and-backup-buffer] '(lambda () (interactive)
-							  ;; Using write-region instead of write-file here makes it so that the scratch buffer doesn't get assigned to a file, which means it can be used without any problems in a direnv buffer
-							  (save-restriction
-							    (widen)
-							    (write-region (point-min) (point-max) (concat user-emacs-directory "scratch")))))))
+      (local-set-key [remap my/save-and-backup-buffer] (lambda () (interactive)
+							 ;; Using write-region instead of write-file here makes it so that the scratch buffer doesn't get assigned to a file, which means it can be used without any problems in a direnv buffer
+							 (save-restriction
+							   (widen)
+							   (write-region (point-min) (point-max) (concat user-emacs-directory "scratch")))))))
   (run-hooks 'my/open-map-hook))
 
 (define-key my/open-map (kbd "s") 'my/switch-to-scratch)
@@ -2181,7 +2181,7 @@ Borrowed from mozc.el."
 (setq org-src-window-setup 'current-window)
 
 ;; *** Don't save window layout
-(add-hook 'org-src-mode-hook '(lambda () (interactive) (setq org-src--saved-temp-window-config nil)))
+(add-hook 'org-src-mode-hook (lambda () (interactive) (setq org-src--saved-temp-window-config nil)))
 
 ;; *** Rebind key
 (define-key my/leader-map (kbd "'") 'my/toggle-org-src)
@@ -2603,9 +2603,9 @@ Borrowed from mozc.el."
 
 (defvar my/hs-ignore-modes '(fsharp-mode))
 
-(add-hook 'prog-mode-hook '(lambda () (interactive)
-			     (if (not (member major-mode my/hs-ignore-modes))
-				 (hs-minor-mode 1))))
+(add-hook 'prog-mode-hook (lambda () (interactive)
+			    (if (not (member major-mode my/hs-ignore-modes))
+				(hs-minor-mode 1))))
 
 ;; *** Yafolding
 ;; Used for universal folding
@@ -2636,11 +2636,11 @@ Borrowed from mozc.el."
 ;; Make counsel-yank-pop use default height
 ;; (delete `(counsel-yank-pop . 5) ivy-height-alist)
 ;; Disable set height depending on command
-(add-hook 'after-init-hook '(lambda ()
-			      (setq ivy-height-alist nil)
-			      (setq-default ivy-height-alist nil)
-			      (add-to-list 'ivy-height-alist '(swiper . 10))
-			      (add-to-list 'ivy-height-alist '(swiper-isearch . 10))))
+(add-hook 'after-init-hook (lambda ()
+			     (setq ivy-height-alist nil)
+			     (setq-default ivy-height-alist nil)
+			     (add-to-list 'ivy-height-alist '(swiper . 10))
+			     (add-to-list 'ivy-height-alist '(swiper-isearch . 10))))
 
 ;; **** Highlight whole row in minibuffer
 ;; Change the default emacs formatter to highlight whole row in minibuffer
@@ -2701,9 +2701,9 @@ Borrowed from mozc.el."
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-d") 'ivy-insert-current)
 
 ;; Clear ivy input
-(evil-define-key '(motion normal) ivy-minibuffer-map (kbd "D") '(lambda () (interactive) (beginning-of-line-text)
-								  (evil-delete-char (+ 1 (point)) (point-max))
-								  (delete-char 1)))
+(evil-define-key '(motion normal) ivy-minibuffer-map (kbd "D") (lambda () (interactive) (beginning-of-line-text)
+								 (evil-delete-char (+ 1 (point)) (point-max))
+								 (delete-char 1)))
 
 ;; **** Ivy occur
 ;; Also ivy-occur-grep
@@ -2958,8 +2958,8 @@ Borrowed from mozc.el."
 
 ;; *** Fix company and eldoc
 ;; Where the company menu is up, eldoc shouldn't write to the minibuffer because company is already writing documentation there
-(add-hook 'company-completion-started-hook '(lambda (a) (setq-local eldoc-idle-delay 100)))
-(add-hook 'company-after-completion-hook '(lambda (a) (setq-local eldoc-idle-delay my/eldoc-idle-delay)))
+(add-hook 'company-completion-started-hook (lambda (a) (setq-local eldoc-idle-delay 100)))
+(add-hook 'company-after-completion-hook (lambda (a) (setq-local eldoc-idle-delay my/eldoc-idle-delay)))
 
 ;; *** Company posframe
 ;; (straight-use-package 'company-posframe)
@@ -3191,8 +3191,8 @@ Borrowed from mozc.el."
 (define-key isearch-mode-map (kbd "C-n") 'my/isearch-repeat-forward)
 (define-key isearch-mode-map (kbd "C-p") 'my/isearch-repeat-backward)
 
-(define-key isearch-mode-map (kbd "C-w") '(lambda () (interactive) () (my/isearch-repeat-times t 5)))
-(define-key isearch-mode-map (kbd "C-u") '(lambda () (interactive) () (my/isearch-repeat-times nil 5)))
+(define-key isearch-mode-map (kbd "C-w") (lambda () (interactive) () (my/isearch-repeat-times t 5)))
+(define-key isearch-mode-map (kbd "C-u") (lambda () (interactive) () (my/isearch-repeat-times nil 5)))
 
 (setq isearch-lazy-highlight t)
 (setq lazy-highlight-initial-delay 0)
@@ -4027,7 +4027,7 @@ Borrowed from mozc.el."
 
 ;; (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
 
-;; (add-hook 'prog-mode-hook '(lambda () (highlight-indent-guides-mode (my/highlight-indent-guide-should-enable))))
+;; (add-hook 'prog-mode-hook (lambda () (highlight-indent-guides-mode (my/highlight-indent-guide-should-enable))))
 
 ;; ;;(defun my/highlight-indent-guide-should-enable ()
 ;; ;;  (pcase major-mode
@@ -4496,7 +4496,7 @@ Borrowed from mozc.el."
 (add-hook 'haskell-mode-hook 'my/haskell-mode)
 
 ;; *** haskell-interactive-mode
-(add-hook 'haskell-mode-hook '(lambda () (add-hook 'after-save-hook 'haskell-process-load-file nil t)))
+(add-hook 'haskell-mode-hook (lambda () (add-hook 'after-save-hook 'haskell-process-load-file nil t)))
 
 ;; *** nix-haskell-mode
 ;; It's buggy for me
@@ -4593,8 +4593,8 @@ Borrowed from mozc.el."
 
 ;; *** Disable haskell-doc
 ;; Haskell-doc is loaded in as the eldoc-documentation-function.
-(add-hook 'haskell-mode-hook '(lambda ()
-				(setq-local eldoc-documentation-function nil)))
+(add-hook 'haskell-mode-hook (lambda ()
+			       (setq-local eldoc-documentation-function nil)))
 
 ;; *** Project management
 ;; **** Stack
@@ -4619,9 +4619,9 @@ Borrowed from mozc.el."
 
 ;; *** Fix lockup
 ;; This fixes a lockup that sometimes happens. I think this has to do with flycheck-mode
-(add-hook 'haskell-mode-hook '(lambda ()
-				;; Fixes lockups due to prettify-symbol I think
-				(setq-local syntax-propertize-function nil)))
+(add-hook 'haskell-mode-hook (lambda ()
+			       ;; Fixes lockups due to prettify-symbol I think
+			       (setq-local syntax-propertize-function nil)))
 
 ;; *** lsp-haskell
 (when my/haskell-hie-enable
@@ -4651,11 +4651,11 @@ Borrowed from mozc.el."
   (add-hook 'haskell-mode-hook 'my/haskell-lsp-mode))
 
 ;; **** Make it start in nix-shell
-(setq lsp-haskell-process-wrapper-function '(lambda (argv)
-					      (append
-					       (append (list "nix-shell" "-I" "." "--command" )
-						       (list (mapconcat 'identity argv " ")))
-					       (list (concat (lsp-haskell--get-root) "/shell.nix")))))
+(setq lsp-haskell-process-wrapper-function (lambda (argv)
+					     (append
+					      (append (list "nix-shell" "-I" "." "--command" )
+						      (list (mapconcat 'identity argv " ")))
+					      (list (concat (lsp-haskell--get-root) "/shell.nix")))))
 ;; **** Hack in eldoc support
 (when my/haskell-hie-enable
   (setq my/haskell-lsp-eldoc-entries '())
@@ -4709,12 +4709,12 @@ Borrowed from mozc.el."
 	      nil))))))
 
   ;; No idea why but eldoc doesn't run the documentation function unless i press escape, this fixes that
-  (add-hook 'haskell-mode-hook '(lambda ()
-				  (eldoc-mode -1)
-				  (setq-local eldoc-documentation-function 'my/haskell-lsp-eldoc-print)
+  (add-hook 'haskell-mode-hook (lambda ()
+				 (eldoc-mode -1)
+				 (setq-local eldoc-documentation-function 'my/haskell-lsp-eldoc-print)
 
-				  (add-hook 'post-command-hook
-					    'eldoc-print-current-symbol-info nil t))))
+				 (add-hook 'post-command-hook
+					   'eldoc-print-current-symbol-info nil t))))
 
 ;; *** Dante
 (when (not my/haskell-hie-enable)
@@ -4750,8 +4750,8 @@ Borrowed from mozc.el."
 ;; **** Add hlint to dante
 (when (not my/haskell-hie-enable)
   (add-hook 'dante-mode-hook
-	    '(lambda () (flycheck-add-next-checker 'haskell-dante
-					      '(warning . haskell-hlint)))))
+	    (lambda () (flycheck-add-next-checker 'haskell-dante
+						  '(warning . haskell-hlint)))))
 
 ;; **** Apply GHC hints
 (straight-use-package 'attrap)
@@ -5333,7 +5333,7 @@ Borrowed from mozc.el."
   (my/give-buffer-unique-name "*eshell*"))
 
 ;; ** Allow to delete prompt
-(add-hook 'eshell-mode-hook '(lambda () (setq-local inhibit-read-only t)))
+(add-hook 'eshell-mode-hook (lambda () (setq-local inhibit-read-only t)))
 
 ;; ** History
 (setq eshell-highlight-prompt t)
@@ -5359,7 +5359,7 @@ Borrowed from mozc.el."
 
 (add-hook 'eshell-pre-command-hook #'eshell-append-history)
 
-(add-hook 'eshell-mode-hook '(lambda () (interactive) (setq eshell-exit-hook (remove 'eshell-write-history eshell-exit-hook))))
+(add-hook 'eshell-mode-hook (lambda () (interactive) (setq eshell-exit-hook (remove 'eshell-write-history eshell-exit-hook))))
 
 ;; ** Prefer lisp to bash
 (setq eshell-prefer-lisp-functions nil)
@@ -5472,10 +5472,10 @@ Borrowed from mozc.el."
 ;; ** With-editor
 (straight-use-package 'with-editor)
 
-(add-hook 'eshell-mode-hook '(lambda ()
-			       (with-editor-export-editor)
-			       ;; Clear echo area to remove annoying messages. A problem with this is that it also hides error messages
-			       (message nil)))
+(add-hook 'eshell-mode-hook (lambda ()
+			      (with-editor-export-editor)
+			      ;; Clear echo area to remove annoying messages. A problem with this is that it also hides error messages
+			      (message nil)))
 
 ;; ** Keys
 (define-key my/leader-map (kbd "[") 'my/eshell)
@@ -5492,7 +5492,7 @@ Borrowed from mozc.el."
 
   (evil-define-key 'normal eshell-mode-map (kbd "0") 'my/eshell-goto-beg-of-line)
 
-  (evil-define-key '(normal insert visual replace) eshell-mode-map (kbd "C-c") '(lambda () (interactive) (insert "") (call-interactively 'eshell-send-input)))
+  (evil-define-key '(normal insert visual replace) eshell-mode-map (kbd "C-c") (lambda () (interactive) (insert "") (call-interactively 'eshell-send-input)))
   ;;(evil-define-key '(normal insert visual replace) eshell-mode-map (kbd "C-x") 'eshell-interrupt-process)
   (evil-define-key '(normal insert visual replace) eshell-mode-map (kbd "C-z") 'eshell-kill-process)
 
@@ -5523,18 +5523,18 @@ Borrowed from mozc.el."
 
 ;; *** Language specific symbols
 ;; **** Lower
-;; (my/evil-emacs-define-key "M-p" '(lambda () (interactive) (my/exwm-fake-key "å")))
-;; (my/evil-emacs-define-key "M-," '(lambda () (interactive) (my/exwm-fake-key "ä")))
-;; (my/evil-emacs-define-key "M-." '(lambda () (interactive) (my/exwm-fake-key "ö")))
+;; (my/evil-emacs-define-key "M-p" (lambda () (interactive) (my/exwm-fake-key "å")))
+;; (my/evil-emacs-define-key "M-," (lambda () (interactive) (my/exwm-fake-key "ä")))
+;; (my/evil-emacs-define-key "M-." (lambda () (interactive) (my/exwm-fake-key "ö")))
 
 (define-key key-translation-map (kbd "M-p") (kbd "å"))
 (define-key key-translation-map (kbd "M-,") (kbd "ä"))
 (define-key key-translation-map (kbd "M-.") (kbd "ö"))
 
 ;; **** Capital
-;; (my/evil-emacs-define-key "M-P" '(lambda () (interactive) (my/exwm-fake-key ?Å)))
-;; (my/evil-emacs-define-key "M-<" '(lambda () (interactive) (my/exwm-fake-key ?Ä)))
-;; (my/evil-emacs-define-key "M->" '(lambda () (interactive) (my/exwm-fake-key ?Ö)))
+;; (my/evil-emacs-define-key "M-P" (lambda () (interactive) (my/exwm-fake-key ?Å)))
+;; (my/evil-emacs-define-key "M-<" (lambda () (interactive) (my/exwm-fake-key ?Ä)))
+;; (my/evil-emacs-define-key "M->" (lambda () (interactive) (my/exwm-fake-key ?Ö)))
 
 (define-key key-translation-map (kbd "M-P") (kbd "Å"))
 (define-key key-translation-map (kbd "M-<") (kbd "Ä"))
@@ -5759,10 +5759,10 @@ Borrowed from mozc.el."
 ;; *** Company
 (straight-use-package 'company-nixos-options)
 ;; I can't find a pure add-to-list so i have to copy it so that company-backends isn't modified
-(add-hook 'nix-mode-hook '(lambda () (interactive)
-			    (let ((list company-backends))
-			      (add-to-list 'list 'company-nixos-options)
-			      (setq-local company-backends list))))
+(add-hook 'nix-mode-hook (lambda () (interactive)
+			   (let ((list company-backends))
+			     (add-to-list 'list 'company-nixos-options)
+			     (setq-local company-backends list))))
 
 ;; *** Ivy
 (defun my/nixos-options-ivy ()
@@ -5880,12 +5880,12 @@ Borrowed from mozc.el."
 
 (exwm-input-set-key (kbd "M-x") 'counsel-M-x)
 
-;; (exwm-input-set-key (kbd "DEL") '(lambda () (interactive) (exwm-input--fake-key 'backspace)))
-;; (exwm-input-set-key (kbd "<deletechar>") '(lambda () (interactive) (exwm-input--fake-key 'delete)))
+;; (exwm-input-set-key (kbd "DEL") (lambda () (interactive) (exwm-input--fake-key 'backspace)))
+;; (exwm-input-set-key (kbd "<deletechar>") (lambda () (interactive) (exwm-input--fake-key 'delete)))
 
-;; (exwm-input-set-key (kbd "M-w") '(lambda () (interactive) (exwm-input--fake-key ?\å)))
-;; (exwm-input-set-key (kbd "M-r") '(lambda () (interactive) (exwm-input--fake-key ?\ä)))
-;; (exwm-input-set-key (kbd "M-j") '(lambda () (interactive) (exwm-input--fake-key ?\ö)))
+;; (exwm-input-set-key (kbd "M-w") (lambda () (interactive) (exwm-input--fake-key ?\å)))
+;; (exwm-input-set-key (kbd "M-r") (lambda () (interactive) (exwm-input--fake-key ?\ä)))
+;; (exwm-input-set-key (kbd "M-j") (lambda () (interactive) (exwm-input--fake-key ?\ö)))
 
 ;; ** Exwm-edit
 (setq exwm-edit-bind-default-keys
@@ -5895,7 +5895,7 @@ Borrowed from mozc.el."
 (global-exwm-edit-mode 1)
 
 ;; *** Remove header
-(add-hook 'exwm-edit-mode-hook '(lambda () (kill-local-variable 'header-line-format)))
+(add-hook 'exwm-edit-mode-hook (lambda () (kill-local-variable 'header-line-format)))
 
 ;; *** Keys
 (exwm-input-set-key (kbd "C-d") #'exwm-edit--compose)
@@ -5934,8 +5934,8 @@ Borrowed from mozc.el."
     (exwm-workspace-rename-buffer exwm-title)))
 
 ;; ** Fix modeline in exwm buffers
-(add-hook 'exwm-floating-exit-hook '(lambda ()
-				      (kill-local-variable 'header-line-format)))
+(add-hook 'exwm-floating-exit-hook (lambda ()
+				     (kill-local-variable 'header-line-format)))
 
 ;; ** Disable floating windows
 (setq exwm-manage-force-tiling t)
@@ -6105,7 +6105,7 @@ Borrowed from mozc.el."
 (require 'eww)
 
 ;; *** Add URL to buffer name
-(add-hook 'eww-after-render-hook '(lambda () (interactive) (my/give-buffer-unique-name (concat "eww - " (plist-get eww-data :title)))))
+(add-hook 'eww-after-render-hook (lambda () (interactive) (my/give-buffer-unique-name (concat "eww - " (plist-get eww-data :title)))))
 
 ;; *** Keys
 ;; (define-key eww-mode-map [?\d] 'eww-back-url)
@@ -6214,8 +6214,8 @@ Borrowed from mozc.el."
     (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-find-previous)
 
     ;; Bind tab
-    (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "TAB") '(lambda () (interactive)
-											      (exwm-input--fake-key 'tab)))
+    (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "TAB") (lambda () (interactive)
+											     (exwm-input--fake-key 'tab)))
 
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "f") 'exwm-firefox-evil-link-hint)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "F") 'exwm-firefox-evil-link-hint-new-tab)
@@ -6233,24 +6233,24 @@ Borrowed from mozc.el."
     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
 
        ;;; Insert
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-u") '(lambda () (interactive) (exwm-firefox-evil-normal) (exwm-firefox-core-half-page-up)))
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-w") '(lambda () (interactive) (exwm-firefox-evil-normal) (exwm-firefox-core-half-page-down)))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-u") (lambda () (interactive) (exwm-firefox-evil-normal) (exwm-firefox-core-half-page-up)))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-w") (lambda () (interactive) (exwm-firefox-evil-normal) (exwm-firefox-core-half-page-down)))
     ;;
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-f") '(lambda () (interactive) (my/exwm-fake-key "å")))
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-u") '(lambda () (interactive) (my/exwm-fake-key "ä")))
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-b") '(lambda () (interactive) (my/exwm-fake-key "ö")))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-f") (lambda () (interactive) (my/exwm-fake-key "å")))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-u") (lambda () (interactive) (my/exwm-fake-key "ä")))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-b") (lambda () (interactive) (my/exwm-fake-key "ö")))
     ;;
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-F") '(lambda () (interactive) (my/exwm-fake-key "Å")))
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-U") '(lambda () (interactive) (my/exwm-fake-key "Ä")))
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-B") '(lambda () (interactive) (my/exwm-fake-key "Ö")))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-F") (lambda () (interactive) (my/exwm-fake-key "Å")))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-U") (lambda () (interactive) (my/exwm-fake-key "Ä")))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-B") (lambda () (interactive) (my/exwm-fake-key "Ö")))
 
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-,") '(lambda () (interactive) (exwm-input--fake-key ?ä)))
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "ä") '(lambda () (interactive) (exwm-input--fake-key ?ä)))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-,") (lambda () (interactive) (exwm-input--fake-key ?ä)))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "ä") (lambda () (interactive) (exwm-input--fake-key ?ä)))
 
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-l") '(lambda () (interactive) (exwm-input--fake-key 'delete)))
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "<backspace>") '(lambda () (interactive) (exwm-input--fake-key 'backspace)))))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-l") (lambda () (interactive) (exwm-input--fake-key 'delete)))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "<backspace>") (lambda () (interactive) (exwm-input--fake-key 'backspace)))))
 
 ;; ** Next browser
 ;; (defun my/write-next-config ()
@@ -7227,7 +7227,7 @@ Borrowed from mozc.el."
 ;; ** Keys
 (define-key my/network-map (kbd "s") 'netstat)
 (define-key my/network-map (kbd "p") 'ping)
-(define-key my/network-map (kbd "P") '(lambda () (interactive) (ping "8.8.8.8")))
+(define-key my/network-map (kbd "P") (lambda () (interactive) (ping "8.8.8.8")))
 (define-key my/network-map (kbd "i") 'ifconfig)
 
 ;; * Hardware
@@ -7426,7 +7426,7 @@ Borrowed from mozc.el."
 (define-key my/artist-mode-map (kbd "s") 'my/artist-select-settings)
 
 
-;; (evil-define-key 'insert artist-mode-map (kbd "SPC") '(lambda () (interactive) (insert " ")))
+;; (evil-define-key 'insert artist-mode-map (kbd "SPC") (lambda () (interactive) (insert " ")))
 ;; (evil-define-key 'insert artist-mode-map (kbd "SPC") 'self-insert-command)
 
 (setq artist-mode-map (make-sparse-keymap))
@@ -7720,7 +7720,7 @@ Borrowed from mozc.el."
 (defhydra my/structured-haskell-hydra (:hint nil
 					     :color red)
   "haskell"
-  ("U" (call-interactively '(lambda () (interactive) (insert "undefined"))) nil)
+  ("U" (call-interactively (lambda () (interactive) (insert "undefined"))) nil)
 
   ;; Also check forward/backward node
   ("l" shm/goto-parent-end nil)
@@ -7815,11 +7815,11 @@ Borrowed from mozc.el."
 (define-key pdf-view-mode-map [remap counsel-grep] 'isearch-forward)
 
 ;; Movement
-(define-key pdf-view-mode-map [remap evil-next-line] '(lambda () (interactive) (image-next-line 4)))
-(define-key pdf-view-mode-map [remap evil-previous-line] '(lambda () (interactive) (image-previous-line 4)))
+(define-key pdf-view-mode-map [remap evil-next-line] (lambda () (interactive) (image-next-line 4)))
+(define-key pdf-view-mode-map [remap evil-previous-line] (lambda () (interactive) (image-previous-line 4)))
 
-(define-key pdf-view-mode-map [remap evil-forward-char] '(lambda () (interactive) (image-forward-hscroll 8)))
-(define-key pdf-view-mode-map [remap evil-backward-char] '(lambda () (interactive) (image-backward-hscroll 8)))
+(define-key pdf-view-mode-map [remap evil-forward-char] (lambda () (interactive) (image-forward-hscroll 8)))
+(define-key pdf-view-mode-map [remap evil-backward-char] (lambda () (interactive) (image-backward-hscroll 8)))
 
 ;; Disable other modes
 (evil-define-key 'normal pdf-view-mode-map (kbd "i") 'nil)
@@ -7845,7 +7845,7 @@ Borrowed from mozc.el."
 ;; ** Image mode
 (require 'image-mode)
 
-(add-hook 'image-mode-hook '(lambda () (interactive) (display-line-numbers-mode -1)))
+(add-hook 'image-mode-hook (lambda () (interactive) (display-line-numbers-mode -1)))
 
 ;; Make animated images loop
 (setq image-animate-loop t)
@@ -7876,16 +7876,16 @@ Borrowed from mozc.el."
 (evil-define-key 'normal image-mode-map (kbd "C-u") 'image-scroll-down)
 (evil-define-key 'normal image-mode-map (kbd "C-w") 'image-scroll-up)
 
-(evil-define-key 'normal image-mode-map (kbd "n") '(lambda () (interactive) (image-next-line 8)))
-(evil-define-key 'normal image-mode-map (kbd "p") '(lambda () (interactive) (image-previous-line 8)))
-(evil-define-key 'normal image-mode-map (kbd "h") '(lambda () (interactive) (image-backward-hscroll 8)))
-(evil-define-key 'normal image-mode-map (kbd "l") '(lambda () (interactive) (image-forward-hscroll 8)))
+(evil-define-key 'normal image-mode-map (kbd "n") (lambda () (interactive) (image-next-line 8)))
+(evil-define-key 'normal image-mode-map (kbd "p") (lambda () (interactive) (image-previous-line 8)))
+(evil-define-key 'normal image-mode-map (kbd "h") (lambda () (interactive) (image-backward-hscroll 8)))
+(evil-define-key 'normal image-mode-map (kbd "l") (lambda () (interactive) (image-forward-hscroll 8)))
 
-(evil-define-key 'normal image-mode-map (kbd "G") '(lambda () (interactive) (image-next-line 1000)))
-(evil-define-key 'normal image-mode-map (kbd "g g") '(lambda () (interactive) (image-previous-line 1000)))
+(evil-define-key 'normal image-mode-map (kbd "G") (lambda () (interactive) (image-next-line 1000)))
+(evil-define-key 'normal image-mode-map (kbd "g g") (lambda () (interactive) (image-previous-line 1000)))
 
-(evil-define-key 'normal image-mode-map (kbd "$") '(lambda () (interactive) (image-forward-hscroll 1000)))
-(evil-define-key 'normal image-mode-map (kbd "0") '(lambda () (interactive) (image-backward-hscroll 1000)))
+(evil-define-key 'normal image-mode-map (kbd "$") (lambda () (interactive) (image-forward-hscroll 1000)))
+(evil-define-key 'normal image-mode-map (kbd "0") (lambda () (interactive) (image-backward-hscroll 1000)))
 
 (define-prefix-command 'my/image-mode-map)
 (evil-define-key 'normal image-mode-map (kbd (concat my/leader-map-key " a")) 'my/image-mode-map)
@@ -7928,7 +7928,7 @@ Borrowed from mozc.el."
 
 ;; ** Magit
 ;; Prettify symbols doesn't work with magit
-(add-hook 'magit-mode-hook '(lambda () (interactive) (prettify-symbols-mode -1)))
+(add-hook 'magit-mode-hook (lambda () (interactive) (prettify-symbols-mode -1)))
 
 ;; ** Symbols
 ;; Read =reference-point-alist= to understand how to merge characters and add spaces to characters
@@ -8009,8 +8009,8 @@ Borrowed from mozc.el."
 (setq my/pretty-comment-symbol ? )
 
 ;; Use font lock to
-(add-hook 'prog-mode-hook '(lambda ()
-			     (setq-local font-lock-comment-start-skip (concat (s-trim-right comment-start) "+"))))
+(add-hook 'prog-mode-hook (lambda ()
+			    (setq-local font-lock-comment-start-skip (concat (s-trim-right comment-start) "+"))))
 
 (defun my/prettify-comment ()
   `((,(string-trim comment-start) . ,my/pretty-comment-symbol)))
@@ -8169,9 +8169,9 @@ Borrowed from mozc.el."
 	(my/prettify-outline-heading)
 	))))
 
-(add-hook 'prog-mode-hook '(lambda () (interactive)
-			     (setq-local prettify-symbols-alist
-					 (my/get-pretty-symbols-by-mode major-mode))))
+(add-hook 'prog-mode-hook (lambda () (interactive)
+			    (setq-local prettify-symbols-alist
+					(my/get-pretty-symbols-by-mode major-mode))))
 
 ;; ** Enable modify symbols inside comment blocks
 (defun my/prettify-symbols-default-compose-p (start end _match)
@@ -8772,11 +8772,11 @@ Borrowed from mozc.el."
 (defun my/modeline-update-git-changes (changes)
   "CHANGES is generated by `(diff-hl-changes)'"
   (my/mode-line-update-git-changes-string-reset)
-  (mapc #'(lambda (entry)
-	    (pcase (nth 2 entry)
-	      ('insert (setq my/vc-insert-count (+ my/vc-insert-count (nth 1 entry))))
-	      ('change (setq my/vc-change-count (+ my/vc-change-count (nth 1 entry))))
-	      ('delete (setq my/vc-delete-count (+ my/vc-delete-count (nth 1 entry))))))
+  (mapc (lambda (entry)
+	  (pcase (nth 2 entry)
+	    ('insert (setq my/vc-insert-count (+ my/vc-insert-count (nth 1 entry))))
+	    ('change (setq my/vc-change-count (+ my/vc-change-count (nth 1 entry))))
+	    ('delete (setq my/vc-delete-count (+ my/vc-delete-count (nth 1 entry))))))
 	changes)
   (my/mode-line-update-git-changes-string))
 
@@ -9055,7 +9055,7 @@ Borrowed from mozc.el."
 
 ;; ***** Init
 (when (string= my/status-bar 'lv-line)
-  (add-hook 'exwm-init-hook (lambda () (interactive) (run-with-timer 1 nil '(lambda () (interactive) (my/frame-width-update) (my/lv-line-update)))) t))
+  (add-hook 'exwm-init-hook (lambda () (interactive) (run-with-timer 1 nil (lambda () (interactive) (my/frame-width-update) (my/lv-line-update)))) t))
 
 ;; ***** Create LV-line at top
 (defun my/lv-line-set-buffer ()
@@ -9613,7 +9613,7 @@ Borrowed from mozc.el."
 (setq undo-tree-visualizer-diff t)
 
 ;; *** Keys
-(add-hook 'undo-tree-visualizer-mode-hook '(lambda () (interactive) (run-with-timer 0.1 nil 'evil-force-normal-state)))
+(add-hook 'undo-tree-visualizer-mode-hook (lambda () (interactive) (run-with-timer 0.1 nil 'evil-force-normal-state)))
 
 (setq undo-tree-visualizer-mode-map (make-sparse-keymap))
 
