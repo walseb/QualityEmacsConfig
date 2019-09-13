@@ -5758,11 +5758,10 @@ Borrowed from mozc.el."
 ;; ** Nix-options
 ;; *** Company
 (straight-use-package 'company-nixos-options)
-;; I can't find a pure add-to-list so i have to copy it so that company-backends isn't modified
+
+;; Run nixos-options on a hook because otherwise it's run on every startup which means increased startup time even if you aren't going to edit nix files
 (add-hook 'nix-mode-hook (lambda () (interactive)
-			   (let ((backends company-backends))
-			     (push 'backends 'company-nixos-options)
-			     (setq-local company-backends list))))
+			   (add-to-list 'company-backends 'company-nixos-options)))
 
 ;; *** Ivy
 (defun my/nixos-options-ivy ()
