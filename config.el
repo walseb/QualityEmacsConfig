@@ -5761,7 +5761,7 @@ Borrowed from mozc.el."
 
 ;; Run nixos-options on a hook because otherwise it's run on every startup which means increased startup time even if you aren't going to edit nix files
 (add-hook 'nix-mode-hook (lambda () (interactive)
-			   (add-to-list 'company-backends 'company-nixos-options)))
+			   (setq-local company-backends (pushnew 'company-nixos-options company-backends))))
 
 ;; *** Ivy
 (defun my/nixos-options-ivy ()
