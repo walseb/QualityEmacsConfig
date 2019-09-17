@@ -5448,7 +5448,9 @@ Borrowed from mozc.el."
 (setq eshell-prompt-function
       (lambda ()
 	(concat (abbreviate-file-name (eshell/pwd))
-		(if (= (user-uid) 0) " # " (concat " " my/eshell-prompt-symbol " ")))))
+		(if (= (user-uid) 0) " # " ;;(concat " " my/eshell-prompt-symbol " ")
+		    "\n"
+		    ))))
 
 (setq eshell-prompt-regexp
       (concat "^[^#$\n]* [#" my/eshell-prompt-symbol "] "))
