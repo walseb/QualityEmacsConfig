@@ -5341,8 +5341,9 @@ Borrowed from mozc.el."
 (setq eshell-history-size 10000)
 
 ;; *** Clean history
+;; This cryptic code removes all duplicate lines in the eshell history file without sorting
 (with-eval-after-load 'em-hist
-  (let ((content (shell-command-to-string (concat "cat " eshell-history-file-name " | awk '{$1=$1};1' | sort | uniq"))))
+  (let ((content (shell-command-to-string (concat "awk '!seen[$0]++' " eshell-history-file-name))))
     (write-region content nil eshell-history-file-name)))
 
 ;; *** Append history
