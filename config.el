@@ -672,6 +672,11 @@
   (write-region (concat "\n" content) nil file t)
   (message (concat "Wrote file: " file " with contents")))
 
+;; *** Append to end of file
+(defun my/append-to-file (file string)
+  ;; The 1 here is used to stop write-region from printing when it writes something
+  (write-region string nil file t 1))
+
 ;; ** Is external package installed
 ;; Checks variable =exec-path= for package
 (defun my/is-system-package-installed (package)
@@ -5350,15 +5355,15 @@ Borrowed from mozc.el."
 ;; https://emacs.stackexchange.com/questions/18564/merge-history-from-multiple-eshells
 (setq eshell-save-history-on-exit nil)
 
-(defun eshell-append-history ()
+(defun my/eshell-append-history ()
   "Call `eshell-write-history' with the `append' parameter set to `t'."
   (when eshell-history-ring
     (let ((newest-cmd-ring (make-ring 1)))
       (ring-insert newest-cmd-ring (car (ring-elements eshell-history-ring)))
       (let ((eshell-history-ring newest-cmd-ring))
-	(eshell-write-history eshell-history-file-name t)))))
+	(my/append-to-file eshell-history-file-name (concat (car (ring-elements eshell-history-ring)) "\n"))))))
 
-(add-hook 'eshell-pre-command-hook #'eshell-append-history)
+(add-hook 'eshell-pre-command-hook #'my/eshell-append-history)
 
 (add-hook 'eshell-mode-hook (lambda () (interactive) (setq eshell-exit-hook (remove 'eshell-write-history eshell-exit-hook))))
 
