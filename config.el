@@ -9367,6 +9367,7 @@ Borrowed from mozc.el."
   ;; Dired
   (set-face-attribute 'dired-directory nil :foreground my/background-color :background my/foreground-color)
   (my/set-face-to-default 'dired-perm-write 't)
+  (set-face-attribute 'dired-symlink nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
 
   ;; Spray
   ;;  (set-face-attribute 'spray-accent-face nil :foreground "red" :background my/background-color)
