@@ -704,6 +704,13 @@ Emacs 27 doesn't support :init-value, :keymap, etc
   (message (concat "Wrote file: " file " with contents")))
 #+end_src
 
+*** Append to end of file
+#+begin_src emacs-lisp
+(defun my/append-to-file (file string)
+  ;; The 1 here is used to stop write-region from printing when it writes something
+  (write-region string nil file t 1))
+#+end_src
+
 ** Is external package installed
 Checks variable =exec-path= for package
 #+begin_src emacs-lisp
@@ -5566,7 +5573,9 @@ Remove duplicates if any
 (when (not my/haskell-hie-enable)
   (add-hook 'dante-mode-hook
 	    (lambda () (flycheck-add-next-checker 'haskell-dante
-						  '(warning . haskell-hlint)))))
+					     '(warning . haskell-hlint))
+
+	      (setq flycheck-checkers (remove 'haskell-ghc flycheck-checkers)))))
 #+end_src
 
 **** Apply GHC hints
@@ -6241,9 +6250,10 @@ Change to temporary name before renaming. This has to be unique. If it isn't the
 #+end_src
 
 *** Clean history
+This cryptic code removes all duplicate lines in the eshell history file without sorting
 #+begin_src emacs-lisp
 (with-eval-after-load 'em-hist
-  (let ((content (shell-command-to-string (concat "cat " eshell-history-file-name " | awk '{$1=$1};1' | sort | uniq"))))
+  (let ((content (shell-command-to-string (concat "awk '!seen[$0]++' " eshell-history-file-name))))
     (write-region content nil eshell-history-file-name)))
 #+end_src
 
@@ -6252,15 +6262,15 @@ https://emacs.stackexchange.com/questions/18564/merge-history-from-multiple-eshe
 #+begin_src emacs-lisp
 (setq eshell-save-history-on-exit nil)
 
-(defun eshell-append-history ()
+(defun my/eshell-append-history ()
   "Call `eshell-write-history' with the `append' parameter set to `t'."
   (when eshell-history-ring
     (let ((newest-cmd-ring (make-ring 1)))
       (ring-insert newest-cmd-ring (car (ring-elements eshell-history-ring)))
       (let ((eshell-history-ring newest-cmd-ring))
-	(eshell-write-history eshell-history-file-name t)))))
+	(my/append-to-file eshell-history-file-name (concat (car (ring-elements eshell-history-ring)) "\n"))))))
 
-(add-hook 'eshell-pre-command-hook #'eshell-append-history)
+(add-hook 'eshell-pre-command-hook #'my/eshell-append-history)
 
 (add-hook 'eshell-mode-hook (lambda () (interactive) (setq eshell-exit-hook (remove 'eshell-write-history eshell-exit-hook))))
 #+end_src
@@ -6275,24 +6285,100 @@ https://emacs.stackexchange.com/questions/18564/merge-history-from-multiple-eshe
 (require 'em-tramp)
 (defalias 'sudo 'eshell/sudo)
 
-** Autocompletion
-(defun company-eshell-history (command &optional arg &rest ignored)
-(interactive (list 'interactive))
-(cl-case command
-(interactive (company-begin-backend 'company-eshell-history))
-(prefix (and (eq major-mode 'eshell-mode)
-(let ((word (company-grab-word)))
-(save-excursion
-(eshell-bol)
-(and (looking-at-p (s-concat word "$")) word)))))
-(candidates (remove-duplicates
-(->> (ring-elements eshell-history-ring)
-(remove-if-not (lambda (item) (s-prefix-p arg item)))
-(mapcar 's-trim))
-:test 'string=))
-(sorted t)))
+** Completion
+*** Bash-completion
+https://github.com/szermatt/emacs-bash-completion/issues/24
+(straight-use-package 'bash-completion)
 
-(add-to-list 'company-backends 'company-eshell-history)
+(add-hook 'eshell-mode-hook (lambda () (setq-local bash-completion-nospace t)))
+
+(setq eshell-default-completion-function 'eshell-bash-completion)
+
+(defun eshell-bash-completion ()
+  (while (pcomplete-here
+	  (nth 2 (bash-completion-dynamic-complete-nocomint (save-excursion (eshell-bol) (point)) (point))))))
+
+*** Fish-completion
+Uses bash-completion if fish wasn't found
+(straight-use-package 'fish-completion)
+(fish-completion-mode)
+
+*** Fix inserting random tabs
+https://github.com/company-mode/company-mode/issues/409#issuecomment-434820576
+Commented out what's changed
+#+begin_src emacs-lisp
+(defun eshell-complete-parse-arguments ()
+  "Parse the command line arguments for `pcomplete-argument'."
+  (when (and eshell-no-completion-during-jobs
+	     (eshell-interactive-process))
+    ;; (insert-and-inherit "\t")
+    (throw 'pcompleted t))
+  (let ((end (point-marker))
+	(begin (save-excursion (eshell-bol) (point)))
+	(posns (list t))
+	args delim)
+    (when (memq this-command '(pcomplete-expand
+			       pcomplete-expand-and-complete))
+      (run-hook-with-args 'eshell-expand-input-functions begin end)
+      (if (= begin end)
+	  (end-of-line))
+      (setq end (point-marker)))
+    (if (setq delim
+	      (catch 'eshell-incomplete
+		(ignore
+		 (setq args (eshell-parse-arguments begin end)))))
+	(cond ((memq (car delim) '(?\{ ?\<))
+	       (setq begin (1+ (cadr delim))
+		     args (eshell-parse-arguments begin end)))
+	      ((eq (car delim) ?\()
+	       (eshell-complete-lisp-symbol)
+	       (throw 'pcompleted t))
+	      (t
+	       ;; (insert-and-inherit "\t")
+	       (throw 'pcompleted t))))
+    (when (get-text-property (1- end) 'comment)
+      ;; (insert-and-inherit "\t")
+      (throw 'pcompleted t))
+    (let ((pos begin))
+      (while (< pos end)
+	(if (get-text-property pos 'arg-begin)
+	    (nconc posns (list pos)))
+	(setq pos (1+ pos))))
+    (setq posns (cdr posns))
+    (cl-assert (= (length args) (length posns)))
+    (let ((a args)
+	  (i 0)
+	  l)
+      (while a
+	(if (and (consp (car a))
+		 (eq (caar a) 'eshell-operator))
+	    (setq l i))
+	(setq a (cdr a) i (1+ i)))
+      (and l
+	   (setq args (nthcdr (1+ l) args)
+		 posns (nthcdr (1+ l) posns))))
+    (cl-assert (= (length args) (length posns)))
+    (when (and args (eq (char-syntax (char-before end)) ? )
+	       (not (eq (char-before (1- end)) ?\\)))
+      (nconc args (list ""))
+      (nconc posns (list (point))))
+    (cons (mapcar
+	   (function
+	    (lambda (arg)
+	      (let ((val
+		     (if (listp arg)
+			 (let ((result
+				(eshell-do-eval
+				 (list 'eshell-commands arg) t)))
+			   (cl-assert (eq (car result) 'quote))
+			   (cadr result))
+		       arg)))
+		(if (numberp val)
+		    (setq val (number-to-string val)))
+		(or val ""))))
+	   args)
+	  posns)))
+#+end_src
 
 ** Eldoc
 *** Eshell-eldoc
@@ -6366,7 +6452,9 @@ Default eshell/clear only spams newlines
 (setq eshell-prompt-function
       (lambda ()
 	(concat (abbreviate-file-name (eshell/pwd))
-		(if (= (user-uid) 0) " # " (concat " " my/eshell-prompt-symbol " ")))))
+		(if (= (user-uid) 0) " # " ;;(concat " " my/eshell-prompt-symbol " ")
+		    "\n"
+		    ))))
 
 (setq eshell-prompt-regexp
       (concat "^[^#$\n]* [#" my/eshell-prompt-symbol "] "))
@@ -6746,12 +6834,11 @@ If window system, unbind tab key and not C-=
 #+begin_src emacs-lisp
 (straight-use-package 'company-nixos-options)
 #+end_src
-I can't find a pure add-to-list so i have to copy it so that company-backends isn't modified
+
+Run nixos-options on a hook because otherwise it's run on every startup which means increased startup time even if you aren't going to edit nix files
 #+begin_src emacs-lisp
 (add-hook 'nix-mode-hook (lambda () (interactive)
-			   (let ((list company-backends))
-			     (add-to-list 'list 'company-nixos-options)
-			     (setq-local company-backends list))))
+			   (setq-local company-backends (pushnew 'company-nixos-options company-backends))))
 #+end_src
 
 *** Ivy
@@ -10859,6 +10946,7 @@ my/lv-line-window
   ;; Dired
   (set-face-attribute 'dired-directory nil :foreground my/background-color :background my/foreground-color)
   (my/set-face-to-default 'dired-perm-write 't)
+  (set-face-attribute 'dired-symlink nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
 
   ;; Spray
   ;;  (set-face-attribute 'spray-accent-face nil :foreground "red" :background my/background-color)
@@ -11163,6 +11251,6 @@ Fixes errors
 Byte compilation doesn't work before loading everything because of some reason, so do it now
 #+begin_src emacs-lisp
 (unless (and (file-exists-p my/config-compiled-location) (my/is-file-more-up-to-date my/config-compiled-location my/config-location))
-  (byte-compile-file "~/.emacs.d/config.el")
+  (byte-compile-file "~/.emacs.d/config.el" nil)
   (message "Config is now byte compiled, restart to run it"))
 #+end_src
