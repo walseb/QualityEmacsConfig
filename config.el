@@ -4756,7 +4756,9 @@ Borrowed from mozc.el."
 (when (not my/haskell-hie-enable)
   (add-hook 'dante-mode-hook
 	    (lambda () (flycheck-add-next-checker 'haskell-dante
-						  '(warning . haskell-hlint)))))
+					     '(warning . haskell-hlint))
+
+	      (setq flycheck-checkers (remove 'haskell-ghc flycheck-checkers)))))
 
 ;; **** Apply GHC hints
 (straight-use-package 'attrap)
@@ -5375,24 +5377,81 @@ Borrowed from mozc.el."
 ;; (require 'em-tramp)
 ;; (defalias 'sudo 'eshell/sudo)
 
-;; ** Autocompletion
-;; (defun company-eshell-history (command &optional arg &rest ignored)
-;; (interactive (list 'interactive))
-;; (cl-case command
-;; (interactive (company-begin-backend 'company-eshell-history))
-;; (prefix (and (eq major-mode 'eshell-mode)
-;; (let ((word (company-grab-word)))
-;; (save-excursion
-;; (eshell-bol)
-;; (and (looking-at-p (s-concat word "$")) word)))))
-;; (candidates (remove-duplicates
-;; (->> (ring-elements eshell-history-ring)
-;; (remove-if-not (lambda (item) (s-prefix-p arg item)))
-;; (mapcar 's-trim))
-;; :test 'string=))
-;; (sorted t)))
-
-;; (add-to-list 'company-backends 'company-eshell-history)
+;; ** Completion
+;; *** Fix inserting random tabs
+;; https://github.com/company-mode/company-mode/issues/409#issuecomment-434820576
+;; Commented out what's changed
+(defun eshell-complete-parse-arguments ()
+  "Parse the command line arguments for `pcomplete-argument'."
+  (when (and eshell-no-completion-during-jobs
+	     (eshell-interactive-process))
+    ;; (insert-and-inherit "\t")
+    (throw 'pcompleted t))
+  (let ((end (point-marker))
+	(begin (save-excursion (eshell-bol) (point)))
+	(posns (list t))
+	args delim)
+    (when (memq this-command '(pcomplete-expand
+			       pcomplete-expand-and-complete))
+      (run-hook-with-args 'eshell-expand-input-functions begin end)
+      (if (= begin end)
+	  (end-of-line))
+      (setq end (point-marker)))
+    (if (setq delim
+	      (catch 'eshell-incomplete
+		(ignore
+		 (setq args (eshell-parse-arguments begin end)))))
+	(cond ((memq (car delim) '(?\{ ?\<))
+	       (setq begin (1+ (cadr delim))
+		     args (eshell-parse-arguments begin end)))
+	      ((eq (car delim) ?\()
+	       (eshell-complete-lisp-symbol)
+	       (throw 'pcompleted t))
+	      (t
+	       ;; (insert-and-inherit "\t")
+	       (throw 'pcompleted t))))
+    (when (get-text-property (1- end) 'comment)
+      ;; (insert-and-inherit "\t")
+      (throw 'pcompleted t))
+    (let ((pos begin))
+      (while (< pos end)
+	(if (get-text-property pos 'arg-begin)
+	    (nconc posns (list pos)))
+	(setq pos (1+ pos))))
+    (setq posns (cdr posns))
+    (cl-assert (= (length args) (length posns)))
+    (let ((a args)
+	  (i 0)
+	  l)
+      (while a
+	(if (and (consp (car a))
+		 (eq (caar a) 'eshell-operator))
+	    (setq l i))
+	(setq a (cdr a) i (1+ i)))
+      (and l
+	   (setq args (nthcdr (1+ l) args)
+		 posns (nthcdr (1+ l) posns))))
+    (cl-assert (= (length args) (length posns)))
+    (when (and args (eq (char-syntax (char-before end)) ? )
+	       (not (eq (char-before (1- end)) ?\\)))
+      (nconc args (list ""))
+      (nconc posns (list (point))))
+    (cons (mapcar
+	   (function
+	    (lambda (arg)
+	      (let ((val
+		     (if (listp arg)
+			 (let ((result
+				(eshell-do-eval
+				 (list 'eshell-commands arg) t)))
+			   (cl-assert (eq (car result) 'quote))
+			   (cadr result))
+		       arg)))
+		(if (numberp val)
+		    (setq val (number-to-string val)))
+		(or val ""))))
+	   args)
+	  posns)))
 
 ;; ** Eldoc
 ;; *** Eshell-eldoc
