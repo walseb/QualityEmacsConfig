@@ -5378,6 +5378,23 @@ Borrowed from mozc.el."
 ;; (defalias 'sudo 'eshell/sudo)
 
 ;; ** Completion
+;; *** Bash-completion
+;; https://github.com/szermatt/emacs-bash-completion/issues/24
+;; (straight-use-package 'bash-completion)
+
+;; (add-hook 'eshell-mode-hook (lambda () (setq-local bash-completion-nospace t)))
+
+;; (setq eshell-default-completion-function 'eshell-bash-completion)
+
+;; (defun eshell-bash-completion ()
+;;   (while (pcomplete-here
+;;	  (nth 2 (bash-completion-dynamic-complete-nocomint (save-excursion (eshell-bol) (point)) (point))))))
+
+;; *** Fish-completion
+;; Uses bash-completion if fish wasn't found
+;; (straight-use-package 'fish-completion)
+;; (fish-completion-mode)
+
 ;; *** Fix inserting random tabs
 ;; https://github.com/company-mode/company-mode/issues/409#issuecomment-434820576
 ;; Commented out what's changed
