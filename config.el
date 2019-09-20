@@ -414,36 +414,17 @@
 ;; ** Annotations
 ;; https://github.com/bastibe/annotate.el
 
-;; ** Find out what is taking so long when opening config
-;; Does it happen in vanilla?
-;; Use error on quit, quit when loading is happening then get backtrace.
 ;; ** Make magit-status faster during huge edits, or create new magit-status-fast command
 ;; ** Should save-window-excursion be disabled?
 ;; Steps to reproduce: open two window split, do M-x, close the window you focused when doing M-x, cancel the M-x with C-g
 
-;; ** GPG doesn't remember last password when saving
+;; ** GPG doesn't remember last password when saving a symmetrically encryped buffer
 ;; ** Automate gnus
 ;; *** Notmuch gnus integration
-;; *** Dovecot docker process
-;; Add to and configure in nixos config
-
-;; ** Add is wsl/VM in config
-;; This will disable volume controls for example
-
-;; ** Locate
-;; *** Locate should cut out the default directory from the prompt
-;; *** Lisp only locate
-;; Look into changing from locate to using "directory-files-recursively" to cache all files on the pc
-;; Problem seems to be that it needs sudo to do this
-
 ;; ** Fix ivy grep/occur
 ;; Colors change when you put your cursor over custom faces
-
 ;; ** Fix change defalut directory to change save dir
 ;; ** Customize ivy more
-
-;; ** % should go to closest paren if not on one
-;; ** Dedicated auto comment key?
 ;; ** Make macros faster
 ;; Temporarily disable "global-hl-line-mode" while running macro (takes like 70% cpu in worst cases)
 ;; Disable symbol-overlay while in macro (takes little cpu, but you can still gain speed)
@@ -525,7 +506,6 @@
 
 ;; ** Make use of global mode map
 ;; evil-universal-define-key overwrites the evil mode map, this should use global-mode-map instead
-
 
 ;; ** Fix keys
 ;; Exwm keys are really messy, remove 'my/keys-mode-map'
@@ -5130,15 +5110,25 @@ Borrowed from mozc.el."
 
 (defun my/macro-run (&optional count)
   "If COUNT is a number repeat that amount of times, otherwise if it's nil run the macro until an error is thrown."
-  (let* ((to-run-string (completing-read "Run macro: " my/macro-store))
-	 (to-run (symbol-function (intern to-run-string))))
+  (let ((to-run-string (completing-read "Run macro: " my/macro-store)))
+    (if (>= emacs-major-version 27)
+	(my/macro-run-new to-run-string count)
+      (my/macro-run-legacy to-run-string count))))
+
+(defun my/macro-run-new (to-run-string count)
+  "Emacs >= 27"
+  (let ((to-run (symbol-function (intern to-run-string))))
     (if count
 	(dotimes (i count)
 	  (funcall to-run))
       (while (ignore-errors (funcall to-run))))))
-;; This seems to be a better way to call the macros, but I can't get it to work
-;; (execute-kbd-macro (intern macro-test)) (intern "macro-test")) count)))
-;; (execute-kbd-macro (symbol-function (intern to-run)) count)))
+
+(defun my/macro-run-legacy (to-run-string count)
+  "Emacs <= 26"
+  (let ((to-run (intern to-run-string)))
+    (if count
+	(execute-kbd-macro to-run count)
+      (execute-kbd-macro to-run 0))))
 
 (defun my/macro-modify (&optional prefix)
   (interactive "P")
