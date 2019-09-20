@@ -429,6 +429,9 @@
 ;; Temporarily disable "global-hl-line-mode" while running macro (takes like 70% cpu in worst cases)
 ;; Disable symbol-overlay while in macro (takes little cpu, but you can still gain speed)
 
+;; ** Make macros work both ways
+;; Right now macros only work if they go from the top down
+
 ;; ** Read large files package
 ;; There is one for dired too
 
@@ -5111,9 +5114,29 @@ Borrowed from mozc.el."
 (defun my/macro-run (&optional count)
   "If COUNT is a number repeat that amount of times, otherwise if it's nil run the macro until an error is thrown."
   (let ((to-run-string (completing-read "Run macro: " my/macro-store)))
-    (if (>= emacs-major-version 27)
-	(my/macro-run-new to-run-string count)
-      (my/macro-run-legacy to-run-string count))))
+    (unwind-protect
+	(progn
+	  (my/macro-run-optimize)
+	  (if (>= emacs-major-version 27)
+	      (my/macro-run-new to-run-string count)
+	    (my/macro-run-legacy to-run-string count)))
+      (my/macro-run-reset))))
+
+(defun my/macro-run-optimize ()
+  (font-lock-mode -1)
+  (flyspell-mode -1)
+  (symbol-overlay-mode -1)
+  (global-hl-line-mode -1)
+  (yascroll-bar-mode -1)
+  (highlight-parentheses-mode -1))
+
+(defun my/macro-run-reset ()
+  (font-lock-mode 1)
+  (my/flyspell-mode-auto-select)
+  (symbol-overlay-mode)
+  (global-hl-line-mode 1)
+  (yascroll-bar-mode 1)
+  (highlight-parentheses-mode 1))
 
 (defun my/macro-run-new (to-run-string count)
   "Emacs >= 27"
@@ -5145,7 +5168,7 @@ Borrowed from mozc.el."
   (interactive "<R>")
   (evil-normal-state)
   (save-restriction
-    (goto-char (point-min))
+    (goto-char beg)
     (narrow-to-region beg end)
     ;; current-prefix-arg here is used because I don't know how to access the universal argument in this function
     (my/macro-run current-prefix-arg)))
@@ -8354,17 +8377,18 @@ Borrowed from mozc.el."
 
 ;; *** Fix for emacs 27
 ;; The function ~window-fringes~ returns a list of 4 results on some versions of emacs because of some reason. This fixes that
-;;   (defun yascroll:choose-scroll-bar ()
-;;     (when (memq window-system yascroll:enabled-window-systems)
-;;       (cl-destructuring-bind (left-width right-width outside-margins pers)
-;;	  (window-fringes)
-;;	(cl-loop for scroll-bar in (yascroll:listify yascroll:scroll-bar)
-;;		 if (or (eq scroll-bar 'text-area)
-;;			(and (eq scroll-bar 'left-fringe)
-;;			     (> left-width 0))
-;;			(and (eq scroll-bar 'right-fringe)
-;;			     (> right-width 0)))
-;;		 return scroll-bar))))
+(when (>= emacs-major-version 27)
+  (defun yascroll:choose-scroll-bar ()
+    (when (memq window-system yascroll:enabled-window-systems)
+      (cl-destructuring-bind (left-width right-width outside-margins pers)
+	  (window-fringes)
+	(cl-loop for scroll-bar in (yascroll:listify yascroll:scroll-bar)
+		 if (or (eq scroll-bar 'text-area)
+			(and (eq scroll-bar 'left-fringe)
+			     (> left-width 0))
+			(and (eq scroll-bar 'right-fringe)
+			     (> right-width 0)))
+		 return scroll-bar)))))
 
 ;; ** Hl-Todo
 (straight-use-package 'hl-todo)
