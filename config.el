@@ -7237,8 +7237,10 @@ Borrowed from mozc.el."
 ;; **** Disable line wrapping
 (defun my/proced-mode ()
   (interactive)
-  (toggle-truncate-lines 1)
-  (visual-line-mode -1))
+  (visual-line-mode -1)
+  ;; I need to delay this because of some reason
+  (run-with-timer 0.000001 nil (lambda ()
+				 (setq truncate-lines t))))
 
 ;; (add-hook 'proced-post-display-hook 'my/proced-mode)
 (add-hook 'proced-mode-hook 'my/proced-mode)
