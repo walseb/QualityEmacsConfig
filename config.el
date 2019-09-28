@@ -4750,7 +4750,7 @@ Borrowed from mozc.el."
 					     '(warning . haskell-hlint))
 	      ;; Remove dante since the haskell repl is a lot faster at detecting errors anyways
 	      ;; But turns out this leads to some packages being labled hidden?
-	      (add-to-list 'flycheck-disabled-checkers 'haskell-dante)
+	      ;; (add-to-list 'flycheck-disabled-checkers 'haskell-dante)
 	      )))
 
 ;; **** Apply GHC hints
@@ -7238,7 +7238,8 @@ Borrowed from mozc.el."
 (define-prefix-command 'my/processes-map)
 (define-key my/system-commands-map (kbd "p") 'my/processes-map)
 
-;; *** Top - proced
+;; *** Proced
+(setq proced-tree-flag t)
 (define-key my/processes-map (kbd "t") 'proced)
 
 ;; **** Disable line wrapping
@@ -7251,6 +7252,9 @@ Borrowed from mozc.el."
 
 ;; (add-hook 'proced-post-display-hook 'my/proced-mode)
 (add-hook 'proced-mode-hook 'my/proced-mode)
+
+;; **** Auto update interval
+(setq proced-auto-update-interval 0.5)
 
 ;; *** Profiler
 (define-prefix-command 'my/profiler-map)
