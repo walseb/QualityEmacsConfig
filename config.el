@@ -1694,7 +1694,7 @@ Borrowed from mozc.el."
 ;; (define-key my/leader-map (kbd "_") (lambda () (interactive) (text-scale-set 0)))
 
 (define-key my/leader-map (kbd "-") (lambda () (interactive) (text-scale-decrease 4)))
-(define-key my/leader-map (kbd "=") '(lambda() (interactive) (text-scale-increase 4)))
+(define-key my/leader-map (kbd "=") (lambda () (interactive) (text-scale-increase 4)))
 
 (define-key my/leader-map (kbd "C--") (lambda () (interactive) (text-scale-decrease 1)))
 (define-key my/leader-map (kbd "C-=") (lambda () (interactive) (text-scale-increase 1)))
@@ -4486,6 +4486,13 @@ Borrowed from mozc.el."
 ;; *** haskell-interactive-mode
 (add-hook 'haskell-mode-hook (lambda () (add-hook 'after-save-hook 'haskell-process-load-file nil t)))
 
+;; **** Keys
+(add-hook 'haskell-interactive-mode-hook
+	  (lambda ()
+	    (evil-define-key '(normal insert visual replace) haskell-interactive-mode-map (kbd "C-c") 'haskell-process-interrupt)
+	    (evil-define-key '(normal insert) haskell-interactive-mode-map (kbd "C-n") 'haskell-interactive-mode-history-next)
+	    (evil-define-key '(normal insert) haskell-interactive-mode-map (kbd "C-p") 'haskell-interactive-mode-history-previous)))
+
 ;; *** nix-haskell-mode
 ;; It's buggy for me
 ;; (straight-use-package 'nix-haskell-mode)
@@ -4714,12 +4721,13 @@ Borrowed from mozc.el."
   (add-hook 'haskell-mode-hook 'dante-mode)
 
   (defun my/dante-mode ()
-    (my/dante-fix-flycheck-bugs))
+    (my/dante-fix-flycheck))
 
-  (add-hook 'haskell-mode-hook 'my/dante-mode))
+  (add-hook 'dante-mode-hook 'my/dante-mode))
 
-;; **** Fix flycheck bugs
-(defun my/dante-fix-flycheck-bugs ()
+;; **** Set flycheck settings
+(defun my/dante-fix-flycheck ()
+  ;; Settings good for both dante and the haskell repl
   (setq-local flymake-no-changes-timeout nil)
   (setq-local flymake-start-syntax-check-on-newline nil)
   (setq-local flycheck-check-syntax-automatically '(save mode-enabled)))
@@ -4740,19 +4748,18 @@ Borrowed from mozc.el."
   (add-hook 'dante-mode-hook
 	    (lambda () (flycheck-add-next-checker 'haskell-dante
 					     '(warning . haskell-hlint))
-
-	      (setq flycheck-checkers (remove 'haskell-ghc flycheck-checkers)))))
+	      ;; Remove dante since the haskell repl is a lot faster at detecting errors anyways
+	      ;; But turns out this leads to some packages being labled hidden?
+	      (add-to-list 'flycheck-disabled-checkers 'haskell-dante)
+	      )))
 
 ;; **** Apply GHC hints
 (straight-use-package 'attrap)
 
 ;; *** Flycheck
 ;; Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the standard ghc checker though, because it works fine if I don't have HIE. If I have HIE emacs should use that instead
-(setq flycheck-checkers (remove 'haskell-stack-ghc flycheck-checkers))
-
-;; (when my/haskell-hie-enable
-;; (setq flycheck-checkers (remove 'haskell-ghc flycheck-checkers))
-;; (setq flycheck-checkers (remove 'haskell-hlint flycheck-checkers)))
+(add-hook 'haskell-mode-hook (lambda ()
+			       (add-to-list 'flycheck-disabled-checkers 'haskell-stack-ghc)))
 
 ;; ** C/CPP
 ;; *** Irony
@@ -5544,8 +5551,8 @@ Borrowed from mozc.el."
       (lambda ()
 	(concat (abbreviate-file-name (eshell/pwd))
 		(if (= (user-uid) 0) " # " ;;(concat " " my/eshell-prompt-symbol " ")
-		    "\n"
-		    ))))
+		  "\n"
+		  ))))
 
 (setq eshell-prompt-regexp
       (concat "^[^#$\n]* [#" my/eshell-prompt-symbol "] "))
@@ -7410,7 +7417,7 @@ Borrowed from mozc.el."
 ;; * Find
 (straight-use-package '(ellocate :type git :host github :repo "walseb/ellocate"))
 
-;; * Spelling
+;; * Flyspell - Spelling
 (define-prefix-command 'my/spell-map)
 ;; (define-key my/leader-map (kbd "S") 'my/spell-map)
 
@@ -7439,6 +7446,12 @@ Borrowed from mozc.el."
 (define-globalized-minor-mode global-my/flyspell-mode
   nil my/flyspell-mode-auto-select)
 (global-my/flyspell-mode 1)
+
+;; ** Clean mode map
+(add-hook 'flyspell-mode-hook
+	  (lambda ()
+	    ;; This should remove binds like ~C-c $~ but doesn't. No idea why
+	    (setq flyspell-mode-map (make-sparse-keymap))))
 
 ;; ** Flyspell-prog enable only for certain faces
 ;; Don't auto correct strings
@@ -9355,9 +9368,11 @@ Borrowed from mozc.el."
 
 (defun my/theme-header-line-color ()
   (set-face-attribute 'header-line nil
+		      ;; Green mode line
 		      :foreground my/foreground-color
 		      :background "#052000"
-		      ;; :background "#001330"
+		      ;; :foreground my/background-color
+		      ;; :background my/foreground-color
 		      )
 
   (set-face-attribute 'my/mode-line-highlight nil
