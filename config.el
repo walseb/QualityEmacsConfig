@@ -1124,6 +1124,12 @@
 (straight-use-package 'evil-surround)
 (global-evil-surround-mode 1)
 
+;; **** Keys
+(evil-define-key 'normal evil-surround-mode-map (kbd ",") 'evil-surround-edit)
+(evil-define-key 'normal evil-surround-mode-map (kbd "C-,") 'evil-Surround-edit)
+(evil-define-key 'visual evil-surround-mode-map (kbd ",") 'evil-surround-region)
+(evil-define-key 'visual evil-surround-mode-map (kbd "C-,") 'evil-Surround-region)
+
 ;; *** Evil-args
 (straight-use-package 'evil-args)
 
@@ -2323,8 +2329,6 @@ Borrowed from mozc.el."
 
 (define-key my/org-mode-map (kbd "f") 'my/org-present-next)
 (define-key my/org-mode-map (kbd "b") 'my/org-present-prev)
-
-(define-key my/org-mode-map (kbd "i") 'org-toggle-inline-images)
 
 (define-key my/org-mode-map (kbd "d") 'org-deadline)
 
@@ -3681,7 +3685,12 @@ Borrowed from mozc.el."
 ;; ** Open current dir
 (defun my/dired-curr-dir ()
   (interactive)
-  (dired default-directory))
+  (dired
+   ;; If this file isn't temporary
+   (if (buffer-file-name)
+       ;; Default directory isn't updated when entering symlinks, this fixes that
+       (file-name-directory (file-truename (buffer-file-name)))
+     default-directory)))
 
 ;; ** Narrow
 ;; (straight-use-package 'dired-narrow)
@@ -4745,13 +4754,14 @@ Borrowed from mozc.el."
 
 ;; **** Add hlint to dante
 (when (not my/haskell-hie-enable)
-  (add-hook 'dante-mode-hook
-	    (lambda () (flycheck-add-next-checker 'haskell-dante
-					     '(warning . haskell-hlint))
-	      ;; Remove dante since the haskell repl is a lot faster at detecting errors anyways
-	      ;; But turns out this leads to some packages being labled hidden?
-	      ;; (add-to-list 'flycheck-disabled-checkers 'haskell-dante)
-	      )))
+  (add-hook 'dante-mode-hook (lambda ()
+			       (flycheck-add-next-checker 'haskell-dante '(warning . haskell-hlint))
+			       ;; Remove dante since the haskell repl is a lot faster at detecting errors anyways
+			       ;; But turns out this leads to some packages being labled hidden?
+			       ;; (add-to-list 'flycheck-disabled-checkers 'haskell-dante)
+
+			       ;; Dante runs a lot faster now? Also problem with haskell-ghc is that it doesn't care about cabal files, it just runs ghc on the current file
+			       (add-to-list 'flycheck-disabled-checkers 'haskell-ghc))))
 
 ;; **** Apply GHC hints
 (straight-use-package 'attrap)
@@ -5418,78 +5428,83 @@ Borrowed from mozc.el."
 
 ;; *** Fix inserting random tabs
 ;; https://github.com/company-mode/company-mode/issues/409#issuecomment-434820576
+;; Also disables command completions
+;; (add-hook 'eshell-mode-hook
+;;	  (lambda () (setq-local completion-at-point-functions (remove 'pcomplete-completions-at-point completion-at-point-functions))))
+
 ;; Commented out what's changed
-(defun eshell-complete-parse-arguments ()
-  "Parse the command line arguments for `pcomplete-argument'."
-  (when (and eshell-no-completion-during-jobs
-	     (eshell-interactive-process))
-    ;; (insert-and-inherit "\t")
-    (throw 'pcompleted t))
-  (let ((end (point-marker))
-	(begin (save-excursion (eshell-bol) (point)))
-	(posns (list t))
-	args delim)
-    (when (memq this-command '(pcomplete-expand
-			       pcomplete-expand-and-complete))
-      (run-hook-with-args 'eshell-expand-input-functions begin end)
-      (if (= begin end)
-	  (end-of-line))
-      (setq end (point-marker)))
-    (if (setq delim
-	      (catch 'eshell-incomplete
-		(ignore
-		 (setq args (eshell-parse-arguments begin end)))))
-	(cond ((memq (car delim) '(?\{ ?\<))
-	       (setq begin (1+ (cadr delim))
-		     args (eshell-parse-arguments begin end)))
-	      ((eq (car delim) ?\()
-	       (eshell-complete-lisp-symbol)
-	       (throw 'pcompleted t))
-	      (t
-	       ;; (insert-and-inherit "\t")
-	       (throw 'pcompleted t))))
-    (when (get-text-property (1- end) 'comment)
+(with-eval-after-load 'em-cmpl
+  (defun eshell-complete-parse-arguments ()
+    "Parse the command line arguments for `pcomplete-argument'."
+    (when (and eshell-no-completion-during-jobs
+	       (eshell-interactive-process))
       ;; (insert-and-inherit "\t")
       (throw 'pcompleted t))
-    (let ((pos begin))
-      (while (< pos end)
-	(if (get-text-property pos 'arg-begin)
-	    (nconc posns (list pos)))
-	(setq pos (1+ pos))))
-    (setq posns (cdr posns))
-    (cl-assert (= (length args) (length posns)))
-    (let ((a args)
-	  (i 0)
-	  l)
-      (while a
-	(if (and (consp (car a))
-		 (eq (caar a) 'eshell-operator))
-	    (setq l i))
-	(setq a (cdr a) i (1+ i)))
-      (and l
-	   (setq args (nthcdr (1+ l) args)
-		 posns (nthcdr (1+ l) posns))))
-    (cl-assert (= (length args) (length posns)))
-    (when (and args (eq (char-syntax (char-before end)) ? )
-	       (not (eq (char-before (1- end)) ?\\)))
-      (nconc args (list ""))
-      (nconc posns (list (point))))
-    (cons (mapcar
-	   (function
-	    (lambda (arg)
-	      (let ((val
-		     (if (listp arg)
-			 (let ((result
-				(eshell-do-eval
-				 (list 'eshell-commands arg) t)))
-			   (cl-assert (eq (car result) 'quote))
-			   (cadr result))
-		       arg)))
-		(if (numberp val)
-		    (setq val (number-to-string val)))
-		(or val ""))))
-	   args)
-	  posns)))
+    (let ((end (point-marker))
+	  (begin (save-excursion (eshell-bol) (point)))
+	  (posns (list t))
+	  args delim)
+      (when (memq this-command '(pcomplete-expand
+				 pcomplete-expand-and-complete))
+	(run-hook-with-args 'eshell-expand-input-functions begin end)
+	(if (= begin end)
+	    (end-of-line))
+	(setq end (point-marker)))
+      (if (setq delim
+		(catch 'eshell-incomplete
+		  (ignore
+		   (setq args (eshell-parse-arguments begin end)))))
+	  (cond ((memq (car delim) '(?\{ ?\<))
+		 (setq begin (1+ (cadr delim))
+		       args (eshell-parse-arguments begin end)))
+		((eq (car delim) ?\()
+		 (eshell-complete-lisp-symbol)
+		 (throw 'pcompleted t))
+		(t
+		 ;; (insert-and-inherit "\t")
+		 (throw 'pcompleted t))))
+      (when (get-text-property (1- end) 'comment)
+	;; (insert-and-inherit "\t")
+	(throw 'pcompleted t))
+      (let ((pos begin))
+	(while (< pos end)
+	  (if (get-text-property pos 'arg-begin)
+	      (nconc posns (list pos)))
+	  (setq pos (1+ pos))))
+      (setq posns (cdr posns))
+      (cl-assert (= (length args) (length posns)))
+      (let ((a args)
+	    (i 0)
+	    l)
+	(while a
+	  (if (and (consp (car a))
+		   (eq (caar a) 'eshell-operator))
+	      (setq l i))
+	  (setq a (cdr a) i (1+ i)))
+	(and l
+	     (setq args (nthcdr (1+ l) args)
+		   posns (nthcdr (1+ l) posns))))
+      (cl-assert (= (length args) (length posns)))
+      (when (and args (eq (char-syntax (char-before end)) ? )
+		 (not (eq (char-before (1- end)) ?\\)))
+	(nconc args (list ""))
+	(nconc posns (list (point))))
+      (cons (mapcar
+	     (function
+	      (lambda (arg)
+		(let ((val
+		       (if (listp arg)
+			   (let ((result
+				  (eshell-do-eval
+				   (list 'eshell-commands arg) t)))
+			     (cl-assert (eq (car result) 'quote))
+			     (cadr result))
+			 arg)))
+		  (if (numberp val)
+		      (setq val (number-to-string val)))
+		  (or val ""))))
+	     args)
+	    posns))))
 
 ;; ** Eldoc
 ;; *** Eshell-eldoc
@@ -5760,7 +5775,7 @@ Borrowed from mozc.el."
 
 (general-simulate-key "C-x C-s")
 
-(defun my/save-and-backup-buffer()
+(defun my/save-and-backup-buffer ()
   (interactive)
   (my/backup-buffer-per-session)
   (my/backup-original-buffer)
@@ -9157,6 +9172,9 @@ Borrowed from mozc.el."
   (setq mini-modeline-enhance-visual nil)
   ;; Mini-modeline flashes during GC if this is t
   (setq garbage-collection-messages nil)
+
+  ;; This fixes a bug with ~counsel-describe-function~
+  (setq mini-modeline-echo-duration 99999)
 
   (setq-default mini-modeline-r-format my/status-line-format)
   (mini-modeline-enable))
