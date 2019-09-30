@@ -4282,6 +4282,12 @@ Borrowed from mozc.el."
 
 (setq lsp-ui-sideline-delay 0)
 
+;; ** DAP
+(straight-use-package 'dap-mode)
+(require 'dap-mode)
+(dap-mode 1)
+(dap-ui-mode 1)
+
 ;; ** Elgot
 ;; (straight-use-package 'eglot)
 
@@ -4443,6 +4449,9 @@ Borrowed from mozc.el."
 (require 'lsp-java)
 
 (defun my/java-mode ()
+  ;; Add configurations for java dap-mode
+  (require 'dap-java)
+
   (lsp)
   (lsp-lens-mode))
 
