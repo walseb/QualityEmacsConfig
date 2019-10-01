@@ -5521,8 +5521,7 @@ Borrowed from mozc.el."
 ;; (add-hook 'eshell-mode-hook 'eshell-eldoc-enable-for-buffer)
 
 ;; *** Eshell-help
-;; (straight-use-package 'esh-help)
-(straight-use-package '(esh-help :type git :host github :repo "defaultxr/esh-help"))
+(straight-use-package 'esh-help)
 
 (require 'esh-help)
 (setup-esh-help-eldoc)
