@@ -557,6 +557,9 @@
 ;; *** Direnv binds
 ;; Maybe add direnv bind for creating a .envrc with content "use nix"
 
+;; ** Backup
+;; Check out ~helm-backup~ and make it work with ivy
+
 ;; * First
 ;; Things to do first
 (setq mode-line-format nil)
@@ -800,6 +803,19 @@
   (if (> n 1)
       (my/repeat-char char initial-string (- n 1))
     initial-string))
+
+;; ** Delete old functions
+(defun my/delete-everything-older-than (folder time)
+  (message (concat "Deleting all files older than " (number-to-string time) " seconds"))
+  (let ((time time)
+	(current (float-time (current-time))))
+    (dolist (file (directory-files folder t))
+      (when (and (backup-file-name-p file)
+		 (> (- current (float-time (nth 5 (file-attributes file))))
+		    time))
+	(message "%s" file)
+	(delete-file file)))
+    (message "Deletion completed!")))
 
 ;; * Fonts
 (defun my/get-best-font ()
@@ -2655,6 +2671,11 @@ Borrowed from mozc.el."
 
 (setq ivy-minibuffer-map (make-sparse-keymap))
 
+(define-prefix-command 'my/ivy-mode-map)
+(evil-define-key 'normal ivy-minibuffer-map (kbd (concat my/leader-map-key " a")) 'my/ivy-mode-map)
+
+(define-key my/ivy-mode-map (kbd "k") 'counsel-minibuffer-history)
+
 ;; Enable avy movements in ivy buffer
 (evil-define-key '(motion normal) ivy-minibuffer-map (kbd "M-n") 'ivy-avy)
 (evil-define-key '(motion normal) ivy-minibuffer-map (kbd "M-p") 'ivy-avy)
@@ -2668,7 +2689,9 @@ Borrowed from mozc.el."
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-n") 'ivy-next-line)
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-p") 'ivy-previous-line)
 
-(evil-define-key '(motion normal) ivy-minibuffer-map (kbd "C-y") 'ivy-call)
+(evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-d") 'ivy-call)
+
+(evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-c") 'ivy-dispatching-done)
 
 (define-key ivy-minibuffer-map [remap evil-ret] 'ivy-done)
 (define-key ivy-minibuffer-map [remap newline] 'ivy-done)
@@ -2690,7 +2713,7 @@ Borrowed from mozc.el."
 
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "RET") 'ivy-done)
 
-(evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-d") 'ivy-insert-current)
+(evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-y") 'ivy-insert-current)
 
 ;; Clear ivy input
 (evil-define-key '(motion normal) ivy-minibuffer-map (kbd "D") (lambda () (interactive) (beginning-of-line-text)
@@ -4312,7 +4335,6 @@ Borrowed from mozc.el."
 (evil-define-key 'normal lisp-mode-map (kbd (concat my/leader-map-key " a")) 'my/common-lisp-mode-map)
 
 (define-key my/common-lisp-mode-map (kbd "d") 'slime-inspect-definition)
-
 
 ;; *** Scheme
 ;; (straight-use-package 'geiser)
@@ -9723,19 +9745,13 @@ Borrowed from mozc.el."
 
 ;; ** Delete old backups
 ;; Automatically delete old backup files older than a week
-(message "Deleting old backup files...")
-(let ((week (* 60 60 24 7))
-      (current (float-time (current-time))))
-  (dolist (file (directory-files my/backup-directory t))
-    (when (and (backup-file-name-p file)
-	       (> (- current (float-time (nth 5 (file-attributes file))))
-		  week))
-      (message "%s" file)
-      (delete-file file))))
+(message "Deleting old long term backup files...")
+(my/delete-everything-older-than my/backup-directory (* 60 60 24 7))
 
 ;; ** Delete per-session backups on startup
 (ignore-errors
-  (async-shell-command (concat "rm " my/backup-per-session-directory "*" )))
+  ;; Delete anything older than a day
+  (my/delete-everything-older-than my/backup-directory (* 60 60 24 1)))
 
 ;; ** Undo
 ;; *** Disable undo warning buffer
