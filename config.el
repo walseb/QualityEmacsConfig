@@ -557,9 +557,6 @@
 ;; *** Direnv binds
 ;; Maybe add direnv bind for creating a .envrc with content "use nix"
 
-;; ** Backup
-;; Check out ~helm-backup~ and make it work with ivy
-
 ;; ** Prettify symbol sometimes not working
 ;; This is because ~prettify-symbols--current-symbol-bounds~ sometimes gets set to a value outside the range of the current buffer like ~(2689 2691)~
 ;; This can be solved by setting it to nil
@@ -2642,6 +2639,14 @@ Borrowed from mozc.el."
 
 ;; Make user intput selectable
 (setq ivy-use-selectable-prompt t)
+
+;; *** Fix ivy dispatching
+;; So when using exwm with minibuffer at the top and trying to use the ivy menu you get an error like
+;; window-resize: Cannot resize the root window of a frame
+;; This fixes that, it might cause bugs though
+(defun ivy-shrink-after-dispatching ()
+  "Shrink the window after dispatching when action list is too large."
+  nil)
 
 ;; *** Visuals
 ;; Ivy height
@@ -5827,7 +5832,7 @@ Borrowed from mozc.el."
 
 (defun my/save-and-backup-buffer ()
   (interactive)
-  (my/backup-buffer-per-session)
+  ;; (my/backup-buffer-per-session)
   (my/backup-original-buffer)
   (general-simulate-C-x_C-s))
 
@@ -9760,15 +9765,25 @@ Borrowed from mozc.el."
 	(setq-local my/first-save nil))))
 
 ;; ** Make backup on every save
-(defun my/backup-buffer-per-session ()
-  (interactive)
-  (if (not my/first-save)
-      (my/backup-buffer my/backup-per-session-directory)))
+;; *** helm-backup
+;; (straight-use-package 'helm)
+(straight-use-package '(helm-backup :type git :host github :repo "walseb/helm-backup"))
+(require 'helm-backup)
 
-;; ** Delete old backups
+(add-hook 'after-save-hook 'helm-backup-versioning)
+
+(define-key my/leader-map (kbd "C-u") 'helm-backup-ivy)
+
+;; *** Manual way
+;; (defun my/backup-buffer-per-session ()
+;;   (interactive)
+;;   (if (not my/first-save)
+;;       (my/backup-buffer my/backup-per-session-directory)))
+
+;; **** Delete old backups
 ;; Automatically delete old backup files older than a week
-(message "Deleting old long term backup files...")
-(my/delete-everything-older-than my/backup-directory (* 60 60 24 7))
+;; (message "Deleting old long term backup files...")
+;; (my/delete-everything-older-than my/backup-directory (* 60 60 24 7))
 
 ;; ** Delete per-session backups on startup
 (ignore-errors
