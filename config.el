@@ -560,6 +560,12 @@
 ;; ** Backup
 ;; Check out ~helm-backup~ and make it work with ivy
 
+;; ** Prettify symbol sometimes not working
+;; This is because ~prettify-symbols--current-symbol-bounds~ sometimes gets set to a value outside the range of the current buffer like ~(2689 2691)~
+;; This can be solved by setting it to nil
+;; This is the full error:
+;; Error in post-command-hook (prettify-symbols--post-command-hook): (args-out-of-range 2689 2691)
+
 ;; * First
 ;; Things to do first
 (setq mode-line-format nil)
@@ -4305,6 +4311,10 @@ Borrowed from mozc.el."
 
 (setq lsp-ui-sideline-delay 0)
 
+;; *** Flycheck keys
+(define-key lsp-ui-flycheck-list-mode-map [remap evil-ret] 'lsp-ui-flycheck-list--view)
+(define-key lsp-ui-flycheck-list-mode-map [remap newline] 'lsp-ui-flycheck-list--view)
+
 ;; ** DAP
 (straight-use-package 'dap-mode)
 (require 'dap-mode)
@@ -4463,10 +4473,6 @@ Borrowed from mozc.el."
 (define-key my/clojure-mode-map (kbd "C-s") 'cider-connect)
 
 ;; ** Java
-;; Try
-;; https://github.com/mopemope/meghanada-emacs
-;; or
-;; =ENSIME=
 (straight-use-package 'lsp-java)
 (require 'lsp-java)
 
@@ -4474,8 +4480,22 @@ Borrowed from mozc.el."
   ;; Add configurations for java dap-mode
   (require 'dap-java)
 
+  (require 'lsp-java-boot)
+
   (lsp)
-  (lsp-lens-mode))
+  (lsp-lens-mode)
+  (lsp-java-boot-lens-mode)
+
+  ;; (lsp-ui-sideline-mode -1)
+  ;; Disabling sideline-mode entirely stops code actions from working
+  (setq-local lsp-ui-sideline-show-code-actions t)
+  (setq-local lsp-ui-sideline-show-diagnostics nil)
+  (setq-local lsp-ui-sideline-show-hover nil)
+  (setq-local lsp-ui-sideline-show-symbol nil))
+
+;; Enable java lens
+(setq lsp-java-references-code-lens-enabled t)
+(setq lsp-java-implementations-code-lens-enabled t)
 
 (add-hook 'java-mode-hook 'my/java-mode)
 
@@ -9643,6 +9663,8 @@ Borrowed from mozc.el."
   ;; lsp Doc
   (set-face-attribute 'lsp-ui-doc-header nil :foreground my/foreground-color :background my/background-color-4)
   (set-face-attribute 'lsp-ui-doc-url nil :foreground my/background-color :background my/foreground-color)
+  ;; Make the code action overlay invisible to make it less distracting
+  (set-face-attribute 'lsp-ui-sideline-code-action nil :foreground my/background-color :background my/background-color)
 
   ;; lsp Sideline
   (my/set-face-to-default 'lsp-ui-peek-filename nil)
