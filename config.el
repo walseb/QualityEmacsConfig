@@ -3663,29 +3663,6 @@ Borrowed from mozc.el."
 (my/evil-universal-define-key "C-j" 'my/toggle-switch-to-minibuffer)
 
 ;; * Window and buffer settings
-;; ** Delete other windows
-(defun my/delete-other-windows()
-  (interactive)
-  (delete-other-windows)
-  ;; TODO add this back in using a better method. Hooks don't work
-  ;; (my/lv-line-create)
-  (run-hooks 'my/switch-buffer-hook)
-  )
-
-;; ** Switch window hook
-
-;; ** Switch buffer hook
-(defvar my/switch-buffer-hook nil
-  "Hook called after user has switched buffer")
-(add-hook 'window-configuration-change-hook (lambda () (interactive) (run-hooks 'my/switch-buffer-hook) t))
-(add-hook 'minibuffer-exit-hook (lambda () (interactive) (run-with-timer 0.1 nil (lambda () (interactive) (run-hooks 'my/switch-buffer-hook)))))
-(add-hook 'my/switch-window-hook (lambda () (interactive) (run-hooks 'my/switch-buffer-hook) t))
-
-(defadvice evil-window-up (after evil-window-up-after activate) (run-hooks 'my/switch-buffer-hook))
-(defadvice evil-window-down (after evil-window-down activate) (run-hooks 'my/switch-buffer-hook))
-(defadvice evil-window-left (after evil-window-left activate) (run-hooks 'my/switch-buffer-hook))
-(defadvice evil-window-right (after evil-window-right activate) (run-hooks 'my/switch-buffer-hook))
-
 ;; ** Window settings
 ;; *** Make cursor auto move to new split window
 (defun my/split-and-follow-horozontally ()
@@ -7734,7 +7711,7 @@ Borrowed from mozc.el."
   ;; Close window
   ("s" delete-window nil)
   ;; Focus on window
-  ("d" my/delete-other-windows nil)
+  ("d" delete-other-windows nil)
 
   ;; minimize window
   ("S" (lambda () (interactive) (evil-window-increase-height 1000) (evil-window-increase-width 1000)) nil)
@@ -8943,15 +8920,18 @@ Borrowed from mozc.el."
 ;; When projectile-mode is on, project name is updated on every keypress, here it is fixed
 (defvar-local my/projectile-project-name nil)
 (defvar-local my/buffer-git-branch nil)
+;; Make sure every buffer is only scanned once
+(defvar-local my/projectile-project-buffer-already-scanned nil)
 
 (defun my/update-projectile-project-name()
   (interactive)
   ;; Some virtual buffers don't work, but dired-mode does
-  (when (or (string= major-mode 'dired-mode) (and buffer-file-name (file-exists-p buffer-file-name)))
+  (when (or (string= major-mode 'dired-mode) (and buffer-file-name (file-exists-p buffer-file-name) (not my/projectile-project-buffer-already-scanned)))
+    (setq my/projectile-project-buffer-already-scanned t)
     (setq my/projectile-project-name (projectile-project-name))
     (setq my/buffer-git-branch (car (vc-git-branches)))))
 
-(add-hook 'my/switch-buffer-hook 'my/update-projectile-project-name)
+(add-hook 'window-state-change-hook 'my/update-projectile-project-name)
 
 ;; **** Git changes
 (require 'diff-hl)
