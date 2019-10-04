@@ -392,6 +392,11 @@
 ;; #+END_SRC
 ;; always instead
 
+;; ** Emacs crashes when copying from clipboard
+;; Setting these to nil is a workaround
+;; (setq x-select-enable-clipboard nil)
+;; (setq x-select-enable-clipboard-manager nil)
+
 ;; * Todo
 ;; ** Packages to try
 ;; nix-buffer
