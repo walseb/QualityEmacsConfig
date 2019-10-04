@@ -878,6 +878,12 @@
 ;; Stop custom from editing init.el
 (setq custom-file (concat user-emacs-directory ".emacs-custom.el"))
 
+;; ** Load helm early
+;; Helm throws an error if the key C-SPC has been bound before it's loaded. This ensures that helm will be loaded before that happens
+(straight-use-package 'helm)
+(require 'helm)
+(require 'helm-utils)
+
 ;; * Evil
 (setq evil-search-module 'evil-search)
 (setq evil-vsplit-window-right t)
@@ -1676,9 +1682,6 @@ Borrowed from mozc.el."
 
 (global-set-key (kbd "<XF86MonBrightnessUp>") 'my/increase-brightness)
 (global-set-key (kbd "<XF86MonBrightnessDown>") 'my/decrease-brightness)
-
-;; ** Update packages
-(define-key my/leader-map (kbd "C-u") 'list-packages)
 
 ;; ** Sudo edit
 (straight-use-package 'sudo-edit)
@@ -3797,6 +3800,15 @@ Borrowed from mozc.el."
 
 ;; ** Dired-single
 ;; (straight-use-package 'dired-single)
+
+;; ** Dired omit-mode
+;; This hides the this directory and previous directory folders in dired (. and ..)
+(require 'dired-x)
+
+(setq dired-omit-extensions nil)
+(setq dired-omit-files "^\\.$\\|^\\.\\.$")
+
+(add-hook 'dired-mode-hook 'dired-omit-mode)
 
 ;; ** Keys
 ;; Reset dired mode map
@@ -9680,7 +9692,6 @@ Borrowed from mozc.el."
   (my/set-face-to-default 'lsp-ui-peek-list nil)
   (my/set-face-to-default 'lsp-ui-peek-peek nil)
   (my/set-face-to-default 'lsp-ui-peek-selection nil)
-  (my/set-face-to-default 'lsp-ui-sideline-code-action nil)
   (my/set-face-to-default 'lsp-ui-sideline-current-symbol nil)
 
   ;;  (set-face-attribute 'lsp-ui-peek-filename nil :foreground my/foreground-color :background my/background-color)
