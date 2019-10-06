@@ -1301,6 +1301,8 @@ Borrowed from mozc.el."
 ;; P is normally bound to manual, make this key useful
 (my/evil-normal-define-key "P" 'delete-indentation)
 
+(my/evil-normal-define-key "DEL" 'backward-delete-char-untabify)
+
 ;; *** Rebind evil case change
 (my/evil-normal-define-key "g u" 'evil-downcase)
 (my/evil-normal-define-key "g U" 'evil-upcase)
