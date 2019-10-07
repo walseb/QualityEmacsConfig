@@ -1728,11 +1728,11 @@ Borrowed from mozc.el."
 ;; (define-key my/leader-map (kbd "+") ')
 ;; (define-key my/leader-map (kbd "_") (lambda () (interactive) (text-scale-set 0)))
 
-(define-key my/leader-map (kbd "-") (lambda () (interactive) (text-scale-decrease 4)))
-(define-key my/leader-map (kbd "=") (lambda () (interactive) (text-scale-increase 4)))
+(define-key my/leader-map (kbd "-") (lambda () (interactive) (text-scale-decrease 1)))
+(define-key my/leader-map (kbd "=") (lambda () (interactive) (text-scale-increase 1)))
 
-(define-key my/leader-map (kbd "C--") (lambda () (interactive) (text-scale-decrease 1)))
-(define-key my/leader-map (kbd "C-=") (lambda () (interactive) (text-scale-increase 1)))
+(define-key my/leader-map (kbd "C--") (lambda () (interactive) (text-scale-decrease 4)))
+(define-key my/leader-map (kbd "C-=") (lambda () (interactive) (text-scale-increase 4)))
 
 
 (define-key my/leader-map (kbd "+") (lambda () (interactive) (text-scale-mode 0)))
@@ -4189,7 +4189,6 @@ Borrowed from mozc.el."
 (defun my/auto-debug ()
   (interactive)
   ;;(load-library "realgud")
-
   (if (eq evil-state 'visual)
       (my/auto-debug-region)
     (pcase major-mode
@@ -4225,10 +4224,10 @@ Borrowed from mozc.el."
     ('c++-mode (my/start-gdb))
     (_ (eval-last-sexp nil))))
 
-(define-key my/leader-map (kbd "D") 'my/auto-debug)
-(define-key my/leader-map (kbd "C-D") 'my/auto-remove-debug)
+(define-key my/leader-map (kbd "C-D") 'my/auto-debug)
+;; (define-key my/leader-map (kbd "C-D") 'my/auto-remove-debug)
 ;; (define-key my/leader-map (kbd "D") 'my/auto-debug-buffer)
-(define-key my/leader-map (kbd "M-D") 'my/auto-start-debugger)
+;; (define-key my/leader-map (kbd "M-D") 'my/auto-start-debugger)
 
 ;; *** Auto compile
 (defun my/auto-compile ()
@@ -7634,16 +7633,19 @@ Borrowed from mozc.el."
 ;; ** Window and buffer management
 (defhydra my/window-hydra (:hint nil
 				 :color red
-				 :pre (setq my/window-hydra/hint
-					    (concat "next: "
-						    (let ((list (ivy--buffer-list "")))
-						      (if (and (string= (car list) (buffer-name))
-							       ;; If there is only 1 buffer in emacs
-							       (> (length list) 1))
-							  (substring-no-properties
-							   (nth 1 list))
-							(substring-no-properties
-							 (car list)))))))
+				 :pre
+				 (progn
+				   (setq hydra-hint-display-type 'message)
+				   (setq my/window-hydra/hint
+					 (concat "next: "
+						 (let ((list (ivy--buffer-list "")))
+						   (if (and (string= (car list) (buffer-name))
+							    ;; If there is only 1 buffer in emacs
+							    (> (length list) 1))
+						       (substring-no-properties
+							(nth 1 list))
+						     (substring-no-properties
+						      (car list))))))))
   "movement"
 
   ;; Move focus
@@ -7763,7 +7765,8 @@ Borrowed from mozc.el."
 ;; ** Structural navigation
 ;; *** Evil-lispy
 (defhydra my/lispy-hydra (:hint nil
-				:color red)
+				:color red
+				:pre (setq hydra-hint-display-type 'message))
   "lisp"
 
   ("H" (call-interactively #'lispy-backward nil))
@@ -7895,7 +7898,8 @@ Borrowed from mozc.el."
 (require 'shm-case-split)
 
 (defhydra my/structured-haskell-hydra (:hint nil
-					     :color red)
+					     :color red
+					     :pre (setq hydra-hint-display-type 'message))
   "haskell"
   ("U" (call-interactively (lambda () (interactive) (insert "undefined"))) nil)
 
@@ -7933,6 +7937,31 @@ Borrowed from mozc.el."
 
 (my/evil-visual-define-key "z" 'my/lispy-hydra/body)
 (my/evil-normal-define-key "z" 'my/lispy-hydra/body)
+
+;; ** Ediff
+;; *** Main
+(defhydra hydra-ediff (:color blue
+			      :hint nil
+			      :pre (progn
+				     (setq hydra-hint-display-type 'posframe)))
+  "
+^Buffers           Files           VC                     Ediff regions
+----------------------------------------------------------------------
+_b_uffers           _f_iles (_=_)       _r_evisions              _l_inewise
+_B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
+		  _c_urrent file
+"
+  ("b" ediff-buffers)
+  ("B" ediff-buffers3)
+  ("=" ediff-files)
+  ("f" ediff-files)
+  ("F" ediff-files3)
+  ("c" ediff-current-file)
+  ("r" ediff-revision)
+  ("l" ediff-regions-linewise)
+  ("w" ediff-regions-wordwise))
+
+(define-key my/leader-map (kbd "D") 'hydra-ediff/body)
 
 ;; * Image modes
 ;; ** PDF view
@@ -8415,6 +8444,34 @@ Borrowed from mozc.el."
     (symbol-overlay-remove-temp)
     (when (not symbol-overlay-idle-time)
       (symbol-overlay-maybe-put-temp))))
+
+;; ** Put lv at top
+(require 'lv)
+(defun lv-window ()
+  "Ensure that LV window is live and return it."
+  (if (window-live-p lv-wnd)
+      lv-wnd
+    (let ((ori (selected-window))
+	  buf)
+      (prog1 (setq lv-wnd
+		   (select-window
+		    (let ((ignore-window-parameters t))
+		      (split-window
+		       ;; Change is here
+		       (frame-root-window) -1 'above))))
+	(if (setq buf (get-buffer " *LV*"))
+	    (switch-to-buffer buf)
+	  (switch-to-buffer " *LV*")
+	  (set-window-hscroll lv-wnd 0)
+	  (setq window-size-fixed t)
+	  (setq mode-line-format nil)
+	  (setq header-line-format nil)
+	  (setq cursor-type nil)
+	  (setq display-line-numbers nil)
+	  (setq display-fill-column-indicator nil)
+	  (set-window-dedicated-p lv-wnd t)
+	  (set-window-parameter lv-wnd 'no-other-window t))
+	(select-window ori)))))
 
 ;; ** Show paren
 ;; Highlights matching paren under cursor
