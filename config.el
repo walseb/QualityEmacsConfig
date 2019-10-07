@@ -1344,6 +1344,10 @@ Borrowed from mozc.el."
 			     (backward-char)
 			     (call-interactively #'delete-char)))
 
+;; * Hydra
+(straight-use-package 'hydra)
+(setq hydra-hint-display-type 'message)
+
 ;; * Leader
 ;; When changing leader, change =my/leader-map-key=
 (define-prefix-command 'my/leader-map)
@@ -3664,6 +3668,142 @@ Borrowed from mozc.el."
 (define-key my/keys-mode-map (kbd "C-j") 'my/toggle-switch-to-minibuffer)
 (my/evil-universal-define-key "C-j" 'my/toggle-switch-to-minibuffer)
 
+;; ** Window and buffer management hydra
+(defhydra my/window-hydra (:hint nil
+				 :color red
+				 :pre
+				 (progn
+				   (setq hydra-hint-display-type 'message)
+				   (setq my/window-hydra/hint
+					 (concat "next: "
+						 (let ((list (ivy--buffer-list "")))
+						   (if (and (string= (car list) (buffer-name))
+							    ;; If there is only 1 buffer in emacs
+							    (> (length list) 1))
+						       (substring-no-properties
+							(nth 1 list))
+						     (substring-no-properties
+						      (car list))))))))
+  "movement"
+
+  ;; Move focus
+  ("p" evil-window-up nil)
+  ("n" evil-window-down nil)
+  ("l" evil-window-right nil)
+  ("h" evil-window-left nil)
+
+  ;; Move focus to edge window
+  ;; Frame border window
+  ("|" evil-window-mru nil)
+
+  ;; Move window
+  ;; Move up
+  ("P" evil-move-very-top nil)
+  ;; Move down
+  ("N" evil-move-very-bottom nil)
+  ;; Move right
+  ("L" evil-move-far-right nil)
+  ;; Move left
+  ("H" evil-move-far-left nil)
+
+  ;; Switch monitor right
+  ("$" my/switch-monitor-right nil)
+  ;; Switch monitor left
+  ("0" my/switch-monitor-left nil)
+
+  ;; Resize window
+  ;; Resize up
+  ("C-p" (evil-window-increase-height 10) nil)
+  ;; Resize down
+  ("C-n" (evil-window-decrease-height 10) nil)
+  ;; Resize right
+  ;;("<delete>" (evil-window-decrease-width 10) nil)
+  ("<deletechar>" (evil-window-decrease-width 10) nil)
+  ;; Resize left
+  ;;("\b" (evil-window-increase-width 10) nil)
+  ("C-h" (evil-window-increase-width 10) nil)
+
+  ;; Resize up
+  ("C-S-p" (evil-window-increase-height 40) nil)
+  ;; Resize down
+  ("C-S-n" (evil-window-decrease-height 40) nil)
+  ;; Resize right
+  ("C-S-l" (evil-window-decrease-width 40) nil)
+  ;; Resize left
+  ("C-S-h" (evil-window-increase-width 40) nil)
+
+
+  ;; Split
+  ("o" my/window-split-right nil)
+  ("O" my/window-split-left nil)
+  ("v" my/window-split-down nil)
+  ("V" my/window-split-up nil)
+
+  ("i" my/clone-indirect-buffer nil)
+  ("I" my/clone-indirect-buffer-other-window nil)
+
+  ;; Search
+  ("C-s" swiper-all nil)
+
+  ;; Close window
+  ("s" delete-window nil)
+  ;; Focus on window
+  ("d" delete-other-windows nil)
+
+  ;; minimize window
+  ("S" (lambda () (interactive) (evil-window-increase-height 1000) (evil-window-increase-width 1000)) nil)
+  ;; maximize window
+  ("D" (lambda () (interactive) (evil-window-decrease-height 1000) (evil-window-decrease-width 1000)) nil)
+
+  ;; Buffer management
+  ;; Find file
+  ("e" counsel-find-file nil)
+  ("E" my/dired-curr-dir nil)
+  ("M-e" my/change-default-directory nil)
+
+  ;; Find
+  ("f" ellocate nil)
+  ("F" my/counsel-ag nil)
+
+  ;; Browser
+  ("b" my/switch-w3m-buffer nil)
+  ("B" my/browser-activate-tab nil)
+
+  ;; Switch buffer
+  ("a" ivy-switch-buffer nil)
+  ("A" my/switch-to-last-buffer nil)
+
+  ;; Kill buffer
+  ("k" my/auto-kill-buffer nil)
+
+  ;; Move around in buffer
+  ("C-u" evil-scroll-up nil)
+  ("C-w" evil-scroll-down nil)
+
+  ("y" counsel-linux-app nil)
+
+  ;; Switch window configuration
+  ("t" my/load-window-config nil)
+  ("T" my/add-window-config nil)
+  ("C-t" my/delete-window-config nil)
+
+  (";" counsel-bookmark nil)
+  (":" my/add-bookmark nil)
+  ("C-;" my/delete-bookmark nil)
+
+  ("u" winner-undo nil)
+  ("C-r" winner-redo nil)
+
+  ("R" rename-buffer nil)
+
+  ;; Add this to not auto exit insert mode after closing the hydra
+  ;; ("<escape>" nil)
+  )
+
+;; *** Keys
+(my/evil-universal-define-key my/mod-window-leader-key 'my/window-hydra/body)
+(my/evil-universal-define-key my/window-leader-key 'my/window-hydra/body)
+
 ;; * Window and buffer settings
 ;; ** Window settings
 ;; *** Make cursor auto move to new split window
@@ -4325,9 +4465,6 @@ Borrowed from mozc.el."
 ;; (straight-use-package 'eglot)
 
 ;; ** Lisps
-(straight-use-package 'lispy)
-(require 'lispy)
-
 ;; *** Common lisp
 ;; **** Slime
 (straight-use-package 'slime)
@@ -5149,6 +5286,182 @@ Borrowed from mozc.el."
 
 ;; *** Debugger
 (straight-use-package 'dap-mode)
+
+;; ** Structural editing
+;; *** Lispy
+(straight-use-package 'lispy)
+(require 'lispy)
+
+(defhydra my/lispy-hydra (:hint nil
+				:color red
+				:pre (setq hydra-hint-display-type 'message))
+  "lisp"
+
+  ("H" (call-interactively #'lispy-backward nil))
+  ("L" (call-interactively #'lispy-flow nil))
+
+  ("C-l" (call-interactively #'lispy-knight-down) nil)
+  ("C-h" (call-interactively #'lispy-knight-up) nil)
+
+  ("l" (call-interactively #'lispy-right) nil)
+  ("h" (call-interactively #'lispy-left) nil)
+
+  ;;   ("l" (call-interactively #'down-list) nil)
+  ;;   ("h" (call-interactively #'up-list) nil)
+
+  ("N" (call-interactively #'lispy-raise) nil)
+  ("P" (call-interactively #'lispy-convolute) nil)
+
+  ("n" (call-interactively #'lispy-down) nil)
+  ("p" (call-interactively #'lispy-up) nil)
+
+  ("u" (call-interactively #'undo nil))
+  ;;("u" (call-interactively #'lispy-back nil))
+
+  ("e" (call-interactively #'my/auto-eval nil))
+
+  ("o" (call-interactively #'lispy-different nil))
+  ("d" (call-interactively #'lispy-kill nil))
+
+  ;;("y" (call-interactively #'lispy-occur nil))
+
+
+  (">" (call-interactively #'lispy-slurp nil))
+  ("<" (call-interactively #'lispy-barf nil))
+  ("/" (call-interactively #'lispy-splice nil))
+
+  ;;  ("r" (call-interactively #'lispy-raise nil))
+  ;;  ("R" (call-interactively #'lispy-raise-some nil))
+
+  ;;("+" (call-interactively #'lispy-join nil))
+
+  ;;  ("C" (call-interactively #'lispy-splice nil))
+  ;;  ("X" (call-interactively #'lispy-splice nil))
+  ;;  ("w" (call-interactively #'lispy-splice nil))
+  ;;  ("s" (call-interactively #'lispy-splice nil))
+  ;;  ("/" (call-interactively #'lispy-splice nil))
+  ;;  ("/" (call-interactively #'lispy-splice nil))
+  ;;  ("/" (call-interactively #'lispy-splice nil))
+  ;;  ("/" (call-interactively #'lispy-splice nil))
+  ;;  ("/" (call-interactively #'lispy-splice nil))
+
+  ("<escape>" nil nil))
+
+;; ;; navigation
+;; (lispy-define-key map "C" 'lispy-convolute)
+;; (lispy-define-key map "X" 'lispy-convolute-left)
+;; (lispy-define-key map "w" 'lispy-move-up)
+;; (lispy-define-key map "s" 'lispy-move-down)
+;; (lispy-define-key map "O" 'lispy-oneline)
+;; (lispy-define-key map "M" 'lispy-alt-multiline)
+;; (lispy-define-key map "S" 'lispy-stringify)
+;; ;; marking
+;; (lispy-define-key map "a" 'lispy-ace-symbol
+;;   :override '(cond ((looking-at lispy-outline)
+;;                     (lispy-meta-return))))
+;; (lispy-define-key map "H" 'lispy-ace-symbol-replace)
+;; (lispy-define-key map "m" 'lispy-mark-list)
+;; ;; dialect-specific
+;; (lispy-define-key map "e" 'lispy-eval)
+;; (lispy-define-key map "E" 'lispy-eval-and-insert)
+;; (lispy-define-key map "G" 'lispy-goto-local)
+;; (lispy-define-key map "g" 'lispy-goto)
+;; (lispy-define-key map "F" 'lispy-follow t)
+;; (lispy-define-key map "D" 'pop-tag-mark)
+;; (lispy-define-key map "A" 'lispy-beginning-of-defun)
+;; (lispy-define-key map "_" 'lispy-underscore)
+;; ;; miscellanea
+;; (define-key map (kbd "SPC") 'lispy-space)
+;; (lispy-define-key map "i" 'lispy-tab)
+;; (lispy-define-key map "I" 'lispy-shifttab)
+;; (lispy-define-key map "N" 'lispy-narrow)
+;; (lispy-define-key map "W" 'lispy-widen)
+;; (lispy-define-key map "c" 'lispy-clone)
+;; (lispy-define-key map "u" 'lispy-undo)
+;; (lispy-define-key map "q" 'lispy-ace-paren
+;;   :override '(cond ((bound-and-true-p view-mode)
+;;                     (View-quit))))
+;; (lispy-define-key map "Q" 'lispy-ace-char)
+;; (lispy-define-key map "v" 'lispy-view)
+;; (lispy-define-key map "t" 'lispy-teleport
+;;   :override '(cond ((looking-at lispy-outline)
+;;                     (end-of-line))))
+;; (lispy-define-key map "n" 'lispy-new-copy)
+;; (lispy-define-key map "b" 'lispy-back)
+;; (lispy-define-key map "B" 'lispy-ediff-regions)
+;; (lispy-define-key map "x" 'lispy-x)
+;; (lispy-define-key map "Z" 'lispy-edebug-stop)
+;; (lispy-define-key map "V" 'lispy-visit)
+;; (lispy-define-key map "-" 'lispy-ace-subword)
+;; (lispy-define-key map "." 'lispy-repeat)
+;; (lispy-define-key map "~" 'lispy-tilde)
+
+;; Goto
+;; ("d" lispy-goto)
+;; ("l" lispy-goto-local)
+;; ("r" lispy-goto-recursive)
+;; ("p" lispy-goto-projectile)
+;; ("f" lispy-follow)
+;; ("b" pop-tag-mark)
+;; ("q" lispy-quit)
+;; ("j" lispy-goto-def-down)
+;; ("a" lispy-goto-def-ace)
+;; ("e" lispy-goto-elisp-commands)
+
+;; Other
+;; (("h" lispy-move-left)
+;;  ("j" lispy-down-slurp)
+;;  ("k" lispy-up-slurp)
+;;  ("l" lispy-move-right)
+;;  ("SPC" lispy-other-space)
+;;  ("g" lispy-goto-mode)))
+
+;; Knight
+;;   ("j" lispy-knight-down)
+;;   ("k" lispy-knight-up)
+;;    ("z" nil))
+
+;; *** Structured haskell mode
+(straight-use-package 'shm)
+(require 'shm-case-split)
+
+(defhydra my/structured-haskell-hydra (:hint nil
+					     :color red
+					     :pre (setq hydra-hint-display-type 'message))
+  "haskell"
+  ("U" (call-interactively (lambda () (interactive) (insert "undefined"))) nil)
+
+  ;; Also check forward/backward node
+  ("l" shm/goto-parent-end nil)
+  ("h" shm/goto-parent nil)
+  ("RET" (call-interactively #'shm/newline-indent) nil)
+
+  ("N" (call-interactively #'shm/raise) nil)
+
+  ("u" (call-interactively #'undo) nil)
+
+  ("e" (call-interactively #'my/auto-eval) nil)
+
+  ("k" (call-interactively #'shm/yank) nil)
+  ("d" (call-interactively #'shm/kill) nil)
+  ("D" (call-interactively #'shm/kill-line) nil)
+
+  ("c" (call-interactively #'shm/case-split) nil)
+
+  ("<escape>" nil))
+
+;; *** Keys
+(my/evil-visual-define-key "z" 'my/lispy-hydra/body)
+(my/evil-normal-define-key "z" 'my/lispy-hydra/body)
+
+;; (defun my/structural-navigation-state ()
+;;  (interactive)
+;;  (pcase major-mode
+;;    ('haskell-mode (my/structured-haskell-hydra/body))
+;;    (_ (my/lispy-hydra/body))))
+
+;; (my/evil-visual-define-key "z" 'my/structural-navigation-state)
+;; (my/evil-normal-define-key "z" 'my/structural-navigation-state)
 
 ;; * Macros
 ;; (define-prefix-command 'my/macro-map)
@@ -6465,6 +6778,30 @@ Borrowed from mozc.el."
 	    (ediff-files file1 file2)))
       (error "no more than 2 files should be marked"))))
 
+;; *** Hydra
+(defhydra hydra-ediff (:color blue
+			      :hint nil
+			      :pre (progn
+				     (setq hydra-hint-display-type 'posframe)))
+  "
+^Buffers           Files           VC                     Ediff regions
+----------------------------------------------------------------------
+_b_uffers           _f_iles (_=_)       _r_evisions              _l_inewise
+_B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
+		  _c_urrent file
+"
+  ("b" ediff-buffers)
+  ("B" ediff-buffers3)
+  ("=" ediff-files)
+  ("f" ediff-files)
+  ("F" ediff-files3)
+  ("c" ediff-current-file)
+  ("r" ediff-revision)
+  ("l" ediff-regions-linewise)
+  ("w" ediff-regions-wordwise))
+
+(define-key my/leader-map (kbd "D") 'hydra-ediff/body)
+
 ;; *** Keys
 (setq-default ediff-mode-map (make-sparse-keymap))
 
@@ -7624,344 +7961,6 @@ Borrowed from mozc.el."
 (evil-define-key 'emacs artist-mode-map [S-down-mouse-3] 'artist-down-mouse-3)
 (evil-define-key 'emacs artist-mode-map [C-mouse-4] 'artist-select-prev-op-in-list)
 (evil-define-key 'emacs artist-mode-map [C-mouse-5] 'artist-select-next-op-in-list)
-
-;; * Hydra
-(straight-use-package 'hydra)
-
-(setq hydra-hint-display-type 'message)
-
-;; ** Window and buffer management
-(defhydra my/window-hydra (:hint nil
-				 :color red
-				 :pre
-				 (progn
-				   (setq hydra-hint-display-type 'message)
-				   (setq my/window-hydra/hint
-					 (concat "next: "
-						 (let ((list (ivy--buffer-list "")))
-						   (if (and (string= (car list) (buffer-name))
-							    ;; If there is only 1 buffer in emacs
-							    (> (length list) 1))
-						       (substring-no-properties
-							(nth 1 list))
-						     (substring-no-properties
-						      (car list))))))))
-  "movement"
-
-  ;; Move focus
-  ("p" evil-window-up nil)
-  ("n" evil-window-down nil)
-  ("l" evil-window-right nil)
-  ("h" evil-window-left nil)
-
-  ;; Move focus to edge window
-  ;; Frame border window
-  ("|" evil-window-mru nil)
-
-  ;; Move window
-  ;; Move up
-  ("P" evil-move-very-top nil)
-  ;; Move down
-  ("N" evil-move-very-bottom nil)
-  ;; Move right
-  ("L" evil-move-far-right nil)
-  ;; Move left
-  ("H" evil-move-far-left nil)
-
-  ;; Switch monitor right
-  ("$" my/switch-monitor-right nil)
-  ;; Switch monitor left
-  ("0" my/switch-monitor-left nil)
-
-  ;; Resize window
-  ;; Resize up
-  ("C-p" (evil-window-increase-height 10) nil)
-  ;; Resize down
-  ("C-n" (evil-window-decrease-height 10) nil)
-  ;; Resize right
-  ;;("<delete>" (evil-window-decrease-width 10) nil)
-  ("<deletechar>" (evil-window-decrease-width 10) nil)
-  ;; Resize left
-  ;;("\b" (evil-window-increase-width 10) nil)
-  ("C-h" (evil-window-increase-width 10) nil)
-
-  ;; Resize up
-  ("C-S-p" (evil-window-increase-height 40) nil)
-  ;; Resize down
-  ("C-S-n" (evil-window-decrease-height 40) nil)
-  ;; Resize right
-  ("C-S-l" (evil-window-decrease-width 40) nil)
-  ;; Resize left
-  ("C-S-h" (evil-window-increase-width 40) nil)
-
-
-  ;; Split
-  ("o" my/window-split-right nil)
-  ("O" my/window-split-left nil)
-  ("v" my/window-split-down nil)
-  ("V" my/window-split-up nil)
-
-  ("i" my/clone-indirect-buffer nil)
-  ("I" my/clone-indirect-buffer-other-window nil)
-
-  ;; Search
-  ("C-s" swiper-all nil)
-
-  ;; Close window
-  ("s" delete-window nil)
-  ;; Focus on window
-  ("d" delete-other-windows nil)
-
-  ;; minimize window
-  ("S" (lambda () (interactive) (evil-window-increase-height 1000) (evil-window-increase-width 1000)) nil)
-  ;; maximize window
-  ("D" (lambda () (interactive) (evil-window-decrease-height 1000) (evil-window-decrease-width 1000)) nil)
-
-  ;; Buffer management
-  ;; Find file
-  ("e" counsel-find-file nil)
-  ("E" my/dired-curr-dir nil)
-  ("M-e" my/change-default-directory nil)
-
-  ;; Find
-  ("f" ellocate nil)
-  ("F" my/counsel-ag nil)
-
-  ;; Browser
-  ("b" my/switch-w3m-buffer nil)
-  ("B" my/browser-activate-tab nil)
-
-  ;; Switch buffer
-  ("a" ivy-switch-buffer nil)
-  ("A" my/switch-to-last-buffer nil)
-
-  ;; Kill buffer
-  ("k" my/auto-kill-buffer nil)
-
-  ;; Move around in buffer
-  ("C-u" evil-scroll-up nil)
-  ("C-w" evil-scroll-down nil)
-
-  ("y" counsel-linux-app nil)
-
-  ;; Switch window configuration
-  ("t" my/load-window-config nil)
-  ("T" my/add-window-config nil)
-  ("C-t" my/delete-window-config nil)
-
-  (";" counsel-bookmark nil)
-  (":" my/add-bookmark nil)
-  ("C-;" my/delete-bookmark nil)
-
-  ("u" winner-undo nil)
-  ("C-r" winner-redo nil)
-
-  ("R" rename-buffer nil)
-
-  ;; Add this to not auto exit insert mode after closing the hydra
-  ;; ("<escape>" nil)
-  )
-
-;; ** Structural navigation
-;; *** Evil-lispy
-(defhydra my/lispy-hydra (:hint nil
-				:color red
-				:pre (setq hydra-hint-display-type 'message))
-  "lisp"
-
-  ("H" (call-interactively #'lispy-backward nil))
-  ("L" (call-interactively #'lispy-flow nil))
-
-  ("C-l" (call-interactively #'lispy-knight-down) nil)
-  ("C-h" (call-interactively #'lispy-knight-up) nil)
-
-  ("l" (call-interactively #'lispy-right) nil)
-  ("h" (call-interactively #'lispy-left) nil)
-
-  ;;   ("l" (call-interactively #'down-list) nil)
-  ;;   ("h" (call-interactively #'up-list) nil)
-
-  ("N" (call-interactively #'lispy-raise) nil)
-  ("P" (call-interactively #'lispy-convolute) nil)
-
-  ("n" (call-interactively #'lispy-down) nil)
-  ("p" (call-interactively #'lispy-up) nil)
-
-  ("u" (call-interactively #'undo nil))
-  ;;("u" (call-interactively #'lispy-back nil))
-
-  ("e" (call-interactively #'my/auto-eval nil))
-
-  ("o" (call-interactively #'lispy-different nil))
-  ("d" (call-interactively #'lispy-kill nil))
-
-  ;;("y" (call-interactively #'lispy-occur nil))
-
-
-  (">" (call-interactively #'lispy-slurp nil))
-  ("<" (call-interactively #'lispy-barf nil))
-  ("/" (call-interactively #'lispy-splice nil))
-
-  ;;  ("r" (call-interactively #'lispy-raise nil))
-  ;;  ("R" (call-interactively #'lispy-raise-some nil))
-
-  ;;("+" (call-interactively #'lispy-join nil))
-
-  ;;  ("C" (call-interactively #'lispy-splice nil))
-  ;;  ("X" (call-interactively #'lispy-splice nil))
-  ;;  ("w" (call-interactively #'lispy-splice nil))
-  ;;  ("s" (call-interactively #'lispy-splice nil))
-  ;;  ("/" (call-interactively #'lispy-splice nil))
-  ;;  ("/" (call-interactively #'lispy-splice nil))
-  ;;  ("/" (call-interactively #'lispy-splice nil))
-  ;;  ("/" (call-interactively #'lispy-splice nil))
-  ;;  ("/" (call-interactively #'lispy-splice nil))
-
-  ("<escape>" nil nil))
-
-;; ;; navigation
-;; (lispy-define-key map "C" 'lispy-convolute)
-;; (lispy-define-key map "X" 'lispy-convolute-left)
-;; (lispy-define-key map "w" 'lispy-move-up)
-;; (lispy-define-key map "s" 'lispy-move-down)
-;; (lispy-define-key map "O" 'lispy-oneline)
-;; (lispy-define-key map "M" 'lispy-alt-multiline)
-;; (lispy-define-key map "S" 'lispy-stringify)
-;; ;; marking
-;; (lispy-define-key map "a" 'lispy-ace-symbol
-;;   :override '(cond ((looking-at lispy-outline)
-;;                     (lispy-meta-return))))
-;; (lispy-define-key map "H" 'lispy-ace-symbol-replace)
-;; (lispy-define-key map "m" 'lispy-mark-list)
-;; ;; dialect-specific
-;; (lispy-define-key map "e" 'lispy-eval)
-;; (lispy-define-key map "E" 'lispy-eval-and-insert)
-;; (lispy-define-key map "G" 'lispy-goto-local)
-;; (lispy-define-key map "g" 'lispy-goto)
-;; (lispy-define-key map "F" 'lispy-follow t)
-;; (lispy-define-key map "D" 'pop-tag-mark)
-;; (lispy-define-key map "A" 'lispy-beginning-of-defun)
-;; (lispy-define-key map "_" 'lispy-underscore)
-;; ;; miscellanea
-;; (define-key map (kbd "SPC") 'lispy-space)
-;; (lispy-define-key map "i" 'lispy-tab)
-;; (lispy-define-key map "I" 'lispy-shifttab)
-;; (lispy-define-key map "N" 'lispy-narrow)
-;; (lispy-define-key map "W" 'lispy-widen)
-;; (lispy-define-key map "c" 'lispy-clone)
-;; (lispy-define-key map "u" 'lispy-undo)
-;; (lispy-define-key map "q" 'lispy-ace-paren
-;;   :override '(cond ((bound-and-true-p view-mode)
-;;                     (View-quit))))
-;; (lispy-define-key map "Q" 'lispy-ace-char)
-;; (lispy-define-key map "v" 'lispy-view)
-;; (lispy-define-key map "t" 'lispy-teleport
-;;   :override '(cond ((looking-at lispy-outline)
-;;                     (end-of-line))))
-;; (lispy-define-key map "n" 'lispy-new-copy)
-;; (lispy-define-key map "b" 'lispy-back)
-;; (lispy-define-key map "B" 'lispy-ediff-regions)
-;; (lispy-define-key map "x" 'lispy-x)
-;; (lispy-define-key map "Z" 'lispy-edebug-stop)
-;; (lispy-define-key map "V" 'lispy-visit)
-;; (lispy-define-key map "-" 'lispy-ace-subword)
-;; (lispy-define-key map "." 'lispy-repeat)
-;; (lispy-define-key map "~" 'lispy-tilde)
-
-;; Goto
-;; ("d" lispy-goto)
-;; ("l" lispy-goto-local)
-;; ("r" lispy-goto-recursive)
-;; ("p" lispy-goto-projectile)
-;; ("f" lispy-follow)
-;; ("b" pop-tag-mark)
-;; ("q" lispy-quit)
-;; ("j" lispy-goto-def-down)
-;; ("a" lispy-goto-def-ace)
-;; ("e" lispy-goto-elisp-commands)
-
-;; Other
-;; (("h" lispy-move-left)
-;;  ("j" lispy-down-slurp)
-;;  ("k" lispy-up-slurp)
-;;  ("l" lispy-move-right)
-;;  ("SPC" lispy-other-space)
-;;  ("g" lispy-goto-mode)))
-
-;; Knight
-;;   ("j" lispy-knight-down)
-;;   ("k" lispy-knight-up)
-;;    ("z" nil))
-
-;; *** Structured haskell mode
-(straight-use-package 'shm)
-(require 'shm-case-split)
-
-(defhydra my/structured-haskell-hydra (:hint nil
-					     :color red
-					     :pre (setq hydra-hint-display-type 'message))
-  "haskell"
-  ("U" (call-interactively (lambda () (interactive) (insert "undefined"))) nil)
-
-  ;; Also check forward/backward node
-  ("l" shm/goto-parent-end nil)
-  ("h" shm/goto-parent nil)
-  ("RET" (call-interactively #'shm/newline-indent) nil)
-
-  ("N" (call-interactively #'shm/raise) nil)
-
-  ("u" (call-interactively #'undo) nil)
-
-  ("e" (call-interactively #'my/auto-eval) nil)
-
-  ("k" (call-interactively #'shm/yank) nil)
-  ("d" (call-interactively #'shm/kill) nil)
-  ("D" (call-interactively #'shm/kill-line) nil)
-
-  ("c" (call-interactively #'shm/case-split) nil)
-
-  ("<escape>" nil))
-
-;; *** Keys
-(my/evil-universal-define-key my/mod-window-leader-key 'my/window-hydra/body)
-(my/evil-universal-define-key my/window-leader-key 'my/window-hydra/body)
-
-;; (defun my/structural-navigation-state ()
-;;  (interactive)
-;;  (pcase major-mode
-;;    ('haskell-mode (my/structured-haskell-hydra/body))
-;;    (_ (my/lispy-hydra/body))))
-
-;; (my/evil-visual-define-key "z" 'my/structural-navigation-state)
-;; (my/evil-normal-define-key "z" 'my/structural-navigation-state)
-
-(my/evil-visual-define-key "z" 'my/lispy-hydra/body)
-(my/evil-normal-define-key "z" 'my/lispy-hydra/body)
-
-;; ** Ediff
-;; *** Main
-(defhydra hydra-ediff (:color blue
-			      :hint nil
-			      :pre (progn
-				     (setq hydra-hint-display-type 'posframe)))
-  "
-^Buffers           Files           VC                     Ediff regions
-----------------------------------------------------------------------
-_b_uffers           _f_iles (_=_)       _r_evisions              _l_inewise
-_B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
-		  _c_urrent file
-"
-  ("b" ediff-buffers)
-  ("B" ediff-buffers3)
-  ("=" ediff-files)
-  ("f" ediff-files)
-  ("F" ediff-files3)
-  ("c" ediff-current-file)
-  ("r" ediff-revision)
-  ("l" ediff-regions-linewise)
-  ("w" ediff-regions-wordwise))
-
-(define-key my/leader-map (kbd "D") 'hydra-ediff/body)
 
 ;; * Image modes
 ;; ** PDF view
