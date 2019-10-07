@@ -4077,11 +4077,11 @@ Borrowed from mozc.el."
   (pcase major-mode
     ('haskell-mode
      (if my/haskell-hie-enable
-	 (lsp-ui-sideline-apply-code-actions)
+	 (call-interactively 'lsp-execute-code-action)
        (call-interactively 'attrap-attrap)))
     (_
      (if lsp-mode
-	 (lsp-ui-sideline-apply-code-actions)
+	 (call-interactively 'lsp-execute-code-action)
        (call-interactively 'attrap-attrap)))))
 
 (define-key my/leader-map (kbd "RET") 'my/auto-fix-suggested)
@@ -4300,7 +4300,7 @@ Borrowed from mozc.el."
       lsp-ui-flycheck-enable t)
 ;; (setq lsp-ui-sideline-ignore-duplicate t)
 
-(setq lsp-ui-sideline-show-code-actions t
+(setq lsp-ui-sideline-show-code-actions nil
       ;; Errors i think
       lsp-ui-sideline-show-diagnostics nil
 
@@ -4487,12 +4487,7 @@ Borrowed from mozc.el."
   (lsp-lens-mode)
   (lsp-java-boot-lens-mode)
 
-  ;; (lsp-ui-sideline-mode -1)
-  ;; Disabling sideline-mode entirely stops code actions from working
-  (setq-local lsp-ui-sideline-show-code-actions t)
-  (setq-local lsp-ui-sideline-show-diagnostics nil)
-  (setq-local lsp-ui-sideline-show-hover nil)
-  (setq-local lsp-ui-sideline-show-symbol nil))
+  (lsp-ui-sideline-mode -1))
 
 ;; Enable java lens
 (setq lsp-java-references-code-lens-enabled t)
@@ -9667,8 +9662,6 @@ Borrowed from mozc.el."
   ;; lsp Doc
   (set-face-attribute 'lsp-ui-doc-header nil :foreground my/foreground-color :background my/background-color-4)
   (set-face-attribute 'lsp-ui-doc-url nil :foreground my/background-color :background my/foreground-color)
-  ;; Make the code action overlay invisible to make it less distracting
-  (set-face-attribute 'lsp-ui-sideline-code-action nil :foreground my/background-color :background my/background-color)
 
   ;; lsp Sideline
   (my/set-face-to-default 'lsp-ui-peek-filename nil)
@@ -9680,6 +9673,7 @@ Borrowed from mozc.el."
   (my/set-face-to-default 'lsp-ui-peek-peek nil)
   (my/set-face-to-default 'lsp-ui-peek-selection nil)
   (my/set-face-to-default 'lsp-ui-sideline-current-symbol nil)
+  (my/set-face-to-default 'lsp-ui-sideline-code-action nil)
 
   ;;  (set-face-attribute 'lsp-ui-peek-filename nil :foreground my/foreground-color :background my/background-color)
   ;;  (set-face-attribute 'lsp-ui-peek-footer nil :foreground my/foreground-color :background my/background-color)
