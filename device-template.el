@@ -30,3 +30,6 @@
 (defvar my/haskell-hie-enable nil)
 
 (defvar my/use-w3m nil)
+
+;; Should be true if in either WSL or VM with windows host
+(defvar my/windows-host t)

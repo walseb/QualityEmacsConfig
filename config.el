@@ -392,11 +392,6 @@
 ;; #+END_SRC
 ;; always instead
 
-;; ** Emacs crashes when copying from clipboard
-;; Setting these to nil is a workaround
-;; (setq x-select-enable-clipboard nil)
-;; (setq x-select-enable-clipboard-manager nil)
-
 ;; * Todo
 ;; ** Packages to try
 ;; nix-buffer
@@ -1364,6 +1359,28 @@ Borrowed from mozc.el."
 (my/evil-visual-define-key my/leader-map-key my/leader-map)
 
 (my/evil-universal-define-key my/mod-leader-map-key my/leader-map)
+
+;; * Compatibility
+;; ** Windows host clipboard crash
+;; Emacs crashes from time to time when it's run in linux but the clipboard contents are from windows.
+(setq x-select-request-type 'STRING)
+
+(defun gui--selection-value-internal (type)
+  (let ((request-type (if (eq window-system 'x)
+			  (or x-select-request-type
+			      '(UTF8_STRING COMPOUND_TEXT STRING))
+			'STRING))
+	text)
+    (with-demoted-errors "gui-get-selection: %S"
+      (if (consp request-type)
+	  (while (and request-type (not text))
+	    (setq text (gui-get-selection type (car request-type)))
+	    (setq request-type (cdr request-type)))
+	(setq text (gui-get-selection type request-type))))
+    ;; This seems to be the problem
+    ;; (if text
+    ;; (remove-text-properties 0 (length text) '(foreign-selection nil) text))
+    text))
 
 ;; * Alert
 (defvar my/past-alerts (list))
@@ -2664,7 +2681,7 @@ Borrowed from mozc.el."
 
 ;; *** Visuals
 ;; Ivy height
-(setq ivy-height 20)
+(setq ivy-height (+ (window-height) 1))
 
 ;; Make counsel-yank-pop use default height
 ;; (delete `(counsel-yank-pop . 5) ivy-height-alist)
@@ -9583,7 +9600,6 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   (when (require 'hl-line nil 'noerror)
     (set-face-attribute 'hl-line nil :foreground my/foreground-color :background my/background-color-2 :underline nil))
 
-
   ;;  Show-paren
   (set-face-attribute 'show-paren-match nil :background my/background-color :foreground my/foreground-color)
   (set-face-attribute 'show-paren-match-expression nil :background my/foreground-color :foreground my/background-color)
@@ -9636,7 +9652,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
   ;; Ivy
   ;; Ivy also uses "font-lock-doc-face" for the documentation
-  (set-face-attribute 'ivy-current-match nil :foreground my/background-color :background my/foreground-color)
+  (set-face-attribute 'ivy-current-match nil :foreground my/background-color :background my/mark-color-3)
   (set-face-attribute 'ivy-cursor nil :foreground my/background-color :background my/foreground-color)
   (set-face-attribute 'ivy-minibuffer-match-highlight nil :foreground my/background-color :background my/foreground-color)
   ;;(set-face-attribute 'ivy-separator nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
