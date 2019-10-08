@@ -2681,7 +2681,7 @@ Borrowed from mozc.el."
 
 ;; *** Visuals
 ;; Ivy height
-(setq ivy-height (+ (window-height) 2))
+(add-hook 'exwm-init-hook (lambda () (setq ivy-height (+ (window-height) 2))))
 
 ;; Make counsel-yank-pop use default height
 ;; (delete `(counsel-yank-pop . 5) ivy-height-alist)
@@ -2739,6 +2739,7 @@ Borrowed from mozc.el."
 (define-key ivy-minibuffer-map [remap newline] 'ivy-done)
 
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-g") 'minibuffer-keyboard-quit)
+(evil-define-key '(motion normal insert) minibuffer-inactive-mode-map (kbd "C-g") 'minibuffer-keyboard-quit)
 
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-u") 'ivy-scroll-down-command)
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-w") 'ivy-scroll-up-command)
@@ -9892,6 +9893,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 ;; * Restore gc mem
 (setq gc-cons-threshold my/after-gc-mem)
+(garbage-collect)
 
 ;; * Report start time
 (run-with-timer 4 nil (lambda () (interactive) (message (concat "Booted in " (emacs-init-time)))))
