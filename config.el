@@ -2681,7 +2681,7 @@ Borrowed from mozc.el."
 
 ;; *** Visuals
 ;; Ivy height
-(setq ivy-height (+ (window-height) 1))
+(setq ivy-height (+ (window-height) 2))
 
 ;; Make counsel-yank-pop use default height
 ;; (delete `(counsel-yank-pop . 5) ivy-height-alist)
