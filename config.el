@@ -6838,6 +6838,11 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; If enabled it auto enables projectile, which has high CPU usage
 (straight-use-package 'counsel-projectile)
 
+;; ** Diff
+;; Puts + and - in the diff buffer on the fringe so that text from there can be more easily copied.
+;; Only works on emacs 27
+(setq diff-font-lock-prettify t)
+
 ;; ** Magit
 (straight-use-package 'magit)
 
