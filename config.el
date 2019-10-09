@@ -1365,22 +1365,24 @@ Borrowed from mozc.el."
 ;; Emacs crashes from time to time when it's run in linux but the clipboard contents are from windows.
 (setq x-select-request-type 'STRING)
 
-(defun gui--selection-value-internal (type)
-  (let ((request-type (if (eq window-system 'x)
-			  (or x-select-request-type
-			      '(UTF8_STRING COMPOUND_TEXT STRING))
-			'STRING))
-	text)
-    (with-demoted-errors "gui-get-selection: %S"
-      (if (consp request-type)
-	  (while (and request-type (not text))
-	    (setq text (gui-get-selection type (car request-type)))
-	    (setq request-type (cdr request-type)))
-	(setq text (gui-get-selection type request-type))))
-    ;; This seems to be the problem
-    ;; (if text
-    ;; (remove-text-properties 0 (length text) '(foreign-selection nil) text))
-    text))
+(when my/windows-host
+  (with-eval-after-load 'select
+    (defun gui--selection-value-internal (type)
+      (let ((request-type (if (eq window-system 'x)
+			      (or x-select-request-type
+				  '(UTF8_STRING COMPOUND_TEXT STRING))
+			    'STRING))
+	    text)
+	(with-demoted-errors "gui-get-selection: %S"
+	  (if (consp request-type)
+	      (while (and request-type (not text))
+		(setq text (gui-get-selection type (car request-type)))
+		(setq request-type (cdr request-type)))
+	    (setq text (gui-get-selection type request-type))))
+	;; This seems to be the problem
+	;; (if text
+	;; (remove-text-properties 0 (length text) '(foreign-selection nil) text))
+	text))))
 
 ;; * Alert
 (defvar my/past-alerts (list))
@@ -1672,7 +1674,9 @@ Borrowed from mozc.el."
 (global-visual-line-mode 1)
 
 ;; *** Fringe indicators of wrapped line
-(setq visual-line-fringe-indicators '(right-triangle nil))
+(setq visual-line-fringe-indicators '(left-bracket nil))
+;; (setq visual-line-fringe-indicators '(top-left-angle nil))
+;; (setq visual-line-fringe-indicators '(empty-line nil))
 
 ;; ** Disable useless functionallity
 (tooltip-mode -1)
@@ -2820,6 +2824,12 @@ Borrowed from mozc.el."
 
 ;; **** Remove duplicate entries in yank ring
 (advice-add #'counsel-mark-ring :before (lambda (&optional arg) (delete-dups mark-ring)))
+
+;; *** Find file
+;; **** Filter out .. and .
+(setq counsel-find-file-ignore-regexp "^\\./$\\|^\\.\\./$")
+;; In ivy you can't press ~/~ on the first entry to enter that directory because there is supposed to be ~.~ there
+(setq ivy-extra-directories '("./"))
 
 ;; *** Keys
 ;; (define-key my/leader-map (kbd "g") 'counsel-M-x)
@@ -4635,11 +4645,11 @@ Borrowed from mozc.el."
   ;; Add configurations for java dap-mode
   (require 'dap-java)
 
-  (require 'lsp-java-boot)
+  ;; (require 'lsp-java-boot)
 
   (lsp)
   (lsp-lens-mode)
-  (lsp-java-boot-lens-mode)
+  ;; (lsp-java-boot-lens-mode)
 
   (lsp-ui-sideline-mode -1))
 
