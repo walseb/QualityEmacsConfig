@@ -9847,12 +9847,13 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; ** Make backup on every save
 ;; *** helm-backup
 ;; (straight-use-package 'helm)
-(straight-use-package '(helm-backup :type git :host github :repo "walseb/helm-backup"))
+(straight-use-package 'helm-backup)
+(straight-use-package '(ivy-backup :type git :host github :repo "walseb/ivy-backup"))
 (require 'helm-backup)
 
 (add-hook 'after-save-hook 'helm-backup-versioning)
 
-(define-key my/leader-map (kbd "C-u") 'helm-backup-ivy)
+(define-key my/leader-map (kbd "C-u") 'ivy-backup)
 
 ;; *** Manual way
 ;; (defun my/backup-buffer-per-session ()
