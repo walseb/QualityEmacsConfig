@@ -2685,7 +2685,7 @@ Borrowed from mozc.el."
 
 ;; *** Visuals
 ;; Ivy height
-(add-hook 'exwm-init-hook (lambda () (setq ivy-height (+ (window-height) 2))))
+(add-hook 'exwm-init-hook (lambda () (setq ivy-height (+ (window-height) 1))))
 
 ;; Make counsel-yank-pop use default height
 ;; (delete `(counsel-yank-pop . 5) ivy-height-alist)
@@ -2694,7 +2694,8 @@ Borrowed from mozc.el."
 			     (setq ivy-height-alist nil)
 			     (setq-default ivy-height-alist nil)
 			     (add-to-list 'ivy-height-alist '(swiper . 10))
-			     (add-to-list 'ivy-height-alist '(swiper-isearch . 10))))
+			     (add-to-list 'ivy-height-alist '(swiper-isearch . 10))
+			     (add-to-list 'ivy-height-alist '(counsel-switch-buffer . 10))))
 
 ;; **** Highlight whole row in minibuffer
 ;; Change the default emacs formatter to highlight whole row in minibuffer
@@ -3798,8 +3799,11 @@ Borrowed from mozc.el."
   ("B" my/browser-activate-tab nil)
 
   ;; Switch buffer
-  ("a" ivy-switch-buffer nil)
+  ("a" counsel-switch-buffer nil)
   ("A" my/switch-to-last-buffer nil)
+
+  ;; Same as M-e
+  ("8" my/counsel-switch-buffer-ediff nil)
 
   ;; Kill buffer
   ("k" my/auto-kill-buffer nil)
@@ -6775,7 +6779,8 @@ Borrowed from mozc.el."
 (require 'ediff)
 (setq-default ediff-forward-word-function 'forward-char)
 
-;; Fixes exwm bug too?
+;; Stops ediff from creating a new frame dedicated to the control panel
+;; This also fixes exwm from crashing or something
 (setq ediff-window-setup-function 'ediff-setup-windows-plain)
 
 (setq ediff-split-window-function 'split-window-horizontally)
@@ -6830,13 +6835,23 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 (define-key my/leader-map (kbd "D") 'hydra-ediff/body)
 
-;; *** Keys
-(setq-default ediff-mode-map (make-sparse-keymap))
+;; *** Counsel ediff control
+;; Only shows ediff control buffers
+(defun my/counsel-switch-buffer-ediff ()
+  (interactive)
+  (ivy-read "Switch to buffer: " 'internal-complete-buffer
+	    :preselect (buffer-name (other-buffer (current-buffer)))
+	    :keymap ivy-switch-buffer-map
+	    :action #'ivy--switch-buffer-action
+	    :matcher #'ivy--switch-buffer-matcher
+	    :caller 'counsel-switch-buffer
+	    :unwind #'counsel--switch-buffer-unwind
+	    :update-fn 'counsel--switch-buffer-update-fn
+	    :initial-input "\*Ediff  Control  Panel"))
 
+;; *** Keys
 (define-prefix-command 'my/ediff-mode-map)
 (evil-define-key 'normal ediff-mode-map (kbd (concat my/leader-map-key " a")) 'my/ediff-mode-map)
-(define-key ediff-mode-map "p" 'ediff-previous-difference)
-(define-key ediff-mode-map "n" 'ediff-next-difference)
 
 ;; ** Projectile
 (straight-use-package 'projectile)
