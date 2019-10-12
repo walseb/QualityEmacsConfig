@@ -1411,7 +1411,7 @@ Borrowed from mozc.el."
 ;; * Compatibility
 ;; ** Windows host clipboard crash
 ;; Emacs crashes from time to time when it's run in linux but the clipboard contents are from windows.
-(setq x-select-request-type 'STRING)
+;; (setq x-select-request-type 'STRING)
 
 (when my/windows-host
   (with-eval-after-load 'select
@@ -7240,9 +7240,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   "Takes a screenshot of a region selected by the user and asks for file path"
   (interactive)
   (when window-system
-
     ;; Check if there is a directory called "images" in current dir, if so start read-file-name inside that directory
-    (if(file-exists-p (concat default-directory "images/"))
+    (if (file-exists-p (concat default-directory "images/"))
 	(setq screenshot-base-path (concat default-directory "images/"))
       (setq screenshot-base-path default-directory))
 
