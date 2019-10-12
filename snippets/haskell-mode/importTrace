@@ -1,0 +1,4 @@
+# name: importTrace
+# key: tr
+# --
+import qualified Debug.Trace as Tr $0

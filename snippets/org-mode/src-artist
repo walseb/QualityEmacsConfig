@@ -1,0 +1,6 @@
+# key: art
+# name: src-artist
+# --
+#+BEGIN_SRC artist
+
+#+END_SRC

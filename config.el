@@ -980,8 +980,11 @@
 (setq evil-mc-undo-cursors-on-keyboard-quit t)
 
 ;; *** Keys
-(define-key evil-visual-state-map "A" 'evil-mc-make-cursor-in-visual-selection-end)
-(define-key evil-visual-state-map "I" 'evil-mc-make-cursor-in-visual-selection-beg)
+(define-key evil-visual-state-map (kbd "A") 'evil-mc-make-cursor-in-visual-selection-end)
+(define-key evil-visual-state-map (kbd "I") 'evil-mc-make-cursor-in-visual-selection-beg)
+
+(define-key evil-normal-state-map (kbd "C-S-n") 'evil-mc-make-and-goto-next-match)
+(define-key evil-normal-state-map (kbd "C-S-p") 'evil-mc-make-and-goto-prev-match)
 
 ;; ** Settings
 ;; *** Disable messages in echo area
@@ -1148,6 +1151,51 @@
 ;; *** Evil-surround
 (straight-use-package 'evil-surround)
 (global-evil-surround-mode 1)
+
+;; **** Setup pair binds
+(setq evil-surround-pairs-alist
+      '(
+	;; Default
+	(?\( . ("(" . ")"))
+	(?\[ . ("[ " . "]"))
+	(?\{ . ("{" . "}"))
+
+	;; Default reversed
+	(?\) . ("(" . ")"))
+	(?\] . ("[" . "]"))
+	(?\} . ("{" . "}"))
+
+	;; My meta keys
+	(134217841 . ("!" . "!"))
+	(134217831 . ("@" . "@"))
+	(134217837 . ("#" . "#"))
+	(134217836 . ("$" . "$"))
+	(134217847 . ("%" . "%"))
+	(134217849 . ("*" . "*"))
+	(134217830 . ("(" . ")"))
+	(134217845 . ("(" . ")"))
+	(134217826 . ("&" . "&"))
+	(134217787 . ("^" . "^"))
+
+	(134217828 . ("1" . "1"))
+	(134217843 . ("2" . "2"))
+	(134217844 . ("3" . "3"))
+	(134217838 . ("4" . "4"))
+	(134217842 . ("5" . "5"))
+	(134217833 . ("6" . "6"))
+	(134217825 . ("7" . "7"))
+	(134217829 . ("8" . "8"))
+	(134217839 . ("9" . "9"))
+	(134217832 . ("0" . "0"))
+
+	;; Blocks, etc
+	(?# . ("#{" . "}"))
+	(?b . ("(" . ")"))
+	(?B . ("{" . "}"))
+	(?> . ("<" . ">"))
+	(?t . evil-surround-read-tag)
+	(?< . evil-surround-read-tag)
+	(?f . evil-surround-function)))
 
 ;; **** Keys
 (evil-define-key 'normal evil-surround-mode-map (kbd ",") 'evil-surround-edit)
@@ -6543,7 +6591,7 @@ Borrowed from mozc.el."
 ;; * Browser
 (defun my/get-search-url ()
   (interactive)
-  (let ((search (completing-read "search: " nil)))
+  (let ((search (counsel-google)))
     ;; Don't do a google search for anything that has a dot then a letter
     ;; There are two (not whitespace) here because otherwise the * wildcard would accept strings without any char after a dot
     (if (or
@@ -7944,6 +7992,9 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (evil-define-key 'visual calc-mode-map (kbd "d") 'calc-kill-region)
 
 ;; * Artist mode
+;; Auto enable emacs mode
+(add-hook 'artist-mode-hook 'evil-emacs-state)
+
 ;; ** Completing read
 ;; https://www.emacswiki.org/emacs/ArtistMode
 (defun my/artist-select-operation (type)
