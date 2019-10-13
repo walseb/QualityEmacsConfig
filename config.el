@@ -1153,49 +1153,49 @@
 (global-evil-surround-mode 1)
 
 ;; **** Setup pair binds
-(setq evil-surround-pairs-alist
-      '(
-	;; Default
-	(?\( . ("(" . ")"))
-	(?\[ . ("[ " . "]"))
-	(?\{ . ("{" . "}"))
+(setq-default evil-surround-pairs-alist
+	      '(
+		;; Default
+		(?\( . ("(" . ")"))
+		(?\[ . ("[ " . "]"))
+		(?\{ . ("{" . "}"))
 
-	;; Default reversed
-	(?\) . ("(" . ")"))
-	(?\] . ("[" . "]"))
-	(?\} . ("{" . "}"))
+		;; Default reversed
+		(?\) . ("(" . ")"))
+		(?\] . ("[" . "]"))
+		(?\} . ("{" . "}"))
 
-	;; My meta keys
-	(134217841 . ("!" . "!"))
-	(134217831 . ("@" . "@"))
-	(134217837 . ("#" . "#"))
-	(134217836 . ("$" . "$"))
-	(134217847 . ("%" . "%"))
-	(134217849 . ("*" . "*"))
-	(134217830 . ("(" . ")"))
-	(134217845 . ("(" . ")"))
-	(134217826 . ("&" . "&"))
-	(134217787 . ("^" . "^"))
+		;; My meta keys
+		(134217841 . ("!" . "!"))
+		(134217831 . ("@" . "@"))
+		(134217837 . ("#" . "#"))
+		(134217836 . ("$" . "$"))
+		(134217847 . ("%" . "%"))
+		(134217849 . ("*" . "*"))
+		(134217830 . ("(" . ")"))
+		(134217845 . ("(" . ")"))
+		(134217826 . ("&" . "&"))
+		(134217787 . ("^" . "^"))
 
-	(134217828 . ("1" . "1"))
-	(134217843 . ("2" . "2"))
-	(134217844 . ("3" . "3"))
-	(134217838 . ("4" . "4"))
-	(134217842 . ("5" . "5"))
-	(134217833 . ("6" . "6"))
-	(134217825 . ("7" . "7"))
-	(134217829 . ("8" . "8"))
-	(134217839 . ("9" . "9"))
-	(134217832 . ("0" . "0"))
+		(134217828 . ("1" . "1"))
+		(134217843 . ("2" . "2"))
+		(134217844 . ("3" . "3"))
+		(134217838 . ("4" . "4"))
+		(134217842 . ("5" . "5"))
+		(134217833 . ("6" . "6"))
+		(134217825 . ("7" . "7"))
+		(134217829 . ("8" . "8"))
+		(134217839 . ("9" . "9"))
+		(134217832 . ("0" . "0"))
 
-	;; Blocks, etc
-	(?# . ("#{" . "}"))
-	(?b . ("(" . ")"))
-	(?B . ("{" . "}"))
-	(?> . ("<" . ">"))
-	(?t . evil-surround-read-tag)
-	(?< . evil-surround-read-tag)
-	(?f . evil-surround-function)))
+		;; Blocks, etc
+		(?# . ("#{" . "}"))
+		(?b . ("(" . ")"))
+		(?B . ("{" . "}"))
+		(?> . ("<" . ">"))
+		(?t . evil-surround-read-tag)
+		(?< . evil-surround-read-tag)
+		(?f . evil-surround-function)))
 
 ;; **** Keys
 (evil-define-key 'normal evil-surround-mode-map (kbd ",") 'evil-surround-edit)
@@ -5017,17 +5017,20 @@ Borrowed from mozc.el."
 
 ;; **** Add hlint to dante
 (when (not my/haskell-hie-enable)
-  (add-hook 'dante-mode-hook (lambda ()
-			       (flycheck-add-next-checker 'haskell-dante '(warning . haskell-hlint))
-			       ;; Remove dante since the haskell repl is a lot faster at detecting errors anyways
-			       ;; But turns out this leads to some packages being labled hidden?
-			       ;; (add-to-list 'flycheck-disabled-checkers 'haskell-dante)
+  (add-hook 'haskell-mode-hook (lambda ()
+				 (flycheck-add-next-checker 'haskell-dante '(warning . haskell-hlint))
+				 ;; Remove dante since the haskell repl is a lot faster at detecting errors anyways
+				 ;; But turns out this leads to some packages being labled hidden?
+				 ;; (add-to-list 'flycheck-disabled-checkers 'haskell-dante)
 
-			       ;; Dante runs a lot faster now? Also problem with haskell-ghc is that it doesn't care about cabal files, it just runs ghc on the current file
-			       (add-to-list 'flycheck-disabled-checkers 'haskell-ghc))))
+				 ;; Dante runs a lot faster now? Also problem with haskell-ghc is that it doesn't care about cabal files, it just runs ghc on the current file
+				 (add-to-list 'flycheck-disabled-checkers 'haskell-ghc))))
 
 ;; **** Apply GHC hints
 (straight-use-package 'attrap)
+
+;; **** Fix
+(setq dante-repl-command-line '("nix-shell" "--run" "cabal new-repl ReactiveGame --builddir=dist-newstyle/dante"))
 
 ;; *** Flycheck
 ;; Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the standard ghc checker though, because it works fine if I don't have HIE. If I have HIE emacs should use that instead
