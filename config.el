@@ -3597,19 +3597,11 @@ Borrowed from mozc.el."
 			  ;;			  evil-forward-WORD evil-forward-WORD-begin evil-forward-WORD-end evil-backward-WORD-begin
 			  ;;			  evil-backward-word-begin evil-backward-word-end
 			  ))
-(jammer-mode)
+;; (jammer-mode)
 
 ;; ** goto change
 ;; g-; and g-,
 (straight-use-package 'goto-chg)
-
-;; ** My find file
-;; (defun my/find-file ()
-;;  (interactive)
-;;  (find-file (let ((dir (ignore-errors (dired-current-directory))))
-;;	       (if dir
-;;		   (read-file-name "Find file: " dir)
-;;		 (read-file-name "Find file: " default-directory)))))
 
 ;; ** Change default directory
 (defun my/change-default-directory ()
@@ -5038,45 +5030,6 @@ Borrowed from mozc.el."
 			       (add-to-list 'flycheck-disabled-checkers 'haskell-stack-ghc)))
 
 ;; ** C/CPP
-;; *** Irony
-;; (straight-use-package 'irony)
-
-;; (add-hook 'c++-mode-hook 'irony-mode)
-;; (add-hook 'c-mode-hook 'irony-mode)
-;; (add-hook 'objc-mode-hook 'irony-mode)
-
-;; (add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)
-
-;; **** Windows tweaks
-;; Windows performance tweaks
-;; (when (boundp 'w32-pipe-read-delay)
-;; (setq w32-pipe-read-delay 0))
-;; ;; Set the buffer size to 64K on Windows (from the original 4K)
-;; (when (boundp 'w32-pipe-buffer-size)
-;; (setq irony-server-w32-pipe-buffer-size (* 64 1024)))
-
-;; **** Flycheck-irony
-;; (straight-use-package 'flycheck-irony)
-
-;; (with-eval-after-load 'flycheck
-;;   (add-hook 'flycheck-mode-hook #'flycheck-irony-setup))
-
-;; **** Company-irony
-;; (straight-use-package 'company-irony)
-
-;; (with-eval-after-load 'company
-;;   (add-to-list 'company-backends 'company-irony))
-
-;; **** Eldoc-irony
-;; (straight-use-package 'irony-eldoc)
-
-;; (add-hook 'irony-mode-hook #'irony-eldoc)
-
-;; *** Elgot
-;; (add-hook 'c-mode-hook 'eglot-ensure)
-;; (add-hook 'c++-mode-hook 'eglot-ensure)
-;; (add-hook 'objc-mode-hook 'eglot-ensure)
-
 ;; *** LSP CCLS
 (straight-use-package 'ccls)
 (require 'ccls)
@@ -5157,16 +5110,6 @@ Borrowed from mozc.el."
     (undo)
     (undo)));;;this is a rather leaky way of doing temporary changes. there should be some way to save buffer contents or something
    ;;;probably uses with-temp-buffer
-
-;; *** Etags
-;; (straight-use-package 'etags)
-;; (straight-use-package 'counsel-etags)
-
-;; *** Rtags
-
-
-;; *** Debugging
-;; (require 'gdb-mi)
 
 ;; *** Keys
 (define-prefix-command 'my/c-mode-map)
