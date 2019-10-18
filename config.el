@@ -2233,7 +2233,7 @@ Borrowed from mozc.el."
 
 ;; *** Hide emphasis markers
 ;; The equal signs =here= to make it bold should not be visible
-(setq org-hide-emphasis-markers t)
+(setq org-hide-emphasis-markers nil)
 
 ;; *** Disable edit-src help header
 (setq org-edit-src-persistent-message nil)
@@ -8238,6 +8238,17 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   '(("&&" . ?∧)
     ("||" . ?∨)))
 
+;; *** Org
+;; Doesn't work without regexps because there isn't any space between org emphasis markers and the contents. For example this ~code~
+;; (defconst my/org-hide-emphasis
+;;   '(
+;;     ("*" . ? )
+;;     ("/" . ? )
+;;     ("_" . ? )
+;;     ("=" . ? )
+;;     ("~" . ? )
+;;     ("+" . ? )))
+
 ;; *** Comment delimiter
 ;; Font lock automatically handles comment highlighting through the function font-lock-fontify-syntactically-region
 
@@ -8408,7 +8419,6 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 			     (my/prettify-outline-heading-lisp)
 			     ;; (my/prettify-outline-heading-lisp-classic)
 			     ))
-
     (_ (append
 	(my/prettify-comment)
 	my/generic-greek-symbols
@@ -8434,10 +8444,10 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 	 (syntaxes-end (if (memq (char-syntax (char-before end)) '(?w ?_))
 			   '(?w ?_) '(?. ?\\))))
     (not (or (memq (char-syntax (or (char-before start) ?\s)) syntaxes-beg)
-	     (memq (char-syntax (or (char-after end) ?\s)) syntaxes-end)
-	     ;; It looks like this part makes it ignore comments, remove it
-	     ;;(nth 8 (syntax-ppss))
-	     ))))
+	   (memq (char-syntax (or (char-after end) ?\s)) syntaxes-end)
+	   ;; It looks like this part makes it ignore comments, remove it
+	   ;;(nth 8 (syntax-ppss))
+	   ))))
 
 (setq-default prettify-symbols-compose-predicate #'my/prettify-symbols-default-compose-p)
 
@@ -8449,6 +8459,14 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (straight-use-package 'olivetti)
 
 (setq-default olivetti-body-width 150)
+
+(define-globalized-minor-mode global-olivetti-mode
+  nil (lambda ()
+	(pcase major-mode
+	  ('minibuffer-inactive-mode)
+	  (_ (olivetti-mode)))))
+
+(global-olivetti-mode 1)
 
 (define-key my/leader-map (kbd "V") 'olivetti-mode)
 
