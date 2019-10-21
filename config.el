@@ -1,4 +1,5 @@
 ;; -*- lexical-binding:t -*-
+
 ;; * Docs
 ;; ** Requirements
 ;; *** All
@@ -2733,7 +2734,8 @@ Borrowed from mozc.el."
 
 ;; *** Visuals
 ;; Ivy height
-(add-hook 'exwm-init-hook (lambda () (setq ivy-height (+ (window-height) 1))))
+(add-hook 'exwm-init-hook (lambda () (run-with-timer 1 nil
+						(lambda () (setq ivy-height (+ (window-height) 1))))))
 
 ;; Make counsel-yank-pop use default height
 ;; (delete `(counsel-yank-pop . 5) ivy-height-alist)
@@ -8464,6 +8466,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   nil (lambda ()
 	(pcase major-mode
 	  ('minibuffer-inactive-mode)
+	  ('exwm-mode)
 	  (_ (olivetti-mode)))))
 
 (global-olivetti-mode 1)
