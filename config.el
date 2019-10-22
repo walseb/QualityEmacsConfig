@@ -821,6 +821,20 @@
 	(delete-file file)))
     (message "Deletion completed!")))
 
+;; ** Is there any line longer than
+;; From mm-bodies.el
+(defun my/line-longer-than (length)
+  "Say whether any of the lines in the buffer is longer than LENGTH."
+  (save-excursion
+    (goto-char (point-min))
+    (end-of-line)
+    (while (and (not (eobp))
+		(not (> (current-column) length)))
+      (forward-line 1)
+      (end-of-line))
+    (and (> (current-column) length)
+	 (current-column))))
+
 ;; * Fonts
 (defun my/get-best-font ()
   (if (my/font-installed "Inconsolata LGC")
@@ -4870,7 +4884,8 @@ Borrowed from mozc.el."
 
 ;; *** Formatting
 ;; (setq haskell-stylish-on-save t)
-(setq haskell-mode-stylish-haskell-path "brittany")
+;; (setq haskell-mode-stylish-haskell-path "brittany")
+(setq haskell-mode-stylish-haskell-path "ormolu")
 
 ;; *** Extension management
 (straight-use-package 'hasky-extensions)
@@ -8464,6 +8479,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 (define-globalized-minor-mode global-olivetti-mode
   nil (lambda ()
+	;; (when (not (my/line-longer-than olivetti-body-width))
 	(pcase major-mode
 	  ('minibuffer-inactive-mode)
 	  ('exwm-mode)
