@@ -8,6 +8,7 @@
 !snippets
 !device-template.el
 !lexical.el
+!.aspell.en.pws
 
 !/snippets/
 !/configs/

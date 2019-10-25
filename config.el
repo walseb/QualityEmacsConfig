@@ -2416,10 +2416,10 @@ Borrowed from mozc.el."
   (goto-char (point-min)))
 
 ;; ** Eldoc
-;;  (straight-use-package 'org-plus-contrib)
-;;  (require 'org-eldoc)
-;;  (require 'org-src)
-;;  (add-hook 'org-mode-hook #'org-eldoc-load)
+(straight-use-package 'org-plus-contrib)
+(require 'org-eldoc)
+(require 'org-src)
+(add-hook 'org-mode-hook #'org-eldoc-load)
 
 ;; *** Fix error
 ;; The function =org-src-get-lang-mode= doesn't exist, but the function =org-src--get-lang-mode= does
@@ -4548,6 +4548,10 @@ Borrowed from mozc.el."
 (require 'dap-mode)
 (dap-mode 1)
 (dap-ui-mode 1)
+
+;; *** Keys
+;; Unbind
+(setq-default dap-mode-map (make-sparse-keymap))
 
 ;; ** Elgot
 ;; (straight-use-package 'eglot)
@@ -7905,6 +7909,9 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (define-globalized-minor-mode global-my/flyspell-mode
   nil my/flyspell-mode-auto-select)
 (global-my/flyspell-mode 1)
+
+;; ** Personal directory
+(setq ispell-personal-dictionary (concat user-emacs-directory ".aspell.en.pws"))
 
 ;; ** Clean mode map
 (add-hook 'flyspell-mode-hook
