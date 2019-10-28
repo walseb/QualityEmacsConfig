@@ -1,5 +1,4 @@
 ;; -*- lexical-binding:t -*-
-
 ;; * Docs
 ;; ** Requirements
 ;; *** All
@@ -1553,7 +1552,11 @@ Borrowed from mozc.el."
   (interactive)
   (pcase (completing-read "Which config to write: "
 			  '("xdefaults" "xinit" "xmodmap" "mpd" "gpg-agent" "cabal" "mbsync" "msmtp" "dovecot") nil t)
-    ("xdefaults" (my/write-xdefaults))
+    ("xdefaults"
+     ;; With emacs 27 gui is disabled in early-init.el instead of xdefaults
+     (if (string< emacs-version "27")
+	 (my/write-xdefaults)
+       (message "Not writing xdefault file, emacs version is > 27 so you shouldn't need a xdefaults file")))
     ("xinit" (my/write-xinitrc))
     ("xmodmap" (my/write-xmodmap))
     ("mpd" (my/write-mpd-config))
@@ -4544,14 +4547,13 @@ Borrowed from mozc.el."
 (define-key lsp-ui-flycheck-list-mode-map [remap newline] 'lsp-ui-flycheck-list--view)
 
 ;; ** DAP
+;; I have to clear the mode map before it's defined otherwise I can't unbind it
+(setq-default dap-mode-map nil)
+
 (straight-use-package 'dap-mode)
 (require 'dap-mode)
 (dap-mode 1)
 (dap-ui-mode 1)
-
-;; *** Keys
-;; Unbind
-(setq-default dap-mode-map (make-sparse-keymap))
 
 ;; ** Elgot
 ;; (straight-use-package 'eglot)
@@ -7962,7 +7964,10 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 ;; * Artist mode
 ;; Auto enable emacs mode
-(add-hook 'artist-mode-hook 'evil-emacs-state)
+(add-hook 'artist-mode-hook (lambda ()
+			      (if artist-mode
+				  (evil-emacs-state 1)
+				(evil-normal-state 1))))
 
 ;; ** Completing read
 ;; https://www.emacswiki.org/emacs/ArtistMode
@@ -7998,7 +8003,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (setq-default picture-mode-map (make-sparse-keymap))
 
 ;; ** Keys
-;; (define-key my/leader-map (kbd "k") 'artist-mode)
+(define-key my/leader-map (kbd "A") 'artist-mode)
 
 (define-prefix-command 'my/artist-mode-map)
 (evil-define-key 'normal artist-mode-map (kbd (concat my/leader-map-key " a")) 'my/artist-mode-map)

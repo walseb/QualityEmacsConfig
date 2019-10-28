@@ -4,10 +4,9 @@
 !.gitignore
 !init.el
 !config.el
+!early-init.el
 !readme.org
-!snippets
 !device-template.el
-!lexical.el
 !.aspell.en.pws
 
 !/snippets/
