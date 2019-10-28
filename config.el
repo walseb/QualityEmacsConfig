@@ -7907,7 +7907,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 				(flyspell-mode 1))))))
 
 (define-globalized-minor-mode global-my/flyspell-mode
-  nil my/flyspell-mode-auto-select)
+  flyspell-mode my/flyspell-mode-auto-select)
 (global-my/flyspell-mode 1)
 
 ;; ** Personal directory
