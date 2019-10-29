@@ -7942,6 +7942,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (setq ispell-extra-args (list "--sug-mode=bad-spellers" "--run-together" "--run-together-limit=5"))
 
 ;; *** Key
+(my/evil-insert-define-key (kbd "C-d") 'flyspell-correct-at-point)
 (my/evil-normal-define-key (kbd "C-d") 'flyspell-correct-at-point)
 (my/evil-visual-define-key (kbd "C-d") 'flyspell-correct-at-point)
 
