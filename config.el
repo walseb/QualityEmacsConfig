@@ -4060,7 +4060,7 @@ Borrowed from mozc.el."
 ;; *** Dired keys
 ;; Bind =Backspace= to go up one directory
 ;; (define-key dired-mode-map [?\d] 'dired-up-directory)
-(evil-define-key '(normal insert) dired-mode-map (kbd "k") 'dired-up-directory)
+(evil-define-key '(normal) dired-mode-map (kbd "k") 'dired-up-directory)
 
 (evil-define-key 'insert dired-mode-map (kbd "A") 'dired-do-find-regexp)
 (evil-define-key 'insert dired-mode-map  (kbd "B") 'dired-do-byte-compile)
@@ -4122,12 +4122,16 @@ Borrowed from mozc.el."
 (evil-define-key '(normal insert) dired-mode-map (kbd "*\C-p") 'dired-prev-marked-file)
 (evil-define-key '(normal insert) dired-mode-map (kbd "*t") 'dired-toggle-marks)
 ;; Lower keys for commands not operating on all the marked files
-(evil-define-key 'insert dired-mode-map (kbd "a") 'dired-find-alternate-file)
 (evil-define-key '(normal insert) dired-mode-map (kbd "d") 'dired-flag-file-deletion)
 (evil-define-key 'insert dired-mode-map (kbd "e") 'counsel-find-file)
 ;; (put 'dired-find-file :advertised-binding (kbd "\C-m"))
 (evil-define-key 'insert dired-mode-map (kbd "g") 'revert-buffer)
+;; (evil-define-key 'insert dired-mode-map (kbd "RET") 'dired-subtree-insert)
+;; (evil-define-key 'insert dired-mode-map (kbd "i") 'dired-subtree-insert)
+;; (evil-define-key 'insert dired-mode-map (kbd "k") 'dired-subtree-remove)
+(evil-define-key 'insert dired-mode-map (kbd "RET") 'dired-maybe-insert-subdir)
 (evil-define-key 'insert dired-mode-map (kbd "i") 'dired-maybe-insert-subdir)
+(evil-define-key 'insert dired-mode-map (kbd "k") 'dired-kill-subdir)
 ;; Maybe bind this??
 (evil-define-key 'insert dired-mode-map (kbd "l") 'dired-do-redisplay)
 (evil-define-key 'normal dired-mode-map (kbd "M-m") 'dired-mark-subdir-files)
@@ -7933,7 +7937,9 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (straight-use-package 'flyspell-correct)
 
 ;; http://aspell.net/0.50-doc/man-html/4_Customizing.html#suggestion
-(setq ispell-extra-args (list "--sug-mode=bad-spellers" "--run-together"))
+;; Allow 5 words to be connected without spaces. Default is 2
+;; Run-together causes a performance loss while typing but bad-spellers only
+(setq ispell-extra-args (list "--sug-mode=bad-spellers" "--run-together" "--run-together-limit=5"))
 
 ;; *** Key
 (my/evil-normal-define-key (kbd "C-d") 'flyspell-correct-at-point)
