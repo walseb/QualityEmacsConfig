@@ -836,7 +836,7 @@
 
 ;; ** Is file remote
 (defun my/is-file-remote (path)
-  (string-match-p "\/ssh\:" path))
+  (string-match-p "^/ssh:.*:" path))
 
 ;; * Fonts
 (defun my/get-best-font ()
@@ -3985,6 +3985,19 @@ Borrowed from mozc.el."
 
 ;; ** Subtree
 ;; (straight-use-package 'dired-subtree)
+
+;; ** Buffer naming
+
+;; *** Tramp
+;; Tramp buffers aren't prefixed with server name by default
+;; https://emacs.stackexchange.com/questions/26444/include-host-in-buffer-name-for-all-files-opened-with-tramp
+(defun my/add-server-postfix ()
+  "Add the name of the connection type and server to the buffer name"
+  (when (my/is-file-remote default-directory)
+    (rename-buffer default-directory)))
+
+(add-hook 'find-file-hook #'my/add-server-postfix)
+(add-hook 'dired-mode-hook #'my/add-server-postfix)
 
 ;; ** Date format
 (setq my/dired-base-ls-command "-alh --time-style \"+%d-%m-%Y %H:%M\"")
