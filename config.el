@@ -3986,19 +3986,6 @@ Borrowed from mozc.el."
 ;; ** Subtree
 ;; (straight-use-package 'dired-subtree)
 
-;; ** Buffer naming
-
-;; *** Tramp
-;; Tramp buffers aren't prefixed with server name by default
-;; https://emacs.stackexchange.com/questions/26444/include-host-in-buffer-name-for-all-files-opened-with-tramp
-(defun my/add-server-postfix ()
-  "Add the name of the connection type and server to the buffer name"
-  (when (my/is-file-remote default-directory)
-    (rename-buffer default-directory)))
-
-(add-hook 'find-file-hook #'my/add-server-postfix)
-(add-hook 'dired-mode-hook #'my/add-server-postfix)
-
 ;; ** Date format
 (setq my/dired-base-ls-command "-alh --time-style \"+%d-%m-%Y %H:%M\"")
 (setq dired-listing-switches my/dired-base-ls-command)
@@ -7813,6 +7800,22 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 ;; ** Tramp
 ;; (setq tramp-default-method "scpx")
+
+;; *** Buffer naming
+;; Tramp buffers aren't prefixed with server name by default
+;; https://emacs.stackexchange.com/questions/26444/include-host-in-buffer-name-for-all-files-opened-with-tramp
+(defun my/tramp-add-server-prefix ()
+  "Add the name of the connection type and server to the buffer name"
+  (when (my/is-file-remote default-directory)
+    ;; If we are in a file
+    (if buffer-file-name
+	(rename-buffer buffer-file-name)
+      (if (string= major-mode "dired-mode")
+	  (rename-buffer default-directory)
+	(rename-buffer (concat default-directory " > " (symbol-name major-mode)))))))
+
+(add-hook 'find-file-hook #'my/tramp-add-server-prefix)
+(add-hook 'dired-mode-hook #'my/tramp-add-server-prefix)
 
 ;; *** Performance
 ;; https://gist.github.com/ralt/a36288cd748ce185b26237e6b85b27bb
