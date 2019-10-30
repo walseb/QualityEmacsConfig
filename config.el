@@ -834,10 +834,6 @@
     (and (> (current-column) length)
 	 (current-column))))
 
-;; ** Is file remote
-(defun my/is-file-remote (path)
-  (string-match-p "^/ssh:.*:" path))
-
 ;; * Fonts
 (defun my/get-best-font ()
   (if (my/font-installed "Inconsolata LGC")
@@ -4011,7 +4007,7 @@ Borrowed from mozc.el."
 ;; *** Tramp compatibility
 ;; When dired is used over tramp sorting doesn't work
 (defun my/dired-tramp-compatibility ()
-  (when (my/is-file-remote default-directory)
+  (when (file-remote-p default-directory)
     (dired-sort-other
      (progn (my/dired-du-disable-quietly) "-alh"))))
 
@@ -7804,18 +7800,15 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; *** Buffer naming
 ;; Tramp buffers aren't prefixed with server name by default
 ;; https://emacs.stackexchange.com/questions/26444/include-host-in-buffer-name-for-all-files-opened-with-tramp
-(defun my/tramp-add-server-prefix ()
-  "Add the name of the connection type and server to the buffer name"
-  (when (my/is-file-remote default-directory)
-    ;; If we are in a file
-    (if buffer-file-name
-	(rename-buffer buffer-file-name)
-      (if (string= major-mode "dired-mode")
-	  (rename-buffer default-directory)
-	(rename-buffer (concat default-directory " > " (symbol-name major-mode)))))))
+;; (defun my/tramp-add-server-prefix ()
+;;   "Add the name of the connection type and server to the buffer name"
+;;   (let* ((file (or buffer-file-name default-directory))
+;;	 (is-file-remote (file-remote-p file)))
+;;     (when is-file-remote
+;;       (rename-buffer file))))
 
-(add-hook 'find-file-hook #'my/tramp-add-server-prefix)
-(add-hook 'dired-mode-hook #'my/tramp-add-server-prefix)
+;; (add-hook 'find-file-hook #'my/tramp-add-server-prefix)
+;; (add-hook 'dired-mode-hook #'my/tramp-add-server-prefix)
 
 ;; *** Performance
 ;; https://gist.github.com/ralt/a36288cd748ce185b26237e6b85b27bb
