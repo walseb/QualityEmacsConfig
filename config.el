@@ -834,6 +834,10 @@
     (and (> (current-column) length)
 	 (current-column))))
 
+;; ** Is file remote
+(defun my/is-file-remote (path)
+  (string-match-p "\/ssh\:" path))
+
 ;; * Fonts
 (defun my/get-best-font ()
   (if (my/font-installed "Inconsolata LGC")
@@ -4003,6 +4007,15 @@ Borrowed from mozc.el."
       (dired-du-mode -1)))
 
 (define-key dired-mode-map (kbd "s") 'my/dired-sort-menu)
+
+;; *** Tramp compatibility
+;; When dired is used over tramp sorting doesn't work
+(defun my/dired-tramp-compatibility ()
+  (when (my/is-file-remote default-directory)
+    (dired-sort-other
+     (progn (my/dired-du-disable-quietly) "-alh"))))
+
+(add-hook 'dired-mode-hook 'my/dired-tramp-compatibility)
 
 ;; ** Recursive folder size
 (straight-use-package 'dired-du)
