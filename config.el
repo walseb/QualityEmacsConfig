@@ -3013,6 +3013,12 @@ Borrowed from mozc.el."
   '((t :inherit default))
   "Face used by ivy rich")
 
+;; *** Transformers
+;; **** Don't shorten path
+(defun my/ivy-rich-path (file)
+  (buffer-file-name
+   (get-buffer file)))
+
 ;; *** Set transformers list
 ;; (ivy-set-display-transformer 'ivy-switch-buffer 'ivy-switch-buffer)
 ;; (setq ivy-rich-path-style 'abbrev)
@@ -3024,9 +3030,10 @@ Borrowed from mozc.el."
 	  ;;(ivy-rich-switch-buffer-size (:width 7 :face my/ivy-rich-switch-buffer-size-face))
 	  (ivy-rich-switch-buffer-indicators (:width 4 :face my/ivy-rich-switch-buffer-indicator-face :align right))
 	  (ivy-rich-switch-buffer-major-mode (:width 12 :face my/ivy-rich-switch-buffer-major-mode-face))
+	  (ivy-rich-switch-buffer-project (:width 15 :face my/ivy-rich-switch-buffer-project-face))
+	  (my/ivy-rich-path)
 
 	  ;; These two takes a lot of memory and cpu
-	  ;;(ivy-rich-switch-buffer-project (:width 15 :face my/ivy-rich-switch-buffer-project-face))
 	  ;;(ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))) :face my/ivy-rich-switch-buffer-path-face))
 	  )
 	 :predicate
