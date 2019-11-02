@@ -6900,6 +6900,13 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; If enabled it auto enables projectile, which has high CPU usage
 (straight-use-package 'counsel-projectile)
 
+(projectile-mode 1)
+(counsel-projectile-mode 1)
+
+;; *** Disable mode line
+(defun projectile-update-mode-line()
+  ())
+
 ;; ** Diff
 ;; Puts + and - in the diff buffer on the fringe so that text from there can be more easily copied.
 ;; Only works on emacs 27
@@ -9411,7 +9418,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   (setq mini-modeline-echo-duration 99999)
 
   (setq-default mini-modeline-r-format my/status-line-format)
-  (mini-modeline-enable))
+  (mini-modeline-mode 1))
 
 ;; **** LV-line (top modeline)
 ;; Use lv-line to create a mode line on the top of the screen
