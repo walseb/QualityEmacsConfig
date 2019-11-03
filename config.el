@@ -9717,7 +9717,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; *** Package colors
 (defun my/theme-package-colors ()
   (when (require 'hl-line nil 'noerror)
-    (set-face-attribute 'hl-line nil :foreground my/foreground-color :background my/background-color-2 :underline nil))
+    ;; (set-face-attribute 'hl-line nil :foreground my/foreground-color :background my/background-color-2 :underline nil)
+    (set-face-attribute 'hl-line nil :foreground my/foreground-color :background (color-darken-name "#00008b" 20) :underline nil))
 
   ;;  Show-paren
   (set-face-attribute 'show-paren-match nil :background my/background-color :foreground my/foreground-color)
