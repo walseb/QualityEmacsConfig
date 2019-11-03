@@ -4792,6 +4792,17 @@ Borrowed from mozc.el."
 ;; *** haskell-interactive-mode
 (add-hook 'haskell-mode-hook (lambda () (add-hook 'after-save-hook 'haskell-process-load-file nil t)))
 
+;; **** Disable autocompletion
+(define-minor-mode interactive-haskell-mode
+  "Minor mode for enabling haskell-process interaction."
+  :lighter " Interactive"
+  :keymap interactive-haskell-mode-map
+  ;; (add-hook 'completion-at-point-functions
+  ;;           #'haskell-completions-sync-repl-completion-at-point
+  ;;           nil
+  ;;           t)
+  )
+
 ;; **** Keys
 (add-hook 'haskell-interactive-mode-hook
 	  (lambda ()
