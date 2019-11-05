@@ -1425,7 +1425,7 @@ Borrowed from mozc.el."
 ;; * Compatibility
 ;; ** Windows host clipboard crash
 ;; Emacs crashes from time to time when it's run in linux but the clipboard contents are from windows.
-;; (setq x-select-request-type 'STRING)
+(setq x-select-request-type 'STRING)
 
 (when my/windows-host
   (with-eval-after-load 'select
