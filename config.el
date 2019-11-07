@@ -9269,7 +9269,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
     ;; Show break buffer
     (switch-to-buffer "Break")
-    (insert "Break")))
+    (insert "Break")
+    (message (concat "Break at " (format-time-string "%H:%M")))))
 
 (defun my/break-timer-run ()
   (interactive)
