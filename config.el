@@ -3878,7 +3878,7 @@ Borrowed from mozc.el."
   ("C-u" evil-scroll-up nil)
   ("C-w" evil-scroll-down nil)
 
-  ("y" counsel-linux-app nil)
+  ("," counsel-linux-app nil)
 
   ;; Switch window configuration
   ("t" my/load-window-config nil)
@@ -3888,6 +3888,10 @@ Borrowed from mozc.el."
   (";" counsel-bookmark nil)
   (":" my/add-bookmark nil)
   ("C-;" my/delete-bookmark nil)
+
+  ("y" counsel-projectile-switch-to-buffer nil)
+  ("Y" counsel-projectile-switch-project nil)
+  ("C-y" projectile-kill-buffers nil)
 
   ("u" winner-undo nil)
   ("C-r" winner-redo nil)
@@ -6902,6 +6906,16 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 (projectile-mode 1)
 (counsel-projectile-mode 1)
+
+;; ** Compile project
+;; *** Gradlew
+;; The default gradlew compile command doesn't do a clean build
+(projectile-register-project-type 'gradlew '("gradlew")
+				  :compile "./gradlew clean build"
+				  :test "./gradlew test"
+				  :test-suffix "Spec")
+;; *** Keys
+(define-key my/leader-map (kbd "C-y") 'projectile-compile-project)
 
 ;; *** Disable mode line
 (defun projectile-update-mode-line()
