@@ -1545,7 +1545,7 @@ Borrowed from mozc.el."
 (define-key my/guix-store-map (kbd "C-r") 'guix-store-item-requisites)
 
 ;; ** Local packages
-(add-to-list 'load-path (expand-file-name (concat user-emacs-directory "local-packages")))
+;; (add-to-list 'load-path (expand-file-name (concat user-emacs-directory "local-packages")))
 
 ;; * Write configs
 (defun my/write-configs ()
@@ -2144,6 +2144,10 @@ Borrowed from mozc.el."
   (run-hooks 'my/open-map-hook))
 
 (define-key my/open-map (kbd "r") 'my/open-home)
+
+;; ** Open mail
+;; (define-key my/open-map (kbd "M") 'gnus)
+(define-key my/open-map (kbd "M") 'mu4e)
 
 ;; ** Open password file
 (defun my/open-passwords ()
@@ -6549,7 +6553,7 @@ Borrowed from mozc.el."
 ;; * Shr
 (require 'shr)
 
-;; *** Fix background colors shr
+;; ** Fix background colors shr
 ;; Try fixing colors
 ;; (setq shr-color-visible-luminance-min 80)
 ;; (setq shr-color-visible-distance-min 5)
@@ -6557,7 +6561,7 @@ Borrowed from mozc.el."
 ;; Fully disables colors
 (advice-add #'shr-colorize-region :around (defun shr-no-colourise-region (&rest ignore)))
 
-;; *** Auto-open image at point
+;; ** Auto-open image at point
 ;; Redefine function to attempt to open image if link at point wasn't found
 (el-patch-feature shr)
 (el-patch-defun shr-browse-url (&optional external mouse-event)
@@ -7271,12 +7275,136 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;;  (define-key my/leader-map (kbd "p w") 'my/take-screenshot)
 
 ;; * Mail
+;; ** mu4e
+;; *** Find nixos install location
+;; https://www.reddit.com/r/NixOS/comments/6duud4/adding_mu4e_to_emacs_loadpath/
+(let ((mu4epath
+       (concat
+	(f-dirname
+	 (file-truename
+	  (executable-find "mu")))
+	"/../share/emacs/site-lisp/mu4e")))
+  (when (and
+	 (string-prefix-p "/nix/store/" mu4epath)
+	 (file-directory-p mu4epath))
+    (add-to-list 'load-path mu4epath)))
+
+;; *** Settings
+;; https://www.reddit.com/r/emacs/comments/bfsck6/mu4e_for_dummies/
+(require 'mu4e)
+
+(setq mu4e-get-mail-command "mbsync -c ~/.mbsyncrc -a"
+      ;; mu4e-html2text-command "w3m -T text/html" ;;using the default mu4e-shr2text
+      mu4e-view-use-gnus t
+      mu4e-view-prefer-html t
+      mu4e-update-interval 300
+      mu4e-headers-auto-update t
+      mu4e-compose-signature-auto-include nil
+      mu4e-compose-format-flowed t)
+
+;; to view selected message in the browser, no signin, just html mail
+(add-to-list 'mu4e-view-actions
+	     '("ViewInBrowser" . mu4e-action-view-in-browser) t)
+
+;; enable inline images
+(setq mu4e-view-show-images t)
+
+;; don't save message to Sent Messages, IMAP takes care of this
+(setq mu4e-sent-messages-behavior 'delete)
+
+;; **** Modification
+;; I want mu4e to display images in w3m and not switch to the mail buffer whenever you open a mail
+
+;; ***** Display email in w3m duffer
+(defun mu4e-view (msg)
+  (mu4e~view-define-mode)
+  (unless (mu4e~view-mark-as-read-maybe msg)
+    (my/mu4e-w3m-display msg)))
+
+(defun my/mu4e-w3m-display (msg)
+  (when (get-buffer mu4e~view-buffer-name)
+    (progn
+      (switch-to-buffer mu4e~view-buffer-name)
+      (kill-buffer)))
+  (w3m-browse-url (concat "file://" (mu4e~write-body-to-html msg)))
+  ;; (mu4e~view-mode-body)
+  ;; (mu4e-view-mode)
+
+  (rename-buffer mu4e~view-buffer-name)
+  (select-window (get-buffer-window (get-buffer "*mu4e-headers*"))))
+
+;; ***** Don't autoselect new buffers
+(defun mu4e-headers-view-message ()
+  (interactive)
+  (unless (eq major-mode 'mu4e-headers-mode)
+    (mu4e-error "Must be in mu4e-headers-mode (%S)" major-mode))
+  (let* ((msg (mu4e-message-at-point))
+	 (docid (or (mu4e-message-field msg :docid)
+		    (mu4e-warn "No message at point")))
+	 (decrypt (mu4e~decrypt-p msg))
+	 (viewwin (mu4e~headers-redraw-get-view-window)))
+    (unless (window-live-p viewwin)
+      (mu4e-error "Cannot get a message view"))
+    (let ((curr-window (selected-window)))
+      (select-window viewwin)
+      (switch-to-buffer (mu4e~headers-get-loading-buf))
+      (mu4e~proc-view docid mu4e-view-show-images decrypt)
+      ;; (select-window curr-window)
+      )))
+
+;; ***** Fix windows splitting
+(defun mu4e~headers-redraw-get-view-window ()
+  (if (eq mu4e-split-view 'single-window)
+      (or (and (buffer-live-p (mu4e-get-view-buffer))
+	       (get-buffer-window (mu4e-get-view-buffer)))
+	  (selected-window))
+    ;; (mu4e-hide-other-mu4e-buffers)
+    (unless (buffer-live-p (mu4e-get-headers-buffer))
+      (mu4e-error "No headers buffer available"))
+    (switch-to-buffer (mu4e-get-headers-buffer))
+    ;; kill the existing view buffer
+    (when (buffer-live-p (mu4e-get-view-buffer))
+      (if (get-buffer-window (mu4e-get-view-buffer))
+	  (progn
+	    (select-window (get-buffer-window (mu4e-get-view-buffer)))
+	    (kill-buffer-and-window))
+	(kill-buffer (mu4e-get-view-buffer))))
+    ;; get a new view window
+    (setq mu4e~headers-view-win
+	  (let* ((new-win-func
+		  (cond
+		   ((eq mu4e-split-view 'horizontal) ;; split horizontally
+		    '(split-window-vertically mu4e-headers-visible-lines))
+		   ((eq mu4e-split-view 'vertical) ;; split vertically
+		    '(split-window-horizontally mu4e-headers-visible-columns)))))
+	    (cond ((with-demoted-errors "Unable to split window: %S"
+		     (eval new-win-func)))
+		  (t ;; no splitting; just use the currently selected one
+		   (selected-window)))))))
+
+;; **** Send messages
+;; ***** org-mime
+(straight-use-package 'org-mime)
+(require 'org-mime)
+(setq org-mime-library 'mml)
+
+;; **** Dynamically setting the width of the columns so it takes up the whole width
+;; from https://www.reddit.com/r/emacs/comments/bfsck6/mu4e_for_dummies/elgoumx
+(add-hook 'mu4e-headers-mode-hook
+	  (defun my/mu4e-change-headers ()
+	    (interactive)
+	    (setq mu4e-headers-fields
+		  `((:human-date . 25) ;; alternatively, use :date
+		    (:flags . 6)
+		    (:from . 22)
+		    (:thread-subject . ,(- (window-body-width) 70)) ;; alternatively, use :subject
+		    (:size . 7)))))
+
 ;; ** Gnus
 ;; .gnus.el is written in =write config map=
 ;; https://github.com/gongzhitaao/GnusSolution
 ;; https://www.gnu.org/software/emacs/manual/html_node/gnus/Comparing-Mail-Back-Ends.html
 (require 'gnus)
-(define-key my/open-map (kbd "M") 'gnus)
 
 ;; Encrypt passwords
 (setq netrc-file "~/.authinfo.gpg")
@@ -7630,11 +7758,11 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (setq gnus-logo-colors (list (concat "#" (my/random-hex 6)) (concat "#" (my/random-hex 6))))
 
 ;; ** mbsync
-(defvar my/sync-mail-hook nil)
-(defvar my/sync-mail-has-begun nil)
+(defvar my/sync-gnus-hook nil)
+(defvar my/sync-gnus-has-begun nil)
 (defconst my/mbsync-config "~/.mbsyncrc")
 
-(defun my/sync-mail ()
+(defun my/sync-gnus ()
   (interactive)
   (message (concat "Syncing mail at: " (current-time-string)))
   (if (file-exists-p my/mbsync-config)
@@ -7646,20 +7774,20 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 			   "--config "
 			   mbsync-config)))
 	 (lambda (result)
-	   (run-hooks 'my/sync-mail-hook))))
+	   (run-hooks 'my/sync-gnus-hook))))
     (message "mbsync config not created")))
 
 (defvar my/is-syncing nil)
 
-(defun my/sync-mail-begin ()
+(defun my/sync-gnus-begin ()
   (when (and (my/is-system-package-installed 'mbsync) (file-exists-p my/mbsync-config) (not my/is-syncing))
     (setq my/is-syncing t)
-    (run-with-timer 0 300 'my/sync-mail)))
+    (run-with-timer 0 300 'my/sync-gnus)))
 
 (if my/run-mail-on-boot
-    (add-hook 'exwm-init-hook 'my/sync-mail-begin)
-  ;;(my/sync-mail-begin)
-  (add-hook 'gnus-topic-mode-hook 'my/sync-mail-begin))
+    (add-hook 'exwm-init-hook 'my/sync-gnus-begin)
+  ;;(my/sync-gnus-begin)
+  (add-hook 'gnus-topic-mode-hook 'my/sync-gnus-begin))
 
 ;; ** Display unread mail count
 (defun my/gnus-scan-unread ()
@@ -8552,6 +8680,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 	(pcase major-mode
 	  ('minibuffer-inactive-mode)
 	  ('exwm-mode)
+	  ('mu4e-headers-mode)
 	  (_ (olivetti-mode)))))
 
 (global-olivetti-mode 1)
@@ -9043,6 +9172,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (my/linux-update-network-tx-delta)
 
 ;; **** Mail
+;; ***** Gnus mail counter
 (defvar my/gnus-unread-string nil)
 
 (defvar my/gnus-mail-counter-update-hook nil)
@@ -9057,8 +9187,19 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 	 (my/gnus-get-unread-news-count)))
   (run-hooks 'my/gnus-mail-counter-update-hook))
 
-(add-hook 'my/sync-mail-hook 'my/gnus-update-unread)
+(add-hook 'my/sync-gnus-hook 'my/gnus-update-unread)
 (add-hook 'gnus-summary-exit-hook 'my/gnus-update-unread)
+
+;; ***** mu4e mail counter
+(straight-use-package 'mu4e-alert)
+
+(defvar my/mu4e-unread-mail-count nil)
+
+(setq mu4e-alert-modeline-formatter (lambda (count)
+				      (setq my/mu4e-unread-mail-count (number-to-string count))))
+
+;; ****** Enable
+(mu4e-alert-enable-mode-line-display)
 
 ;; **** Battery
 ;; If there is a battery, display it in the mode line
@@ -9360,9 +9501,13 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 		    (:eval (concat " Up: " my/uptime-total-time-formated))
 
-		    (:eval (if (and my/gnus-unread-string (not (string= my/gnus-unread-string "")))
-			       (concat " | "
-				       my/gnus-unread-string)))
+		    ;; (:eval (if (and my/gnus-unread-string (not (string= my/gnus-unread-string "")))
+		    ;;	       (concat " | "
+		    ;;		       my/gnus-unread-string)))
+
+		    (:eval (if (and my/mu4e-unread-mail-count)
+			       (concat " | Mail: "
+				       my/mu4e-unread-mail-count)))
 
 
 		    " | "
