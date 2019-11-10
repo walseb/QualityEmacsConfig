@@ -7278,16 +7278,17 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; ** mu4e
 ;; *** Find nixos install location
 ;; https://www.reddit.com/r/NixOS/comments/6duud4/adding_mu4e_to_emacs_loadpath/
-(let ((mu4epath
-       (concat
-	(f-dirname
-	 (file-truename
-	  (executable-find "mu")))
-	"/../share/emacs/site-lisp/mu4e")))
-  (when (and
-	 (string-prefix-p "/nix/store/" mu4epath)
-	 (file-directory-p mu4epath))
-    (add-to-list 'load-path mu4epath)))
+(ignore-errors
+  (let ((mu4epath
+	 (concat
+	  (f-dirname
+	   (file-truename
+	    (executable-find "mu")))
+	  "/../share/emacs/site-lisp/mu4e")))
+    (when (and
+	   (string-prefix-p "/nix/store/" mu4epath)
+	   (file-directory-p mu4epath))
+      (add-to-list 'load-path mu4epath))))
 
 ;; *** Settings
 ;; https://www.reddit.com/r/emacs/comments/bfsck6/mu4e_for_dummies/
@@ -8064,10 +8065,11 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; * Find
 (straight-use-package '(ellocate :type git :host github :repo "walseb/ellocate"))
 
-;; * Flyspell - Spelling
+;; * Spelling
 (define-prefix-command 'my/spell-map)
 ;; (define-key my/leader-map (kbd "S") 'my/spell-map)
 
+;; ** Flyspell
 (define-key my/spell-map (kbd "d") 'ispell-change-dictionary)
 (define-key my/spell-map (kbd "s") 'flyspell-mode)
 
@@ -8094,16 +8096,16 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   flyspell-mode my/flyspell-mode-auto-select)
 (global-my/flyspell-mode 1)
 
-;; ** Personal directory
+;; *** Personal directory
 (setq ispell-personal-dictionary (concat user-emacs-directory ".aspell.en.pws"))
 
-;; ** Clean mode map
+;; *** Clean mode map
 (add-hook 'flyspell-mode-hook
 	  (lambda ()
 	    ;; This should remove binds like ~C-c $~ but doesn't. No idea why
 	    (setq flyspell-mode-map (make-sparse-keymap))))
 
-;; ** Flyspell-prog enable only for certain faces
+;; *** Flyspell-prog enable only for certain faces
 ;; Don't auto correct strings
 (setq flyspell-prog-text-faces
       '(
@@ -8111,7 +8113,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 	font-lock-comment-face
 	font-lock-doc-face))
 
-;; ** Flyspell-Correct
+;; *** Flyspell-Correct
 (straight-use-package 'flyspell-correct)
 
 ;; http://aspell.net/0.50-doc/man-html/4_Customizing.html#suggestion
@@ -8119,12 +8121,12 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; Run-together causes a performance loss while typing but bad-spellers only
 (setq ispell-extra-args (list "--sug-mode=bad-spellers" "--run-together" "--run-together-limit=5"))
 
-;; *** Key
+;; **** Key
 (my/evil-insert-define-key (kbd "C-d") 'flyspell-correct-at-point)
 (my/evil-normal-define-key (kbd "C-d") 'flyspell-correct-at-point)
 (my/evil-visual-define-key (kbd "C-d") 'flyspell-correct-at-point)
 
-;; ** Company
+;; *** Company
 (defun my/toggle-company-ispell ()
   (interactive)
   (cond
@@ -8136,6 +8138,25 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
     (message "company-ispell enabled!"))))
 
 (define-key my/spell-map (kbd "c") 'my/toggle-company-ispell)
+
+;; ** Langtool
+(straight-use-package 'langtool)
+
+(setq langtool-language-tool-jar
+      (ignore-errors
+	(concat
+	 (f-dirname
+	  (file-truename
+	   (executable-find "languagetool")))
+	 "/../share/languagetool-commandline.jar")))
+
+(require 'langtool)
+
+(setq langtool-autoshow-idle-delay 0)
+(setq langtool-mother-tongue "en-US")
+
+(define-key my/spell-map (kbd "l") 'langtool-check)
+(define-key my/spell-map (kbd "L") 'langtool-check-done))
 
 ;; * Calc
 (define-key my/leader-map (kbd "m") 'calc)
