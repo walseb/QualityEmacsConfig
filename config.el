@@ -7278,21 +7278,21 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; ** mu4e
 ;; *** Find nixos install location
 ;; https://www.reddit.com/r/NixOS/comments/6duud4/adding_mu4e_to_emacs_loadpath/
-(ignore-errors
-  (let ((mu4epath
-	 (concat
-	  (f-dirname
-	   (file-truename
-	    (executable-find "mu")))
-	  "/../share/emacs/site-lisp/mu4e")))
-    (when (and
-	   (string-prefix-p "/nix/store/" mu4epath)
-	   (file-directory-p mu4epath))
-      (add-to-list 'load-path mu4epath))))
+(setq my/mu4epath
+      (ignore-errors
+	(concat
+	 (f-dirname
+	  (file-truename
+	   (executable-find "mu")))
+	 "/../share/emacs/site-lisp/mu4e")))
+
+(when (and my/mu4epath (string-prefix-p "/nix/store/" mu4epath) (file-directory-p mu4epath))
+  (add-to-list 'load-path my/mu4epath))
 
 ;; *** Settings
 ;; https://www.reddit.com/r/emacs/comments/bfsck6/mu4e_for_dummies/
-(require 'mu4e)
+(when my/mu4epath
+  (require 'mu4e))
 
 (setq mu4e-get-mail-command "mbsync -c ~/.mbsyncrc -a"
       ;; mu4e-html2text-command "w3m -T text/html" ;;using the default mu4e-shr2text
@@ -7304,8 +7304,9 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
       mu4e-compose-format-flowed t)
 
 ;; to view selected message in the browser, no signin, just html mail
-(add-to-list 'mu4e-view-actions
-	     '("ViewInBrowser" . mu4e-action-view-in-browser) t)
+(when my/mu4epath
+  (add-to-list 'mu4e-view-actions
+	       '("ViewInBrowser" . mu4e-action-view-in-browser) t))
 
 ;; enable inline images
 (setq mu4e-view-show-images t)
@@ -8156,7 +8157,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (setq langtool-mother-tongue "en-US")
 
 (define-key my/spell-map (kbd "l") 'langtool-check)
-(define-key my/spell-map (kbd "L") 'langtool-check-done))
+(define-key my/spell-map (kbd "L") 'langtool-check-done)
 
 ;; * Calc
 (define-key my/leader-map (kbd "m") 'calc)
@@ -9220,7 +9221,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 				      (setq my/mu4e-unread-mail-count (number-to-string count))))
 
 ;; ****** Enable
-(mu4e-alert-enable-mode-line-display)
+(when my/mu4epath
+  (mu4e-alert-enable-mode-line-display))
 
 ;; **** Battery
 ;; If there is a battery, display it in the mode line
@@ -9296,7 +9298,9 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
     (setq my/projectile-project-name (projectile-project-name))
     (setq my/buffer-git-branch (car (vc-git-branches)))))
 
-(add-hook 'window-state-change-hook 'my/update-projectile-project-name)
+(if (>= emacs-major-version 27)
+    (add-hook 'window-state-change-hook 'my/update-projectile-project-name)
+  (add-hook 'window-configuration-change-hook 'my/update-projectile-project-name))
 
 ;; **** Git changes
 (require 'diff-hl)
