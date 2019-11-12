@@ -7291,7 +7291,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 	   (executable-find "mu")))
 	 "/../share/emacs/site-lisp/mu4e")))
 
-(when (and my/mu4epath (string-prefix-p "/nix/store/" mu4epath) (file-directory-p mu4epath))
+(when (and my/mu4epath (string-prefix-p "/nix/store/" my/mu4epath) (file-directory-p my/mu4epath))
   (add-to-list 'load-path my/mu4epath))
 
 ;; *** Settings
