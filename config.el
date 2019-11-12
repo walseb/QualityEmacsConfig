@@ -3236,10 +3236,15 @@ Borrowed from mozc.el."
 
 (setq my/flycheck-posframe-symbol "→ ")
 
-(setq flycheck-posframe-error-prefix my/flycheck-posframe-symbol)
-(setq flycheck-posframe-info-prefix my/flycheck-posframe-symbol)
-(setq flycheck-posframe-prefix my/flycheck-posframe-symbol)
-(setq flycheck-posframe-warning-prefix my/flycheck-posframe-symbol)
+;; (setq flycheck-posframe-error-prefix my/flycheck-posframe-symbol)
+;; (setq flycheck-posframe-info-prefix my/flycheck-posframe-symbol)
+;; (setq flycheck-posframe-prefix my/flycheck-posframe-symbol)
+;; (setq flycheck-posframe-warning-prefix my/flycheck-posframe-symbol)
+
+(setq flycheck-posframe-error-prefix nil)
+(setq flycheck-posframe-info-prefix nil)
+(setq flycheck-posframe-prefix nil)
+(setq flycheck-posframe-warning-prefix nil)
 
 ;; **** Flycheck inline
 ;; (straight-use-package 'flycheck-inline)
@@ -8070,6 +8075,11 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (define-prefix-command 'my/spell-map)
 ;; (define-key my/leader-map (kbd "S") 'my/spell-map)
 
+;; http://aspell.net/0.50-doc/man-html/4_Customizing.html#suggestion
+;; Allow 5 words to be connected without spaces. Default is 2
+;; Run-together causes a performance loss while typing but bad-spellers only
+(setq ispell-extra-args (list "--sug-mode=bad-spellers" "--run-together" "--run-together-limit=5"))
+
 ;; ** Flyspell
 (define-key my/spell-map (kbd "d") 'ispell-change-dictionary)
 (define-key my/spell-map (kbd "s") 'flyspell-mode)
@@ -8116,11 +8126,6 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 ;; *** Flyspell-Correct
 (straight-use-package 'flyspell-correct)
-
-;; http://aspell.net/0.50-doc/man-html/4_Customizing.html#suggestion
-;; Allow 5 words to be connected without spaces. Default is 2
-;; Run-together causes a performance loss while typing but bad-spellers only
-(setq ispell-extra-args (list "--sug-mode=bad-spellers" "--run-together" "--run-together-limit=5"))
 
 ;; **** Key
 (my/evil-insert-define-key (kbd "C-d") 'flyspell-correct-at-point)
