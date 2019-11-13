@@ -839,28 +839,32 @@
 
 ;; * Fonts
 (defun my/get-best-font ()
-  (if (my/font-installed "Inconsolata LGC")
-      "Inconsolata LGC"
-    (if (my/font-installed "Inconsolata")
-	"Inconsolata"
-      (if (my/font-installed "DejaVu Sans Mono")
-	  "DejaVu Sans Mono"
-	(if (my/font-installed "Fira Mono")
-	    "Fira Mono"
-	  (if (my/font-installed "dejavu sans mono")
-	      "DejaVuSansMono"
-	    (if (my/font-installed "Noto Sans Mono")
-		"NotoSansMono"
-	      (if (my/font-installed "Perfect DOS VGA 437")
-		  "Perfect DOS VGA 437"))))))))
+  (if (my/font-installed "Liga Inconsolata LGC")
+      "Liga Inconsolata LGC"
+    (if (my/font-installed "Inconsolata LGC")
+	"Inconsolata LGC"
+      (if (my/font-installed "Inconsolata")
+	  "Inconsolata"
+	(if (my/font-installed "DejaVu Sans Mono")
+	    "DejaVu Sans Mono"
+	  (if (my/font-installed "Fira Mono")
+	      "Fira Mono"
+	    (if (my/font-installed "dejavu sans mono")
+		"DejaVuSansMono"
+	      (if (my/font-installed "Noto Sans Mono")
+		  "NotoSansMono"
+		(if (my/font-installed "Perfect DOS VGA 437")
+		    "Perfect DOS VGA 437")))))))))
 
 (defun my/get-best-symbol-font ()
-  (if (my/font-installed "DejaVu Sans Mono")
-      "DejaVu Sans Mono"
-    (if (my/font-installed "dejavu sans mono")
-	"DejaVuSansMono"
-      (if (my/font-installed "Noto Sans Mono")
-	  "NotoSansMono"))))
+  (if (my/font-installed "Liga Inconsolata LGC")
+      "Liga Inconsolata LGC"
+    (if (my/font-installed "DejaVu Sans Mono")
+	"DejaVu Sans Mono"
+      (if (my/font-installed "dejavu sans mono")
+	  "DejaVuSansMono"
+	(if (my/font-installed "Noto Sans Mono")
+	    "NotoSansMono")))))
 
 (setq my/font (my/get-best-font))
 (setq my/symbol-font (my/get-best-symbol-font))
@@ -8790,6 +8794,12 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; *** Set paren style
 (setq show-paren-style 'paren)
 
+(setq show-paren-highlight-openparen t)
+(setq show-paren-when-point-inside-paren nil)
+(setq show-paren-when-point-in-periphery t)
+
+(show-paren-mode 1)
+
 ;; *** Show offscreen expression
 ;; https://with-emacs.com/posts/editing/show-matching-lines-when-parentheses-go-off-screen/
 ;; Not implemented yet
@@ -8798,15 +8808,10 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   '((t :inherit highlight))
   "Face for showing function names offscreen")
 
-(setq show-paren-highlight-openparen t)
-(setq show-paren-when-point-inside-paren nil)
-(setq show-paren-when-point-in-periphery t)
-
-(show-paren-mode 1)
-
 ;; ** Highlight parens
 ;; Highlights surrounding parens
 (straight-use-package 'highlight-parentheses)
+
 (global-highlight-parentheses-mode)
 
 ;; *** Set delay
