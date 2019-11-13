@@ -392,6 +392,9 @@
 ;; #+END_SRC
 ;; always instead
 
+;; ** Java LSP with gradle doesn't start
+;; This could be because of permissions. LSP builds it's own gradle build and for example .gradle dir in the project root needs to have the correct permissions to allow LSP to build everything
+
 ;; * Todo
 ;; ** Packages to try
 ;; nix-buffer
