@@ -905,6 +905,10 @@
 (require 'helm)
 (require 'helm-utils)
 
+;; *** Deactivate helm
+;; lsp-java checks if helm is defined and then just uses helm for some things, this fixes that
+(fmakunbound 'helm)
+
 ;; * Evil
 (setq evil-search-module 'evil-search)
 (setq evil-vsplit-window-right t)
@@ -6913,8 +6917,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; ** Projectile
 (straight-use-package 'projectile)
 
-;; Disable projectile mode so that CPU isn't taken by projectile wating to refresh git project directory all the time
-(projectile-mode -1)
+;; *** Set completion system
+(setq projectile-completion-system 'ivy)
 
 ;; ** Counsel projectile
 ;; If enabled it auto enables projectile, which has high CPU usage
