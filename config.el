@@ -8719,6 +8719,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 	  ('minibuffer-inactive-mode)
 	  ('exwm-mode)
 	  ('mu4e-headers-mode)
+	  ('pdf-view-mode)
 	  (_ (olivetti-mode)))))
 
 (global-olivetti-mode 1)
