@@ -5089,7 +5089,21 @@ Borrowed from mozc.el."
 (straight-use-package 'attrap)
 
 ;; **** Fix
-(setq dante-repl-command-line '("nix-shell" "--run" "cabal new-repl ReactiveGame --builddir=dist-newstyle/dante"))
+;; Dante wants to use the cabal dist folder instead of the dist-newstyle folder which makes it crash on newstyle projects
+;; Here I just changed dist to dist-newstyle
+(setq dante-methods-alist
+      `((styx "styx.yaml" ("styx" "repl" dante-target))
+	(snack ,(lambda (d) (directory-files d t "package\\.\\(yaml\\|nix\\)")) ("snack" "ghci" dante-target))
+	(new-impure-nix dante-cabal-new-nix ("nix-shell" "--run" (concat "cabal new-repl " (or dante-target (dante-package-name) "") " --builddir=dist-newstyle/dante")))
+	(new-nix dante-cabal-new-nix ("nix-shell" "--pure" "--run" (concat "cabal new-repl " (or dante-target (dante-package-name) "") " --builddir=dist-newstyle/dante")))
+	(nix dante-cabal-nix ("nix-shell" "--pure" "--run" (concat "cabal repl " (or dante-target "") " --builddir=dist-newstyle/dante")))
+	(impure-nix dante-cabal-nix ("nix-shell" "--run" (concat "cabal repl " (or dante-target "") " --builddir=dist-newstyle/dante")))
+	(new-build "cabal.project.local" ("cabal" "new-repl" (or dante-target (dante-package-name) nil) "--builddir=dist-newstyle/dante"))
+	(nix-ghci ,(lambda (d) (directory-files d t "shell.nix\\|default.nix")) ("nix-shell" "--pure" "--run" "ghci"))
+	(stack "stack.yaml" ("stack" "repl" dante-target))
+	(mafia "mafia" ("mafia" "repl" dante-target))
+	(bare-cabal ,(lambda (d) (directory-files d t "..cabal$")) ("cabal" "repl" dante-target "--builddir=dist-newstyle/dante"))
+	(bare-ghci ,(lambda (_) t) ("ghci"))))
 
 ;; *** Flycheck
 ;; Remove flycheck stack-ghc since it freezes emacs without stack. Don't remove the standard ghc checker though, because it works fine if I don't have HIE. If I have HIE emacs should use that instead
