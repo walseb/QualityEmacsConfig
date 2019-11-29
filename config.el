@@ -7079,9 +7079,6 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 (global-set-key (kbd "s--") 'my/pulse-lower-volume)
 
-;; #+RESULTS:
-;; : my/pulse-lower-volume
-
 ;; ** Music
 (define-prefix-command 'my/music-map)
 (define-key my/leader-map (kbd "M") 'my/music-map)
@@ -7094,7 +7091,6 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   "Hook called when emms has to init fully")
 
 (straight-use-package 'emms)
-
 
 (add-hook 'my/emms-init-hook (lambda () (interactive)
 			       (unless my/emms-has-init
@@ -8245,7 +8241,6 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 (define-key my/artist-mode-map (kbd "o") 'my/artist-select-operation)
 (define-key my/artist-mode-map (kbd "s") 'my/artist-select-settings)
-
 
 ;; (evil-define-key 'insert artist-mode-map (kbd "SPC") (lambda () (interactive) (insert " ")))
 ;; (evil-define-key 'insert artist-mode-map (kbd "SPC") 'self-insert-command)
