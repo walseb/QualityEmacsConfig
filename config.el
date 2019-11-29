@@ -978,16 +978,14 @@
 
 ;; ** Evil-multiple cursors
 (straight-use-package 'evil-mc)
-;; (straight-use-package '(evil-mc :type git :host github :repo "walseb/evil-mc"))
 
+;; *** Clear default keys
 (setq evil-mc-key-map nil)
 
-(require 'evil-mc)
-;; (setq evil-mc-key-map nil)
+;; *** Start mc-mode in this buffer
+(evil-mc-mode)
 
-(global-evil-mc-mode 1)
-;; (setq evil-mc-key-map nil)
-
+;; *** Add unsupported commands
 (add-to-list 'evil-mc-custom-known-commands
 	     '(delete-char . ((:default . evil-mc-execute-default-call-with-count))))
 
@@ -997,9 +995,9 @@
 (add-to-list 'evil-mc-custom-known-commands
 	     '(csharp-maybe-insert-codedoc . ((:default . evil-mc-execute-default-call-with-count))))
 
-;; *** Clear default keys
-(setq evil-mc-key-map nil)
-
+;; *** Enable globally
+;; Enable evil-mc in all modes, including fundamental-mode
+(add-hook 'evil-local-mode-hook 'evil-mc-mode)
 
 ;; *** Disable on keybord-quit (C-g)
 (setq evil-mc-undo-cursors-on-keyboard-quit t)
