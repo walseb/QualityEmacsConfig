@@ -3989,7 +3989,11 @@ Borrowed from mozc.el."
 ;; *** Better async confirmation messages
 (setq dired-async-message-function
       (lambda (text face &rest args)
-	(shell-command (format "echo '%s'" (apply #'format text args)))))
+	(let ((formatted-text (concat "Dired-async completed at: " (current-time-string) " with message: " (apply #'format text args) "\n")))
+	  (message formatted-text)
+	  (save-excursion
+	    (switch-to-buffer "dired-async-messages")
+	    (insert formatted-text)))))
 
 ;; ** Dired atool
 (straight-use-package 'dired-atool)
