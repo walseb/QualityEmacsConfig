@@ -784,7 +784,7 @@
 (defun my/set-default-font-size ()
   (if window-system
       (set-face-attribute 'default nil
-			  :height 130)))
+			  :height my/default-face-height)))
 
 ;; ** Overlay
 (defun my/inline-overlay-print (string)
@@ -8198,12 +8198,6 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (evil-define-key 'visual calc-mode-map (kbd "d") 'calc-kill-region)
 
 ;; * Artist mode
-;; Auto enable emacs mode
-(add-hook 'artist-mode-hook (lambda ()
-			      (if artist-mode
-				  (evil-emacs-state 1)
-				(evil-normal-state 1))))
-
 ;; ** Completing read
 ;; https://www.emacswiki.org/emacs/ArtistMode
 (defun my/artist-select-operation (type)
