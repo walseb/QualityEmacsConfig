@@ -3995,6 +3995,9 @@ Borrowed from mozc.el."
 	    (switch-to-buffer "dired-async-messages")
 	    (insert formatted-text)))))
 
+;; ** rsync
+(straight-use-package 'dired-rsync)
+
 ;; ** Dired atool
 (straight-use-package 'dired-atool)
 
