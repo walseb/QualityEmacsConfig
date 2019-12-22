@@ -2764,8 +2764,7 @@ Borrowed from mozc.el."
 
 ;; *** Visuals
 ;; Ivy height
-(add-hook 'exwm-init-hook (lambda () (run-with-timer 1 nil
-						(lambda () (setq ivy-height (+ (window-height) 1))))))
+(add-hook 'exwm-init-hook (lambda () (run-with-timer 1 nil (lambda () (setq ivy-height (+ (window-height) 1))))))
 
 ;; Make counsel-yank-pop use default height
 ;; (delete `(counsel-yank-pop . 5) ivy-height-alist)
@@ -8650,7 +8649,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 		    my/haskell-type-symbols
 		    my/generic-greek-symbols
 		    my/generic-equality-symbols
-		    my/generic-arrow-symbols
+		    ;; my/generic-arrow-symbols
 		    my/generic-logic-symbols
 		    (my/prettify-outline-heading)))
     ('fsharp-mode (append
@@ -8658,7 +8657,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 		   my/fsharp-symbols
 		   my/generic-greek-symbols
 		   my/generic-equality-symbols
-		   my/generic-arrow-symbols
+		   ;; my/generic-arrow-symbols
 		   (my/prettify-outline-heading)
 		   ))
     ('emacs-lisp-mode (append
@@ -8666,7 +8665,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 		       my/elisp-symbols
 		       my/generic-greek-symbols
 		       my/generic-equality-symbols
-		       my/generic-arrow-symbols
+		       ;; my/generic-arrow-symbols
 		       (my/prettify-outline-heading-lisp)
 		       ;; (my/prettify-outline-heading-lisp-classic)
 		       ))
@@ -8675,7 +8674,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 			     my/elisp-symbols
 			     my/generic-greek-symbols
 			     my/generic-equality-symbols
-			     my/generic-arrow-symbols
+			     ;; my/generic-arrow-symbols
 			     (my/prettify-outline-heading-lisp)
 			     ;; (my/prettify-outline-heading-lisp-classic)
 			     ))
@@ -8683,7 +8682,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 	(my/prettify-comment)
 	my/generic-greek-symbols
 	my/generic-equality-symbols
-	my/generic-arrow-symbols
+	;; my/generic-arrow-symbols
 	my/generic-logic-symbols
 	(my/prettify-outline-heading)
 	))))
@@ -10160,15 +10159,14 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 	(setq-local my/first-save nil))))
 
 ;; ** Make backup on every save
-;; *** helm-backup
-;; (straight-use-package 'helm)
-(straight-use-package 'helm-backup)
-(straight-use-package '(ivy-backup :type git :host github :repo "walseb/ivy-backup"))
-(require 'helm-backup)
+;; *** git-backup
+(straight-use-package '(git-backup :type git :host github :repo "antham/git-backup"))
+(straight-use-package '(git-backup-ivy :type git :host github :repo "walseb/git-backup-ivy"))
+(require 'git-backup-ivy)
 
-(add-hook 'after-save-hook 'helm-backup-versioning)
+(add-hook 'after-save-hook (lambda () (git-backup-version-file git-backup-ivy-git-path git-backup-ivy-backup-path nil (buffer-file-name))))
 
-(define-key my/leader-map (kbd "C-u") 'ivy-backup)
+(define-key my/leader-map (kbd "C-u") 'git-backup-ivy)
 
 ;; *** Manual way
 ;; (defun my/backup-buffer-per-session ()
