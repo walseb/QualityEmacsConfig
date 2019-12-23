@@ -5,7 +5,7 @@
 !init.el
 !config.el
 !early-init.el
-!readme.org
+!readme.el
 !device-template.el
 !.aspell.en.pws
 
