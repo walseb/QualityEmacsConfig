@@ -6112,19 +6112,11 @@ Borrowed from mozc.el."
 
 ;; *** Language specific symbols
 ;; **** Lower
-;; (my/evil-emacs-define-key "M-p" (lambda () (interactive) (my/exwm-fake-key "å")))
-;; (my/evil-emacs-define-key "M-," (lambda () (interactive) (my/exwm-fake-key "ä")))
-;; (my/evil-emacs-define-key "M-." (lambda () (interactive) (my/exwm-fake-key "ö")))
-
 (define-key input-decode-map (kbd "M-p") (kbd "å"))
 (define-key input-decode-map (kbd "M-,") (kbd "ä"))
 (define-key input-decode-map (kbd "M-.") (kbd "ö"))
 
 ;; **** Capital
-;; (my/evil-emacs-define-key "M-P" (lambda () (interactive) (my/exwm-fake-key ?Å)))
-;; (my/evil-emacs-define-key "M-<" (lambda () (interactive) (my/exwm-fake-key ?Ä)))
-;; (my/evil-emacs-define-key "M->" (lambda () (interactive) (my/exwm-fake-key ?Ö)))
-
 (define-key input-decode-map (kbd "M-P") (kbd "Å"))
 (define-key input-decode-map (kbd "M-<") (kbd "Ä"))
 (define-key input-decode-map (kbd "M->") (kbd "Ö"))
@@ -6199,12 +6191,6 @@ Borrowed from mozc.el."
 (my/evil-normal-define-key "gJ" 'evil-previous-match)
 
 ;; *** Rebind search key
-;; (my/evil-normal-define-key "s" 'my/avy-goto-subword-0-below)
-;; (my/evil-normal-define-key "S" 'my/avy-goto-subword-0-above)
-
-;; (my/evil-visual-define-key "s" 'my/avy-goto-subword-0-below)
-;; (my/evil-visual-define-key "S" 'my/avy-goto-subword-0-above)
-
 (my/evil-normal-define-key "s" 'my/isearch-forward-regexp)
 (my/evil-normal-define-key "S" 'my/isearch-backward-regexp)
 
