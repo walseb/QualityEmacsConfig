@@ -1173,7 +1173,7 @@
 
 ;; *** Evil-surround
 (straight-use-package 'evil-surround)
-(global-evil-surround-mode 1)
+(add-hook 'after-init-hook (lambda () (global-evil-surround-mode 1)))
 
 ;; **** Setup pair binds
 (setq-default evil-surround-pairs-alist
@@ -6116,34 +6116,34 @@ Borrowed from mozc.el."
 ;; (my/evil-emacs-define-key "M-," (lambda () (interactive) (my/exwm-fake-key "ä")))
 ;; (my/evil-emacs-define-key "M-." (lambda () (interactive) (my/exwm-fake-key "ö")))
 
-(define-key key-translation-map (kbd "M-p") (kbd "å"))
-(define-key key-translation-map (kbd "M-,") (kbd "ä"))
-(define-key key-translation-map (kbd "M-.") (kbd "ö"))
+(define-key input-decode-map (kbd "M-p") (kbd "å"))
+(define-key input-decode-map (kbd "M-,") (kbd "ä"))
+(define-key input-decode-map (kbd "M-.") (kbd "ö"))
 
 ;; **** Capital
 ;; (my/evil-emacs-define-key "M-P" (lambda () (interactive) (my/exwm-fake-key ?Å)))
 ;; (my/evil-emacs-define-key "M-<" (lambda () (interactive) (my/exwm-fake-key ?Ä)))
 ;; (my/evil-emacs-define-key "M->" (lambda () (interactive) (my/exwm-fake-key ?Ö)))
 
-(define-key key-translation-map (kbd "M-P") (kbd "Å"))
-(define-key key-translation-map (kbd "M-<") (kbd "Ä"))
-(define-key key-translation-map (kbd "M->") (kbd "Ö"))
+(define-key input-decode-map (kbd "M-P") (kbd "Å"))
+(define-key input-decode-map (kbd "M-<") (kbd "Ä"))
+(define-key input-decode-map (kbd "M->") (kbd "Ö"))
 
 ;; *** Rebind backspace with C-f
 ;; 127 is backspace
-(define-key key-translation-map (kbd "C-f") [127])
+(define-key input-decode-map (kbd "C-f") [127])
 ;; There are 2 unbinds here for compatibility
-(define-key key-translation-map [127] (kbd "C-="))
-(define-key key-translation-map (kbd "<backspace>") (kbd "C-="))
+(define-key input-decode-map [127] (kbd "C-="))
+(define-key input-decode-map (kbd "<backspace>") (kbd "C-="))
 
 ;; Don't split up tabs on delete
 ;; (global-set-key (kbd "DEL") 'backward-delete-char)
 
 ;; *** Rebind delete with
-(define-key key-translation-map (kbd "C-l") (kbd "<deletechar>"))
+(define-key input-decode-map (kbd "C-l") (kbd "<deletechar>"))
 ;; There are 2 unbinds here for compatibility
-(define-key key-translation-map (kbd "<deletechar>") (kbd "C-="))
-(define-key key-translation-map (kbd "<delete>") (kbd "C-="))
+(define-key input-decode-map (kbd "<deletechar>") (kbd "C-="))
+(define-key input-decode-map (kbd "<delete>") (kbd "C-="))
 
 ;; *** k(Move up) <--> p(Paste)
 ;; **** k
@@ -6257,84 +6257,86 @@ Borrowed from mozc.el."
 (my/evil-normal-define-key "C-d" nil)
 
 ;; *** Rebind esc
-(define-key key-translation-map (kbd "<escape>") (kbd "C-e"))
-(define-key key-translation-map (kbd "C-e") (kbd "<escape>"))
+(define-key input-decode-map (kbd "<escape>") (kbd "C-e"))
+(define-key input-decode-map (kbd "C-e") (kbd "<escape>"))
 
 ;; *** Rebind enter
-;;  (define-key key-translation-map (kbd "RET") (kbd "C-a"))
-(define-key key-translation-map (kbd "C-a") (kbd "RET"))
+;;  (define-key input-decode-map (kbd "RET") (kbd "C-a"))
+(define-key input-decode-map (kbd "C-a") (kbd "RET"))
 
 ;; *** Rebind tab
 ;; (define-key my/keys-mode-map (kbd "C-e") 'my/simulate-esc)
-;; (define-key key-translation-map (kbd "?\\t") (kbd "C-="))
+;; (define-key input-decode-map (kbd "?\\t") (kbd "C-="))
 
 ;; If window system, unbind tab key and not C-=
 
-(define-key key-translation-map (kbd "TAB") (kbd "C-="))
-(define-key key-translation-map (kbd "<tab>") (kbd "C-="))
-(define-key key-translation-map (kbd "C-t") (kbd "TAB"))
-(define-key key-translation-map (kbd "M-C-t") (kbd "C-TAB"))
+(define-key input-decode-map (kbd "TAB") (kbd "C-="))
+(define-key input-decode-map (kbd "<tab>") (kbd "C-="))
+(define-key input-decode-map (kbd "C-t") (kbd "TAB"))
+(define-key input-decode-map (kbd "M-C-t") (kbd "C-TAB"))
 
 ;; (when window-system
-;;  (define-key key-translation-map (kbd "TAB") (kbd "C--"))
-;;  (define-key key-translation-map (kbd "<tab>") (kbd "C--"))
+;;  (define-key input-decode-map (kbd "TAB") (kbd "C--"))
+;;  (define-key input-decode-map (kbd "<tab>") (kbd "C--"))
 
-;;  (define-key key-translation-map (kbd "C-i") (kbd "C-~")))
+;;  (define-key input-decode-map (kbd "C-i") (kbd "C-~")))
 
 ;; *** Disable backspace
-;; (define-key key-translation-map (kbd "C-e") (kbd "TAB"))
-;; (define-key key-translation-map (kbd "M-C-i") (kbd "C-TAB"))
+;; (define-key input-decode-map (kbd "C-e") (kbd "TAB"))
+;; (define-key input-decode-map (kbd "M-C-i") (kbd "C-TAB"))
 
 ;; *** Rebind number row
 ;; **** Numbers
 ;; ***** Disable number row
-(define-key key-translation-map (kbd "1") (kbd "C-="))
-(define-key key-translation-map (kbd "2") (kbd "C-="))
-(define-key key-translation-map (kbd "3") (kbd "C-="))
-(define-key key-translation-map (kbd "4") (kbd "C-="))
-(define-key key-translation-map (kbd "5") (kbd "C-="))
-(define-key key-translation-map (kbd "6") (kbd "C-="))
-(define-key key-translation-map (kbd "7") (kbd "C-="))
-(define-key key-translation-map (kbd "8") (kbd "C-="))
-(define-key key-translation-map (kbd "9") (kbd "C-="))
-(define-key key-translation-map (kbd "0") (kbd "C-="))
+;; (define-key input-decode-map (kbd "C-[") [control-bracketleft])
+
+(define-key input-decode-map (kbd "1") (kbd "C-="))
+(define-key input-decode-map (kbd "2") (kbd "C-="))
+(define-key input-decode-map (kbd "3") (kbd "C-="))
+(define-key input-decode-map (kbd "4") (kbd "C-="))
+(define-key input-decode-map (kbd "5") (kbd "C-="))
+(define-key input-decode-map (kbd "6") (kbd "C-="))
+(define-key input-decode-map (kbd "7") (kbd "C-="))
+(define-key input-decode-map (kbd "8") (kbd "C-="))
+(define-key input-decode-map (kbd "9") (kbd "C-="))
+(define-key input-decode-map (kbd "0") (kbd "C-="))
 
 ;; ***** Set new number row
-(define-key key-translation-map (kbd "M-d") (kbd "1"))
-(define-key key-translation-map (kbd "M-s") (kbd "2"))
-(define-key key-translation-map (kbd "M-t") (kbd "3"))
-(define-key key-translation-map (kbd "M-n") (kbd "4"))
-(define-key key-translation-map (kbd "M-r") (kbd "5"))
-(define-key key-translation-map (kbd "M-i") (kbd "6"))
-(define-key key-translation-map (kbd "M-a") (kbd "7"))
-(define-key key-translation-map (kbd "M-e") (kbd "8"))
-(define-key key-translation-map (kbd "M-o") (kbd "9"))
-(define-key key-translation-map (kbd "M-h") (kbd "0"))
+(define-key input-decode-map (kbd "M-d") (kbd "1"))
+(define-key input-decode-map (kbd "M-s") (kbd "2"))
+(define-key input-decode-map (kbd "M-t") (kbd "3"))
+(define-key input-decode-map (kbd "M-n") (kbd "4"))
+(define-key input-decode-map (kbd "M-r") (kbd "5"))
+(define-key input-decode-map (kbd "M-i") (kbd "6"))
+(define-key input-decode-map (kbd "M-a") (kbd "7"))
+(define-key input-decode-map (kbd "M-e") (kbd "8"))
+(define-key input-decode-map (kbd "M-o") (kbd "9"))
+(define-key input-decode-map (kbd "M-h") (kbd "0"))
 
 ;; **** Symbols
 ;; ***** Disable symbol keys
-(define-key key-translation-map (kbd "!") (kbd "C-="))
-(define-key key-translation-map (kbd "@") (kbd "C-="))
-(define-key key-translation-map (kbd "#") (kbd "C-="))
-(define-key key-translation-map (kbd "$") (kbd "C-="))
-(define-key key-translation-map (kbd "%") (kbd "C-="))
-(define-key key-translation-map (kbd "^") (kbd "C-="))
-(define-key key-translation-map (kbd "&") (kbd "C-="))
-(define-key key-translation-map (kbd "*") (kbd "C-="))
-(define-key key-translation-map (kbd "(") (kbd "C-="))
-(define-key key-translation-map (kbd ")") (kbd "C-="))
+(define-key input-decode-map (kbd "!") (kbd "C-="))
+(define-key input-decode-map (kbd "@") (kbd "C-="))
+(define-key input-decode-map (kbd "#") (kbd "C-="))
+(define-key input-decode-map (kbd "$") (kbd "C-="))
+(define-key input-decode-map (kbd "%") (kbd "C-="))
+(define-key input-decode-map (kbd "^") (kbd "C-="))
+(define-key input-decode-map (kbd "&") (kbd "C-="))
+(define-key input-decode-map (kbd "*") (kbd "C-="))
+(define-key input-decode-map (kbd "(") (kbd "C-="))
+(define-key input-decode-map (kbd ")") (kbd "C-="))
 
 ;; ***** Set new keys
-(define-key key-translation-map (kbd "M-q") (kbd "!"))
-(define-key key-translation-map (kbd "M-g") (kbd "@"))
-(define-key key-translation-map (kbd "M-m") (kbd "#"))
-(define-key key-translation-map (kbd "M-l") (kbd "$"))
-(define-key key-translation-map (kbd "M-w") (kbd "%"))
-(define-key key-translation-map (kbd "M-;") (kbd "^"))
-(define-key key-translation-map (kbd "M-b") (kbd "&"))
-(define-key key-translation-map (kbd "M-y") (kbd "*"))
-(define-key key-translation-map (kbd "M-f") (kbd "("))
-(define-key key-translation-map (kbd "M-u") (kbd ")"))
+(define-key input-decode-map (kbd "M-q") (kbd "!"))
+(define-key input-decode-map (kbd "M-g") (kbd "@"))
+(define-key input-decode-map (kbd "M-m") (kbd "#"))
+(define-key input-decode-map (kbd "M-l") (kbd "$"))
+(define-key input-decode-map (kbd "M-w") (kbd "%"))
+(define-key input-decode-map (kbd "M-;") (kbd "^"))
+(define-key input-decode-map (kbd "M-b") (kbd "&"))
+(define-key input-decode-map (kbd "M-y") (kbd "*"))
+(define-key input-decode-map (kbd "M-f") (kbd "("))
+(define-key input-decode-map (kbd "M-u") (kbd ")"))
 
 ;; * nix
 ;; ** Direnv
