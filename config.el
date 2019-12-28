@@ -1994,6 +1994,7 @@ Borrowed from mozc.el."
   (interactive)
   (pcase major-mode
     ('gnus-summary-mode (gnus-summary-exit))
+    ('ediff-mode (call-interactively #'ediff-quit))
     (_ (kill-current-buffer))))
 
 ;; ** Copy minibuffer contents
