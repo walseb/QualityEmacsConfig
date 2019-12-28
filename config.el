@@ -899,16 +899,6 @@
 ;; Stop custom from editing init.el
 (setq custom-file (concat user-emacs-directory ".emacs-custom.el"))
 
-;; ** Load helm early
-;; Helm throws an error if the key C-SPC has been bound before it's loaded. This ensures that helm will be loaded before that happens
-(straight-use-package 'helm)
-(require 'helm)
-(require 'helm-utils)
-
-;; *** Deactivate helm
-;; lsp-java checks if helm is defined and then just uses helm for some things, this fixes that
-(fmakunbound 'helm)
-
 ;; * Evil
 (setq evil-search-module 'evil-search)
 (setq evil-vsplit-window-right t)
