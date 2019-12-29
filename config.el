@@ -7959,7 +7959,23 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (straight-use-package 'enwc)
 (setq enwc-default-backend 'nm)
 
-(define-key my/network-map (kbd "c") 'enwc)
+(define-key my/network-map (kbd "e") 'enwc)
+
+;; *** Connect to wifi networks
+(defun my/nm-connect-to-wifi-network ()
+  (interactive)
+  (shell-command
+   (concat "nmcli device wifi connect "
+	   (completing-read "Select network: "
+			    (progn
+			      (setq enwc-scan-interactive t)
+			      (map 'list
+				   (lambda (net) (enwc-value-from-scan 'essid net))
+				   (enwc-get-networks))))
+	   " password "
+	   (read-passwd "Enter password: "))))
+
+(define-key my/network-map (kbd "c") 'my/nm-connect-to-wifi-network)
 
 ;; ** Tramp
 ;; (setq tramp-default-method "scpx")
