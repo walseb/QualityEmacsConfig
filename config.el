@@ -1550,7 +1550,7 @@ Borrowed from mozc.el."
 (defun my/write-configs ()
   (interactive)
   (pcase (completing-read "Which config to write: "
-			  '("xdefaults" "xinit" "xmodmap" "mpd" "gpg-agent" "cabal" "mbsync" "msmtp" "dovecot") nil t)
+			  '("xdefaults" "xinit" "xmodmap" "mpd" "gpg-agent" "cabal" "mbsync" "msmtp" "dovecot" "direnv") nil t)
     ("xdefaults"
      ;; With emacs 27 gui is disabled in early-init.el instead of xdefaults
      (if (string< emacs-version "27")
@@ -1563,7 +1563,8 @@ Borrowed from mozc.el."
     ("cabal" (my/write-cabal-config))
     ("mbsync" (my/write-mbsync-config))
     ("msmtp" (my/write-msmtp-config))
-    ("dovecot" (my/write-dovecot-config))))
+    ("dovecot" (my/write-dovecot-config))
+    ("direnv" (my/write-direnv-config))))
 
 (define-key my/leader-map (kbd "C-c") 'my/write-configs)
 
@@ -1696,6 +1697,12 @@ Borrowed from mozc.el."
 (defun my/write-dovecot-config ()
   (let ((config-dir  "~/.dovecot-pass"))
     (my/create-file-with-content-if-not-exist config-dir "admin:{PLAIN}")))
+
+;; ** Write direnv config
+(defun my/write-direnv-config ()
+  (let ((config-target  "~/.direnvrc")
+	(config-source (concat user-emacs-directory "configs/direnv/.direnvrc")))
+    (copy-file config-source config-target)))
 
 ;; * Minor
 ;; ** Startup
@@ -4808,6 +4815,15 @@ Borrowed from mozc.el."
 
 (add-hook 'haskell-mode-hook 'my/haskell-mode)
 
+;; *** haskell-process
+(setq haskell-process-auto-import-loaded-modules t)
+;; Disable ghci error overlay
+(setq haskell-process-show-overlays nil)
+
+;; **** Start using nix-shell
+;; (setq haskell-process-wrapper-function (lambda (argv) (append (list "nix-shell" "--pure" "-I" "." "--command" )
+;;							 (list (mapconcat ’identity argv " ")))))
+
 ;; *** haskell-interactive-mode
 (add-hook 'haskell-mode-hook (lambda () (add-hook 'after-save-hook 'haskell-process-load-file nil t)))
 
@@ -4972,11 +4988,12 @@ Borrowed from mozc.el."
   (add-hook 'haskell-mode-hook 'my/haskell-lsp-mode))
 
 ;; **** Make it start in nix-shell
-(setq lsp-haskell-process-wrapper-function (lambda (argv)
-					     (append
-					      (append (list "nix-shell" "-I" "." "--command" )
-						      (list (mapconcat 'identity argv " ")))
-					      (list (concat (lsp-haskell--get-root) "/shell.nix")))))
+;; (setq lsp-haskell-process-wrapper-function (lambda (argv)
+;;					     (append
+;;					      (append (list "nix-shell" "-I" "." "--command" )
+;;						      (list (mapconcat 'identity argv " ")))
+;;					      (list (concat (lsp-haskell--get-root) "/shell.nix")))))
+
 ;; **** Hack in eldoc support
 (when my/haskell-hie-enable
   (setq my/haskell-lsp-eldoc-entries '())
@@ -5082,6 +5099,9 @@ Borrowed from mozc.el."
 
 ;; **** Apply GHC hints
 (straight-use-package 'attrap)
+
+;; **** Disable nix boot
+(setq dante-methods '(bare-cabal))
 
 ;; **** Fix
 ;; Dante wants to use the cabal dist folder instead of the dist-newstyle folder which makes it crash on newstyle projects
