@@ -1662,7 +1662,7 @@ Borrowed from mozc.el."
   (let* ((gpg-dir "~/.gnupg/")
 	 (gpg-file (concat gpg-dir "gpg-agent.conf")))
     (my/create-dir-if-not-exist gpg-dir)
-    (my/create-file-with-content-if-not-exist gpg-file "allow-emacs-pinentry")
+    (my/create-file-with-content-if-not-exist gpg-file (concat "allow-emacs-pinentry\n" "pinentry-program " (shell-command-to-string "which pinentry-emacs")))
     (shell-command "gpgconf --reload gpg-agent")))
 
 ;; ** Write cabal config
@@ -3229,6 +3229,9 @@ Borrowed from mozc.el."
 
 (global-flycheck-mode)
 
+;; *** Disable switch buffer delay
+(setq flycheck-idle-buffer-switch-delay nil)
+
 ;; *** Disable flycheck fringe
 (setq flycheck-indication-mode nil)
 
@@ -4444,7 +4447,7 @@ Borrowed from mozc.el."
     ('c-mode (cling-send-buffer))
     ('c++-mode (cling-send-buffer))
     ('csharp-mode (my/csharp-run-repl))
-    ('haskell-mode (haskell-process-load-file))
+    ('haskell-mode (progn (haskell-process-load-file) (haskell-interactive-bring)))
     ;; For now disable elisp evaluation
     (_ (when (not (string= (buffer-name) "config.el"))
 	 (eval-buffer nil)))))
@@ -4524,7 +4527,7 @@ Borrowed from mozc.el."
     ('haskell-mode
      ;; (let ((browse-url-browser-function 'eww-browse-url))
      (my/ivy-hoogle))
-
+    ('haskell-interactive-mode (my/ivy-hoogle))
     ('nix-mode (my/nixos-options-ivy))))
 
 (define-key my/leader-map (kbd "h") help-map)
@@ -4825,7 +4828,7 @@ Borrowed from mozc.el."
 ;;							 (list (mapconcat ’identity argv " ")))))
 
 ;; *** haskell-interactive-mode
-(add-hook 'haskell-mode-hook (lambda () (add-hook 'after-save-hook 'haskell-process-load-file nil t)))
+;; (add-hook 'haskell-mode-hook (lambda () (add-hook 'after-save-hook 'haskell-process-load-file nil t)))
 
 ;; **** Keys
 (add-hook 'haskell-interactive-mode-hook
@@ -5073,7 +5076,7 @@ Borrowed from mozc.el."
   ;; Settings good for both dante and the haskell repl
   (setq-local flymake-no-changes-timeout nil)
   (setq-local flymake-start-syntax-check-on-newline nil)
-  (setq-local flycheck-check-syntax-automatically '(save mode-enabled)))
+  (setq-local flycheck-check-syntax-automatically '(save mode-enabled idle-buffer-switch))) ;; idle-change
 
 ;; **** Add more warnings
 (when (not my/haskell-hie-enable)
@@ -8625,6 +8628,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
     ("isSubsetOf" . ?⊆)
     ("isProperSubsetOf" . ?⊂)
 
+    ("theta" . ?θ)
+
     ;; ("\\" . ?∖)
 
     ;; Monoid
@@ -8632,9 +8637,9 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
     ("mappend" . ?⊕)
 
     ;; Arrows
-    ("***" . ?⁂)
-    ("|||" . ?⫴)
-    ("+++" . ?⧻)
+    ;; ("***" . ?⁂)
+    ;; ("|||" . ?⫴)
+    ;; ("+++" . ?⧻)
     ))
 
 ;; https://en.wikipedia.org/wiki/Mathematical_operators_and_symbols_in_Unicode
