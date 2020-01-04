@@ -8198,6 +8198,20 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 (define-key my/network-map (kbd "c") 'my/nm-connect-to-wifi-network)
 
+;; *** Delete wifi networks
+(defun my/nm-delete-wifi-network ()
+  (interactive)
+  (shell-command
+   (concat "nmcli con delete "
+	   (completing-read "Select network: "
+			    (progn
+			      (setq enwc-scan-interactive t)
+			      (map 'list
+				   (lambda (net) (enwc-value-from-scan 'essid net))
+				   (enwc-get-networks)))))))
+
+(define-key my/network-map (kbd "d") 'my/nm-delete-wifi-network)
+
 ;; ** Tramp
 ;; (setq tramp-default-method "scpx")
 
