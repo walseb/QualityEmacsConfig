@@ -837,6 +837,13 @@
     (and (> (current-column) length)
 	 (current-column))))
 
+;; ** Get position of beginning of next line
+(defun my/next-line-pos ()
+  (save-excursion
+    (forward-line)
+    (beginning-of-line)
+    (point)))
+
 ;; * Fonts
 (defun my/get-best-font ()
   (if (my/font-installed "Liga Inconsolata LGC")
@@ -1152,7 +1159,6 @@
 (evil-define-operator evil-eval (beg end type)
   "Run eval on BEG to END."
   (interactive "<R>")
-  (message (concat "beg: " (number-to-string beg) " end: " (number-to-string end)))
   (my/auto-eval-region beg end))
 
 (my/evil-normal-define-key "/" 'evil-eval)
@@ -4408,7 +4414,11 @@ Borrowed from mozc.el."
       (my/auto-eval-region)
     (pcase major-mode
       ;; Silent result
-      ('org-mode (org-babel-execute-src-block nil nil '((:result-params . ("none")))))
+      ;; ('org-mode (org-babel-execute-src-block nil nil '((:result-params . ("none")))))
+      ;; ('org-mode (org-babel-execute-src-block nil nil '((:result-params . ("silent")))))
+      ;; ('org-mode (org-babel-execute-src-block))
+      ;; Without pretty print it formats results of "[[[ ... ]]]" as "| ... |"
+      ('org-mode (org-babel-execute-src-block nil nil '((:result-params . ("pp")))))
       ('scheme-mode (geiser-eval-definition nil))
       ('clojure-mode (cider-eval-last-sexp))
       ('racket-mode (racket-eval-last-sexp))
@@ -4417,7 +4427,7 @@ Borrowed from mozc.el."
       ('c-mode (cling-send-region (line-beginning-position) (line-end-position)))
       ('c++-mode (cling-send-region (line-beginning-position) (line-end-position)))
       ('csharp-mode (my/csharp-run-repl))
-      ('haskell-mode (haskell-interactive-copy-to-prompt))
+      ('haskell-mode (save-excursion (my/auto-eval-region (progn (beginning-of-line) (point)) (progn (end-of-line) (point)))))
       (_ (call-interactively 'eros-eval-last-sexp)))))
 
 (defun my/auto-eval-region (beg end)
@@ -4429,7 +4439,10 @@ Borrowed from mozc.el."
     ('c-mode (cling-send-region beg end))
     ('c++-mode (cling-send-region beg end))
     ('csharp-mode (my/csharp-run-repl))
-    ('haskell-mode (haskell-interactive-copy-to-prompt))
+    ;; ('haskell-mode (save-selected-window (my/haskell-interactive-copy-string-to-prompt (buffer-substring-no-properties beg end)) (haskell-interactive-bring) (goto-char (point-max)) (re-search-backward (haskell-interactive-prompt-regex)) (end-of-line) (recenter) ))
+    ('haskell-mode (save-excursion (my/haskell-interactive-mode-run-expr (buffer-substring-no-properties beg end))))
+
+    ;; (haskell-interactive-mode-prompt-previous)
     (_
      ;; eval-region doesn't return anything, just prints to the minibuffer so eros can't be used here
      (eros--eval-overlay
@@ -4665,6 +4678,112 @@ Borrowed from mozc.el."
 
 (eros-mode 1)
 
+;; ***** Make it work inside run with timer and such
+;; Eros doesn't work inside run-with-timers because then ~this-command~ is set. In this patch I just remove the ~this-command~ check
+(cl-defun eros--make-result-overlay (value &rest props &key where duration (type 'result)
+					   (format (concat " " eros-eval-result-prefix "%s "))
+					   (prepend-face 'eros-result-overlay-face)
+					   &allow-other-keys)
+  "Place an overlay displaying VALUE at the end of line.
+
+VALUE is used as the overlay's after-string property, meaning it
+is displayed at the end of the overlay.  The overlay itself is
+placed from beginning to end of current line.
+
+Return nil if the overlay was not placed or if it might not be
+visible, and return the overlay otherwise.
+
+Return the overlay if it was placed successfully, and nil if it
+failed.
+
+This function takes some optional keyword arguments:
+
+- If WHERE is a number or a marker, apply the overlay over the
+  entire line at that place (defaulting to `point').  If it is a
+  cons cell, the car and cdr determine the start and end of the
+  overlay.
+
+- DURATION takes the same possible values as the
+  `eros-eval-result-duration' variable.
+
+- TYPE is passed to `eros--make-overlay' (defaults to `result').
+
+- FORMAT is a string passed to `format'.  It should have exactly
+  one %s construct (for VALUE).
+
+All arguments beyond these (PROPS) are properties to be used on
+the overlay."
+  (declare (indent 1))
+  (while (keywordp (car props))
+    (setq props (cddr props)))
+  ;; If the marker points to a dead buffer, don't do anything.
+  (let ((buffer (cond
+		 ((markerp where) (marker-buffer where))
+		 ((markerp (car-safe where)) (marker-buffer (car where)))
+		 (t (current-buffer)))))
+    (with-current-buffer buffer
+      (save-excursion
+	(when (number-or-marker-p where)
+	  (goto-char where))
+	;; Make sure the overlay is actually at the end of the sexp.
+	(skip-chars-backward "\r\n[:blank:]")
+	(let* ((beg (if (consp where)
+			(car where)
+		      (save-excursion
+			(backward-sexp 1)
+			(point))))
+	       (end (if (consp where)
+			(cdr where)
+		      (line-end-position)))
+	       (display-string (format format value))
+	       (o nil))
+	  (remove-overlays beg end 'category type)
+	  (funcall (if eros-overlays-use-font-lock
+		       #'font-lock-prepend-text-property
+		     #'put-text-property)
+		   0 (length display-string)
+		   'face prepend-face
+		   display-string)
+	  ;; If the display spans multiple lines or is very long, display it at
+	  ;; the beginning of the next line.
+	  (when (or (string-match "\n." display-string)
+		    (> (string-width display-string)
+		       (- (window-width) (current-column))))
+	    (setq display-string (concat " \n" display-string)))
+	  ;; Put the cursor property only once we're done manipulating the
+	  ;; string, since we want it to be at the first char.
+	  (put-text-property 0 1 'cursor 0 display-string)
+	  (when (> (string-width display-string) (* 3 (window-width)))
+	    (setq display-string
+		  (concat (substring display-string 0 (* 3 (window-width)))
+			  "...\nResult truncated.")))
+	  ;; Create the result overlay.
+	  (setq o (apply #'eros--make-overlay
+			 beg end type
+			 'after-string display-string
+			 props))
+	  (pcase duration
+	    ((pred numberp) (run-at-time duration nil #'eros--delete-overlay o))
+	    (`command
+	     ;; (if this-command
+	     (add-hook 'pre-command-hook
+		       #'eros--remove-result-overlay
+		       nil 'local)
+	     ;; (eros--remove-result-overlay))
+	     ))
+	  (let ((win (get-buffer-window buffer)))
+	    ;; Left edge is visible.
+	    (when (and win
+		       (<= (window-start win) (point))
+		       ;; In 24.3 `<=' is still a binary predicate.
+		       (<= (point) (window-end win))
+		       ;; Right edge is visible. This is a little conservative
+		       ;; if the overlay contains line breaks.
+		       (or (< (+ (current-column) (string-width value))
+			      (window-width win))
+			   (not truncate-lines)))
+	      o)))))))
+
 ;; **** Litable
 ;; ;;(straight-use-package '(litable :type git :host github :repo "Fuco1/blablabla"))
 ;; (straight-use-package 'litable)
@@ -4818,6 +4937,9 @@ Borrowed from mozc.el."
 
 (add-hook 'haskell-mode-hook 'my/haskell-mode)
 
+;; *** org-mode (ob) support
+(require 'ob-haskell)
+
 ;; *** haskell-process
 (setq haskell-process-auto-import-loaded-modules t)
 ;; Disable ghci error overlay
@@ -4829,6 +4951,82 @@ Borrowed from mozc.el."
 
 ;; *** haskell-interactive-mode
 ;; (add-hook 'haskell-mode-hook (lambda () (add-hook 'after-save-hook 'haskell-process-load-file nil t)))
+
+(setq haskell-interactive-mode-read-only t)
+(setq haskell-interactive-popup-errors nil)
+
+;; *** Run expr
+;; Just patch the :complete to also run eros overlay
+(defun my/haskell-interactive-mode-run-expr (expr)
+  "Run the given expression."
+  (let ((session (haskell-interactive-session))
+	(process (haskell-interactive-process)))
+    (haskell-process-queue-command
+     process
+     (make-haskell-command
+      :state (list session process expr 0)
+      :go (lambda (state)
+	    (goto-char (point-max))
+	    (insert "\n")
+	    (setq haskell-interactive-mode-result-end
+		  (point-max))
+	    (haskell-process-send-string (cadr state)
+					 (haskell-interactive-mode-multi-line (cl-caddr state)))
+	    (haskell-process-set-evaluating (cadr state) t))
+      :live (lambda (state buffer)
+	      (unless (and (string-prefix-p ":q" (cl-caddr state))
+			   (string-prefix-p (cl-caddr state) ":quit"))
+		(let* ((cursor (cl-cadddr state))
+		       (next (replace-regexp-in-string
+			      haskell-process-prompt-regex
+			      ""
+			      (substring buffer cursor))))
+		  (haskell-interactive-mode-eval-result (car state) next)
+		  (setf (cl-cdddr state) (list (length buffer)))
+		  nil)))
+      :complete
+      (lambda (state response)
+	(haskell-process-set-evaluating (cadr state) nil)
+	(unless (haskell-interactive-mode-trigger-compile-error state response)
+	  ;; (haskell-interactive-mode-expr-result state response)
+	  (eros--eval-overlay response (my/next-line-pos))))))))
+
+;; *** Patch multi-line
+;; Turn 'prompt2' into prompt-cont. 'prompt2' might be deprecated
+(defun haskell-interactive-mode-multi-line (expr)
+  "If a multi-line expression EXPR has been entered, then reformat it to be:
+
+:{
+do the
+   multi-liner
+   expr
+:}"
+  (if (not (string-match-p "\n" expr))
+      expr
+    (let ((pre (format "^%s" (regexp-quote haskell-interactive-prompt)))
+	  (lines (split-string expr "\n")))
+      (cl-loop for elt on (cdr lines) do
+	       (setcar elt (replace-regexp-in-string pre "" (car elt))))
+      ;; Temporarily set prompt2 to be empty to avoid unwanted output
+      (concat ":set prompt-cont \"\"\n"
+	      ":{\n"
+	      (mapconcat #'identity lines "\n")
+	      "\n:}\n"
+	      (format ":set prompt-cont \"%s\"" haskell-interactive-prompt-cont)))))
+
+;; **** Better copy to prompt
+(defun my/haskell-interactive-copy-string-to-prompt (string)
+  "Copy the current line to the prompt, overwriting the current prompt."
+  (let ((l (substring-no-properties string)))
+    ;; If it looks like the prompt is at the start of the line, chop
+    ;; it off.
+    (when (and (>= (length l) (length haskell-interactive-prompt))
+	       (string= (substring l 0 (length haskell-interactive-prompt))
+			haskell-interactive-prompt))
+      (setq l (substring l (length haskell-interactive-prompt))))
+
+    (haskell-interactive-mode-set-prompt l)))
+
 
 ;; **** Keys
 (add-hook 'haskell-interactive-mode-hook
