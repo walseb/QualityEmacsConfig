@@ -2050,22 +2050,27 @@ Borrowed from mozc.el."
 
 (defun my/switch-to-scratch()
   (interactive)
-  (let ((scratch-buffer (get-buffer "*scratch*")))
-    (if scratch-buffer
-	(switch-to-buffer scratch-buffer)
-      (switch-to-buffer "*scratch*")
-      (when (not (file-exists-p (concat user-emacs-directory "scratch")))
-	(write-region "" nil (concat user-emacs-directory "scratch")))
-      (insert-file-contents (concat user-emacs-directory "scratch"))
-      ;; This generates a new mode map and uses it. This makes it possible to modify the current mode map without modifying the org mode map.
-      (org-mode)
-      (use-local-map (copy-keymap org-mode-map))
-      (local-set-key [remap my/save-and-backup-buffer] (lambda () (interactive)
-							 ;; Using write-region instead of write-file here makes it so that the scratch buffer doesn't get assigned to a file, which means it can be used without any problems in a direnv buffer
-							 (save-restriction
-							   (widen)
-							   (write-region (point-min) (point-max) (concat user-emacs-directory "scratch")))))))
-  (run-hooks 'my/open-map-hook))
+  (find-file (concat user-emacs-directory "scratch.org")))
+
+;; *** A persistent scratch buffer without being a file
+;; (defun my/switch-to-scratch()
+;;   (interactive)
+;;   (let ((scratch-buffer (get-buffer "*scratch*")))
+;;     (if scratch-buffer
+;;	(switch-to-buffer scratch-buffer)
+;;       (switch-to-buffer "*scratch*")
+;;       (when (not (file-exists-p (concat user-emacs-directory "scratch")))
+;;	(write-region "" nil (concat user-emacs-directory "scratch")))
+;;       (insert-file-contents (concat user-emacs-directory "scratch"))
+;;       ;; This generates a new mode map and uses it. This makes it possible to modify the current mode map without modifying the org mode map.
+;;       (org-mode)
+;;       (use-local-map (copy-keymap org-mode-map))
+;;       (local-set-key [remap my/save-and-backup-buffer] (lambda () (interactive)
+;;							 ;; Using write-region instead of write-file here makes it so that the scratch buffer doesn't get assigned to a file, which means it can be used without any problems in a direnv buffer
+;;							 (save-restriction
+;;							   (widen)
+;;							   (write-region (point-min) (point-max) (concat user-emacs-directory "scratch")))))))
+;;   (run-hooks 'my/open-map-hook))
 
 (define-key my/open-map (kbd "s") 'my/switch-to-scratch)
 
@@ -3913,9 +3918,12 @@ Borrowed from mozc.el."
   (":" my/add-bookmark nil)
   ("C-;" my/delete-bookmark nil)
 
+  ;; Projectile
   ("y" counsel-projectile-switch-to-buffer nil)
-  ("Y" counsel-projectile-switch-project nil)
-  ("C-y" projectile-kill-buffers nil)
+  ("Y" counsel-projectile-find-file nil)
+  ("*" counsel-projectile-ag nil)
+  ("C-y" counsel-projectile-switch-project nil)
+  ("C-Y" projectile-kill-buffers nil)
 
   ("u" winner-undo nil)
   ("C-r" winner-redo nil)
@@ -4460,7 +4468,7 @@ Borrowed from mozc.el."
     ('c-mode (cling-send-buffer))
     ('c++-mode (cling-send-buffer))
     ('csharp-mode (my/csharp-run-repl))
-    ('haskell-mode (progn (haskell-process-load-file) (haskell-interactive-bring)))
+    ('haskell-mode (progn (haskell-process-load-file) (haskell-interactive-bring) (end-of-buffer) (recenter)))
     ;; For now disable elisp evaluation
     (_ (when (not (string= (buffer-name) "config.el"))
 	 (eval-buffer nil)))))
@@ -4957,6 +4965,7 @@ the overlay."
 
 ;; *** Run expr
 ;; Just patch the :complete to also run eros overlay
+;; Also removed the (insert "\n") cause it was causing everything that I evaled to add one newline
 (defun my/haskell-interactive-mode-run-expr (expr)
   "Run the given expression."
   (let ((session (haskell-interactive-session))
@@ -4966,10 +4975,11 @@ the overlay."
      (make-haskell-command
       :state (list session process expr 0)
       :go (lambda (state)
-	    (goto-char (point-max))
-	    (insert "\n")
-	    (setq haskell-interactive-mode-result-end
-		  (point-max))
+	    ;; I also commented out these because they are just used when in repl-mode I think
+	    ;; (goto-char (point-max))
+	    ;; (insert "\n")
+	    ;; (setq haskell-interactive-mode-result-end
+	    ;;	  (point-max))
 	    (haskell-process-send-string (cadr state)
 					 (haskell-interactive-mode-multi-line (cl-caddr state)))
 	    (haskell-process-set-evaluating (cadr state) t))
@@ -4988,31 +4998,32 @@ the overlay."
       (lambda (state response)
 	(haskell-process-set-evaluating (cadr state) nil)
 	(unless (haskell-interactive-mode-trigger-compile-error state response)
-	  ;; (haskell-interactive-mode-expr-result state response)
+	  (haskell-interactive-mode-expr-result state response)
 	  (eros--eval-overlay response (my/next-line-pos))))))))
 
 ;; *** Patch multi-line
 ;; Turn 'prompt2' into prompt-cont. 'prompt2' might be deprecated
-(defun haskell-interactive-mode-multi-line (expr)
-  "If a multi-line expression EXPR has been entered, then reformat it to be:
+(with-eval-after-load 'haskell-interactive-mode
+  (defun haskell-interactive-mode-multi-line (expr)
+    "If a multi-line expression EXPR has been entered, then reformat it to be:
 
 :{
 do the
    multi-liner
    expr
 :}"
-  (if (not (string-match-p "\n" expr))
-      expr
-    (let ((pre (format "^%s" (regexp-quote haskell-interactive-prompt)))
-	  (lines (split-string expr "\n")))
-      (cl-loop for elt on (cdr lines) do
-	       (setcar elt (replace-regexp-in-string pre "" (car elt))))
-      ;; Temporarily set prompt2 to be empty to avoid unwanted output
-      (concat ":set prompt-cont \"\"\n"
-	      ":{\n"
-	      (mapconcat #'identity lines "\n")
-	      "\n:}\n"
-	      (format ":set prompt-cont \"%s\"" haskell-interactive-prompt-cont)))))
+    (if (not (string-match-p "\n" expr))
+	expr
+      (let ((pre (format "^%s" (regexp-quote haskell-interactive-prompt)))
+	    (lines (split-string expr "\n")))
+	(cl-loop for elt on (cdr lines) do
+		 (setcar elt (replace-regexp-in-string pre "" (car elt))))
+	;; Temporarily set prompt2 to be empty to avoid unwanted output
+	(concat ":set prompt-cont \"\"\n"
+		":{\n"
+		(mapconcat #'identity lines "\n")
+		"\n:}\n"
+		(format ":set prompt-cont \"%s\"" haskell-interactive-prompt-cont))))))
 
 ;; **** Better copy to prompt
 (defun my/haskell-interactive-copy-string-to-prompt (string)
@@ -6335,19 +6346,20 @@ do the
 
 ;; *** Rebind backspace with C-f
 ;; 127 is backspace
-(define-key input-decode-map (kbd "C-f") [127])
+;; (define-key input-decode-map (kbd "C-f") [127])
+(keyboard-translate ?\C-f 127)
 ;; There are 2 unbinds here for compatibility
-(define-key input-decode-map [127] (kbd "C-="))
-(define-key input-decode-map (kbd "<backspace>") (kbd "C-="))
+;; (define-key input-decode-map (kbd "<backspace>") (kbd "C-="))
 
 ;; Don't split up tabs on delete
 ;; (global-set-key (kbd "DEL") 'backward-delete-char)
 
 ;; *** Rebind delete with
-(define-key input-decode-map (kbd "C-l") (kbd "<deletechar>"))
+(keyboard-translate ?\C-l ?\C-?)
+;; (define-key input-decode-map (kbd "C-l") (kbd "<deletechar>"))
 ;; There are 2 unbinds here for compatibility
-(define-key input-decode-map (kbd "<deletechar>") (kbd "C-="))
-(define-key input-decode-map (kbd "<delete>") (kbd "C-="))
+;; (define-key input-decode-map (kbd "<deletechar>") (kbd "C-="))
+;; (define-key input-decode-map (kbd "<delete>") (kbd "C-="))
 
 ;; *** k(Move up) <--> p(Paste)
 ;; **** k
@@ -6455,12 +6467,14 @@ do the
 (my/evil-normal-define-key "C-d" nil)
 
 ;; *** Rebind esc
-(define-key input-decode-map (kbd "<escape>") (kbd "C-e"))
-(define-key input-decode-map (kbd "C-e") (kbd "<escape>"))
+;; (define-key input-decode-map (kbd "<escape>") (kbd "C-e"))
+;; (define-key input-decode-map (kbd "C-e") (kbd "<escape>"))
+(keyboard-translate ?\C-e ?\C-\[)
 
 ;; *** Rebind enter
 ;;  (define-key input-decode-map (kbd "RET") (kbd "C-a"))
-(define-key input-decode-map (kbd "C-a") (kbd "RET"))
+;; (define-key input-decode-map (kbd "C-a") (kbd "RET"))
+(keyboard-translate ?\C-a ?\C-m)
 
 ;; *** Rebind tab
 ;; (define-key my/keys-mode-map (kbd "C-e") 'my/simulate-esc)
@@ -6472,6 +6486,8 @@ do the
 (define-key input-decode-map (kbd "<tab>") (kbd "C-="))
 (define-key input-decode-map (kbd "C-t") (kbd "TAB"))
 (define-key input-decode-map (kbd "M-C-t") (kbd "C-TAB"))
+;; This doesn't work here because you can't cross-bind like above. All keys involved would point to the same output key
+;; (keyboard-translate ?\C-t ?\C-i)
 
 ;; (when window-system
 ;;  (define-key input-decode-map (kbd "TAB") (kbd "C--"))
