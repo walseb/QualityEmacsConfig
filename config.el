@@ -241,6 +241,10 @@
 ;; *** Opening local file results in raw page
 ;; This is because the file isn't named =FILE.html=, when eww saves pages, it doesn't add =.html= at the end
 
+;; ** Keybinds
+;; To find what keycode is fired when you press a key run (read-event)
+;; This can be used to figure what keycode to bind with (keyboard-translate
+
 ;; ** Keyboard setup
 ;; *** Change keyboard layout
 ;; To list keymaps, do =localectl list-keymaps=
@@ -955,8 +959,7 @@
 
 (defun my/evil-normal-define-key (key command)
   (interactive)
-  (define-key evil-normal-state-map (kbd key) command)
-  (define-key evil-motion-state-map (kbd key) command))
+  (define-key evil-normal-state-map (kbd key) command))
 
 (defun my/evil-replace-define-key (key command)
   (interactive)
@@ -1045,6 +1048,10 @@
 				 (emms-playlist-mode . insert))
 	 do (evil-set-initial-state mode state))
 
+;; *** Disable motion state
+;; Motion state is like normal mode but you can't go into insert-mode. Some modes start up with this restrictive mode, disable it here
+(setq evil-motion-state-modes nil)
+
 ;; *** Switching to normal state without moving cursor
 (defun my/evil-normal-state (&optional arg)
   (if (not(eq evil-state 'normal))
@@ -1111,8 +1118,6 @@
 
 (define-key evil-inner-text-objects-map "b" 'evil-textobj-anyblock-inner-block)
 (define-key evil-outer-text-objects-map "b" 'evil-textobj-anyblock-a-block)
-
-;; (define-key evil-motion-state-map "!" 'evil-textobj-anyblock-forward-open-block-start)
 
 (setq evil-textobj-anyblock-blocks
       '(("(" . ")")
@@ -1845,28 +1850,13 @@ Borrowed from mozc.el."
 (define-key my/leader-map (kbd "C-z") 'save-buffers-kill-emacs)
 
 ;; ** Help mode
-(setq help-mode-map
-      (let ((map (make-sparse-keymap)))
-	(define-key map "C-h" 'help-go-back)
-	(define-key map "c-l" 'help-go-forward)
-	map))
-
-(advice-add 'help-mode :after (lambda () (interactive) (evil-force-normal-state)))
+(setq help-mode-map (make-sparse-keymap))
 
 ;; ** Compilation mode
 (setq compilation-mode-map (make-sparse-keymap))
-(setq-default compilation-mode-map (make-sparse-keymap))
-
 (setq compilation-minor-mode-map (make-sparse-keymap))
-(setq-default compilation-minor-mode-map (make-sparse-keymap))
-
 (setq compilation-shell-minor-mode-map (make-sparse-keymap))
-(setq-default compilation-shell-minor-mode-map (make-sparse-keymap))
-
 (setq compilation-mode-tool-bar-map (make-sparse-keymap))
-(setq-default compilation-mode-tool-bar-map (make-sparse-keymap))
-
-(advice-add 'compilation-mode :after (lambda () (interactive) (evil-force-normal-state)))
 
 ;; ** Prefer loading newest lisp source file
 (setq load-prefer-newer t)
@@ -3842,7 +3832,8 @@ Borrowed from mozc.el."
   ("C-n" (evil-window-decrease-height 10) nil)
   ;; Resize right
   ;;("<delete>" (evil-window-decrease-width 10) nil)
-  ("<deletechar>" (evil-window-decrease-width 10) nil)
+  ;; ("<deletechar>" (evil-window-decrease-width 10) nil)
+  ("DEL" (evil-window-decrease-width 10) nil)
   ;; Resize left
   ;;("\b" (evil-window-increase-width 10) nil)
   ("C-h" (evil-window-increase-width 10) nil)
@@ -6345,9 +6336,10 @@ do the
 (define-key input-decode-map (kbd "M->") (kbd "Ö"))
 
 ;; *** Rebind backspace with C-f
+(keyboard-translate ?\C-f ?\C-?)
+
 ;; 127 is backspace
 ;; (define-key input-decode-map (kbd "C-f") [127])
-(keyboard-translate ?\C-f 127)
 ;; There are 2 unbinds here for compatibility
 ;; (define-key input-decode-map (kbd "<backspace>") (kbd "C-="))
 
@@ -6355,7 +6347,7 @@ do the
 ;; (global-set-key (kbd "DEL") 'backward-delete-char)
 
 ;; *** Rebind delete with
-(keyboard-translate ?\C-l ?\C-?)
+(keyboard-translate ?\C-l 'delete)
 ;; (define-key input-decode-map (kbd "C-l") (kbd "<deletechar>"))
 ;; There are 2 unbinds here for compatibility
 ;; (define-key input-decode-map (kbd "<deletechar>") (kbd "C-="))
@@ -10447,22 +10439,35 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (setq undo-tree-enable-undo-in-region nil)
 (setq-default undo-tree-enable-undo-in-region nil)
 
-(setq undo-tree-visualizer-lazy-drawing nil)
-(setq-default undo-tree-visualizer-lazy-drawing nil)
+;; (setq undo-tree-visualizer-lazy-drawing nil)
+;; (setq-default undo-tree-visualizer-lazy-drawing nil)
 
 (setq undo-tree-visualizer-timestamps t)
 (setq undo-tree-visualizer-diff t)
 
+;; *** Persistent history
+(setq my/undo-tree-history-dir (concat user-emacs-directory "undo-tree"))
+
+(ignore-errors
+  (make-directory my/undo-tree-history-dir))
+
+(setq undo-tree-auto-save-history t)
+(setq undo-tree-history-directory-alist `(("." . ,my/undo-tree-history-dir)))
+
+;; *** Disable modes in visualizer
+(add-hook 'undo-tree-visualizer-mode-hook (lambda () (interactive) (visual-line-mode -1)))
+
 ;; *** Keys
-(add-hook 'undo-tree-visualizer-mode-hook (lambda () (interactive) (run-with-timer 0.1 nil 'evil-force-normal-state)))
+(with-eval-after-load 'undo-tree
+  (setq undo-tree-visualizer-mode-map (make-sparse-keymap))
 
-(setq undo-tree-visualizer-mode-map (make-sparse-keymap))
+  (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "p") #'undo-tree-visualize-undo)
 
-(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "p") #'undo-tree-visualize-undo)
-(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "n") #'undo-tree-visualize-redo)
-(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "l") #'undo-tree-visualize-switch-branch-right)
-(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "h") #'undo-tree-visualize-switch-branch-left)
-(evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "d") #'undo-tree-visualizer-toggle-diff)
+  (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "p") #'undo-tree-visualize-undo)
+  (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "n") #'undo-tree-visualize-redo)
+  (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "l") #'undo-tree-visualize-switch-branch-right)
+  (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "h") #'undo-tree-visualize-switch-branch-left)
+  (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "d") #'undo-tree-visualizer-toggle-diff))
 
 ;; * Run command on boot
 (if my/run-command-on-boot
