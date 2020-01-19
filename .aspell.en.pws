@@ -2,6 +2,7 @@ personal_ws-1.1 en 0 utf-8
 yampa
 dunai
 FRP
+AFRP
 utf
 dired
 AABB
@@ -39,3 +40,4 @@ parallelly
 sinc
 isearch
 unexpanded
+OOP

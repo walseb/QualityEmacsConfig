@@ -959,7 +959,8 @@
 
 (defun my/evil-normal-define-key (key command)
   (interactive)
-  (define-key evil-normal-state-map (kbd key) command))
+  (define-key evil-normal-state-map (kbd key) command)
+  (define-key evil-motion-state-map (kbd key) command))
 
 (defun my/evil-replace-define-key (key command)
   (interactive)
@@ -10455,7 +10456,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (setq undo-tree-history-directory-alist `(("." . ,my/undo-tree-history-dir)))
 
 ;; *** Disable modes in visualizer
-(add-hook 'undo-tree-visualizer-mode-hook (lambda () (interactive) (visual-line-mode -1)))
+(add-hook 'undo-tree-visualizer-mode-hook (lambda () (add-hook 'visual-line-mode-hook (lambda () (when visual-line-mode (visual-line-mode -1))) nil t)))
 
 ;; *** Keys
 (with-eval-after-load 'undo-tree
