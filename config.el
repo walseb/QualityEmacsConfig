@@ -5789,6 +5789,24 @@ do the
 ;; (my/evil-visual-define-key "z" 'my/structural-navigation-state)
 ;; (my/evil-normal-define-key "z" 'my/structural-navigation-state)
 
+;; * Wakatime
+;; ** Custom wakatime-save mechanism
+(with-eval-after-load 'wakatime-mode
+  ;; Undefine wakatime-bind-hooks
+  (defun wakatime-bind-hooks ())
+
+  (setq my/wakatime-idle-time (* 60 4))
+  (setq my/wakatime-report-time (/ my/wakatime-idle-time 2))
+  (setq my/wakatime-user-present nil)
+  (run-with-idle-timer my/wakatime-idle-time t (lambda () (message (concat "User no longer present at " (current-time-string))) (setq my/wakatime-user-present nil)))
+  (add-hook 'post-command-hook (lambda () (when (not my/wakatime-user-present) (message (concat "User present again at: " (current-time-string)))) (setq my/wakatime-user-present t)))
+  ;; Make the first report after the idle timer has been run
+  (run-with-timer my/wakatime-report-time my/wakatime-report-time
+		  (lambda () (when my/wakatime-user-present
+			  (message (concat "Reporting to wakatime at: " (current-time-string)))
+			  (wakatime-save))))
+  (message "custom wakatime save mechanism loaded"))
+
 ;; * Macros
 ;; (define-prefix-command 'my/macro-map)
 
@@ -10440,8 +10458,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (setq undo-tree-enable-undo-in-region nil)
 (setq-default undo-tree-enable-undo-in-region nil)
 
-;; (setq undo-tree-visualizer-lazy-drawing nil)
-;; (setq-default undo-tree-visualizer-lazy-drawing nil)
+(setq-default undo-tree-visualizer-lazy-drawing nil)
 
 (setq undo-tree-visualizer-timestamps t)
 (setq undo-tree-visualizer-diff t)
@@ -10452,7 +10469,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (ignore-errors
   (make-directory my/undo-tree-history-dir))
 
-(setq undo-tree-auto-save-history t)
+(setq-default undo-tree-auto-save-history t)
 (setq undo-tree-history-directory-alist `(("." . ,my/undo-tree-history-dir)))
 
 ;; *** Disable modes in visualizer
