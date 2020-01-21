@@ -3855,8 +3855,8 @@ Borrowed from mozc.el."
   ("v" my/window-split-down nil)
   ("V" my/window-split-up nil)
 
-  ("i" my/clone-indirect-buffer nil)
-  ("I" my/clone-indirect-buffer-other-window nil)
+  ;; ("i" my/clone-indirect-buffer-other-window nil)
+  ("I" my/clone-indirect-buffer nil)
 
   ;; Search
   ("C-s" swiper-all nil)
@@ -6689,7 +6689,10 @@ do the
 
 (exwm-input-set-key (kbd "M-<tab>") 'my/toggle-switch-to-minibuffer)
 
-(exwm-input-set-key (kbd "C-e") 'keyboard-quit)
+(exwm-input-set-key (kbd "<escape>") 'keyboard-quit)
+
+;; (exwm-input-set-key (kbd "C-?") (lambda () (my/exwm-fake-key 'backspace)))
+
 (exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
 (exwm-input-set-key (kbd "C-=") 'my/window-hydra/body)
 
@@ -7065,7 +7068,7 @@ do the
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-l") (lambda () (interactive) (exwm-input--fake-key 'delete)))
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "<backspace>") (lambda () (interactive) (exwm-input--fake-key 'backspace)))))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "DEL") (lambda () (interactive) (exwm-input--fake-key 'backspace)))))
 
 ;; ** Next browser
 ;; (defun my/write-next-config ()
