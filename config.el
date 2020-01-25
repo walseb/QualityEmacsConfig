@@ -3878,7 +3878,7 @@ Borrowed from mozc.el."
   ("M-e" my/change-default-directory nil)
 
   ;; Find
-  ("f" ellocate nil)
+  ("f" my/auto-find nil)
   ("F" my/counsel-ag nil)
 
   ;; Browser
@@ -8354,7 +8354,15 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; (string-to-number number-of-processors))))
 
 ;; * Find
+;; ** Ellocate
 (straight-use-package '(ellocate :type git :host github :repo "walseb/ellocate"))
+
+;; ** Auto find
+(defun my/auto-find ()
+  (interactive)
+  (if (projectile-project-p)
+      (projectile-find-file)
+    (ellocate)))
 
 ;; * Spelling
 (define-prefix-command 'my/spell-map)
