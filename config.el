@@ -3276,11 +3276,11 @@ Borrowed from mozc.el."
 (define-key my/leader-map (kbd "y") 'flycheck-copy-errors-as-kill)
 
 ;; ** Which-key
-(straight-use-package 'which-key)
+;; (straight-use-package 'which-key)
 
-(which-key-mode)
+;; (which-key-mode)
 
-(setq which-key-idle-delay 1)
+;; (setq which-key-idle-delay 1)
 
 ;; ** Yasnippet
 (setq yas-minor-mode-map (make-sparse-keymap))
@@ -6706,8 +6706,7 @@ do the
 ;; (exwm-input-set-key (kbd "M-j") (lambda () (interactive) (exwm-input--fake-key ?\ö)))
 
 ;; ** Exwm-edit
-(setq exwm-edit-bind-default-keys
-      nil)
+(setq exwm-edit-bind-default-keys nil)
 (straight-use-package '(exwm-edit :type git :host github :repo "walseb/exwm-edit" :branch "AllFixes"))
 (require 'exwm-edit)
 (global-exwm-edit-mode 1)
@@ -10035,7 +10034,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
       (setq my/foreground-color-5 (color-darken-name my/foreground-color 25))
       (setq my/foreground-color-6 (color-darken-name my/foreground-color 30))
 
-      (setq my/background-color "#121212")
+      (setq my/background-color (color-darken-name "#292b2e" 10))
+      ;; (setq my/background-color "#121212")
       ;; (setq my/background-color "#212121")
       ;; (setq my/background-color "#232323")
       ;; (setq my/background-color "#000000")
@@ -10113,7 +10113,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   (set-face-attribute 'header-line nil
 		      ;; Green mode line
 		      :foreground my/foreground-color
-		      :background "#052000"
+		      ;; :background "#052000"
+		      :background (color-darken-name "#5d4d7a" 10)
 		      ;; :foreground my/background-color
 		      ;; :background my/foreground-color
 		      )
@@ -10198,7 +10199,9 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (defun my/theme-package-colors ()
   (when (require 'hl-line nil 'noerror)
     ;; (set-face-attribute 'hl-line nil :foreground my/foreground-color :background my/background-color-2 :underline nil)
-    (set-face-attribute 'hl-line nil :foreground my/foreground-color :background (color-darken-name "#00008b" 20) :underline nil))
+    ;; (set-face-attribute 'hl-line nil :foreground my/foreground-color :background (color-darken-name "#00008b" 20) :underline nil)
+    (set-face-attribute 'hl-line nil :foreground my/foreground-color :background "#212026" :underline nil)
+    )
 
   ;;  Show-paren
   (set-face-attribute 'show-paren-match nil :background my/background-color :foreground my/foreground-color)
