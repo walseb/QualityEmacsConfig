@@ -4955,6 +4955,18 @@ the overlay."
 (setq haskell-interactive-mode-read-only t)
 (setq haskell-interactive-popup-errors nil)
 
+;; **** Max memory
+;; (require 'haskell-customize)
+;; (add-to-list 'haskell-process-args-ghci "+RTS")
+;; (add-to-list 'haskell-process-args-ghci "-M1m")
+
+;; (add-to-list 'haskell-process-args-cabal-new-repl "--ghc-option=+RTS")
+;; (add-to-list 'haskell-process-args-cabal-new-repl "--ghc-option=-M1m")
+
+;; This would work but the quotes can't be escaped cause then they are never formatted back to normal quotes again
+;; (add-to-list 'haskell-process-args-cabal-new-repl "--ghc-options="+RTS -M100m"")
+;; (add-to-list 'haskell-process-args-cabal-repl "--ghc-options="+RTS -M100m"")
+
 ;; *** Run expr
 ;; Just patch the :complete to also run eros overlay
 ;; Also removed the (insert "\n") cause it was causing everything that I evaled to add one newline
@@ -6014,7 +6026,7 @@ do the
 ;; *** Espy
 (straight-use-package 'espy)
 
-(setq espy-password-file "~/pass.org.gpg")
+(setq espy-password-file "~/pass/pass.org.gpg")
 
 (define-prefix-command 'my/password-map)
 (define-key my/leader-map (kbd "p") 'my/password-map)
