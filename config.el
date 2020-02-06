@@ -1395,10 +1395,34 @@ Borrowed from mozc.el."
 (my/evil-universal-define-key "M-p" #'evil-previous-visual-line)
 
 ;; *** Move by paragraph easier, switch with evil-replace
-(my/evil-normal-define-key "r" 'evil-forward-paragraph)
-(my/evil-visual-define-key "r" 'evil-forward-paragraph)
-(my/evil-normal-define-key "R" 'evil-backward-paragraph)
-(my/evil-visual-define-key "R" 'evil-backward-paragraph)
+(evil-define-motion my/backward-paragraph (count)
+  "Move to the end of the COUNT-th next paragraph."
+  :jump t
+  :type exclusive
+  (evil-signal-at-bob-or-eob count)
+  (unless (bobp) (forward-line -1))
+  (if count
+      (dotimes (i count)
+	(re-search-backward "^$"))
+    (re-search-backward "^$")
+    ))
+
+(evil-define-motion my/forward-paragraph (count)
+  "Move to the end of the COUNT-th next paragraph."
+  :jump t
+  :type exclusive
+  (evil-signal-at-bob-or-eob count)
+  (unless (eobp) (forward-line))
+  (if count
+      (dotimes (i count)
+	(re-search-forward "^$"))
+    (re-search-forward "^$")
+    ))
+
+(my/evil-normal-define-key "r" 'my/forward-paragraph)
+(my/evil-visual-define-key "r" 'my/forward-paragraph)
+(my/evil-normal-define-key "R" 'my/backward-paragraph)
+(my/evil-visual-define-key "R" 'my/backward-paragraph)
 
 (my/evil-normal-define-key "j" 'evil-replace)
 (my/evil-visual-define-key "j" 'evil-replace)
@@ -6641,8 +6665,9 @@ do the
 	([?\C-t] . [tab])
 	([?\t] . [tab])
 
+	;; ([escape] . [escape])
 	([?\C-g] . [escape])
-	;;([?\e] . [escape])
+	([?\C-e] . [escape])
 
 	;; Firefox hard-coded open url hotkey
 	;;([?\C-o] . [f6])
