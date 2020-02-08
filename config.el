@@ -1399,25 +1399,29 @@ Borrowed from mozc.el."
   "Move to the end of the COUNT-th next paragraph."
   :jump t
   :type exclusive
-  (evil-signal-at-bob-or-eob count)
   (unless (bobp) (forward-line -1))
-  (if count
-      (dotimes (i count)
-	(re-search-backward "^$"))
-    (re-search-backward "^$")
-    ))
+  (evil-signal-at-bob-or-eob count)
+  (when
+      (not (ignore-errors
+	   (if count
+	       (dotimes (i count)
+		 (re-search-backward "^$"))
+	     (re-search-backward "^$"))))
+    (beginning-of-buffer)))
 
 (evil-define-motion my/forward-paragraph (count)
   "Move to the end of the COUNT-th next paragraph."
   :jump t
   :type exclusive
-  (evil-signal-at-bob-or-eob count)
   (unless (eobp) (forward-line))
-  (if count
-      (dotimes (i count)
-	(re-search-forward "^$"))
-    (re-search-forward "^$")
-    ))
+  (evil-signal-at-bob-or-eob count)
+  (when
+      (not (ignore-errors
+	   (if count
+	       (dotimes (i count)
+		 (re-search-forward "^$"))
+	     (re-search-forward "^$"))))
+    (end-of-buffer)))
 
 (my/evil-normal-define-key "r" 'my/forward-paragraph)
 (my/evil-visual-define-key "r" 'my/forward-paragraph)
@@ -2652,8 +2656,8 @@ Borrowed from mozc.el."
   (evil-normal-state)
   (my/narrow-indirect beg end))
 
-(define-key evil-normal-state-map "m" 'my/evil-narrow-indirect)
-(define-key evil-visual-state-map "m" 'my/evil-narrow-indirect)
+(define-key evil-normal-state-map "M" 'my/evil-narrow-indirect)
+(define-key evil-visual-state-map "M" 'my/evil-narrow-indirect)
 
 ;; **** Evil-goggle support
 (add-to-list 'evil-goggles--commands '(my/evil-narrow-indirect :face evil-goggles-yank-face :switch evil-goggles-enable-yank :advice evil-goggles--generic-async-advice))
@@ -2666,8 +2670,8 @@ Borrowed from mozc.el."
   (evil-normal-state)
   (narrow-to-region beg end))
 
-(define-key evil-normal-state-map "M" 'my/evil-narrow)
-(define-key evil-visual-state-map "M" 'my/evil-narrow)
+(define-key evil-normal-state-map "m" 'my/evil-narrow)
+(define-key evil-visual-state-map "m" 'my/evil-narrow)
 
 ;; *** Universal narrow function
 (defun my/narrow-widen ()
@@ -6514,9 +6518,9 @@ do the
 (my/evil-normal-define-key "C-d" nil)
 
 ;; *** Rebind esc
-;; (define-key input-decode-map (kbd "<escape>") (kbd "C-e"))
-;; (define-key input-decode-map (kbd "C-e") (kbd "<escape>"))
-(keyboard-translate ?\C-e ?\C-\[)
+(define-key input-decode-map (kbd "<escape>") (kbd "C-e"))
+(define-key input-decode-map (kbd "C-e") (kbd "<escape>"))
+;; (keyboard-translate ?\C-e ?\C-\[)
 
 ;; *** Rebind enter
 ;;  (define-key input-decode-map (kbd "RET") (kbd "C-a"))
