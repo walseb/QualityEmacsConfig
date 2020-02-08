@@ -3340,12 +3340,21 @@ Borrowed from mozc.el."
 (require 'ivy-yasnippet)
 (define-key my/leader-map (kbd "i") 'ivy-yasnippet)
 
-;; *** Keys
-(defvar my/yas-init nil)
+;; *** Org-mode fix
+;; https://orgmode.org/manual/Conflicts.html
+;; https://emacs.stackexchange.com/questions/29758/yasnippets-and-org-mode-yas-next-field-or-maybe-expand-does-not-expand
+;; Yasnippet tab-key doesn't work with org-mode. This fixes that
+(defun yas-org-very-safe-expand ()
+  (let ((yas-fallback-behavior 'return-nil)) (yas-expand)))
+(add-hook 'org-mode-hook
+	  (lambda ()
+	    (add-to-list 'org-tab-first-hook 'yas-org-very-safe-expand)
+	    (define-key yas-keymap [tab] 'yas-next-field)))
 
+;; *** Keys
 ;; Maybe unbind yas-expand in normal mode, since you only really do it in insert mode
-(my/evil-normal-define-key "TAB" #'yas-expand)
-(my/evil-insert-define-key "TAB" #'yas-expand)
+;; (my/evil-normal-define-key "TAB" #'yas-expand)
+;; (my/evil-insert-define-key "TAB" #'yas-expand)
 
 ;; * Movement
 ;; ** Loccur
