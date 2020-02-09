@@ -1394,7 +1394,7 @@ Borrowed from mozc.el."
 (my/evil-universal-define-key "M-n" #'evil-next-visual-line)
 (my/evil-universal-define-key "M-p" #'evil-previous-visual-line)
 
-;; *** Move by paragraph easier, switch with evil-replace
+;; *** Move by paragraph
 (defun my/move-paragraph (forward)
   (let ((regex-forward "^\n.*[[:graph:]]")
 	(regex-backward "[[:graph:]].*\n\n"))
