@@ -1400,15 +1400,13 @@ Borrowed from mozc.el."
 	(regex-backward "^\n.*[[:graph:]]"))
     (if forward
 	(if (ignore-errors (re-search-forward regex-forward)) (previous-line)  (end-of-buffer))
-      (unless (ignore-errors (re-search-backward regex-backward))  (beginning-of-buffer)))
+      (unless (ignore-errors (re-search-backward regex-backward)) (beginning-of-buffer)))
     (beginning-of-line)))
 
 (evil-define-motion my/backward-paragraph (count)
   "Move to the end of the COUNT-th next paragraph."
   :jump t
   :type exclusive
-  (unless (bobp) (forward-line -1))
-  (evil-signal-at-bob-or-eob count)
   (if count
       (dotimes (i count)
 	(my/move-paragraph nil))
@@ -1418,8 +1416,6 @@ Borrowed from mozc.el."
   "Move to the end of the COUNT-th next paragraph."
   :jump t
   :type exclusive
-  (unless (eobp) (forward-line))
-  (evil-signal-at-bob-or-eob count)
   (if count
       (dotimes (i count)
 	(my/move-paragraph t))
