@@ -1396,10 +1396,10 @@ Borrowed from mozc.el."
 
 ;; *** Move by paragraph
 (defun my/move-paragraph (forward)
-  (let ((regex-forward "[[:graph:]].*\n\n")
-	(regex-backward "^\n.*[[:graph:]]"))
+  (let ((regex-forward "[[:graph:]].*\n[[:blank:]]*\n")
+	(regex-backward "^[[:blank:]]*\n.*[[:graph:]]"))
     (if forward
-	(if (ignore-errors (re-search-forward regex-forward)) (previous-line)  (end-of-buffer))
+	(if (ignore-errors (re-search-forward regex-forward)) (previous-line) (end-of-buffer))
       (unless (ignore-errors (re-search-backward regex-backward)) (beginning-of-buffer)))
     (beginning-of-line)))
 
