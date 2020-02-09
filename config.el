@@ -1407,16 +1407,11 @@ Borrowed from mozc.el."
     (my/move-paragraph nil)))
 
 (defun my/move-paragraph (forward)
-  (let ((regex "^\n[^\n][^\s]"))
+  (let ((regex "^\n[^\n]*[[:graph:]]"))
     (if forward
-	(progn
-	  (re-search-forward regex)
-	  )
-      (re-search-backward regex)
-      (next-line))
-    (beginning-of-line)
-    (previous-line)
-    ))
+	(if (ignore-errors (re-search-forward regex)) (previous-line) (end-of-buffer))
+      (unless (ignore-errors (re-search-backward regex)) (beginning-of-buffer)))
+    (beginning-of-line)))
 
 (evil-define-motion my/forward-paragraph (count)
   "Move to the end of the COUNT-th next paragraph."
