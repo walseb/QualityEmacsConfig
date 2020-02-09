@@ -1,0 +1,6 @@
+# key: pl
+# name: src-gnuplot
+# --
+#+BEGIN_SRC gnuplot
+
+#+END_SRC

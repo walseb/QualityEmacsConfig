@@ -1401,13 +1401,22 @@ Borrowed from mozc.el."
   :type exclusive
   (unless (bobp) (forward-line -1))
   (evil-signal-at-bob-or-eob count)
-  (when
-      (not (ignore-errors
-	   (if count
-	       (dotimes (i count)
-		 (re-search-backward "^$"))
-	     (re-search-backward "^$"))))
-    (beginning-of-buffer)))
+  (if count
+      (dotimes (i count)
+	(my/move-paragraph nil))
+    (my/move-paragraph nil)))
+
+(defun my/move-paragraph (forward)
+  (let ((regex "^\n[^\n][^\s]"))
+    (if forward
+	(progn
+	  (re-search-forward regex)
+	  )
+      (re-search-backward regex)
+      (next-line))
+    (beginning-of-line)
+    (previous-line)
+    ))
 
 (evil-define-motion my/forward-paragraph (count)
   "Move to the end of the COUNT-th next paragraph."
@@ -1415,13 +1424,10 @@ Borrowed from mozc.el."
   :type exclusive
   (unless (eobp) (forward-line))
   (evil-signal-at-bob-or-eob count)
-  (when
-      (not (ignore-errors
-	   (if count
-	       (dotimes (i count)
-		 (re-search-forward "^$"))
-	     (re-search-forward "^$"))))
-    (end-of-buffer)))
+  (if count
+      (dotimes (i count)
+	(my/move-paragraph t))
+    (my/move-paragraph t)))
 
 (my/evil-normal-define-key "r" 'my/forward-paragraph)
 (my/evil-visual-define-key "r" 'my/forward-paragraph)
@@ -1612,9 +1618,9 @@ Borrowed from mozc.el."
 ;; I thinks this is no longer needed
 ;; Create =.gnus.el=, which gnus reads from
 (defconst my/gnus-config-text "
-   AddYourEmailHereThenDeleteThis
-   (setq mail-host-address \"MyAdress\")
-   ")
+AddYourEmailHereThenDeleteThis
+(setq mail-host-address \"MyAdress\")
+")
 
 (defun my/write-gnus ()
   (my/create-file-with-content-if-not-exist
@@ -1623,9 +1629,9 @@ Borrowed from mozc.el."
 ;; ** Write .Xdefaults
 ;; emacs. commands to disable scrollbar, etc before launching emacs, improving startup time
 (defconst my/xdefaults-config-text "
-   emacs.toolBar: 0
-   emacs.menuBar: 0
-   emacs.verticalScrollBars: off")
+emacs.toolBar: 0
+emacs.menuBar: 0
+emacs.verticalScrollBars: off")
 
 (defun my/write-xdefaults ()
   (my/create-file-with-content-if-not-exist "~/.Xdefaults" my/xdefaults-config-text))
@@ -1635,20 +1641,20 @@ Borrowed from mozc.el."
 ;; setxkbmap to select keyboard layout
 
 (defconst my/xinit-config-text "
-   xset s off
-   xset s noblank
-   xset s off
-   xset s off -dpms
+xset s off
+xset s noblank
+xset s off
+xset s off -dpms
 
-   setxkbmap -layout us -variant altgr-intl
-   # setxkbmap -layout carpalx -variant qgmlwy
+setxkbmap -layout us -variant altgr-intl
+# setxkbmap -layout carpalx -variant qgmlwy
 
-   # xmodmap ~./xmodmap
+# xmodmap ~./xmodmap
 
-   # Fix java windows in exwm
-   export _JAVA_AWT_WM_NONREPARENTING=1
+# Fix java windows in exwm
+export _JAVA_AWT_WM_NONREPARENTING=1
 
-   exec emacs")
+exec emacs")
 
 (defun my/write-xinitrc ()
   (my/create-file-with-content-if-not-exist "~/.xinitrc" my/xinit-config-text))
@@ -1656,32 +1662,32 @@ Borrowed from mozc.el."
 ;; ** Write .xmodmap
 ;; This swaps capslock and ctrl
 (defconst my/xmodmap-config-text "
-   ! Swap Caps_Lock and Control_L
-   remove Lock = Caps_Lock
-   remove Control = Control_L
-   keysym Control_L = Caps_Lock
-   keysym Caps_Lock = Control_L
-   add Lock = Caps_Lock
-   add Control = Control_L
-   ")
+! Swap Caps_Lock and Control_L
+remove Lock = Caps_Lock
+remove Control = Control_L
+keysym Control_L = Caps_Lock
+keysym Caps_Lock = Control_L
+add Lock = Caps_Lock
+add Control = Control_L
+")
 
 (defun my/write-xmodmap ()
   (my/create-file-with-content-if-not-exist "~/.xmodmap" my/xmodmap-config-text))
 
 ;; ** Write mpd
 (defconst my/mpd-config-text "
-   music_directory \"~/Music\"
-   playlist_directory  \"~/.config/mpd/playlists\"
-   db_file \"~/.config/mpd/mpd.db\"
-   log_file \"~/.config/mpd/mpd.log\"
-   bind_to_address \"127.0.0.1\"
-   port \"6600\"
+music_directory \"~/Music\"
+playlist_directory  \"~/.config/mpd/playlists\"
+db_file \"~/.config/mpd/mpd.db\"
+log_file \"~/.config/mpd/mpd.log\"
+bind_to_address \"127.0.0.1\"
+port \"6600\"
 
-   # For pulse audio
-   audio_output {
-   type \"pulse\"
-   name \"pulse audio\"
-   }")
+# For pulse audio
+audio_output {
+type \"pulse\"
+name \"pulse audio\"
+}")
 
 (defun my/write-mpd-config ()
   (let* ((config-dir "~/.config/")
@@ -1707,7 +1713,7 @@ Borrowed from mozc.el."
 
 ;; ** Write cabal config
 (defconst my/nix-config-text "nix: true
-   documentation: True")
+documentation: True")
 
 (defun my/write-cabal-config ()
   (let* ((cabal-dir "~/.cabal/")
@@ -1909,11 +1915,11 @@ Borrowed from mozc.el."
 ;; ** Redefine keyboard-escape-quit
 (defun keyboard-escape-quit ()
   "Exit the current \"mode\" (in a generalized sense of the word).
-   This command can exit an interactive command such as `query-replace',
-   can clear out a prefix argument or a region,
-   can get out of the minibuffer or other recursive edit,
-   cancel the use of the current buffer (for special-purpose buffers),
-   or go back to just one window (by deleting all but the selected window)."
+This command can exit an interactive command such as `query-replace',
+can clear out a prefix argument or a region,
+can get out of the minibuffer or other recursive edit,
+cancel the use of the current buffer (for special-purpose buffers),
+or go back to just one window (by deleting all but the selected window)."
   (interactive)
   (cond ((eq last-command 'mode-exited) nil)
 	((region-active-p)
@@ -2258,21 +2264,10 @@ Borrowed from mozc.el."
 
 ;; ** Babel
 ;; *** Supported runnable languages
-;;   ;; (org-babel-do-load-languages
-;;    ;; 'org-babel-load-languages
-;;    ;; '((R . t)
-;;      ;; (ditaa . t)
-;;      ;; (dot . t)
-;;      ;; (emacs-lisp . t)
-;;      ;; (gnuplot . t)
-;;      ;; (haskell . nil)
-;;      ;; (ocaml . nil)
-;;      ;; (python . t)
-;;      ;; (ruby . t)
-;;      ;; (screen . nil)
-;;      ;; (sh . t)
-;;      ;; (sql . nil)
-;;      ;; (sqlite . t)))
+(org-babel-do-load-languages
+ 'org-babel-load-languages
+ '((emacs-lisp . t)
+   (gnuplot . t)))
 
 ;; *** Disable warnings in org mode before evaluating source block
 (setq org-confirm-babel-evaluate nil)
@@ -3871,6 +3866,8 @@ Borrowed from mozc.el."
   ;; Resize right
   ;;("<delete>" (evil-window-decrease-width 10) nil)
   ;; ("<deletechar>" (evil-window-decrease-width 10) nil)
+
+  ("<deletechar>" (evil-window-decrease-width 10) nil)
   ("DEL" (evil-window-decrease-width 10) nil)
   ;; Resize left
   ;;("\b" (evil-window-increase-width 10) nil)
@@ -4458,7 +4455,9 @@ Borrowed from mozc.el."
       ('org-mode (org-babel-execute-src-block nil nil '((:result-params . ("pp")))))
       ('scheme-mode (geiser-eval-definition nil))
       ('clojure-mode (cider-eval-last-sexp))
-      ('racket-mode (racket-eval-last-sexp))
+      ;; ('racket-mode (geiser-eval-definition nil))
+      ;; ('racket-mode (racket-eval-last-sexp))
+      ('racket-mode (my/racket-send-last-sexp))
       ('plantuml-mode (plantuml-preview-region 0 (line-beginning-position) (line-end-position)))
       ('fsharp-mode (fsharp-eval-phrase))
       ('c-mode (cling-send-region (line-beginning-position) (line-end-position)))
@@ -4476,6 +4475,7 @@ Borrowed from mozc.el."
     ('c-mode (cling-send-region beg end))
     ('c++-mode (cling-send-region beg end))
     ('csharp-mode (my/csharp-run-repl))
+    ('racket-mode (racket--send-region-to-repl beg end))
     ;; ('haskell-mode (save-selected-window (my/haskell-interactive-copy-string-to-prompt (buffer-substring-no-properties beg end)) (haskell-interactive-bring) (goto-char (point-max)) (re-search-backward (haskell-interactive-prompt-regex)) (end-of-line) (recenter) ))
     ('haskell-mode (save-excursion (my/haskell-interactive-mode-run-expr (buffer-substring-no-properties beg end))))
 
@@ -4497,6 +4497,7 @@ Borrowed from mozc.el."
     ('c-mode (cling-send-buffer))
     ('c++-mode (cling-send-buffer))
     ('csharp-mode (my/csharp-run-repl))
+    ('racket-mode (racket--send-region-to-repl (point-min) (point-max)))
     ('haskell-mode (progn (haskell-process-load-file) (haskell-interactive-bring) (end-of-buffer) (recenter)))
     ;; For now disable elisp evaluation
     (_ (when (not (string= (buffer-name) "config.el"))
@@ -4687,27 +4688,37 @@ Borrowed from mozc.el."
 
 ;; *** Racket
 (straight-use-package 'racket-mode)
+(add-hook 'racket-mode-hook (lambda () (setq-local flycheck-check-syntax-automatically '(save))))
+
+(defun my/racket-send-last-sexp ()
+  (save-excursion
+    (goto-char (+ 1 (point)))
+    (racket-send-last-sexp)))
 
 ;; **** Fix eval
-(defun racket-eval-last-sexp ()
-  "Eval the previous sexp asynchronously and `message' the result."
-  (interactive)
-  (racket--cmd/async
-   `(eval
-     ,(buffer-substring-no-properties (racket--repl-last-sexp-start)
-				      (+ 1(point))))
-   (lambda (v)
-     (message "%s" v))))
+;; (with-eval-after-load 'racket-mode
+;;   (defun racket-eval-last-sexp ()
+;;     "Eval the previous sexp asynchronously and `message' the result."
+;;     (interactive)
+;;     (racket--cmd/async
+;;      `(eval
+;;        ,(buffer-substring-no-properties (racket--repl-last-sexp-start)
+;;					(+ 1(point))))
+;;      (lambda (v)
+;;        (message "%s" v))))
 
-(defun racket--repl-last-sexp-start ()
-  (save-excursion
-    (condition-case ()
-	(progn
-	  (my/backward-sexp)
-	  (if (save-match-data (looking-at "#;"))
-	      (+ (point) 2)
-	    (point)))
-      (scan-error (user-error "There isn't a complete s-expression before point")))))
+;;   (defun racket--repl-last-sexp-start ()
+;;     (save-excursion
+;;       (condition-case ()
+;;	  (progn
+;;	    (my/backward-sexp)
+;;	    (if (save-match-data (looking-at "#;"))
+;;		(+ (point) 2)
+;;	      (point)))
+;;	(scan-error (user-error "There isn't a complete s-expression before point"))))))
+
+;; **** Keys
+(setq racket-repl-mode-map (make-sparse-keymap))
 
 ;; *** Emacs-lisp
 ;; **** Eros
@@ -5661,6 +5672,9 @@ do the
 
 ;; *** Debugger
 (straight-use-package 'dap-mode)
+
+;; ** Gnuplot
+(straight-use-package 'gnuplot)
 
 ;; ** Structural editing
 ;; *** Lispy
@@ -8670,7 +8684,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; ** Image mode
 (require 'image-mode)
 
-(add-hook 'image-mode-hook (lambda () (interactive) (display-line-numbers-mode -1)))
+(add-hook 'image-mode-hook (lambda () (display-line-numbers-mode -1)))
+(add-hook 'image-mode-hook (lambda () (auto-revert-mode 1)))
 
 ;; Make animated images loop
 (setq image-animate-loop t)
@@ -9234,6 +9249,17 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (setq c-font-lock-keywords-1 '())
 (setq c-font-lock-keywords-2 '())
 (setq c-font-lock-keywords-3 '())
+
+;; **** Racket
+(setq racket-font-lock-keywords '())
+(setq racket-font-lock-keywords-0 '())
+(setq racket-font-lock-keywords-1 '())
+(setq racket-font-lock-keywords-2 '())
+(setq racket-font-lock-keywords-3 '())
+(setq racket-font-lock-keywords-level-0 '())
+(setq racket-font-lock-keywords-level-1 '())
+(setq racket-font-lock-keywords-level-2 '())
+(setq racket-font-lock-keywords-level-3 '())
 
 ;; ** Modeline
 ;; Make mode line appear in echo area instead of in the mode line area. This saves space and makes it so that the mode line can't be split
