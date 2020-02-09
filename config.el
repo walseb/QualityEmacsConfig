@@ -1395,6 +1395,13 @@ Borrowed from mozc.el."
 (my/evil-universal-define-key "M-p" #'evil-previous-visual-line)
 
 ;; *** Move by paragraph easier, switch with evil-replace
+(defun my/move-paragraph (forward)
+  (let ((regex "^\n[^\n]*[[:graph:]]"))
+    (if forward
+	(if (ignore-errors (re-search-forward regex)) (previous-line) (end-of-buffer))
+      (unless (ignore-errors (re-search-backward regex)) (beginning-of-buffer)))
+    (beginning-of-line)))
+
 (evil-define-motion my/backward-paragraph (count)
   "Move to the end of the COUNT-th next paragraph."
   :jump t
@@ -1405,13 +1412,6 @@ Borrowed from mozc.el."
       (dotimes (i count)
 	(my/move-paragraph nil))
     (my/move-paragraph nil)))
-
-(defun my/move-paragraph (forward)
-  (let ((regex "^\n[^\n]*[[:graph:]]"))
-    (if forward
-	(if (ignore-errors (re-search-forward regex)) (previous-line) (end-of-buffer))
-      (unless (ignore-errors (re-search-backward regex)) (beginning-of-buffer)))
-    (beginning-of-line)))
 
 (evil-define-motion my/forward-paragraph (count)
   "Move to the end of the COUNT-th next paragraph."
