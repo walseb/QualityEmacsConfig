@@ -575,6 +575,9 @@
 (setq mode-line-format nil)
 (setq-default mode-line-format nil)
 
+;; ** Disable frame resize on font change
+(setq frame-inhibit-implied-resize t)
+
 ;; * Security
 (setq network-security-level 'high)
 
