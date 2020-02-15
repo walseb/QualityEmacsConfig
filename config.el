@@ -3330,18 +3330,6 @@ or go back to just one window (by deleting all but the selected window)."
 (require 'ivy-yasnippet)
 (define-key my/leader-map (kbd "i") 'ivy-yasnippet)
 
-;; *** Org-mode yasnippet fix
-;; https://orgmode.org/manual/Conflicts.html
-;; https://emacs.stackexchange.com/questions/29758/yasnippets-and-org-mode-yas-next-field-or-maybe-expand-does-not-expand
-;; Yasnippet tab-key doesn't work with org-mode. This fixes that
-;; (defun yas-org-very-safe-expand ()
-;;   (interactive)
-;;   (let ((yas-fallback-behavior 'return-nil)) (yas-expand)))
-;; (add-hook 'org-mode-hook
-;;	  (lambda ()
-;;	    (add-to-list 'org-tab-first-hook 'yas-org-very-safe-expand)
-;;	    (define-key yas-keymap [tab] 'yas-next-field)))
-
 ;; ** Autotab
 ;; By default modes like outshine and org-mode redefines TAB. This changes the meaning of tab depending on modes
 ;; If for example you are in org-mode it checks if org-cycle did anything, if it didn't, then run yas-expand
@@ -3353,7 +3341,7 @@ or go back to just one window (by deleting all but the selected window)."
 	 (ignore-errors (progn
 			  (org-cycle)
 			  ;; This is here so that "ignore-errors" doesn't return nil, cause then you wouldn't know if an error occurred or not
-			  1
+			  t
 			  ))
        (call-interactively 'yas-expand)))
     (_
