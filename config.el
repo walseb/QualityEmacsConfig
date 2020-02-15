@@ -1403,7 +1403,7 @@ Borrowed from mozc.el."
 	(regex-backward "^[[:blank:]]*\n.*[[:graph:]]"))
     (if forward
 	(if (ignore-errors (re-search-forward regex-forward)) (previous-line) (end-of-buffer))
-      (unless (ignore-errors (re-search-backward regex-backward)) (beginning-of-buffer)))
+      (unless (ignore-errors (forward-line 1) (re-search-backward regex-backward)) (beginning-of-buffer)))
     (beginning-of-line)))
 
 (evil-define-motion my/backward-paragraph (count)
