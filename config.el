@@ -5952,8 +5952,9 @@ do the
   (interactive "<R>")
   (evil-normal-state)
   (save-restriction
+    (beginning-of-line)
+    (narrow-to-region (point) end)
     (goto-char beg)
-    (narrow-to-region beg end)
     ;; current-prefix-arg here is used because I don't know how to access the universal argument in this function
     (my/macro-run current-prefix-arg)))
 
