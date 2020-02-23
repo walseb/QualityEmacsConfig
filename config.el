@@ -3806,12 +3806,9 @@ or go back to just one window (by deleting all but the selected window)."
 (defun my/toggle-switch-to-minibuffer ()
   "Switch to minibuffer window."
   (interactive)
-  (if (active-minibuffer-window)
-      (progn
-	(if (string= major-mode "minibuffer-inactive-mode")
-	    (select-window (previous-window))
-	  (select-window (active-minibuffer-window))))
-    (error "Minibuffer is not active")))
+  (if (window-minibuffer-p)
+      (select-window (minibuffer-selected-window))
+    (select-window (active-minibuffer-window))))
 
 (define-key my/keys-mode-map (kbd "C-j") 'my/toggle-switch-to-minibuffer)
 (my/evil-universal-define-key "C-j" 'my/toggle-switch-to-minibuffer)
@@ -5220,10 +5217,10 @@ do the
 (straight-use-package 'company-cabal)
 
 ;; *** Fix lockup
-;; This fixes a lockup that sometimes happens. I think this has to do with flycheck-mode
-(add-hook 'haskell-mode-hook (lambda ()
-			       ;; Fixes lockups due to prettify-symbol I think
-			       (setq-local syntax-propertize-function nil)))
+;; ;; This fixes a lockup that sometimes happens. I think this has to do with flycheck-mode
+;; (add-hook 'haskell-mode-hook (lambda ()
+;;			       ;; Fixes lockups due to prettify-symbol I think
+;;			       (setq-local syntax-propertize-function nil)))
 
 ;; *** lsp-haskell
 (when my/haskell-hie-enable
