@@ -2446,8 +2446,13 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; ** Eldoc
 (straight-use-package 'org-plus-contrib)
+
+(with-eval-after-load 'org
+  (require 'org-refile))
+
 ;; (require 'org-eldoc)
 ;; (require 'org-src)
+
 (add-hook 'org-mode-hook #'org-eldoc-load)
 
 ;; *** Fix error
