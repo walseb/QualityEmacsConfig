@@ -1032,6 +1032,10 @@
 (setq evil-insert-state-cursor '("orange" box))
 (setq evil-replace-state-cursor '("green" box))
 (setq evil-operator-state-cursor '("white" hollow))
+(setq evil-motion-state-cursor '("blue" box))
+
+;; *** Disable evil-maps override
+(setq evil-overriding-maps nil)
 
 ;; *** Disable emacs mode
 (setq evil-emacs-state-modes nil)
