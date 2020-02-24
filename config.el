@@ -570,13 +570,32 @@
 ;; This is the full error:
 ;; Error in post-command-hook (prettify-symbols--post-command-hook): (args-out-of-range 2689 2691)
 
-;; * First
-;; Things to do first
-(setq mode-line-format nil)
-(setq-default mode-line-format nil)
+;; * Startup processes
+;; ** Garbage collection
+(setq garbage-collection-messages t)
+
+(setq my/after-gc-mem gc-cons-threshold)
+(setq gc-cons-threshold 800000000)
 
 ;; ** Disable frame resize on font change
 (setq frame-inhibit-implied-resize t)
+
+;; ** Stop custom from writing to init
+;; Stop custom from editing init.el
+(setq custom-file (concat user-emacs-directory ".emacs-custom.el"))
+
+;; ** Disable mode-line
+(setq mode-line-format nil)
+(setq-default mode-line-format nil)
+
+;; ** Theme
+(unless custom-enabled-themes
+  (load-theme 'myTheme t))
+
+;; ** Prevent async command from opening new window
+;; Buffers that I don't want popping up by default
+(add-to-list 'display-buffer-alist
+	     '("\\*Async Shell Command\\*.*" display-buffer-no-window))
 
 ;; * Security
 (setq network-security-level 'high)
@@ -591,18 +610,19 @@
 
 ;; * Package management
 ;; Bootstrap straight.el
-(defvar bootstrap-version)
-(let ((bootstrap-file
-       (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
-      (bootstrap-version 5))
-  (unless (file-exists-p bootstrap-file)
-    (with-current-buffer
-	(url-retrieve-synchronously
-	 "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
-	 'silent 'inhibit-cookies)
-      (goto-char (point-max))
-      (eval-print-last-sexp)))
-  (load bootstrap-file nil 'nomessage))
+(eval-and-compile
+  (defvar bootstrap-version)
+  (let ((bootstrap-file
+	 (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
+	(bootstrap-version 5))
+    (unless (file-exists-p bootstrap-file)
+      (with-current-buffer
+	  (url-retrieve-synchronously
+	   "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
+	   'silent 'inhibit-cookies)
+	(goto-char (point-max))
+	(eval-print-last-sexp)))
+    (load bootstrap-file nil 'nomessage)))
 
 ;; * Private config
 (defun my/load-if-exists (f)
@@ -622,8 +642,6 @@
 (straight-use-package 's)
 (straight-use-package 'dash)
 (straight-use-package 'ov)
-(require 's)
-(require 'dash)
 
 ;; ** Elpatch
 (straight-use-package 'el-patch)
@@ -743,8 +761,6 @@
 
 ;; ** File size human readable
 ;; Default file-size-human-readable returns decimal values
-(require 'files)
-
 (defun my/file-size-human-readable (file-size &optional flavor decimal)
   "Produce a string showing FILE-SIZE in human-readable form.
 
@@ -757,6 +773,8 @@
     If FLAVOR is `iec', each kilobyte is 1024 bytes and the produced suffixes
        are \"KiB\", \"MiB\", \"GiB\", \"TiB\", etc.
     If DECIMAL is true, a decimal number is returned"
+  (require 'files)
+
   (setq 1024Decimal (if decimal 1024.0 1024))
   (setq 1000Decimal (if decimal 1000.0 1000))
 
@@ -893,26 +911,6 @@
   ;; Set symbol font
   (set-fontset-font t 'symbol my/symbol-font))
 
-
-;; * Startup processes
-;; ** Prevent async command from opening new window
-;; Buffers that I don't want popping up by default
-(add-to-list 'display-buffer-alist
-	     '("\\*Async Shell Command\\*.*" display-buffer-no-window))
-
-;; ** Check if OS is fully compatible
-(defvar fully-compatible-system (or (eq system-type 'gnu/linux)(eq system-type 'gnu)(eq system-type 'gnu/kfreebsd)))
-
-;; ** Garbage collection
-(setq garbage-collection-messages t)
-
-(setq my/after-gc-mem gc-cons-threshold)
-(setq gc-cons-threshold 800000000)
-
-;; ** Disable custom
-;; Stop custom from editing init.el
-(setq custom-file (concat user-emacs-directory ".emacs-custom.el"))
-
 ;; * Evil
 (setq evil-search-module 'evil-search)
 (setq evil-vsplit-window-right t)
@@ -923,15 +921,16 @@
 (setq evil-ex-interactive-search-highlight t)
 (setq evil-ex-search-persistent-highlight nil)
 
-(straight-use-package 'evil)
-(require 'evil)
+(eval-and-compile
+  (straight-use-package 'evil)
+  (require 'evil)
+  (require 'evil-macros))
 
 ;; (fset 'evil-visual-update-x-selection 'ignore)
 (evil-mode)
 
 ;; ** Evil-goggles support
 (straight-use-package 'evil-goggles)
-(require 'evil-goggles)
 
 (add-hook 'after-init-hook 'evil-goggles-mode)
 
@@ -939,7 +938,8 @@
 (setq evil-goggles-pulse nil)
 (setq evil-goggles-duration 60)
 
-(evil-goggles-use-diff-faces)
+(with-eval-after-load 'evil-goggles
+  (evil-goggles-use-diff-faces))
 
 ;; ** Minibuffer
 ;; Enable evil in minibuffer
@@ -1074,12 +1074,13 @@
 ;; *** Evil-entire-buffer
 ;; Modify entire buffer - for example: "d a e"
 ;; https://github.com/supermomonga/evil-textobj-entire
-(evil-define-text-object evil-entire-entire-buffer (count &optional beg end type)
+;; I eval the expression here because `evil-define-text-object' doesn't work after it's byte-compiled and evaling prevents that from happening
+(evil-define-text-object evil-entire-buffer (count &optional beg end type)
   "Select entire buffer"
   (evil-range (point-min) (point-max)))
 
-(define-key evil-outer-text-objects-map "e" 'evil-entire-entire-buffer)
-(define-key evil-inner-text-objects-map "e" 'evil-entire-entire-buffer)
+(define-key evil-outer-text-objects-map "e" 'evil-entire-buffer)
+(define-key evil-inner-text-objects-map "e" 'evil-entire-buffer)
 
 ;; *** Evil-line
 ;; https://github.com/syohex/evil-textobj-line
@@ -1132,37 +1133,38 @@
 	("“" . "”")))
 
 ;; *** Evil commentary
-(straight-use-package 'evil-commentary)
+(with-eval-after-load 'evil
+  (straight-use-package 'evil-commentary)
+  (evil-commentary-mode))
 
-(evil-define-key 'normal evil-commentary-mode-map ":" 'evil-commentary-line)
-(evil-define-key '(normal visual) evil-commentary-mode-map ";" 'evil-commentary)
-
-(evil-define-key 'normal evil-commentary-mode-map "gY" 'evil-commentary-yank-line)
+(with-eval-after-load 'evil-commentary
+  (evil-define-key 'normal evil-commentary-mode-map ":" 'evil-commentary-line)
+  (evil-define-key '(normal visual) evil-commentary-mode-map ";" 'evil-commentary)
+  (evil-define-key 'normal evil-commentary-mode-map "gY" 'evil-commentary-yank-line))
 
 ;; **** Allow commenting empty line
 ;; Because of some reason emacs crashes with undo tree error if this isn't run late
-(add-hook 'after-init-hook
-	  (lambda ()
-	    (evil-commentary-mode)
+;; (add-hook 'after-init-hook 'evil-commentary-mode)
 
-	    (evil-define-operator evil-commentary-line (beg end type)
-	      "Comment or uncomment [count] lines."
-	      :motion evil-line
-	      :move-point nil
-	      (interactive "<R>")
-	      (when (evil-visual-state-p)
-		(unless (memq type '(line block))
-		  (let ((range (evil-expand beg end 'line)))
-		    (setq beg (evil-range-beginning range)
-			  end (evil-range-end range)
-			  type (evil-type range))))
-		(evil-exit-visual-state))
-	      ;; If current line is blank
-	      (if (save-excursion
-		    (beginning-of-line)
-		    (looking-at "[[:space:]]*$"))
-		  (insert comment-start)
-		(evil-commentary beg end type)))))
+(with-eval-after-load 'evil-commentary
+  (evil-define-operator evil-commentary-line (beg end type)
+    "Comment or uncomment [count] lines."
+    :motion evil-line
+    :move-point nil
+    (interactive "<R>")
+    (when (evil-visual-state-p)
+      (unless (memq type '(line block))
+	(let ((range (evil-expand beg end 'line)))
+	  (setq beg (evil-range-beginning range)
+		end (evil-range-end range)
+		type (evil-type range))))
+      (evil-exit-visual-state))
+    ;; If current line is blank
+    (if (save-excursion
+	  (beginning-of-line)
+	  (looking-at "[[:space:]]*$"))
+	(insert comment-start)
+      (evil-commentary beg end type))))
 
 ;; *** Evil-eval operator
 (evil-define-operator evil-eval (beg end type)
@@ -1174,7 +1176,8 @@
 (my/evil-normal-define-key "?" 'my/auto-eval)
 
 ;; **** Add evil-goggle command
-(add-to-list 'evil-goggles--commands '(evil-eval :face evil-goggles-yank-face :switch evil-goggles-enable-yank :advice evil-goggles--generic-async-advice))
+(with-eval-after-load 'evil-goggles
+  (add-to-list 'evil-goggles--commands '(evil-eval :face evil-goggles-yank-face :switch evil-goggles-enable-yank :advice evil-goggles--generic-async-advice)))
 
 ;; *** Evil-surround
 (straight-use-package 'evil-surround)
@@ -1226,10 +1229,11 @@
 		(?f . evil-surround-function)))
 
 ;; **** Keys
-(evil-define-key 'normal evil-surround-mode-map (kbd ",") 'evil-surround-edit)
-(evil-define-key 'normal evil-surround-mode-map (kbd "C-,") 'evil-Surround-edit)
-(evil-define-key 'visual evil-surround-mode-map (kbd ",") 'evil-surround-region)
-(evil-define-key 'visual evil-surround-mode-map (kbd "C-,") 'evil-Surround-region)
+(with-eval-after-load 'evil-surround
+  (evil-define-key 'normal evil-surround-mode-map (kbd ",") 'evil-surround-edit)
+  (evil-define-key 'normal evil-surround-mode-map (kbd "C-,") 'evil-Surround-edit)
+  (evil-define-key 'visual evil-surround-mode-map (kbd ",") 'evil-surround-region)
+  (evil-define-key 'visual evil-surround-mode-map (kbd "C-,") 'evil-Surround-region))
 
 ;; *** Evil-args
 (straight-use-package 'evil-args)
@@ -1364,6 +1368,15 @@ Borrowed from mozc.el."
 ;; ** Fix evil open line
 (setq evil-auto-indent nil)
 
+;; ** Visuals
+(setq evil-emacs-state-cursor '("purple" box))
+(setq evil-normal-state-cursor '("red" box))
+(setq evil-visual-state-cursor '("yellow" box))
+(setq evil-insert-state-cursor '("orange" box))
+(setq evil-replace-state-cursor '("green" box))
+(setq evil-operator-state-cursor '("white" hollow))
+(setq evil-operator-state-cursor '("white" hollow))
+
 ;; ** Keys
 ;; Prevent emacs state from being exited with esc, fixes exwm since it uses emacs state and to exit hydra you have to do esc
 (define-key evil-emacs-state-map (kbd "<escape>") 'keyboard-quit)
@@ -1442,7 +1455,8 @@ Borrowed from mozc.el."
 			     (call-interactively #'delete-char)))
 
 ;; * Hydra
-(straight-use-package 'hydra)
+(eval-and-compile
+  (straight-use-package 'hydra))
 (setq hydra-hint-display-type 'message)
 
 ;; * Leader
@@ -1854,9 +1868,9 @@ documentation: True")
 ;; ** Async
 (straight-use-package 'async)
 
-(require 'async)
-(require 'dired-async)
-(autoload 'dired-async-mode "dired-async.el" nil t)
+;; (require 'async)
+;; (require 'dired-async)
+;; (autoload 'dired-async-mode "dired-async.el" nil t)
 (dired-async-mode 1)
 
 ;; ** Zoom
@@ -1898,14 +1912,15 @@ documentation: True")
 (define-key my/leader-map (kbd "M-h") (lambda () (interactive) (setq cursor-type nil)))
 
 ;; ** Tetris
-(evil-define-key 'insert tetris-mode-map (kbd "p") #'tetris-rotate-next)
-(evil-define-key 'insert tetris-mode-map (kbd "P") #'tetris-rotate-prev)
-(evil-define-key 'insert tetris-mode-map (kbd "n") #'tetris-move-down)
-(evil-define-key 'insert tetris-mode-map (kbd "N") #'tetris-move-bottom)
-(evil-define-key 'insert tetris-mode-map (kbd "h") #'tetris-move-left)
-(evil-define-key 'insert tetris-mode-map (kbd "l") #'tetris-move-right)
+(with-eval-after-load 'tetris
+  (evil-define-key 'insert tetris-mode-map (kbd "p") #'tetris-rotate-next)
+  (evil-define-key 'insert tetris-mode-map (kbd "P") #'tetris-rotate-prev)
+  (evil-define-key 'insert tetris-mode-map (kbd "n") #'tetris-move-down)
+  (evil-define-key 'insert tetris-mode-map (kbd "N") #'tetris-move-bottom)
+  (evil-define-key 'insert tetris-mode-map (kbd "h") #'tetris-move-left)
+  (evil-define-key 'insert tetris-mode-map (kbd "l") #'tetris-move-right)
 
-(evil-define-key 'insert tetris-mode-map (kbd "SPC") #'tetris-move-bottom)
+  (evil-define-key 'insert tetris-mode-map (kbd "SPC") #'tetris-move-bottom))
 
 ;; ** Redefine keyboard-escape-quit
 (defun keyboard-escape-quit ()
@@ -2066,7 +2081,8 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; ** Scratch
 ;; Kill the initial scratch buffer
-(kill-buffer "*scratch*")
+(ignore-errors
+  (kill-buffer "*scratch*"))
 
 (defun my/switch-to-scratch()
   (interactive)
@@ -2142,14 +2158,12 @@ or go back to just one window (by deleting all but the selected window)."
   (run-hooks 'my/open-map-hook))
 (define-key my/open-map (kbd "C-r") 'my/config-reload)
 
-
 ;; ** Open trash
 (defun my/trash-visit ()
   (interactive)
   (find-file "~/.local/share/Trash/files/")
   (run-hooks 'my/open-map-hook))
 (define-key my/open-map (kbd "t") 'my/trash-visit)
-
 
 ;; ** Open agenda
 (defun my/org-agenda-show-agenda-and-todo (&optional arg)
@@ -2248,33 +2262,33 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; * Org
 (straight-use-package 'org)
-(require 'org)
-(require 'org-agenda)
 
 ;; Set org src indent to be 0
 (setq org-edit-src-content-indentation 0)
 
 (define-prefix-command 'my/org-mode-map)
-(evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a")) #'my/org-mode-map)
+(with-eval-after-load 'org
+  (evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a")) #'my/org-mode-map))
 
 ;; ** Babel
 ;; *** Supported runnable languages
-(org-babel-do-load-languages
- 'org-babel-load-languages
- '((emacs-lisp . t)
-   (gnuplot . t)))
+(with-eval-after-load 'org
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((emacs-lisp . t)
+     (gnuplot . t))))
 
 ;; *** Disable warnings in org mode before evaluating source block
 (setq org-confirm-babel-evaluate nil)
 
 ;; ** Bullets
 (straight-use-package 'org-bullets)
-(require 'org-bullets)
 
-(when window-system
-  (if (eq system-type 'windows-nt)
-      (setq inhibit-compacting-font-caches t))
-  (add-hook 'org-mode-hook (lambda () (interactive) (org-bullets-mode))))
+(with-eval-after-load 'org
+  (when window-system
+    (if (eq system-type 'windows-nt)
+	(setq inhibit-compacting-font-caches t))
+    (add-hook 'org-mode-hook (lambda () (interactive) (org-bullets-mode)))))
 
 ;; ** Visuals
 ;; *** Highlight whole heading line
@@ -2291,27 +2305,6 @@ or go back to just one window (by deleting all but the selected window)."
 ;; Should I change this??
 ;; (setq org-edit-src-content-indentation 0)
 
-;; *** Change face of levels
-(defvar my/org-level-1-height 1.9)
-(defvar my/org-level-2-height 1.6)
-(defvar my/org-level-3-height 1.4)
-(defvar my/org-level-4-height 1.3)
-(defvar my/org-level-5-height 1.25)
-(defvar my/org-level-6-height 1.2)
-(defvar my/org-level-7-height 1.15)
-(defvar my/org-level-8-height 1.10)
-
-(set-face-attribute 'org-level-1 nil :inherit 'outline-1) ;;:height my/org-level-1-height)
-(set-face-attribute 'org-level-2 nil :inherit 'outline-2) ;;:height my/org-level-2-height)
-(set-face-attribute 'org-level-3 nil :inherit 'outline-3) ;;:height my/org-level-3-height)
-(set-face-attribute 'org-level-4 nil :inherit 'outline-4) ;;:height my/org-level-4-height)
-(set-face-attribute 'org-level-5 nil :inherit 'outline-5) ;;:height my/org-level-5-height)
-(set-face-attribute 'org-level-6 nil :inherit 'outline-6) ;;:height my/org-level-6-height)
-(set-face-attribute 'org-level-7 nil :inherit 'outline-7) ;;:height my/org-level-7-height)
-(set-face-attribute 'org-level-8 nil :inherit 'outline-8) ;;:height my/org-level-8-height)
-
-;; :weight 'semi-bold
-
 ;; *** Ellipsis face
 (setq org-ellipsis my/fold-ellipsis)
 
@@ -2319,14 +2312,16 @@ or go back to just one window (by deleting all but the selected window)."
 (setq org-startup-truncated nil)
 
 ;; ** Indent mode
-(add-hook 'org-mode-hook 'org-indent-mode)
+(with-eval-after-load 'org
+  (add-hook 'org-mode-hook 'org-indent-mode))
 
 ;; ** Org SRC
 ;; *** Make c-' open in current window
 (setq org-src-window-setup 'current-window)
 
 ;; *** Don't save window layout
-(add-hook 'org-src-mode-hook (lambda () (interactive) (setq org-src--saved-temp-window-config nil)))
+(with-eval-after-load 'org
+  (add-hook 'org-src-mode-hook (lambda () (interactive) (setq org-src--saved-temp-window-config nil))))
 
 ;; *** Rebind key
 (define-key my/leader-map (kbd "'") 'my/toggle-org-src)
@@ -2451,8 +2446,8 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; ** Eldoc
 (straight-use-package 'org-plus-contrib)
-(require 'org-eldoc)
-(require 'org-src)
+;; (require 'org-eldoc)
+;; (require 'org-src)
 (add-hook 'org-mode-hook #'org-eldoc-load)
 
 ;; *** Fix error
@@ -2567,7 +2562,6 @@ or go back to just one window (by deleting all but the selected window)."
 ;; ** Outshine
 (straight-use-package 'outshine)
 ;; (straight-use-package '(outshine :type git :host github :repo "alphapapa/outshine"))
-(require 'outshine)
 
 ;; Clean outshine-mode-map
 (setq outshine-mode-map (make-sparse-keymap))
@@ -2577,7 +2571,6 @@ or go back to just one window (by deleting all but the selected window)."
 (setq outshine-startup-folded-p nil)
 
 ;; ** Outorg
-(require 'outorg)
 (setq outorg-edit-buffer-persistent-message nil)
 (setq outorg-unindent-active-source-blocks-p nil)
 
@@ -2617,6 +2610,7 @@ or go back to just one window (by deleting all but the selected window)."
 (setq counsel-outline-face-style nil)
 
 ;; *** Set outshine fonts to inherit from outline
+(with-eval-after-load 'outshine-mode
 (set-face-attribute 'outshine-level-1 nil :inherit 'outline-1) ;;:height my/org-level-1-height)
 (set-face-attribute 'outshine-level-2 nil :inherit 'outline-2) ;;:height my/org-level-2-height)
 (set-face-attribute 'outshine-level-3 nil :inherit 'outline-3) ;;:height my/org-level-3-height)
@@ -2625,6 +2619,7 @@ or go back to just one window (by deleting all but the selected window)."
 (set-face-attribute 'outshine-level-6 nil :inherit 'outline-6) ;;:height my/org-level-6-height)
 (set-face-attribute 'outshine-level-7 nil :inherit 'outline-7) ;;:height my/org-level-7-height)
 (set-face-attribute 'outshine-level-8 nil :inherit 'outline-8) ;;:height my/org-level-8-height)
+)
 
 ;; *** Fontify whole line
 ;; This makes it so the whole line the heading is on has the heading background color
@@ -2650,7 +2645,8 @@ or go back to just one window (by deleting all but the selected window)."
 (define-key evil-visual-state-map "M" 'my/evil-narrow-indirect)
 
 ;; **** Evil-goggle support
-(add-to-list 'evil-goggles--commands '(my/evil-narrow-indirect :face evil-goggles-yank-face :switch evil-goggles-enable-yank :advice evil-goggles--generic-async-advice))
+(with-eval-after-load 'evil-goggles
+  (add-to-list 'evil-goggles--commands '(my/evil-narrow-indirect :face evil-goggles-yank-face :switch evil-goggles-enable-yank :advice evil-goggles--generic-async-advice)))
 
 ;; *** Narrow
 ;; **** Evil operator
@@ -2742,8 +2738,6 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; ** Folding
 ;; *** Hideshow
-(require 'hideshow)
-
 (defvar my/hs-ignore-modes '(fsharp-mode))
 
 (add-hook 'prog-mode-hook (lambda () (interactive)
@@ -2764,7 +2758,8 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; * Completion
 ;; ** Ivy
-(straight-use-package 'ivy)
+(eval-and-compile
+  (straight-use-package 'ivy))
 (ivy-mode 1)
 
 (setq ivy-use-virtual-buffers nil)
@@ -2802,7 +2797,16 @@ or go back to just one window (by deleting all but the selected window)."
 ;; *** Wgrep
 ;; Needed by ivy-occur to edit buffers
 (straight-use-package 'wgrep)
-(require 'wgrep)
+
+;; *** Fix history
+(defun ivy-next-line-or-history (&optional arg)
+  "Move cursor vertically down ARG candidates.
+If the input is empty, select the previous history element instead."
+  (interactive "p")
+  (let ((orig-index ivy--index))
+    (ivy-next-line arg)
+    (when (string= ivy-text "")
+      (ivy-previous-history-element 1))))
 
 ;; *** Keys
 (defun my/ivy-top ()
@@ -2830,6 +2834,7 @@ or go back to just one window (by deleting all but the selected window)."
 (evil-define-key '(motion normal) ivy-minibuffer-map (kbd "n") 'ivy-next-line)
 (evil-define-key '(motion normal) ivy-minibuffer-map (kbd "p") 'ivy-previous-line)
 
+(require 'evil)
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-n") 'ivy-next-line)
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-p") 'ivy-previous-line)
 
@@ -3010,7 +3015,6 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; ** Ivy rich
 (straight-use-package 'ivy-rich)
-(require 'ivy-rich)
 
 (defvar my/ivy-rich-docstring-spacing 40)
 
@@ -3093,7 +3097,6 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; ** Company
 (straight-use-package 'company)
-(require 'company)
 
 (setq company-idle-delay 0)
 ;; Sets how long before company echoes tooltips in the minibuffer. Normally company and eldocs fights eachother if this is 0. This is fixed using hooks in "Fix company and eldoc"
@@ -3108,7 +3111,8 @@ or go back to just one window (by deleting all but the selected window)."
 ;; Start searching for candidates when 2 letters has been written
 (setq company-minimum-prefix-length 2)
 
-(add-to-list 'company-transformers 'company-sort-prefer-same-case-prefix)
+(with-eval-after-load 'company
+  (add-to-list 'company-transformers 'company-sort-prefer-same-case-prefix))
 
 (setq company-show-numbers t)
 
@@ -3258,7 +3262,6 @@ or go back to just one window (by deleting all but the selected window)."
 ;; *** Flycheck at cursor
 ;; **** Flycheck-posframe
 (straight-use-package 'flycheck-posframe)
-(require 'flycheck-posframe)
 
 (with-eval-after-load 'flycheck
   (add-hook 'flycheck-mode-hook #'flycheck-posframe-mode))
@@ -3304,7 +3307,6 @@ or go back to just one window (by deleting all but the selected window)."
 (setq yas-minor-mode-map (make-sparse-keymap))
 
 (straight-use-package 'yasnippet)
-(require 'yasnippet)
 
 (straight-use-package 'yasnippet-snippets)
 
@@ -3327,7 +3329,6 @@ or go back to just one window (by deleting all but the selected window)."
 ;; *** Ivy integration
 (straight-use-package 'ivy-yasnippet)
 ;; Needed because its font isn't loaded on install, but is needed in theme
-(require 'ivy-yasnippet)
 (define-key my/leader-map (kbd "i") 'ivy-yasnippet)
 
 ;; ** Autotab
@@ -3355,7 +3356,6 @@ or go back to just one window (by deleting all but the selected window)."
 ;; * Movement
 ;; ** Loccur
 (straight-use-package 'loccur)
-(require 'loccur)
 
 (defvar-local my/loccur-search-running nil)
 
@@ -3383,7 +3383,6 @@ or go back to just one window (by deleting all but the selected window)."
 (my/evil-normal-define-key "C-S-s" 'my/loccur-isearch)
 
 ;; ** Isearch
-(require 'isearch)
 (define-key isearch-mode-map (kbd "C-n") 'my/isearch-repeat-forward)
 (define-key isearch-mode-map (kbd "C-p") 'my/isearch-repeat-backward)
 
@@ -3547,7 +3546,6 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; ** Avy
 (straight-use-package 'avy)
-(require 'avy)
 
 (setq avy-all-windows nil)
 
@@ -3794,8 +3792,6 @@ or go back to just one window (by deleting all but the selected window)."
 ;; Remove default keys
 (setq winner-mode-map (make-sparse-keymap))
 
-(require 'winner)
-
 (winner-mode)
 
 ;; ** No more window resetting
@@ -3988,15 +3984,10 @@ or go back to just one window (by deleting all but the selected window)."
 (global-set-key (kbd "C-M-s-k") 'my/kill-all-buffers)
 
 ;; *** Unique names for identical buffer names
-(require 'uniquify)
 (setq uniquify-buffer-name-style 'forward)
 ;; (setq uniquify-buffer-name-style 'post-forward-angle-brackets)
 
 ;; * Dired
-(require 'dired)
-
-(require 'wdired)
-
 ;; ** Disable cluttered major mode
 ;; Dired normally puts the sorting string in the major mode name, this disables that
 (defun dired-sort-set-mode-line ())
@@ -4089,7 +4080,9 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; ** Recursive folder size
 (straight-use-package 'dired-du)
-(require 'dired-du)
+
+(with-eval-after-load 'dired
+  (require 'dired-du))
 
 (setq dired-du-size-format t)
 
@@ -4101,10 +4094,11 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; ** Dired omit-mode
 ;; This hides the this directory and previous directory folders in dired (. and ..)
-(require 'dired-x)
-
 (setq dired-omit-extensions nil)
 (setq dired-omit-files "^\\.$\\|^\\.\\.$")
+
+(with-eval-after-load 'dired
+  (require 'dired-x))
 
 (add-hook 'dired-mode-hook 'dired-omit-mode)
 
@@ -4273,7 +4267,6 @@ or go back to just one window (by deleting all but the selected window)."
 ;; * Gud
 (straight-use-package 'realgud)
 (setq gdb-many-windows 'nil)
-;; (require 'realgud)
 
 ;; * Eldoc
 ;; Shows information in echo area
@@ -4339,7 +4332,6 @@ or go back to just one window (by deleting all but the selected window)."
 ;; **** Ivy-xref
 (straight-use-package 'ivy-xref)
 
-(require 'ivy-xref)
 (setq xref-show-xrefs-function #'ivy-xref-show-xrefs)
 
 ;; *** Smartparens
@@ -4349,7 +4341,6 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; *** Quick-peek
 (straight-use-package 'quick-peek)
-(require 'quick-peek)
 
 (setq quick-peek-spacer nil)
 
@@ -4617,7 +4608,6 @@ or go back to just one window (by deleting all but the selected window)."
 ;; *** LSP-ui
 (straight-use-package 'lsp-ui)
 ;; TODO I have to load the package fully here to set the fonts later
-(require 'lsp-ui)
 
 (add-hook 'lsp-mode-hook 'lsp-ui-mode)
 
@@ -4641,15 +4631,15 @@ or go back to just one window (by deleting all but the selected window)."
 (setq lsp-ui-sideline-delay 0)
 
 ;; *** Flycheck keys
-(define-key lsp-ui-flycheck-list-mode-map [remap evil-ret] 'lsp-ui-flycheck-list--view)
-(define-key lsp-ui-flycheck-list-mode-map [remap newline] 'lsp-ui-flycheck-list--view)
+(with-eval-after-load 'lsp-ui-flycheck
+  (define-key lsp-ui-flycheck-list-mode-map [remap evil-ret] 'lsp-ui-flycheck-list--view)
+  (define-key lsp-ui-flycheck-list-mode-map [remap newline] 'lsp-ui-flycheck-list--view))
 
-;; ** DAP
-;; I have to clear the mode map before it's defined otherwise I can't unbind it
-(setq-default dap-mode-map nil)
+  ;; ** DAP
+  ;; I have to clear the mode map before it's defined otherwise I can't unbind it
+  (setq-default dap-mode-map nil)
 
-(straight-use-package 'dap-mode)
-(require 'dap-mode)
+  (straight-use-package 'dap-mode)
 (dap-mode 1)
 (dap-ui-mode 1)
 
@@ -4659,15 +4649,15 @@ or go back to just one window (by deleting all but the selected window)."
 ;; ** Lisps
 ;; *** Common lisp
 ;; **** Slime
-(straight-use-package 'slime)
+;; (straight-use-package 'slime)
 
-(setq inferior-lisp-program "/usr/bin/sbcl")
-(setq slime-contribs '(slime-fancy))
+;; (setq inferior-lisp-program "/usr/bin/sbcl")
+;; (setq slime-contribs '(slime-fancy))
 
 ;; ***** Slime comany
-(straight-use-package 'slime-company)
+;; (straight-use-package 'slime-company)
 
-(slime-setup '(slime-fancy slime-company))
+;; (slime-setup '(slime-fancy slime-company))
 
 ;; **** Keys
 (define-prefix-command 'my/common-lisp-mode-map)
@@ -4833,7 +4823,6 @@ the overlay."
 ;; **** Litable
 ;; ;;(straight-use-package '(litable :type git :host github :repo "Fuco1/blablabla"))
 ;; (straight-use-package 'litable)
-;; (require 'litable)
 
 ;; ;; Eval everything
 ;; (defun litable--safe-eval (form)
@@ -4903,7 +4892,6 @@ the overlay."
 
 ;; *** Clojure
 (straight-use-package 'clojure-mode)
-(require 'clojure-mode)
 
 ;; **** Cider
 (straight-use-package 'cider)
@@ -4919,7 +4907,6 @@ the overlay."
 
 ;; ** Java
 (straight-use-package 'lsp-java)
-(require 'lsp-java)
 
 (defun my/java-mode ()
   ;; Add configurations for java dap-mode
@@ -4984,7 +4971,8 @@ the overlay."
 (add-hook 'haskell-mode-hook 'my/haskell-mode)
 
 ;; *** org-mode (ob) support
-(require 'ob-haskell)
+(with-eval-after-load 'haskell-mode
+  (require 'ob-haskell))
 
 ;; *** haskell-process
 (setq haskell-process-auto-import-loaded-modules t)
@@ -5390,7 +5378,6 @@ do the
 ;; ** C/CPP
 ;; *** LSP CCLS
 (straight-use-package 'ccls)
-(require 'ccls)
 
 (setq ccls-executable "/bin/ccls")
 
@@ -5677,7 +5664,6 @@ do the
 ;; ** Structural editing
 ;; *** Lispy
 (straight-use-package 'lispy)
-(require 'lispy)
 
 (defhydra my/lispy-hydra (:hint nil
 				:color red
@@ -5810,7 +5796,6 @@ do the
 
 ;; *** Structured haskell mode
 (straight-use-package 'shm)
-(require 'shm-case-split)
 
 (defhydra my/structured-haskell-hydra (:hint nil
 					     :color red
@@ -6123,7 +6108,6 @@ do the
 
 ;; * Eshell
 ;;  https://github.com/howardabrams/dot-files/blob/master/emacs-eshell.org
-(require 'eshell)
 ;; Change to temporary name before renaming. This has to be unique. If it isn't the buffer with the same name will get its major mode changed to eshell
 (setq eshell-buffer-name "*eshell-temp-name*")
 
@@ -6135,7 +6119,8 @@ do the
   (my/give-buffer-unique-name "*eshell*"))
 
 ;; ** Allow to delete prompt
-(add-hook 'eshell-mode-hook (lambda () (setq-local inhibit-read-only t)))
+(with-eval-after-load 'eshell
+  (add-hook 'eshell-mode-hook (lambda () (setq-local inhibit-read-only t))))
 
 ;; ** History
 (setq eshell-highlight-prompt t)
@@ -6161,9 +6146,11 @@ do the
       (let ((eshell-history-ring newest-cmd-ring))
 	(my/append-to-file eshell-history-file-name (concat (car (ring-elements eshell-history-ring)) "\n"))))))
 
-(add-hook 'eshell-pre-command-hook #'my/eshell-append-history)
+(with-eval-after-load 'eshell
+  (add-hook 'eshell-pre-command-hook #'my/eshell-append-history))
 
-(add-hook 'eshell-mode-hook (lambda () (interactive) (setq eshell-exit-hook (remove 'eshell-write-history eshell-exit-hook))))
+(with-eval-after-load 'eshell
+  (add-hook 'eshell-mode-hook (lambda () (interactive) (setq eshell-exit-hook (remove 'eshell-write-history eshell-exit-hook)))))
 
 ;; ** Prefer lisp to bash
 (setq eshell-prefer-lisp-functions nil)
@@ -6279,8 +6266,9 @@ do the
 ;; *** Eshell-help
 (straight-use-package 'esh-help)
 
-(require 'esh-help)
-(setup-esh-help-eldoc)
+(with-eval-after-load 'eshell
+  (require 'esh-help)
+  (setup-esh-help-eldoc))
 
 ;; ** Did you mean
 ;; (straight-use-package 'eshell-did-you-mean)
@@ -6306,10 +6294,11 @@ do the
 (define-key my/leader-map (kbd "{") 'ansi-term)
 
 ;; ** Use ansi term for certain applications
-(require 'em-term)
-(add-to-list 'eshell-visual-commands "vim")
-(add-to-list 'eshell-visual-commands "wifi-menu")
-(add-to-list 'eshell-visual-commands "htop")
+(with-eval-after-load 'eshell
+  (require 'em-term)
+  (add-to-list 'eshell-visual-commands "vim")
+  (add-to-list 'eshell-visual-commands "wifi-menu")
+  (add-to-list 'eshell-visual-commands "htop"))
 
 (setq eshell-visual-subcommands
       '(("git" "log" "diff" "show")
@@ -6398,12 +6387,12 @@ do the
 
 ;; * Keys
 ;; ** Key rebinds
-(require 'evil-maps)
+;;(require 'evil-maps)
 
 ;; *** General
-(straight-use-package 'general)
-
-(general-evil-setup)
+(eval-and-compile
+  (straight-use-package 'general)
+  (general-evil-setup))
 
 ;; *** Language specific symbols
 ;; **** Lower
@@ -6742,8 +6731,6 @@ do the
 ;; https://emacs.stackexchange.com/questions/33326/how-do-i-cut-and-paste-effectively-between-applications-while-using-exwm
 (straight-use-package 'exwm)
 
-(require 'exwm)
-
 ;; enable exwm
 (exwm-enable)
 
@@ -6771,8 +6758,9 @@ do the
 ;; ** Exwm-edit
 (setq exwm-edit-bind-default-keys nil)
 (straight-use-package '(exwm-edit :type git :host github :repo "walseb/exwm-edit" :branch "AllFixes"))
-(require 'exwm-edit)
-(global-exwm-edit-mode 1)
+(with-eval-after-load 'exwm
+  (require 'exwm-edit)
+  (global-exwm-edit-mode 1))
 
 ;; *** Remove header
 (add-hook 'exwm-edit-mode-hook (lambda () (kill-local-variable 'header-line-format)))
@@ -6877,61 +6865,61 @@ do the
 (add-hook 'exwm-init-hook (lambda () (interactive) (exwm-workspace-attach-minibuffer)))
 
 ;; * Shr
-(require 'shr)
-
 ;; ** Fix background colors shr
 ;; Try fixing colors
 ;; (setq shr-color-visible-luminance-min 80)
 ;; (setq shr-color-visible-distance-min 5)
 
 ;; Fully disables colors
-(advice-add #'shr-colorize-region :around (defun shr-no-colourise-region (&rest ignore)))
+(with-eval-after-load 'shr
+  (advice-add #'shr-colorize-region :around (defun shr-no-colourise-region (&rest ignore))))
 
 ;; ** Auto-open image at point
 ;; Redefine function to attempt to open image if link at point wasn't found
-(el-patch-feature shr)
-(el-patch-defun shr-browse-url (&optional external mouse-event)
-  "Browse the URL at point using `browse-url'.
+(with-eval-after-load 'shr
+  (el-patch-feature shr)
+  (el-patch-defun shr-browse-url (&optional external mouse-event)
+    "Browse the URL at point using `browse-url'.
    If EXTERNAL is non-nil (interactively, the prefix argument), browse
    the URL using `shr-external-browser'.
    If this function is invoked by a mouse click, it will browse the URL
    at the position of the click.  Optional argument MOUSE-EVENT describes
    the mouse click event."
-  (interactive (list current-prefix-arg last-nonmenu-event))
-  (mouse-set-point mouse-event)
-  (let ((url (get-text-property (point) 'shr-url)))
-    (cond
-     ((not url)
-      ;; Was unsuccessful in opening link, attempt to open image
-      (shr-browse-image))
-     ((string-match "^mailto:" url)
-      (browse-url-mail url))
-     (t
-      (if external
-	  (funcall shr-external-browser url)
-	(browse-url url))))))
+    (interactive (list current-prefix-arg last-nonmenu-event))
+    (mouse-set-point mouse-event)
+    (let ((url (get-text-property (point) 'shr-url)))
+      (cond
+       ((not url)
+	;; Was unsuccessful in opening link, attempt to open image
+	(shr-browse-image))
+       ((string-match "^mailto:" url)
+	(browse-url-mail url))
+       (t
+	(if external
+	    (funcall shr-external-browser url)
+	  (browse-url url)))))))
 
-;; * Browser
-(defun my/get-search-url ()
-  (interactive)
-  (let ((search (counsel-google)))
-    ;; Don't do a google search for anything that has a dot then a letter
-    ;; There are two (not whitespace) here because otherwise the * wildcard would accept strings without any char after a dot
-    (if (or
-	 (string-match-p (rx whitespace) search)
-	 (not (string-match-p (rx (regexp "\\.") (not whitespace) (not whitespace) (regexp "*") eol) search)))
-	(concat "https://www.google.com/search?q=" search)
-      search)))
+  ;; * Browser
+  (defun my/get-search-url ()
+    (interactive)
+    (let ((search (counsel-google)))
+      ;; Don't do a google search for anything that has a dot then a letter
+      ;; There are two (not whitespace) here because otherwise the * wildcard would accept strings without any char after a dot
+      (if (or
+	   (string-match-p (rx whitespace) search)
+	   (not (string-match-p (rx (regexp "\\.") (not whitespace) (not whitespace) (regexp "*") eol) search)))
+	  (concat "https://www.google.com/search?q=" search)
+	search)))
 
-;; ** w3m
-(straight-use-package 'w3m)
-(when (and (my/is-system-package-installed 'w3m) my/use-w3m)
-  (require 'w3m)
-  (w3m-display-mode 'plain))
+  ;; ** w3m
+  (straight-use-package 'w3m)
+  (when (and (my/is-system-package-installed 'w3m) my/use-w3m)
+    (require 'w3m)
+    (w3m-display-mode 'plain))
 
-(setq w3m-use-title-buffer-name t)
+  (setq w3m-use-title-buffer-name t)
 
-(setq w3m-session-crash-recovery nil)
+  (setq w3m-session-crash-recovery nil)
 
 (setq w3m-search-word-at-point nil)
 
@@ -6982,10 +6970,9 @@ do the
 (evil-define-key 'normal w3m-mode-map (kbd "U") 'w3m-db-history)
 
 ;; ** Eww/shr
-(require 'eww)
-
 ;; *** Add URL to buffer name
-(add-hook 'eww-after-render-hook (lambda () (interactive) (my/give-buffer-unique-name (concat "eww - " (plist-get eww-data :title)))))
+(with-eval-after-load 'eww
+  (add-hook 'eww-after-render-hook (lambda () (interactive) (my/give-buffer-unique-name (concat "eww - " (plist-get eww-data :title))))))
 
 ;; *** Keys
 ;; (define-key eww-mode-map [?\d] 'eww-back-url)
@@ -7032,15 +7019,14 @@ do the
 
 ;; *** Tabs
 ;; http://doc.rix.si/cce/cce-browsers.html
-
-(require 'dbus)
-
 (defun my/browser-activate-tabs-cb (dbus ivy-hash choice)
+  (require 'dbus)
   (funcall dbus "Activate" :int32 (truncate (string-to-number (gethash choice ivy-hash)))))
 
 (defun my/browser-activate-tab ()
   "Activate a browser tab using Ivy. Requires plasma-browser integration"
   (interactive)
+  (require 'dbus)
   (let ((ivy-hash (make-hash-table :test 'equal))
 	(dbus (apply-partially 'dbus-call-method :session
 			       "org.kde.plasma.browser_integration" "/TabsRunner"
@@ -7147,7 +7133,6 @@ do the
 
 ;; * Version control
 ;; ** Ediff
-(require 'ediff)
 (setq-default ediff-forward-word-function 'forward-char)
 
 ;; Stops ediff from creating a new frame dedicated to the control panel
@@ -7157,17 +7142,19 @@ do the
 (setq ediff-split-window-function 'split-window-horizontally)
 
 ;; *** A and B to Ancestor
-(defun ediff-copy-both-to-C ()
-  (interactive)
-  (ediff-copy-diff ediff-current-difference nil 'C nil
-		   (concat
-		    (ediff-get-region-contents ediff-current-difference 'A ediff-control-buffer)
-		    (ediff-get-region-contents ediff-current-difference 'B ediff-control-buffer))))
+(with-eval-after-load 'ediff
+  (defun ediff-copy-both-to-C ()
+    (interactive)
+    (ediff-copy-diff ediff-current-difference nil 'C nil
+		     (concat
+		      (ediff-get-region-contents ediff-current-difference 'A ediff-control-buffer)
+		      (ediff-get-region-contents ediff-current-difference 'B ediff-control-buffer)))))
 
 ;; *** Ediff-dired
 ;; https://oremacs.com/2017/03/18/dired-ediff/
 (defun my/ediff-dired ()
   (interactive)
+  (require 'ediff)
   (let ((files (dired-get-marked-files))
 	(wnd (current-window-configuration)))
     (if (<= (length files) 2)
@@ -7274,14 +7261,12 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (straight-use-package '(forge :type git :host github :repo "magit/forge"))
 
 ;; *** Keys
-(require 'magit)
-(require 'magit-mode)
-
-(evil-define-key '(normal motion) magit-mode-map (kbd "0") 'magit-diff-default-context)
-(evil-define-key '(normal motion) magit-mode-map (kbd "1") #'magit-section-show-level-1)
-(evil-define-key '(normal motion) magit-mode-map  (kbd "2") #'magit-section-show-level-2)
-(evil-define-key '(normal motion) magit-mode-map  (kbd "3") #'magit-section-show-level-3)
-(evil-define-key '(normal motion) magit-mode-map  (kbd "4") #'magit-section-show-level-4)
+(with-eval-after-load 'magit
+  (evil-define-key '(normal motion) magit-mode-map (kbd "0") 'magit-diff-default-context)
+  (evil-define-key '(normal motion) magit-mode-map (kbd "1") #'magit-section-show-level-1)
+  (evil-define-key '(normal motion) magit-mode-map  (kbd "2") #'magit-section-show-level-2)
+  (evil-define-key '(normal motion) magit-mode-map  (kbd "3") #'magit-section-show-level-3)
+  (evil-define-key '(normal motion) magit-mode-map  (kbd "4") #'magit-section-show-level-4))
 
 ;; Can't unbind "s"?
 ;; (my/evil-normal-define-key-in-mode magit-mode-map  "s" 'isearch-forward)
@@ -7294,19 +7279,25 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 (setq diff-hl-side 'right)
 
-(global-diff-hl-mode)
+(add-hook 'after-init-hook (lambda ()
+			     (require 'diff-hl)
+			     (global-diff-hl-mode)))
 
 ;; If there is no fringe (terminal), use margin instead
-(unless (display-graphic-p) (diff-hl-margin-mode))
+(with-eval-after-load 'diff-hl
+  (unless (display-graphic-p) (diff-hl-margin-mode)))
 
-(add-hook 'dired-mode-hook 'diff-hl-dired-mode)
+(with-eval-after-load 'dired
+  (add-hook 'dired-mode-hook 'diff-hl-dired-mode))
 
-(add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh)
+(with-eval-after-load 'magit
+  (add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh))
 
 (setq diff-hl-draw-borders nil)
 
 ;; ** Keys
-(evil-define-key 'insert magit-mode-map (kbd "a") 'evil-append)
+(with-eval-after-load 'magit
+  (evil-define-key 'insert magit-mode-map (kbd "a") 'evil-append))
 
 (define-prefix-command 'my/vc-map)
 (define-key my/leader-map (kbd "v") 'my/vc-map)
@@ -7434,18 +7425,18 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   (message "MPD database and emms updated!"))
 
 ;; **** Keys
-(require 'emms-browser)
 (define-key my/music-map (kbd "u") 'my/sync-mpd-and-emms)
 
 (define-key my/music-map (kbd "o") 'my/open-emms-and-connect)
 (define-key my/music-map (kbd "g") 'emms-seek-to)
 (define-key my/music-map (kbd "s") 'emms-pause)
 
-(define-key emms-browser-mode-map (kbd "s") 'emms-pause)
+(with-eval-after-load 'emms-browser
+  (define-key emms-browser-mode-map (kbd "s") 'emms-pause)
 
-(evil-define-key 'normal emms-browser-mode-map (kbd "RET") 'emms-browser-add-tracks)
+  (evil-define-key 'normal emms-browser-mode-map (kbd "RET") 'emms-browser-add-tracks)
 
-(evil-define-key 'normal emms-playlist-mode-map (kbd "RET") 'emms-playlist-mode-play-smart)
+  (evil-define-key 'normal emms-playlist-mode-map (kbd "RET") 'emms-playlist-mode-play-smart))
 
 (global-set-key (kbd "<XF86AudioPlay>") 'emms-pause)
 (global-set-key (kbd "<XF86AudioStop>") 'emms-stop)
@@ -7709,7 +7700,10 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; **** Send messages
 ;; ***** org-mime
 (straight-use-package 'org-mime)
-(require 'org-mime)
+
+(with-eval-after-load 'org-mode
+  (require 'org-mime))
+
 (setq org-mime-library 'mml)
 
 ;; **** Dynamically setting the width of the columns so it takes up the whole width
@@ -7728,8 +7722,6 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; .gnus.el is written in =write config map=
 ;; https://github.com/gongzhitaao/GnusSolution
 ;; https://www.gnu.org/software/emacs/manual/html_node/gnus/Comparing-Mail-Back-Ends.html
-(require 'gnus)
-
 ;; Encrypt passwords
 (setq netrc-file "~/.authinfo.gpg")
 
@@ -7797,7 +7789,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   ;; List all groups over level 5
   (gnus-group-list-all-groups 5))
 
-(add-hook 'gnus-group-mode-hook 'my/gnus-group-mode)
+(with-eval-after-load 'gnus
+  (add-hook 'gnus-group-mode-hook 'my/gnus-group-mode))
 
 ;; Always show inbox
 ;; (setq gnus-permanently-visible-groups "INBOX")
@@ -7808,13 +7801,14 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; (setq gnus-check-new-newsgroups 'ask-server)
 
 ;; **** Keys
-(evil-define-key 'normal gnus-group-mode-map (kbd "i") 'nil)
-(evil-define-key 'normal gnus-group-mode-map (kbd "o") (lambda () (interactive) (gnus-topic-select-group t)))
-(evil-define-key 'normal gnus-group-mode-map (kbd "RET") 'gnus-topic-select-group)
-(evil-define-key '(normal insert) gnus-group-mode-map (kbd "TAB") 'gnus-topic-select-group)
+(with-eval-after-load 'gnus
+  (evil-define-key 'normal gnus-group-mode-map (kbd "i") 'nil)
+  (evil-define-key 'normal gnus-group-mode-map (kbd "o") (lambda () (interactive) (gnus-topic-select-group t)))
+  (evil-define-key 'normal gnus-group-mode-map (kbd "RET") 'gnus-topic-select-group)
+  (evil-define-key '(normal insert) gnus-group-mode-map (kbd "TAB") 'gnus-topic-select-group)
 
-(define-prefix-command 'my/gnus-group-map)
-(evil-define-key 'normal gnus-group-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-group-map)
+  (define-prefix-command 'my/gnus-group-map)
+  (evil-define-key 'normal gnus-group-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-group-map))
 
 (defun my/gnus-group-list-all-subscribed-groups ()
   "List all subscribed groups with or without un-read messages"
@@ -7831,7 +7825,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   ;;(my/gnus-topic-add-gmane-groups)
   )
 
-(add-hook 'gnus-topic-mode-hook 'my/gnus-topic-mode)
+(with-eval-after-load 'gnus
+  (add-hook 'gnus-topic-mode-hook 'my/gnus-topic-mode))
 
 ;; **** Subscribe to gmane groups
 (defvar my/gnus-topic-gmane-prefix "nntp+news.gmane.org:")
@@ -7916,7 +7911,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   (visual-line-mode -1)
   (setq truncate-lines t))
 
-(add-hook 'gnus-summary-mode-hook 'my/gnus-summary-mode)
+(with-eval-after-load 'gnus
+  (add-hook 'gnus-summary-mode-hook 'my/gnus-summary-mode))
 
 ;; '(gnus-summary-mode-line-format "U%U %S" )
 ;; https://www.gnu.org/software/emacs/manual/html_node/gnus/Summary-Buffer-Lines.html
@@ -8019,7 +8015,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;;  (gnus-article-date-local)
 ;; )
 
-(add-hook 'gnus-article-display-hook 'my/gnus-article-display-mode)
+(with-eval-after-load 'gnus
+  (add-hook 'gnus-article-display-hook 'my/gnus-article-display-mode))
 
 ;; '(gnus-article-mode-line-format "U%U %S" )
 
@@ -8073,7 +8070,10 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 ;; *** Misc
 ;; **** Random color gnus logo
-(random t) ; Randomize sequence of random numbers
+(with-eval-after-load 'gnus
+  (random t)) ; Randomize sequence of random numbers
+
+
 (defun my/random-hex (&optional num)
   (interactive "P")
   (let (($n (if (numberp num) (abs num) 6 )))
@@ -8511,8 +8511,6 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 	   (executable-find "languagetool")))
 	 "/../share/languagetool-commandline.jar")))
 
-(require 'langtool)
-
 (setq langtool-autoshow-idle-delay 0)
 (setq langtool-mother-tongue "en-US")
 
@@ -8681,10 +8679,9 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (define-key my/pdf-view-mode-map (kbd "i") 'pdf-view-extract-region-image)
 
 ;; ** Image mode
-(require 'image-mode)
-
-(add-hook 'image-mode-hook (lambda () (display-line-numbers-mode -1)))
-(add-hook 'image-mode-hook (lambda () (auto-revert-mode 1)))
+(with-eval-after-load 'image-mode
+  (add-hook 'image-mode-hook (lambda () (display-line-numbers-mode -1)))
+  (add-hook 'image-mode-hook (lambda () (auto-revert-mode 1))))
 
 ;; Make animated images loop
 (setq image-animate-loop t)
@@ -8741,12 +8738,12 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 ;; * Spray
 (straight-use-package 'spray)
-(require 'spray)
 
 (setq spray-wpm 500)
 
-(define-key spray-mode-map (kbd "p") 'spray-slower)
-(define-key spray-mode-map (kbd "n") 'spray-faster)
+(with-eval-after-load 'spray
+  (define-key spray-mode-map (kbd "p") 'spray-slower)
+  (define-key spray-mode-map (kbd "n") 'spray-faster))
 
 (define-key my/leader-map (kbd "M-v") 'spray-mode)
 
@@ -9103,32 +9100,32 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
       (symbol-overlay-maybe-put-temp))))
 
 ;; ** Put lv at top
-(require 'lv)
-(defun lv-window ()
-  "Ensure that LV window is live and return it."
-  (if (window-live-p lv-wnd)
-      lv-wnd
-    (let ((ori (selected-window))
-	  buf)
-      (prog1 (setq lv-wnd
-		   (select-window
-		    (let ((ignore-window-parameters t))
-		      (split-window
-		       ;; Change is here
-		       (frame-root-window) -1 'above))))
-	(if (setq buf (get-buffer " *LV*"))
-	    (switch-to-buffer buf)
-	  (switch-to-buffer " *LV*")
-	  (set-window-hscroll lv-wnd 0)
-	  (setq window-size-fixed t)
-	  (setq mode-line-format nil)
-	  (setq header-line-format nil)
-	  (setq cursor-type nil)
-	  (setq display-line-numbers nil)
-	  (setq display-fill-column-indicator nil)
-	  (set-window-dedicated-p lv-wnd t)
-	  (set-window-parameter lv-wnd 'no-other-window t))
-	(select-window ori)))))
+(with-eval-after-load 'lv
+  (defun lv-window ()
+    "Ensure that LV window is live and return it."
+    (if (window-live-p lv-wnd)
+	lv-wnd
+      (let ((ori (selected-window))
+	    buf)
+	(prog1 (setq lv-wnd
+		     (select-window
+		      (let ((ignore-window-parameters t))
+			(split-window
+			 ;; Change is here
+			 (frame-root-window) -1 'above))))
+	  (if (setq buf (get-buffer " *LV*"))
+	      (switch-to-buffer buf)
+	    (switch-to-buffer " *LV*")
+	    (set-window-hscroll lv-wnd 0)
+	    (setq window-size-fixed t)
+	    (setq mode-line-format nil)
+	    (setq header-line-format nil)
+	    (setq cursor-type nil)
+	    (setq display-line-numbers nil)
+	    (setq display-fill-column-indicator nil)
+	    (set-window-dedicated-p lv-wnd t)
+	    (set-window-parameter lv-wnd 'no-other-window t))
+	  (select-window ori))))))
 
 ;; ** Show paren
 ;; Highlights matching paren under cursor
@@ -9211,7 +9208,6 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 ;; ** Disable comments with toggle
 (straight-use-package 'hide-comnt)
-(require 'hide-comnt)
 (define-key my/leader-map (kbd "c") 'hide/show-comments-toggle)
 
 ;; ** Font lock
@@ -9270,10 +9266,6 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   (interactive)
   (setq my/frame-width (frame-width)))
 
-;; *** Disable mode line
-(setq mode-line-format nil)
-(setq-default mode-line-format nil)
-
 ;; *** Mode line highlight face
 (defface my/mode-line-highlight
   '((t :inherit highlight))
@@ -9324,7 +9316,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 		"%n"
 
 		;; Is loccur
-		(:eval (when loccur-mode
+		(:eval (when (and (boundp 'loccur-mode) loccur-mode)
 			 " Loccur"))
 
 		" | "
@@ -9438,8 +9430,6 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; ;;(add-hook 'window-configuration-change-hook (lambda () (interactive) (my/update-buffer-name-string (buffer-name)) t) t)
 
 ;; **** Which function
-(require 'which-func)
-
 (setq which-func-unknown "")
 
 (setq which-func-current
@@ -9672,7 +9662,6 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   (add-hook 'window-configuration-change-hook 'my/update-projectile-project-name))
 
 ;; **** Git changes
-(require 'diff-hl)
 (defvar-local my/git-changes-string nil)
 
 (defvar-local my/vc-insert-count 0)
@@ -9703,41 +9692,42 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   (my/mode-line-update-git-changes-string))
 
 ;; ***** Override old function
-(defun diff-hl-changes ()
-  (my/mode-line-update-git-changes-string-reset)
-  (let* ((file buffer-file-name)
-	 (backend (vc-backend file)))
-    (when backend
-      (let ((state (vc-state file backend)))
-	(cond
-	 ((diff-hl-modified-p state)
-	  (let* (diff-auto-refine-mode res)
-	    (with-current-buffer (diff-hl-changes-buffer file backend)
-	      (goto-char (point-min))
-	      (unless (eobp)
-		(ignore-errors
-		  (diff-beginning-of-hunk t))
-		(while (looking-at diff-hunk-header-re-unified)
-		  (let ((line (string-to-number (match-string 3)))
-			(len (let ((m (match-string 4)))
-			       (if m (string-to-number m) 1)))
-			(beg (point)))
-		    (diff-end-of-hunk)
-		    (let* ((inserts (diff-count-matches "^\\+" beg (point)))
-			   (deletes (diff-count-matches "^-" beg (point)))
-			   (type (cond ((zerop deletes) 'insert)
-				       ((zerop inserts) 'delete)
-				       (t 'change))))
-		      (when (eq type 'delete)
-			(setq len 1)
-			(cl-incf line))
-		      (push (list line len type) res))))))
-	    (my/modeline-update-git-changes res)
-	    (nreverse res)))
-	 ((eq state 'added)
-	  `((1 ,(line-number-at-pos (point-max)) insert)))
-	 ((eq state 'removed)
-	  `((1 ,(line-number-at-pos (point-max)) delete))))))))
+(with-eval-after-load 'diff-hl
+  (defun diff-hl-changes ()
+    (my/mode-line-update-git-changes-string-reset)
+    (let* ((file buffer-file-name)
+	   (backend (vc-backend file)))
+      (when backend
+	(let ((state (vc-state file backend)))
+	  (cond
+	   ((diff-hl-modified-p state)
+	    (let* (diff-auto-refine-mode res)
+	      (with-current-buffer (diff-hl-changes-buffer file backend)
+		(goto-char (point-min))
+		(unless (eobp)
+		  (ignore-errors
+		    (diff-beginning-of-hunk t))
+		  (while (looking-at diff-hunk-header-re-unified)
+		    (let ((line (string-to-number (match-string 3)))
+			  (len (let ((m (match-string 4)))
+				 (if m (string-to-number m) 1)))
+			  (beg (point)))
+		      (diff-end-of-hunk)
+		      (let* ((inserts (diff-count-matches "^\\+" beg (point)))
+			     (deletes (diff-count-matches "^-" beg (point)))
+			     (type (cond ((zerop deletes) 'insert)
+					 ((zerop inserts) 'delete)
+					 (t 'change))))
+			(when (eq type 'delete)
+			  (setq len 1)
+			  (cl-incf line))
+			(push (list line len type) res))))))
+	      (my/modeline-update-git-changes res)
+	      (nreverse res)))
+	   ((eq state 'added)
+	    `((1 ,(line-number-at-pos (point-max)) insert)))
+	   ((eq state 'removed)
+	    `((1 ,(line-number-at-pos (point-max)) delete)))))))))
 
 ;; **** Load average
 (defvar my/load-average 0)
@@ -10069,402 +10059,6 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   ;; Update on mail counter change
   (add-hook 'my/gnus-mail-counter-update-hook 'my/lv-line-update))
 
-;; * Theme
-(defvar my/default-face-list '())
-
-(defun my/set-face-to-default (face-name is-syntax)
-  (add-to-list 'my/default-face-list face-name)
-  ;; Reset face
-  (set-face-attribute face-name nil :family 'unspecified :foundry 'unspecified :width 'unspecified :height 'unspecified :weight 'unspecified :slant 'unspecified :foreground 'unspecified :background 'unspecified :underline 'unspecified :overline 'unspecified :strike-through 'unspecified :box 'unspecified :stipple 'unspecified :font 'unspecified :inherit 'default))
-
-;; ** Define colors
-(setq my/diff-added-color "#335533")
-(setq my/diff-added-hl-color (color-lighten-name "#335533" 20))
-
-(setq my/diff-changed-color "#aaaa22")
-(setq my/diff-changed-hl-color (color-lighten-name "#aaaa22" 20))
-
-(setq my/diff-removed-color "#553333")
-(setq my/diff-removed-hl-color (color-lighten-name "#553333" 20))
-
-(setq my/diff-ancestor-color "#5f06b26ccd93")
-(setq my/diff-ancestor-hl-color (color-lighten-name "#5f06b26ccd93" 20))
-
-(if window-system
-    (progn
-      (setq my/mark-color my/diff-changed-color)
-      (setq my/mark-color-1 (color-darken-name my/diff-changed-color 5))
-      (setq my/mark-color-2 (color-darken-name my/diff-changed-color 10))
-      (setq my/mark-color-3 (color-darken-name my/diff-changed-color 15))
-      (setq my/mark-color-4 (color-darken-name my/diff-changed-color 20))
-      (setq my/mark-color-5 (color-darken-name my/diff-changed-color 25))
-      (setq my/mark-color-6 (color-darken-name my/diff-changed-color 30))
-
-      (setq my/foreground-color "#E6E1DC")
-      ;; (setq my/foreground-color (color-darken-name my/foreground-color 10))
-      (setq my/foreground-color-1 (color-darken-name my/foreground-color 5))
-      (setq my/foreground-color-2 (color-darken-name my/foreground-color 10))
-      (setq my/foreground-color-3 (color-darken-name my/foreground-color 15))
-      (setq my/foreground-color-4 (color-darken-name my/foreground-color 20))
-      (setq my/foreground-color-5 (color-darken-name my/foreground-color 25))
-      (setq my/foreground-color-6 (color-darken-name my/foreground-color 30))
-
-      (setq my/background-color (color-darken-name "#292b2e" 10))
-      ;; (setq my/background-color "#121212")
-      ;; (setq my/background-color "#212121")
-      ;; (setq my/background-color "#232323")
-      ;; (setq my/background-color "#000000")
-      (setq my/background-color-1 (color-lighten-name my/background-color 5))
-      (setq my/background-color-2 (color-lighten-name my/background-color 10))
-      (setq my/background-color-3 (color-lighten-name my/background-color 15))
-      (setq my/background-color-4 (color-lighten-name my/background-color 20)))
-
-  (setq my/mark-color "yellow")
-
-  (setq my/foreground-color "white")
-  (setq my/foreground-color-1 "white")
-  (setq my/foreground-color-2 "white")
-  (setq my/foreground-color-3 "white")
-  (setq my/foreground-color-4 "white")
-  (setq my/foreground-color-5 "white")
-  (setq my/foreground-color-6 "white")
-
-  (setq my/background-color "black")
-  (setq my/background-color-1 "black")
-  (setq my/background-color-2 "black")
-  (setq my/background-color-3 "black")
-  (setq my/background-color-4 "black")
-
-  (setq my/diff-added-color "green")
-  (setq my/diff-changed-color "yellow")
-  (setq my/diff-removed-color "red"))
-
-;; ** Remove color
-(defun my/theme-remove-color ()
-  (cl-loop for face in (face-list) do
-	   ;; Don't change magit faces
-	   (if (and (not (string-match "magit" (symbol-name face))) (not (string-match "w3m" (symbol-name face))))
-	       (set-face-attribute face nil :foreground nil :background nil))))
-
-;; ** Set colors
-;; *** Default colors
-(defun my/theme-default-colors ()
-  (set-face-attribute 'default nil :foreground my/foreground-color :background my/background-color)
-  (set-face-attribute 'link nil :foreground my/background-color :background my/foreground-color)
-  (set-face-attribute 'highlight nil :foreground my/foreground-color :background my/mark-color)
-  (set-face-attribute 'region nil :foreground my/foreground-color :background my/mark-color)
-  (set-face-attribute 'error nil :foreground "#c6350b" :background)
-  (set-face-attribute 'warning nil :foreground "DarkOrange" :background)
-
-  (set-face-attribute 'font-lock-doc-face nil :foreground my/foreground-color :background my/background-color-4)
-  ;; (set-face-attribute 'font-lock-comment-face nil :foreground (color-lighten-name my/background-color 30) :background my/background-color)
-  (set-face-attribute 'font-lock-comment-face nil :foreground (color-lighten-name my/background-color 30) :background (color-lighten-name my/background-color 2))
-  ;; (set-face-attribute 'font-lock-comment-delimiter-face nil :foreground (color-lighten-name my/background-color 15) :background my/background-color)
-  (set-face-attribute 'font-lock-comment-delimiter-face nil :foreground my/background-color-4 :background my/background-color-2)
-  (my/set-face-to-default 'font-lock-string-face t)
-  (my/set-face-to-default 'font-lock-function-name-face t))
-
-(defun my/theme-outline-colors ()
-  (set-face-attribute 'outline-1 nil :foreground (color-lighten-name my/background-color 2) :background (color-darken-name my/foreground-color 50))
-  (set-face-attribute 'outline-2 nil :foreground (color-lighten-name my/background-color 2) :background (color-darken-name my/foreground-color 50))
-  (set-face-attribute 'outline-3 nil :foreground (color-lighten-name my/background-color 2) :background (color-darken-name my/foreground-color 50))
-  (set-face-attribute 'outline-4 nil :foreground (color-lighten-name my/background-color 2) :background (color-darken-name my/foreground-color 50))
-  (set-face-attribute 'outline-5 nil :foreground (color-lighten-name my/background-color 2) :background (color-darken-name my/foreground-color 50))
-  (set-face-attribute 'outline-6 nil :foreground (color-lighten-name my/background-color 2) :background (color-darken-name my/foreground-color 50))
-  (set-face-attribute 'outline-7 nil :foreground (color-lighten-name my/background-color 2) :background (color-darken-name my/foreground-color 50))
-  (set-face-attribute 'outline-8 nil :foreground (color-lighten-name my/background-color 2) :background (color-darken-name my/foreground-color 50)))
-
-;; (defun my/theme-outline-colors ()
-;;   (set-face-attribute 'outline-1 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 10))
-;;   (set-face-attribute 'outline-2 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 10))
-;;   (set-face-attribute 'outline-3 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 10))
-;;   (set-face-attribute 'outline-4 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 10))
-;;   (set-face-attribute 'outline-5 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 10))
-;;   (set-face-attribute 'outline-6 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 10))
-;;   (set-face-attribute 'outline-7 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 10))
-;;   (set-face-attribute 'outline-8 nil :foreground (color-darken-name my/foreground-color 50) :background (color-lighten-name my/background-color 10)))
-
-(defun my/theme-header-line-color ()
-  (set-face-attribute 'header-line nil
-		      ;; Green mode line
-		      :foreground my/foreground-color
-		      ;; :background "#052000"
-		      :background (color-darken-name "#5d4d7a" 10)
-		      ;; :foreground my/background-color
-		      ;; :background my/foreground-color
-		      )
-
-  (set-face-attribute 'my/mode-line-highlight nil
-		      :foreground "#063000"
-		      :background my/foreground-color)
-
-  ;; Mode line separator
-  ;; Set mode line height
-  ;;  (set-face-attribute 'mode-line nil
-  ;;                      :foreground my/foreground-color
-  ;;                      :background my/background-color-1)
-  ;;
-  ;;  (set-face-attribute 'mode-line-inactive nil
-  ;;                      :foreground my/foreground-color
-  ;;                      :background my/background-color)
-  )
-
-(defun my/theme-evil-colors ()
-  ;; Evil
-  (setq evil-emacs-state-cursor '("purple" box))
-  (setq evil-normal-state-cursor '("red" box))
-  (setq evil-visual-state-cursor '("yellow" box))
-  (setq evil-insert-state-cursor '("orange" box))
-  (setq evil-replace-state-cursor '("green" box))
-  (setq evil-operator-state-cursor '("white" hollow))
-  (setq evil-operator-state-cursor '("white" hollow)))
-
-(defun my/theme-diff-colors ()
-  ;; Diff
-  (set-face-attribute 'diff-added nil  :background my/diff-added-color)
-  (set-face-attribute 'diff-changed nil :background my/diff-changed-color)
-  (set-face-attribute 'diff-removed nil :background my/diff-removed-color)
-
-  (set-face-attribute 'diff-refine-added nil  :background my/diff-added-hl-color)
-  (set-face-attribute 'diff-refine-changed nil :background my/diff-changed-hl-color)
-  (set-face-attribute 'diff-refine-removed nil :background my/diff-removed-hl-color)
-
-  ;; Ediff
-  (set-face-attribute 'ediff-current-diff-A nil :background my/diff-removed-color)
-  (set-face-attribute 'ediff-current-diff-Ancestor nil :background my/diff-ancestor-color)
-  (set-face-attribute 'ediff-current-diff-B nil :background my/diff-added-color)
-  (set-face-attribute 'ediff-current-diff-C nil :background my/diff-changed-color)
-  (set-face-attribute 'ediff-even-diff-A nil :background (color-darken-name my/diff-removed-color 18))
-  (set-face-attribute 'ediff-even-diff-Ancestor nil :background (color-darken-name my/diff-ancestor-color 30))
-  (set-face-attribute 'ediff-even-diff-B nil :background (color-darken-name my/diff-added-color 18))
-  (set-face-attribute 'ediff-even-diff-C nil :background (color-darken-name my/diff-changed-color 18))
-  (set-face-attribute 'ediff-fine-diff-A nil :background my/diff-removed-hl-color)
-  (set-face-attribute 'ediff-fine-diff-Ancestor nil :background my/diff-ancestor-hl-color)
-  (set-face-attribute 'ediff-fine-diff-B nil :background my/diff-added-hl-color)
-  (set-face-attribute 'ediff-fine-diff-C nil :background my/diff-changed-hl-color)
-  (set-face-attribute 'ediff-odd-diff-A nil :background (color-darken-name my/diff-removed-color 20))
-  (set-face-attribute 'ediff-odd-diff-Ancestor nil :background (color-darken-name my/diff-ancestor-color 50))
-  (set-face-attribute 'ediff-odd-diff-B nil :background (color-darken-name my/diff-added-color 20))
-  (set-face-attribute 'ediff-odd-diff-C nil :background (color-darken-name my/diff-changed-color 20)))
-
-(defun my/theme-org-colors ()
-  ;; =affects this text=
-  (set-face-attribute 'org-verbatim nil :weight 'bold)
-  (set-face-attribute 'org-quote nil :slant 'italic)
-  (set-face-attribute 'org-mode-line-clock nil :foreground my/foreground-color :background my/foreground-color :height 'unspecified)
-  (set-face-attribute 'org-mode-line-clock-overrun nil :foreground my/foreground-color :background "red" :height 'unspecified)
-  (set-face-attribute 'org-agenda-filter-effort nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
-  (set-face-attribute 'org-agenda-filter-regexp nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
-  (set-face-attribute 'org-agenda-filter-tags nil :foreground my/foreground-color :background my/background-color :height 'unspecified) (set-face-attribute 'org-agenda-filter-category nil :foreground my/foreground-color :background my/background-color :height 'unspecified)
-
-  (set-face-attribute 'org-code nil :background my/background-color-3)
-  (set-face-attribute 'org-block nil :background my/background-color-1)
-
-  ;; Disable right of header background coloring
-  (set-face-attribute 'org-meta-line nil :background nil)
-
-  ;; Used by org-src block borders, by default it uses the comment face
-  ;;  (set-face-attribute 'org-block-begin-line nil :background my/background-color-3)
-  ;;  (set-face-attribute 'org-block-end-line nil :background my/background-color-3)
-
-  ;; Used by org src-blocks when in use, might also be used for other things
-  (set-face-attribute 'secondary-selection nil :background (color-darken-name my/background-color 5)))
-
-;; *** Package colors
-(defun my/theme-package-colors ()
-  (when (require 'hl-line nil 'noerror)
-    ;; (set-face-attribute 'hl-line nil :foreground my/foreground-color :background my/background-color-2 :underline nil)
-    ;; (set-face-attribute 'hl-line nil :foreground my/foreground-color :background (color-darken-name "#00008b" 20) :underline nil)
-    (set-face-attribute 'hl-line nil :foreground my/foreground-color :background "#212026" :underline nil)
-    )
-
-  ;;  Show-paren
-  (set-face-attribute 'show-paren-match nil :background my/background-color :foreground my/foreground-color)
-  (set-face-attribute 'show-paren-match-expression nil :background my/foreground-color :foreground my/background-color)
-  (set-face-attribute 'my/show-paren-offscreen-face nil :inherit 'highlight)
-
-  ;; Wgrep
-  (set-face-attribute 'wgrep-file-face nil :background my/foreground-color-6 :foreground my/background-color)
-
-  ;; Ivy grep
-  (set-face-attribute 'ivy-grep-info nil :background my/foreground-color-6 :foreground my/background-color)
-
-  ;; Symbol overlay
-  (if window-system
-      (set-face-attribute 'symbol-overlay-default-face nil :foreground my/foreground-color :background my/mark-color-5))
-
-  ;; Dired
-  (set-face-attribute 'dired-directory nil :foreground my/background-color :background my/foreground-color)
-  (my/set-face-to-default 'dired-perm-write 't)
-  (set-face-attribute 'dired-symlink nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-
-  ;; Spray
-  ;;  (set-face-attribute 'spray-accent-face nil :foreground "red" :background my/background-color)
-  (set-face-attribute 'spray-accent-face nil :foreground my/foreground-color :background my/background-color :underline t)
-
-  ;; Isearch
-  (set-face-attribute 'isearch nil :foreground my/background-color :background my/foreground-color)
-  (set-face-attribute 'lazy-highlight nil :foreground my/background-color :background my/foreground-color)
-  ;; Haskell
-  (set-face-attribute 'haskell-literate-comment-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-
-  ;; Highlight thing
-  ;;(set-face-attribute 'symbol-overlay nil :foreground my/foreground-color :background my/mark-color)
-
-  ;; Company
-  (set-face-attribute 'company-scrollbar-bg nil :background my/background-color)
-  (set-face-attribute 'company-scrollbar-fg nil :background my/foreground-color)
-  ;; Selected entry
-  (set-face-attribute 'company-tooltip-selection nil :background my/foreground-color :foreground my/background-color)
-  ;; All unmatching text
-  (set-face-attribute 'company-tooltip nil :foreground my/foreground-color :background my/background-color-1)
-  ;; All matching text
-  (set-face-attribute 'company-tooltip-common nil :foreground my/background-color :background my/foreground-color)
-
-  ;; Popup menu
-  ;; Selected entry
-  (when (require 'popup nil 'noerror)
-    (set-face-attribute 'popup-menu-selection-face nil :foreground my/background-color :background my/foreground-color)
-    ;; All unmatching text
-    (set-face-attribute 'popup-menu-face nil :foreground my/foreground-color :background my/background-color-1))
-
-  ;; Ivy
-  ;; Ivy also uses "font-lock-doc-face" for the documentation
-  (set-face-attribute 'ivy-current-match nil :foreground my/background-color :background my/mark-color-3)
-  (set-face-attribute 'ivy-cursor nil :foreground my/background-color :background my/foreground-color)
-  (set-face-attribute 'ivy-minibuffer-match-highlight nil :foreground my/background-color :background my/foreground-color)
-  ;;(set-face-attribute 'ivy-separator nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-
-  (set-face-attribute 'ivy-minibuffer-match-face-1 nil :foreground my/background-color :background my/foreground-color)
-  (set-face-attribute 'ivy-minibuffer-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
-  (set-face-attribute 'ivy-minibuffer-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
-  (set-face-attribute 'ivy-minibuffer-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
-
-  ;; Ivy yasnippet
-  (set-face-attribute 'ivy-yasnippet-key nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-
-  ;; Ivy rich
-  (set-face-attribute 'my/ivy-rich-doc-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-  (set-face-attribute 'my/ivy-rich-switch-buffer-indicator-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-  (set-face-attribute 'my/ivy-rich-switch-buffer-major-mode-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-  (set-face-attribute 'my/ivy-rich-switch-buffer-size-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-  (set-face-attribute 'my/ivy-rich-switch-buffer-path-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-  (set-face-attribute 'my/ivy-rich-switch-buffer-project-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-  (set-face-attribute 'my/ivy-rich-find-file-symlink-face nil :foreground 'unspecified :background 'unspecified :inherit font-lock-comment-face)
-
-  ;; Swiper
-  (set-face-attribute 'swiper-match-face-1 nil :foreground my/background-color :background my/foreground-color)
-  (set-face-attribute 'swiper-match-face-2 nil :foreground my/background-color :background my/foreground-color-2)
-  (set-face-attribute 'swiper-match-face-3 nil :foreground my/background-color :background my/foreground-color-4)
-  (set-face-attribute 'swiper-match-face-4 nil :foreground my/background-color :background my/foreground-color-6)
-
-  ;; Avy
-  (set-face-attribute 'avy-lead-face nil :foreground my/background-color :background my/foreground-color-6)
-  (set-face-attribute 'avy-lead-face-0 nil :foreground my/background-color :background my/foreground-color-2)
-  (set-face-attribute 'avy-lead-face-1 nil :foreground my/background-color :background my/foreground-color-4)
-  (set-face-attribute 'avy-lead-face-2 nil :foreground my/background-color :background my/foreground-color-6)
-
-  ;; Eshell
-  (require 'em-prompt)
-  (if window-system
-      (set-face-attribute 'eshell-prompt nil :foreground "purple" :background my/background-color)
-    (set-face-attribute 'eshell-prompt nil :foreground "magenta" :background my/background-color))
-
-  ;; Yascroll
-  (set-face-attribute 'yascroll:thumb-fringe nil :background "slateblue" :foreground "slateblue")
-  (set-face-attribute 'yascroll:thumb-text-area nil :background "slateblue")
-
-  ;; Term
-  (set-face-attribute 'term-color-black nil :foreground "black" :background "black")
-  (set-face-attribute 'term-color-blue nil :foreground "blue" :background "blue")
-  (set-face-attribute 'term-color-cyan nil :foreground "cyan" :background "cyan")
-  (set-face-attribute 'term-color-green nil :foreground "green" :background "green")
-  (set-face-attribute 'term-color-magenta nil :foreground "magenta" :background "magenta")
-  (set-face-attribute 'term-color-red nil :foreground "red" :background "red")
-  (set-face-attribute 'term-color-white nil :foreground "white" :background "white")
-  (set-face-attribute 'term-color-yellow nil :foreground "yellow" :background "yellow")
-
-  ;; Flyspell
-  (when window-system
-    (set-face-attribute 'flyspell-incorrect nil :underline '(:style wave :color "Blue"))
-    (set-face-attribute 'flyspell-duplicate nil :underline '(:style wave :color "LightBlue")))
-
-  ;; Litable
-  (when (require 'litable nil 'noerror)
-    (set-face-attribute 'litable-result-face nil :foreground my/foreground-color :background my/background-color :weight 'bold)
-    (set-face-attribute 'litable-substitution-face nil :foreground my/foreground-color :background my/background-color :weight 'bold))
-
-  ;; Diff-hl
-  (set-face-attribute 'diff-hl-change nil :background (face-attribute 'diff-changed :background))
-
-  ;; Paren highlight
-  ;;(set-face-attribute 'show-paren-match nil :foreground my/foreground-color :background my/mark-color-5)
-  (set-face-attribute 'show-paren-match nil :foreground my/background-color :background my/foreground-color)
-  (set-face-attribute 'show-paren-mismatch nil :background "red")
-
-  ;; Flycheck-posframe
-  (set-face-attribute 'flycheck-posframe-background-face nil :foreground my/foreground-color :background "#000000")
-
-  ;; lsp
-  (my/set-face-to-default 'lsp-ui-doc-background nil)
-  ;;(set-face-attribute 'lsp-ui-doc-background nil :foreground my/foreground-color :background my/background-color)
-
-  ;; lsp Doc
-  (set-face-attribute 'lsp-ui-doc-header nil :foreground my/foreground-color :background my/background-color-4)
-  (set-face-attribute 'lsp-ui-doc-url nil :foreground my/background-color :background my/foreground-color)
-
-  ;; lsp Sideline
-  (my/set-face-to-default 'lsp-ui-peek-filename nil)
-  (my/set-face-to-default 'lsp-ui-peek-footer nil)
-  (my/set-face-to-default 'lsp-ui-peek-header nil)
-  (my/set-face-to-default 'lsp-ui-peek-highlight nil)
-  (my/set-face-to-default 'lsp-ui-peek-line-number nil)
-  (my/set-face-to-default 'lsp-ui-peek-list nil)
-  (my/set-face-to-default 'lsp-ui-peek-peek nil)
-  (my/set-face-to-default 'lsp-ui-peek-selection nil)
-  (my/set-face-to-default 'lsp-ui-sideline-current-symbol nil)
-  (my/set-face-to-default 'lsp-ui-sideline-code-action nil)
-
-  ;;  (set-face-attribute 'lsp-ui-peek-filename nil :foreground my/foreground-color :background my/background-color)
-  ;;  (set-face-attribute 'lsp-ui-peek-footer nil :foreground my/foreground-color :background my/background-color)
-  ;;  (set-face-attribute 'lsp-ui-peek-header nil :foreground my/foreground-color :background my/background-color)
-  ;;  (set-face-attribute 'lsp-ui-peek-highlight nil :foreground my/foreground-color :background my/background-color)
-  ;;  (set-face-attribute 'lsp-ui-peek-line-number nil :foreground my/foreground-color :background my/background-color)
-  ;;  (set-face-attribute 'lsp-ui-peek-list nil :foreground my/foreground-color :background my/background-color)
-  ;;  (set-face-attribute 'lsp-ui-peek-peek nil :foreground my/foreground-color :background my/background-color)
-  ;;  (set-face-attribute 'lsp-ui-peek-selection nil :foreground my/foreground-color :background my/background-color)
-  ;;  (set-face-attribute 'lsp-ui-sideline-code-action nil :foreground my/foreground-color :background my/background-color)
-  ;;  (set-face-attribute 'lsp-ui-sideline-current-symbol nil :foreground my/foreground-color :background my/background-color)
-
-  (set-face-attribute 'lsp-ui-sideline-global nil :foreground nil :background nil)
-  (set-face-attribute 'lsp-ui-sideline-symbol nil :foreground my/background-color :background my/foreground-color)
-  (set-face-attribute 'lsp-ui-sideline-symbol-info nil :foreground my/mark-color :background my/background-color)
-
-  ;; lsp lens
-  ;; (set-face-attribute 'lsp-lens-face nil :foreground my/foreground-color :background my/mark-color-4 :height 0.8)
-  (set-face-attribute 'lsp-lens-face nil :foreground 'unspecified :background my/background-color :inherit font-lock-comment-face)
-
-  ;; Highlight faces
-  (when (require 'highlight-indent-guides nil 'noerror)
-    (highlight-indent-guides-auto-set-faces)))
-
-(defun my/theme ()
-  (interactive)
-  (my/theme-remove-color)
-  (my/theme-default-colors)
-  (my/theme-outline-colors)
-  (my/theme-header-line-color)
-  (my/theme-evil-colors)
-  (my/theme-diff-colors)
-  (my/theme-org-colors)
-  (my/theme-package-colors))
-
-(if window-system
-    (add-hook 'exwm-init-hook 'my/theme)
-  (add-hook 'after-init-hook 'my/theme))
-
-(define-key my/leader-map (kbd "M-c") 'my/theme)
-
 ;; * Backups
 ;; Stop emacs from creating backup files on every save
 (setq make-backup-files nil)
@@ -10510,9 +10104,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; *** git-backup
 (straight-use-package '(git-backup :type git :host github :repo "antham/git-backup"))
 (straight-use-package '(git-backup-ivy :type git :host github :repo "walseb/git-backup-ivy"))
-(require 'git-backup-ivy)
 
-(add-hook 'after-save-hook (lambda () (git-backup-version-file git-backup-ivy-git-path git-backup-ivy-backup-path nil (buffer-file-name))))
+(add-hook 'after-save-hook (lambda () (require 'git-backup-ivy) (git-backup-version-file git-backup-ivy-git-path git-backup-ivy-backup-path nil (buffer-file-name))))
 
 (define-key my/leader-map (kbd "C-u") 'git-backup-ivy)
 
@@ -10586,9 +10179,3 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 ;; * Report start time
 (run-with-timer 4 nil (lambda () (interactive) (message (concat "Booted in " (emacs-init-time)))))
-
-;; * Byte-compile the config
-;; Byte compilation doesn't work before loading everything because of some reason, so do it now
-(unless (and (file-exists-p my/config-compiled-location) (my/is-file-more-up-to-date my/config-compiled-location my/config-location))
-  (byte-compile-file "~/.emacs.d/config.el" nil)
-  (message "Config is now byte compiled, restart to run it"))
