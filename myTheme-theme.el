@@ -70,6 +70,17 @@
 
        (my/hl-line-color "#212026")
 
+       (my/comment-face (my/ifc (color-lighten-name my/background-color 30)
+				"white"))
+       (my/comment-delimiter-foreground-face (my/ifc my/background-color-4
+						     "white"))
+       (my/comment-delimiter-background-face (my/ifc my/background-color-2
+						     "black"))
+       (my/outline-foreground-face (my/ifc (color-lighten-name my/background-color 2)
+					   "white"))
+       (my/outline-background-face (my/ifc (color-darken-name my/foreground-color 50)
+					   "black"))
+
        )
   (custom-theme-set-faces
    'myTheme
@@ -88,8 +99,8 @@
    `(flymake-warning ((,class (:inherit flycheck-warning))))
    `(haskell-warning-face ((,class (:inherit flycheck-warning))))
 
-   `(font-lock-comment-face ((,class (:foreground ,(color-lighten-name my/background-color 30)))))
-   `(font-lock-comment-delimiter-face ((,class (:foreground ,my/background-color-4 :background ,my/background-color-2))))
+   `(font-lock-comment-face ((,class (:foreground ,my/comment-face))))
+   `(font-lock-comment-delimiter-face ((,class (:foreground ,my/comment-delimiter-foreground-face :background ,my/comment-delimiter-background-face))))
    `(font-lock-string-face ((,class (:inherit default))))
    `(font-lock-function-name-face ((,class (:inherit default))))
    `(font-lock-keyword-face ((,class (:inherit default))))
@@ -106,14 +117,14 @@
 
    `(hl-line ((,class (:foreground ,my/foreground-color :background ,my/hl-line-color :underline nil))))
 
-   `(outline-1 ((,class (:foreground ,(color-lighten-name my/background-color 2) :background ,(color-darken-name my/foreground-color 50)))))
-   `(outline-2 ((,class (:foreground ,(color-lighten-name my/background-color 2) :background ,(color-darken-name my/foreground-color 50)))))
-   `(outline-3 ((,class (:foreground ,(color-lighten-name my/background-color 2) :background ,(color-darken-name my/foreground-color 50)))))
-   `(outline-4 ((,class (:foreground ,(color-lighten-name my/background-color 2) :background ,(color-darken-name my/foreground-color 50)))))
-   `(outline-5 ((,class (:foreground ,(color-lighten-name my/background-color 2) :background ,(color-darken-name my/foreground-color 50)))))
-   `(outline-6 ((,class (:foreground ,(color-lighten-name my/background-color 2) :background ,(color-darken-name my/foreground-color 50)))))
-   `(outline-7 ((,class (:foreground ,(color-lighten-name my/background-color 2) :background ,(color-darken-name my/foreground-color 50)))))
-   `(outline-8 ((,class (:foreground ,(color-lighten-name my/background-color 2) :background ,(color-darken-name my/foreground-color 50)))))
+   `(outline-1 ((,class (:foreground ,my/outline-foreground-face :background ,my/outline-background-face))))
+   `(outline-2 ((,class (:inherit outline-1))))
+   `(outline-3 ((,class (:inherit outline-1))))
+   `(outline-4 ((,class (:inherit outline-1))))
+   `(outline-5 ((,class (:inherit outline-1))))
+   `(outline-6 ((,class (:inherit outline-1))))
+   `(outline-7 ((,class (:inherit outline-1))))
+   `(outline-8 ((,class (:inherit outline-1))))
 
    `(org-level-1 ((,class (:inherit outline-1))))
    `(org-level-2 ((,class (:inherit outline-2))))
