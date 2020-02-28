@@ -2120,10 +2120,10 @@ or go back to just one window (by deleting all but the selected window)."
 					      (file-in-directory-p
 					       buffer-file-name
 					       org-brain-path))
-					 (org-brain-visualize (org-brain-path-entry-name buffer-file-name)))
+					 (org-brain-visualize (org-brain-path-entry-name buffer-file-name) nil nil nil t))
 				     (and (get-buffer "*org-brain*")
 					  (switch-to-buffer "*org-brain*"))
-				     (org-brain-visualize "Origo"))))
+				     (org-brain-visualize "Origo" nil nil nil t))))
 
 (define-key my/open-map (kbd "N") 'org-brain-visualize)
 (define-key my/open-map (kbd "C-n") '(lambda () (interactive) (find-file org-brain-path)))
@@ -2319,22 +2319,6 @@ or go back to just one window (by deleting all but the selected window)."
 
 (setq org-agenda-window-setup 'current-window)
 
-;; *** Display at startup
-;; Spawn agenda buffer
-;; (org-agenda-list)
-
-;; **** Declare switch function
-;; Because just giving "*Org Agenda*" to "initial-buffer-choice" doesn't work
-(defun my/switch-to-agenda()
-  (interactive)
-  (switch-to-buffer "*Org Agenda*"))
-
-;; **** Run switch function as initial buffer choice
-(setq initial-buffer-choice 'my/switch-to-agenda)
-
-;; **** Close all other open windows at start
-(delete-other-windows)
-
 ;; ** Clock
 ;; (setq org-clock-mode-line-total today)
 
@@ -2466,6 +2450,104 @@ or go back to just one window (by deleting all but the selected window)."
   (dolist (child-entry children)
     (org-brain-add-relationship entry child-entry))
   (org-brain--revert-if-visualizing))
+
+;; *** Allow running in same window
+(with-eval-after-load 'org-brain
+  (defun org-brain-visualize (entry &optional nofocus nohistory wander same-window)
+    "View a concept map with ENTRY at the center.
+
+When run interactively, prompt for ENTRY and suggest
+`org-brain-entry-at-pt'.  By default, the choices presented is
+determined by `org-brain-visualize-default-choices': 'all will
+show all entries, 'files will only show file entries and 'root
+will only show files in the root of `org-brain-path'.
+
+You can override `org-brain-visualize-default-choices':
+  `\\[universal-argument]' will use 'all.
+  `\\[universal-argument] \\[universal-argument]' will use 'files.
+  `\\[universal-argument] \\[universal-argument] \\[universal-argument]' will use 'root.
+
+Unless NOFOCUS is non-nil, the `org-brain-visualize' buffer will gain focus.
+Unless NOHISTORY is non-nil, add the entry to `org-brain--vis-history'.
+Setting NOFOCUS to t implies also having NOHISTORY as t.
+Unless WANDER is t, `org-brain-stop-wandering' will be run.
+Unless SAME-WINDOW is t, the buffer will be opened in another window."
+    (interactive
+     (progn
+       (org-brain-maybe-switch-brain)
+       (let ((choices (cond ((equal current-prefix-arg '(4)) 'all)
+			    ((equal current-prefix-arg '(16)) 'files)
+			    ((equal current-prefix-arg '(64)) 'root)
+			    (t org-brain-visualize-default-choices)))
+	     (def-choice (unless (eq major-mode 'org-brain-visualize-mode)
+			   (ignore-errors (org-brain-entry-name (org-brain-entry-at-pt))))))
+	 (org-brain-stop-wandering)
+	 (list
+	  (org-brain-choose-entry
+	   "Entry: "
+	   (cond ((equal choices 'all)
+		  'all)
+		 ((equal choices 'files)
+		  (org-brain-files t))
+		 ((equal choices 'root)
+		  (make-directory org-brain-path t)
+		  (mapcar #'org-brain-path-entry-name
+			  (directory-files org-brain-path t (format "\\.%s$" org-brain-files-extension)))))
+	   nil nil def-choice)))))
+    (unless wander (org-brain-stop-wandering))
+    (with-current-buffer (get-buffer-create "*org-brain*")
+      (setq-local indent-tabs-mode nil)
+      (read-only-mode 1)
+      (setq-local default-directory (file-name-directory (org-brain-entry-path entry)))
+      (org-brain-maybe-switch-brain)
+      (unless (eq org-brain--vis-entry entry)
+	(setq org-brain--vis-entry entry)
+	(setq org-brain-mind-map-parent-level (default-value 'org-brain-mind-map-parent-level))
+	(setq org-brain-mind-map-child-level (default-value 'org-brain-mind-map-child-level)))
+      (setq org-brain--vis-entry-keywords (when (org-brain-filep entry)
+					    (org-brain-keywords entry)))
+      (let ((inhibit-read-only t)
+	    (entry-pos))
+	(delete-region (point-min) (point-max))
+	(org-brain--vis-pinned)
+	(org-brain--vis-selected)
+	(when (not nohistory)
+	  (setq org-brain--vis-history
+		(seq-filter (lambda (elt) (not (equal elt entry))) org-brain--vis-history))
+	  (setq org-brain--vis-history (seq-take org-brain--vis-history 15))
+	  (push entry org-brain--vis-history))
+	(when org-brain-show-history (org-brain--vis-history))
+	(if org-brain-visualizing-mind-map
+	    (setq entry-pos (org-brain-mind-map org-brain--vis-entry org-brain-mind-map-parent-level org-brain-mind-map-child-level))
+	  (insert "\n\n")
+	  (org-brain--vis-parents-siblings entry)
+	  ;; Insert entry title
+	  (let ((title (org-brain-vis-title entry)))
+	    (let ((half-title-length (/ (string-width title) 2)))
+	      (if (>= half-title-length (current-column))
+		  (delete-char (- (current-column)))
+		(ignore-errors (delete-char (- half-title-length)))))
+	    (setq entry-pos (point))
+	    (insert (propertize title
+				'face (org-brain-display-face entry 'org-brain-title)
+				'aa2u-text t))
+	    (org-brain--vis-friends entry)
+	    (org-brain--vis-children entry)))
+	(when (and org-brain-show-resources)
+	  (org-brain--vis-resources (org-brain-resources entry)))
+	(if org-brain-show-text
+	    (org-brain--vis-text entry)
+	  (run-hooks 'org-brain-after-visualize-hook))
+	(unless (eq major-mode 'org-brain-visualize-mode)
+	  (org-brain-visualize-mode))
+	(goto-char entry-pos))
+      (unless nofocus
+	(when org-brain--visualize-follow
+	  (org-brain-goto-current)
+	  (run-hooks 'org-brain-visualize-follow-hook))
+	(if same-window
+	    (pop-to-buffer-same-window "*org-brain*")
+	  (pop-to-buffer "*org-brain*"))))))
 
 ;; *** Keys
 (with-eval-after-load 'org-brain
