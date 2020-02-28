@@ -1060,6 +1060,8 @@
 ;; Motion state is like normal mode but you can't go into insert-mode. Some modes start up with this restrictive mode, disable it here
 (setq evil-motion-state-modes nil)
 
+(add-hook 'evil-motion-state-entry-hook (lambda () (interactive) (evil-force-normal-state) (message "Prevented motion state from being entered")))
+
 ;; *** Switching to normal state without moving cursor
 (defun my/evil-normal-state (&optional arg)
   (if (not(eq evil-state 'normal))
@@ -2080,9 +2082,6 @@ or go back to just one window (by deleting all but the selected window)."
 (define-prefix-command 'my/open-map)
 (define-key my/leader-map (kbd "o") 'my/open-map)
 
-(defvar my/open-map-hook nil
-  "Hook called after a buffer is visited through my/open-map")
-
 ;; ** Scratch
 ;; Kill the initial scratch buffer
 (ignore-errors
@@ -2110,94 +2109,73 @@ or go back to just one window (by deleting all but the selected window)."
 ;;							 (save-restriction
 ;;							   (widen)
 ;;							   (write-region (point-min) (point-max) (concat user-emacs-directory "scratch")))))))
-;;   (run-hooks 'my/open-map-hook))
+;;   )
 
 (define-key my/open-map (kbd "s") 'my/switch-to-scratch)
 
-;; ** Backup
-(defun my/backups-visit ()
-  (interactive)
-  (find-file (expand-file-name (concat user-emacs-directory "backups")))
-  (run-hooks 'my/open-map-hook))
+;; ** Org-brain notes
+(define-key my/open-map (kbd "n") (lambda () (interactive)
+				    (or
+				     (if (and buffer-file-name
+					      (file-in-directory-p
+					       buffer-file-name
+					       org-brain-path))
+					 (org-brain-visualize (org-brain-path-entry-name buffer-file-name)))
+				     (and (get-buffer "*org-brain*")
+					  (switch-to-buffer "*org-brain*"))
+				     (org-brain-visualize "Origo"))))
 
-(defun my/backups-per-session-visit ()
-  (interactive)
-  (find-file (expand-file-name (concat user-emacs-directory "backups/per-session")))
-  (run-hooks 'my/open-map-hook))
-
-
-(define-key my/open-map (kbd "b") 'my/backups-per-session-visit)
-(define-key my/open-map (kbd "B") 'my/backups-visit)
+(define-key my/open-map (kbd "N") 'org-brain-visualize)
+(define-key my/open-map (kbd "C-n") '(lambda () (interactive) (find-file org-brain-path)))
 
 ;; ** Visit nixos config
 (defun my/nixos-config-visit ()
   (interactive)
-  (find-file "/etc/nixos/configuration.nix")
-  (run-hooks 'my/open-map-hook))
+  (find-file "/etc/nixos/configuration.nix"))
 
 (define-key my/open-map (kbd "N") 'my/nixos-config-visit)
-
-;; ** Visit notes
-(defun my/nixos-notes-visit ()
-  (interactive)
-  (find-file "~/Notes/")
-  (run-hooks 'my/open-map-hook))
-
-(define-key my/open-map (kbd "n") 'my/nixos-notes-visit)
 
 ;; ** Visit config
 (defun my/config-visit ()
   (interactive)
   (find-file (expand-file-name (concat user-emacs-directory "config.el")))
   ;; Emacs lags if flycheck runs on config
-  (flycheck-mode -1)
-  (run-hooks 'my/open-map-hook))
+  (flycheck-mode -1))
 
 (define-key my/open-map (kbd "c") 'my/config-visit)
-
-;; ** Reload config
-(defun my/config-reload ()
-  (interactive)
-  (org-babel-load-file (expand-file-name (concat user-emacs-directory "config.org")))
-  (run-hooks 'my/open-map-hook))
-(define-key my/open-map (kbd "C-r") 'my/config-reload)
 
 ;; ** Open trash
 (defun my/trash-visit ()
   (interactive)
-  (find-file "~/.local/share/Trash/files/")
-  (run-hooks 'my/open-map-hook))
+  (find-file "~/.local/share/Trash/files/"))
+
 (define-key my/open-map (kbd "t") 'my/trash-visit)
 
 ;; ** Open agenda
 (defun my/org-agenda-show-agenda-and-todo (&optional arg)
   (interactive "P")
-  (org-agenda arg "a")
-  (run-hooks 'my/open-map-hook))
+  (org-agenda arg "a"))
 
 (define-key my/open-map (kbd "a") 'my/org-agenda-show-agenda-and-todo)
 
 ;; ** Open messages
 (defun my/open-messages ()
   (interactive)
-  (switch-to-buffer "*Messages*")
-  (run-hooks 'my/open-map-hook))
+  (switch-to-buffer "*Messages*"))
 
 (define-key my/open-map (kbd "m") 'my/open-messages)
 
 ;; ** Open downloads
 (defun my/open-downloads ()
   (interactive)
-  (find-file "~/Downloads")
-  (run-hooks 'my/open-map-hook))
+  (find-file "~/Downloads"))
 
 (define-key my/open-map (kbd "d") 'my/open-downloads)
 
 ;; ** Open home
 (defun my/open-home ()
   (interactive)
-  (find-file "~")
-  (run-hooks 'my/open-map-hook))
+  (find-file "~/"))
 
 (define-key my/open-map (kbd "r") 'my/open-home)
 
@@ -2208,16 +2186,14 @@ or go back to just one window (by deleting all but the selected window)."
 ;; ** Open password file
 (defun my/open-passwords ()
   (interactive)
-  (find-file espy-password-file)
-  (run-hooks 'my/open-map-hook))
+  (find-file espy-password-file))
 
 (define-key my/open-map (kbd "p") 'my/open-passwords)
 
 ;; ** Visit agenda file
 (defun my/agenda-file-visit ()
   (interactive)
-  (find-file "~/Notes/Agenda.org")
-  (run-hooks 'my/open-map-hook))
+  (find-file "~/Notes/Agenda.org"))
 
 (define-key my/open-map (kbd "A") 'my/agenda-file-visit)
 
@@ -2464,6 +2440,94 @@ or go back to just one window (by deleting all but the selected window)."
 ;;  (defun org-src-get-lang-mode (LANG)
 ;;    (org-src--get-lang-mode LANG))
 
+;; ** Brain
+(straight-use-package '(org-brain :type git :host github :repo "walseb/org-brain" :branch "File-header-prompt-speedup"))
+(setq org-brain-path "~/Notes")
+(setq org-brain-show-history nil)
+(setq org-brain-show-resources nil)
+
+(add-hook 'org-brain-visualize-text-hook 'org-toggle-inline-images)
+
+;; Speedups
+(setq org-brain-file-entries-use-title nil)
+(setq org-brain-scan-for-header-entries nil)
+
+;; (with-eval-after-load 'org-brain
+;;   (add-hook 'org-brain-visualize-mode-hook '(lambda () (interactive) (org-brain-visualize-follow 1))))
+
+;; *** My add child
+(defun my/org-brain-add-child (entry children)
+  (interactive (list (org-brain-entry-at-pt)
+		     (org-brain-choose-entries "Add child: " 'all nil nil
+					       (let ((path (file-relative-name default-directory org-brain-path)))
+						 (if (string= "./" path)
+						     nil
+						   path)))))
+  (dolist (child-entry children)
+    (org-brain-add-relationship entry child-entry))
+  (org-brain--revert-if-visualizing))
+
+;; *** Keys
+(with-eval-after-load 'org-brain
+  (setq org-brain-visualize-mode-map (make-sparse-keymap))
+
+  ;; Movement
+  (define-key org-brain-visualize-mode-map "n" 'forward-button)
+  (define-key org-brain-visualize-mode-map "p" 'backward-button)
+  (define-key org-brain-visualize-mode-map [remap backward-delete-char-untabify] 'org-brain-visualize-back)
+  (evil-define-key 'normal org-brain-visualize-mode-map (kbd "u") 'org-brain-visualize-back)
+
+  ;; Child
+  (define-key org-brain-visualize-mode-map "c" 'my/org-brain-add-child)
+  (define-key org-brain-visualize-mode-map "C" 'org-brain-remove-child)
+
+  ;; Parent
+  (define-key org-brain-visualize-mode-map "v" 'org-brain-add-parent)
+  (define-key org-brain-visualize-mode-map "V" 'org-brain-remove-parent)
+
+  ;; Delete
+  (define-key org-brain-visualize-mode-map "d" 'org-brain-delete-entry)
+  (define-key org-brain-visualize-mode-map "D" 'org-brain-delete-selected-entries)
+
+  ;; File
+  (define-key org-brain-visualize-mode-map "o" 'org-brain-goto-current)
+  (define-key org-brain-visualize-mode-map "O" 'org-brain-goto)
+
+  (define-key org-brain-visualize-mode-map "j" 'org-brain-set-title)
+  (define-key org-brain-visualize-mode-map "J" 'org-brain-rename-file)
+
+  (define-key org-brain-visualize-mode-map "t" 'org-brain-open-resource)
+
+  ;; Select
+  (define-key org-brain-visualize-mode-map "m" 'org-brain-select)
+
+
+  ;; (define-key org-brain-visualize-mode-map "m" 'org-brain-visualize-mind-map)
+
+  (define-key org-brain-visualize-mode-map "*" 'org-brain-add-child-headline)
+  (define-key org-brain-visualize-mode-map "h" 'org-brain-add-child-headline)
+  (define-key org-brain-visualize-mode-map "u" 'org-brain-visualize-parent)
+  (define-key org-brain-visualize-mode-map [?\t] 'forward-button)
+  (define-key org-brain-visualize-mode-map [backtab] 'backward-button)
+  (define-key org-brain-visualize-mode-map "f" 'org-brain-add-friendship)
+  (define-key org-brain-visualize-mode-map "F" 'org-brain-remove-friendship)
+  (define-key org-brain-visualize-mode-map "l" 'org-brain-add-resource)
+  (define-key org-brain-visualize-mode-map "a" 'org-brain-visualize-attach)
+  (define-key org-brain-visualize-mode-map "A" 'org-brain-archive)
+  (define-key org-brain-visualize-mode-map "b" 'org-brain-visualize-back)
+  (define-key org-brain-visualize-mode-map "\C-y" 'org-brain-visualize-paste-resource)
+  (define-key org-brain-visualize-mode-map "T" 'org-brain-set-tags)
+  (define-key org-brain-visualize-mode-map "q" 'org-brain-visualize-quit)
+  (define-key org-brain-visualize-mode-map "w" 'org-brain-visualize-random)
+  (define-key org-brain-visualize-mode-map "W" 'org-brain-visualize-wander)
+  (define-key org-brain-visualize-mode-map "+" 'org-brain-show-descendant-level)
+  (define-key org-brain-visualize-mode-map "-" 'org-brain-hide-descendant-level)
+  (define-key org-brain-visualize-mode-map "z" 'org-brain-show-ancestor-level)
+  (define-key org-brain-visualize-mode-map "Z" 'org-brain-hide-ancestor-level)
+  (define-key org-brain-visualize-mode-map "e" 'org-brain-annotate-edge)
+  (define-key org-brain-visualize-mode-map "\C-c\C-w" 'org-brain-refile)
+  (define-key org-brain-visualize-mode-map "\C-c\C-x\C-v" 'org-toggle-inline-images))
+
 ;; ** Key
 (define-key my/org-mode-map (kbd "i") 'org-toggle-inline-images)
 (define-key my/org-mode-map (kbd "e") 'org-insert-link)
@@ -2671,7 +2735,7 @@ or go back to just one window (by deleting all but the selected window)."
 ;; *** Universal narrow function
 (defun my/narrow-widen ()
   (interactive)
-  (if loccur-mode
+  (if (and (boundp 'loccur-mode) loccur-mode)
       (loccur-mode -1)
     (widen)))
 
@@ -2817,6 +2881,26 @@ If the input is empty, select the previous history element instead."
     (when (string= ivy-text "")
       (ivy-previous-history-element 1))))
 
+;; *** Switch buffer
+;; **** Ignore buffers
+(defun my/ivy-switch-buffer-ignore (str)
+  (let ((buf (get-buffer str)))
+    (and buf (or (my/ignore-dired-buffers buf) (my/ignore-org-brain-buffers buf)))))
+
+(with-eval-after-load 'ivy
+  (add-to-list 'ivy-ignore-buffers #'my/ivy-switch-buffer-ignore))
+
+;; ***** Ignore dired buffers
+(defun my/ignore-dired-buffers (buf)
+  (eq (buffer-local-value 'major-mode buf) 'dired-mode))
+
+;; ***** Ignore
+(defun my/ignore-org-brain-buffers (buf)
+  (and (buffer-local-value 'buffer-file-name buf)
+       (file-in-directory-p
+	(buffer-local-value 'buffer-file-name buf)
+	(expand-file-name org-brain-path))))
+
 ;; *** Keys
 (defun my/ivy-top ()
   (interactive)
@@ -2847,7 +2931,7 @@ If the input is empty, select the previous history element instead."
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-n") 'ivy-next-line)
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-p") 'ivy-previous-line)
 
-(evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-d") 'ivy-call)
+(evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-,") 'ivy-call)
 
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-c") 'ivy-dispatching-done)
 
@@ -4222,7 +4306,7 @@ If the input is empty, select the previous history element instead."
 (evil-define-key 'insert dired-mode-map (kbd "l") 'dired-do-redisplay)
 (evil-define-key 'normal dired-mode-map (kbd "M-m") 'dired-mark-subdir-files)
 (evil-define-key '(normal insert) dired-mode-map (kbd "m") 'dired-mark)
-(evil-define-key 'insert dired-mode-map (kbd "M") 'dired-toggle-marks)
+(evil-define-key '(normal insert) dired-mode-map (kbd "M") 'dired-toggle-marks)
 (evil-define-key 'insert dired-mode-map (kbd "n") 'dired-next-line)
 (evil-define-key '(normal insert) dired-mode-map (kbd "o") 'dired-find-file-other-window)
 (evil-define-key '(normal insert) dired-mode-map (kbd "O") 'dired-insert-subdir)
@@ -9264,6 +9348,10 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (setq racket-font-lock-keywords-level-1 '())
 (setq racket-font-lock-keywords-level-2 '())
 (setq racket-font-lock-keywords-level-3 '())
+
+;; **** Nix
+(with-eval-after-load 'nix-mode
+  (setq nix-font-lock-keywords '()))
 
 ;; ** Modeline
 ;; Make mode line appear in echo area instead of in the mode line area. This saves space and makes it so that the mode line can't be split

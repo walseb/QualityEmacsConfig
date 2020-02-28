@@ -57,27 +57,51 @@
        (my/mark-color-5 (my/ifc (color-darken-name my/diff-changed-color 25) "yellow"))
        (my/mark-color-6 (my/ifc (color-darken-name my/diff-changed-color 30) "yellow"))
 
-       (my/error-color "#c6350b")
-       (my/warning-color "DarkOrange")
-       (my/spell-error-color "Blue")
-       (my/spell-warning-color "LightBlue")
+       ;; "deep sky blue"
+       (my/error-color (my/ifc "blue" "blue"))
+       (my/warning-color (my/ifc "LightBlue" "LightBlue"))
+
+       (my/spell-error-color "light green")
+       (my/spell-warning-color "dark green")
 
        ;; :background "#052000"
-       (my/mode-line-color (color-darken-name "#5d4d7a" 10))
+       ;; #5d4d7a
+       (my/mode-line-color (color-darken-name "DeepSkyBlue4" 10))
        )
   (custom-theme-set-faces
    'myTheme
    `(default ((,class (:foreground ,my/foreground-color :background ,my/background-color))))
    `(link ((,class (:foreground ,my/background-color :background ,my/foreground-color))))
-   `(highlight ((,class (:foreground ,my/foreground-color :background ,my/mark-color))))
+   `(highlight ((,class (:background ,my/mark-color))))
    `(region ((,class (:foreground ,my/foreground-color :background ,my/mark-color))))
    `(error ((,class (:foreground ,my/error-color))))
    `(warning ((,class (:foreground ,my/warning-color))))
+
+   `(flycheck-error ((,class (:underline (:style wave :color ,my/error-color)))))
+   `(flymake-error ((,class (:inherit flycheck-error))))
+   `(haskell-error-face ((,class (:inherit flycheck-error))))
+
+   `(flycheck-warning ((,class (:underline (:style wave :color ,my/warning-color)))))
+   `(flymake-warning ((,class (:inherit flycheck-warning))))
+   `(haskell-warning-face ((,class (:inherit flycheck-warning))))
+
    `(font-lock-comment-face ((,class (:foreground ,(color-lighten-name my/background-color 30)))))
    `(font-lock-comment-delimiter-face ((,class (:foreground ,my/background-color-4 :background ,my/background-color-2))))
    `(font-lock-string-face ((,class (:inherit default))))
    `(font-lock-function-name-face ((,class (:inherit default))))
    `(font-lock-keyword-face ((,class (:inherit default))))
+   `(font-lock-doc-face ((,class (:inherit default))))
+   `(font-lock-builtin-face ((,class (:inherit default))))
+   `(font-lock-constant-face ((,class (:inherit default))))
+   `(font-lock-negation-char-face ((,class (:inherit default))))
+   `(font-lock-preprocessor-face ((,class (:inherit default))))
+   `(font-lock-regexp-grouping-backslash ((,class (:inherit default :weight bold))))
+   `(font-lock-regexp-grouping-construct ((,class (:inherit default :weight bold))))
+   `(font-lock-type-face ((,class (:inherit default))))
+   `(font-lock-variable-name-face ((,class (:inherit default))))
+   `(font-lock-warning-face ((,class (:inherit warning))))
+
+   `(hl-line ((,class (:foreground ,my/foreground-color :background "#212026" :underline nil))))
 
    `(outline-1 ((,class (:foreground ,(color-lighten-name my/background-color 2) :background ,(color-darken-name my/foreground-color 50)))))
    `(outline-2 ((,class (:foreground ,(color-lighten-name my/background-color 2) :background ,(color-darken-name my/foreground-color 50)))))
@@ -141,16 +165,19 @@
 
    `(org-code ((,class (:background ,my/background-color-3))))
    `(org-block ((,class (:background ,my/background-color-1))))
-   `(org-block-begin-line ((,class (:inherit org-block))))
-   `(org-block-end-line ((,class (:inherit org-block))))
+   `(org-block-begin-line ((,class (:background ,my/background-color-3))))
+   `(org-block-end-line ((,class (:inherit org-block-begin-line))))
 
    `(org-meta-line ((,class (:background unspecified))))
    `(org-table ((,class (:foreground ,my/mark-color))))
 
+   `(org-brain-parent ((,class (:foreground ,my/background-color :background ,my/diff-ancestor-color))))
+   `(org-brain-child ((,class (:foreground ,my/background-color :background ,my/diff-added-color))))
+   `(org-brain-friend ((,class (:foreground ,my/background-color :background ,my/mark-color))))
+   `(org-brain-title ((,class (:inherit outline-1))))
+
    ;; Used by org src-blocks when in use, might also be used for other things
    `(secondary-selection ((,class (:background ,(color-darken-name my/background-color-1 5)))))
-
-   `(hl-line ((,class (:foreground ,my/foreground-color :background "#212026" :underline nil))))
 
    `(show-paren-match ((,class (:background ,my/foreground-color :foreground ,my/background-color))))
    `(show-paren-match-expression ((,class (:background ,my/foreground-color :foreground ,my/background-color))))
