@@ -1772,10 +1772,6 @@ documentation: True")
 (setq inhibit-startup-echo-area-message t)
 
 ;; ** Scratch buffer
-;; *** Disable scratch buffer on startup
-;; We need to do this because the scratch buffer created by emacs is temporary, the one in this config is a file
-;; (kill-buffer "*scratch*")
-
 ;; *** Disable initial scratch buffer message
 (setq initial-scratch-message nil)
 
@@ -1874,9 +1870,6 @@ documentation: True")
 ;; ** Async
 (straight-use-package 'async)
 
-;; (require 'async)
-;; (require 'dired-async)
-;; (autoload 'dired-async-mode "dired-async.el" nil t)
 (dired-async-mode 1)
 
 ;; ** Zoom
@@ -2125,7 +2118,10 @@ or go back to just one window (by deleting all but the selected window)."
 					  (switch-to-buffer "*org-brain*"))
 				     (org-brain-visualize "Origo" nil nil nil t))))
 
-(define-key my/open-map (kbd "N") 'org-brain-visualize)
+(define-key my/open-map (kbd "N") (lambda () (interactive)
+				    (org-brain-visualize
+				     (completing-read "Entry: "
+						      (mapcan #'org-brain--file-targets (org-brain-files))) nil nil nil t)))
 (define-key my/open-map (kbd "C-n") '(lambda () (interactive) (find-file org-brain-path)))
 
 ;; ** Visit nixos config
@@ -2133,7 +2129,7 @@ or go back to just one window (by deleting all but the selected window)."
   (interactive)
   (find-file "/etc/nixos/configuration.nix"))
 
-(define-key my/open-map (kbd "N") 'my/nixos-config-visit)
+(define-key my/open-map (kbd "C") 'my/nixos-config-visit)
 
 ;; ** Visit config
 (defun my/config-visit ()
@@ -2414,9 +2410,6 @@ or go back to just one window (by deleting all but the selected window)."
 (with-eval-after-load 'org
   (require 'org-refile))
 
-;; (require 'org-eldoc)
-;; (require 'org-src)
-
 (add-hook 'org-mode-hook #'org-eldoc-load)
 
 ;; *** Fix error
@@ -2456,22 +2449,22 @@ or go back to just one window (by deleting all but the selected window)."
   (defun org-brain-visualize (entry &optional nofocus nohistory wander same-window)
     "View a concept map with ENTRY at the center.
 
-When run interactively, prompt for ENTRY and suggest
-`org-brain-entry-at-pt'.  By default, the choices presented is
-determined by `org-brain-visualize-default-choices': 'all will
-show all entries, 'files will only show file entries and 'root
-will only show files in the root of `org-brain-path'.
+    When run interactively, prompt for ENTRY and suggest
+    `org-brain-entry-at-pt'.  By default, the choices presented is
+    determined by `org-brain-visualize-default-choices': 'all will
+    show all entries, 'files will only show file entries and 'root
+    will only show files in the root of `org-brain-path'.
 
-You can override `org-brain-visualize-default-choices':
-  `\\[universal-argument]' will use 'all.
-  `\\[universal-argument] \\[universal-argument]' will use 'files.
-  `\\[universal-argument] \\[universal-argument] \\[universal-argument]' will use 'root.
+    You can override `org-brain-visualize-default-choices':
+    `\\[universal-argument]' will use 'all.
+    `\\[universal-argument] \\[universal-argument]' will use 'files.
+    `\\[universal-argument] \\[universal-argument] \\[universal-argument]' will use 'root.
 
-Unless NOFOCUS is non-nil, the `org-brain-visualize' buffer will gain focus.
-Unless NOHISTORY is non-nil, add the entry to `org-brain--vis-history'.
-Setting NOFOCUS to t implies also having NOHISTORY as t.
-Unless WANDER is t, `org-brain-stop-wandering' will be run.
-Unless SAME-WINDOW is t, the buffer will be opened in another window."
+    Unless NOFOCUS is non-nil, the `org-brain-visualize' buffer will gain focus.
+    Unless NOHISTORY is non-nil, add the entry to `org-brain--vis-history'.
+    Setting NOFOCUS to t implies also having NOHISTORY as t.
+    Unless WANDER is t, `org-brain-stop-wandering' will be run.
+    Unless SAME-WINDOW is t, the buffer will be opened in another window."
     (interactive
      (progn
        (org-brain-maybe-switch-brain)
@@ -2967,7 +2960,10 @@ If the input is empty, select the previous history element instead."
 ;; **** Ignore buffers
 (defun my/ivy-switch-buffer-ignore (str)
   (let ((buf (get-buffer str)))
-    (and buf (or (my/ignore-dired-buffers buf) (my/ignore-org-brain-buffers buf)))))
+    (and buf (or
+	      (my/ignore-dired-buffers buf)
+	      ;; (my/ignore-org-brain-buffers buf)
+	      ))))
 
 (with-eval-after-load 'ivy
   (add-to-list 'ivy-ignore-buffers #'my/ivy-switch-buffer-ignore))
@@ -3009,19 +3005,18 @@ If the input is empty, select the previous history element instead."
 (evil-define-key '(motion normal) ivy-minibuffer-map (kbd "n") 'ivy-next-line)
 (evil-define-key '(motion normal) ivy-minibuffer-map (kbd "p") 'ivy-previous-line)
 
-(require 'evil)
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-n") 'ivy-next-line)
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-p") 'ivy-previous-line)
 
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-,") 'ivy-call)
 
-(evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-c") 'ivy-dispatching-done)
-
 (define-key ivy-minibuffer-map [remap evil-ret] 'ivy-done)
 (define-key ivy-minibuffer-map [remap newline] 'ivy-done)
 
-(evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-g") 'minibuffer-keyboard-quit)
-(evil-define-key '(motion normal insert) minibuffer-inactive-mode-map (kbd "C-g") 'minibuffer-keyboard-quit)
+(define-key ivy-minibuffer-map (kbd "C-c") 'ivy-dispatching-done)
+
+(define-key ivy-minibuffer-map [remap keyboard-quit] 'minibuffer-keyboard-quit)
+(define-key minibuffer-inactive-mode-map [remap keyboard-quit] 'minibuffer-keyboard-quit)
 
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-u") 'ivy-scroll-down-command)
 (evil-define-key '(motion normal insert) ivy-minibuffer-map (kbd "C-w") 'ivy-scroll-up-command)
@@ -5163,6 +5158,10 @@ the overlay."
 
 (setq haskell-interactive-mode-read-only t)
 (setq haskell-interactive-popup-errors nil)
+
+;; **** Disable auto completion
+;; Disable auto completion in haskell-interactive-mode because it's slow
+(add-hook 'haskell-interactive-mode-hook (lambda () (company-mode -1)))
 
 ;; **** Max memory
 ;; (require 'haskell-customize)
