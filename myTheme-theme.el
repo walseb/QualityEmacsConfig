@@ -61,12 +61,15 @@
        (my/error-color (my/ifc "blue" "blue"))
        (my/warning-color (my/ifc "LightBlue" "LightBlue"))
 
-       (my/spell-error-color "light green")
-       (my/spell-warning-color "dark green")
+       (my/spell-error-color "green")
+       (my/spell-warning-color "green3")
 
        ;; :background "#052000"
        ;; #5d4d7a
        (my/mode-line-color (color-darken-name "DeepSkyBlue4" 10))
+
+       (my/hl-line-color "#212026")
+
        )
   (custom-theme-set-faces
    'myTheme
@@ -101,7 +104,7 @@
    `(font-lock-variable-name-face ((,class (:inherit default))))
    `(font-lock-warning-face ((,class (:inherit warning))))
 
-   `(hl-line ((,class (:foreground ,my/foreground-color :background "#212026" :underline nil))))
+   `(hl-line ((,class (:foreground ,my/foreground-color :background ,my/hl-line-color :underline nil))))
 
    `(outline-1 ((,class (:foreground ,(color-lighten-name my/background-color 2) :background ,(color-darken-name my/foreground-color 50)))))
    `(outline-2 ((,class (:foreground ,(color-lighten-name my/background-color 2) :background ,(color-darken-name my/foreground-color 50)))))

@@ -2109,13 +2109,13 @@ or go back to just one window (by deleting all but the selected window)."
 ;; ** Org-brain notes
 (define-key my/open-map (kbd "n") (lambda () (interactive)
 				    (or
-				     (if (and buffer-file-name
-					      (file-in-directory-p
-					       buffer-file-name
-					       org-brain-path))
-					 (org-brain-visualize (org-brain-path-entry-name buffer-file-name) nil nil nil t))
 				     (and (get-buffer "*org-brain*")
 					  (switch-to-buffer "*org-brain*"))
+				     (when (and buffer-file-name
+						(file-in-directory-p
+						 buffer-file-name
+						 org-brain-path))
+				       (org-brain-visualize (org-brain-path-entry-name buffer-file-name) nil nil nil t))
 				     (org-brain-visualize "Origo" nil nil nil t))))
 
 (define-key my/open-map (kbd "N") (lambda () (interactive)
@@ -4084,7 +4084,7 @@ If the input is empty, select the previous history element instead."
   ("B" my/browser-activate-tab nil)
 
   ;; Switch buffer
-  ("a" counsel-switch-buffer nil)
+  ("a" ivy-switch-buffer nil)
   ("A" my/switch-to-last-buffer nil)
 
   ;; Same as M-e
