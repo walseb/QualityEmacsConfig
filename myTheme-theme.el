@@ -58,8 +58,8 @@
        (my/mark-color-6 (my/ifc (color-darken-name my/diff-changed-color 30) "yellow"))
 
        ;; "deep sky blue"
-       (my/error-color (my/ifc "blue" "blue"))
-       (my/warning-color (my/ifc "LightBlue" "LightBlue"))
+       (my/error-color "blue")
+       (my/warning-color "LightBlue")
 
        (my/spell-error-color "green")
        (my/spell-warning-color "green3")
