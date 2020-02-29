@@ -2119,6 +2119,7 @@ or go back to just one window (by deleting all but the selected window)."
 				     (org-brain-visualize "Origo" nil nil nil t))))
 
 (define-key my/open-map (kbd "N") (lambda () (interactive)
+				    (require 'org-brain)
 				    (org-brain-visualize
 				     (completing-read "Entry: "
 						      (mapcan #'org-brain--file-targets (org-brain-files))) nil nil nil t)))
@@ -2756,18 +2757,6 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; ** Visuals
 (setq counsel-outline-face-style nil)
-
-;; *** Set outshine fonts to inherit from outline
-(with-eval-after-load 'outshine-mode
-(set-face-attribute 'outshine-level-1 nil :inherit 'outline-1) ;;:height my/org-level-1-height)
-(set-face-attribute 'outshine-level-2 nil :inherit 'outline-2) ;;:height my/org-level-2-height)
-(set-face-attribute 'outshine-level-3 nil :inherit 'outline-3) ;;:height my/org-level-3-height)
-(set-face-attribute 'outshine-level-4 nil :inherit 'outline-4) ;;:height my/org-level-4-height)
-(set-face-attribute 'outshine-level-5 nil :inherit 'outline-5) ;;:height my/org-level-5-height)
-(set-face-attribute 'outshine-level-6 nil :inherit 'outline-6) ;;:height my/org-level-6-height)
-(set-face-attribute 'outshine-level-7 nil :inherit 'outline-7) ;;:height my/org-level-7-height)
-(set-face-attribute 'outshine-level-8 nil :inherit 'outline-8) ;;:height my/org-level-8-height)
-)
 
 ;; *** Fontify whole line
 ;; This makes it so the whole line the heading is on has the heading background color
@@ -3436,17 +3425,13 @@ If the input is empty, select the previous history element instead."
 (with-eval-after-load 'flycheck
   (add-hook 'flycheck-mode-hook #'flycheck-posframe-mode))
 
-(setq my/flycheck-posframe-symbol "→ ")
+(setq my/flycheck-posframe-symbol nil)
+;; (setq my/flycheck-posframe-symbol "→ ")
 
-;; (setq flycheck-posframe-error-prefix my/flycheck-posframe-symbol)
-;; (setq flycheck-posframe-info-prefix my/flycheck-posframe-symbol)
-;; (setq flycheck-posframe-prefix my/flycheck-posframe-symbol)
-;; (setq flycheck-posframe-warning-prefix my/flycheck-posframe-symbol)
-
-(setq flycheck-posframe-error-prefix nil)
-(setq flycheck-posframe-info-prefix nil)
-(setq flycheck-posframe-prefix nil)
-(setq flycheck-posframe-warning-prefix nil)
+(setq flycheck-posframe-error-prefix my/flycheck-posframe-symbol)
+(setq flycheck-posframe-info-prefix my/flycheck-posframe-symbol)
+(setq flycheck-posframe-prefix my/flycheck-posframe-symbol)
+(setq flycheck-posframe-warning-prefix my/flycheck-posframe-symbol)
 
 ;; **** Flycheck inline
 ;; (straight-use-package 'flycheck-inline)
@@ -5484,13 +5469,14 @@ do the
 
   (straight-use-package 'dante)
 
-  (require 'dante)
-  (add-hook 'haskell-mode-hook 'dante-mode)
+  (with-eval-after-load 'haskell-mode
+    (require 'dante)
+    (add-hook 'haskell-mode-hook 'dante-mode)
 
-  (defun my/dante-mode ()
-    (my/dante-fix-flycheck))
+    (defun my/dante-mode ()
+      (my/dante-fix-flycheck))
 
-  (add-hook 'dante-mode-hook 'my/dante-mode))
+    (add-hook 'dante-mode-hook 'my/dante-mode)))
 
 ;; **** Set flycheck settings
 (defun my/dante-fix-flycheck ()
@@ -5505,7 +5491,9 @@ do the
 	;; Dante disables this by default, so remove it
 	(remove "-Wmissing-home-modules" my/ghc-flags))
 
-  (setq dante-load-flags (append dante-load-flags my/ghc-warning-parameters)))
+  (with-eval-after-load 'haskell-mode
+    (setq dante-load-flags (append dante-load-flags my/ghc-warning-parameters)))
+  )
 
 ;; Remove duplicates if any
 ;; (setq dante-load-flags (remove-duplicates dante-load-flags :test 'string=))
@@ -6554,7 +6542,7 @@ do the
 ;; ** Carpalx
 (defun my/carpalx-enable ()
   (interactive)
-  (async-shell-command "setxkbmap -I ~/.emacs.d/configs/kbd-layouts/ carpalx.xkb -print | xkbcomp -I/home/admin/.emacs.d/configs/kbd-layouts/ - $DISPLAY"))
+  (async-shell-command (concat "setxkbmap -I ~/.emacs.d/configs/kbd-layouts/ carpalx.xkb -print | xkbcomp -I"(expand-file-name user-emacs-directory)"configs/kbd-layouts/ - $DISPLAY")))
 
 (when my/carpalx-enable
   (my/carpalx-enable))
@@ -8738,34 +8726,20 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; ** Keys
 (define-key my/leader-map (kbd "A") 'artist-mode)
 
-(define-prefix-command 'my/artist-mode-map)
-(evil-define-key 'normal artist-mode-map (kbd (concat my/leader-map-key " a")) 'my/artist-mode-map)
+(with-eval-after-load 'artist-mode
+  (setq artist-mode-map (make-sparse-keymap))
 
-(define-key my/artist-mode-map (kbd "o") 'my/artist-select-operation)
-(define-key my/artist-mode-map (kbd "s") 'my/artist-select-settings)
+  (evil-define-key 'normal artist-mode-map (kbd "p") 'artist-previous-line)
+  (evil-define-key 'normal artist-mode-map (kbd "n") 'artist-next-line)
 
-;; (evil-define-key 'insert artist-mode-map (kbd "SPC") (lambda () (interactive) (insert " ")))
-;; (evil-define-key 'insert artist-mode-map (kbd "SPC") 'self-insert-command)
-
-(setq artist-mode-map (make-sparse-keymap))
-(setq-default artist-mode-map (make-sparse-keymap))
-;; (evil-define-key 'insert artist-mode-map (kbd "<delete>") 'picture-backward-clear-column)
-
-;; (evil-define-key 'insert artist-mode-map (kbd "RET") 'newline)
-
-(evil-define-key 'normal artist-mode-map (kbd "p") 'artist-previous-line)
-(evil-define-key 'normal artist-mode-map (kbd "n") 'artist-next-line)
-
-(evil-define-key 'normal artist-mode-map (kbd "n") 'artist-next-line)
-
-(evil-define-key 'emacs artist-mode-map [down-mouse-1] 'artist-down-mouse-1)
-(evil-define-key 'emacs artist-mode-map [S-down-mouse-1] 'artist-down-mouse-1)
-(evil-define-key 'emacs artist-mode-map [down-mouse-2] 'artist-mouse-choose-operation)
-(evil-define-key 'emacs artist-mode-map [S-down-mouse-2] 'artist-mouse-choose-operation)
-(evil-define-key 'emacs artist-mode-map [down-mouse-3] 'artist-down-mouse-3)
-(evil-define-key 'emacs artist-mode-map [S-down-mouse-3] 'artist-down-mouse-3)
-(evil-define-key 'emacs artist-mode-map [C-mouse-4] 'artist-select-prev-op-in-list)
-(evil-define-key 'emacs artist-mode-map [C-mouse-5] 'artist-select-next-op-in-list)
+  (evil-define-key 'insert artist-mode-map [down-mouse-1] 'artist-down-mouse-1)
+  (evil-define-key 'insert artist-mode-map [S-down-mouse-1] 'artist-down-mouse-1)
+  (evil-define-key 'insert artist-mode-map [down-mouse-2] 'artist-mouse-choose-operation)
+  (evil-define-key 'insert artist-mode-map [S-down-mouse-2] 'artist-mouse-choose-operation)
+  (evil-define-key 'insert artist-mode-map [down-mouse-3] 'artist-down-mouse-3)
+  (evil-define-key 'insert artist-mode-map [S-down-mouse-3] 'artist-down-mouse-3)
+  (evil-define-key 'insert artist-mode-map [C-mouse-4] 'artist-select-prev-op-in-list)
+  (evil-define-key 'insert artist-mode-map [C-mouse-5] 'artist-select-next-op-in-list))
 
 ;; * Image modes
 ;; ** PDF view

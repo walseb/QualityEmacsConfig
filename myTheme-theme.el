@@ -135,6 +135,15 @@
    `(org-level-7 ((,class (:inherit outline-7))))
    `(org-level-8 ((,class (:inherit outline-8))))
 
+   `(outshine-level-1 ((,class (:inherit outline-1))))
+   `(outshine-level-2 ((,class (:inherit outline-2))))
+   `(outshine-level-3 ((,class (:inherit outline-3))))
+   `(outshine-level-4 ((,class (:inherit outline-4))))
+   `(outshine-level-5 ((,class (:inherit outline-5))))
+   `(outshine-level-6 ((,class (:inherit outline-6))))
+   `(outshine-level-7 ((,class (:inherit outline-7))))
+   `(outshine-level-8 ((,class (:inherit outline-8))))
+
    `(header-line ((,class (:foreground ,my/foreground-color :background ,my/mode-line-color))))
 
    `(my/mode-line-highlight ((,class (:foreground "#063000" :background ,my/foreground-color))))
