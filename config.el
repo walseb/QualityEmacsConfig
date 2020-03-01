@@ -737,16 +737,6 @@
 	(mapcar (lambda (e) `(t . ,e))
 		(listify-key-sequence (kbd key)))))
 
-;; *** Exwm
-(defun my/exwm-fake-key (key)
-  "Key is a string"
-  (interactive)
-  (exwm-input--fake-key
-   ;; (string-to-char
-   key
-   ;; )
-   ))
-
 ;; ** Fold ellipsis
 (defvar my/fold-ellipsis)
 (defvar my/fold-ellipsis-char)
@@ -4106,7 +4096,8 @@ If the input is empty, select the previous history element instead."
   ("R" rename-buffer nil)
 
   ;; Add this to not auto exit insert mode after closing the hydra
-  ;; ("<escape>" nil)
+  ("<escape>" nil)
+  ("C-e" nil)
   )
 
 ;; *** Keys
@@ -6568,12 +6559,12 @@ do the
 (define-key input-decode-map (kbd "M->") (kbd "Ö"))
 
 ;; *** Rebind backspace with C-f
-(keyboard-translate ?\C-f ?\C-?)
+;; (keyboard-translate ?\C-f ?\C-?)
 
 ;; 127 is backspace
-;; (define-key input-decode-map (kbd "C-f") [127])
+(define-key input-decode-map (kbd "C-f") [127])
 ;; There are 2 unbinds here for compatibility
-;; (define-key input-decode-map (kbd "<backspace>") (kbd "C-="))
+(define-key input-decode-map (kbd "<backspace>") (kbd "C-="))
 
 ;; Don't split up tabs on delete
 ;; (global-set-key (kbd "DEL") 'backward-delete-char)
@@ -6809,65 +6800,6 @@ do the
 
 ;; * exwm
 ;; ** Keys before exwm init
-;; Reset exwm-mode map
-(setq exwm-mode-map (make-sparse-keymap))
-
-(define-key evil-emacs-state-map (kbd "TAB") nil)
-(global-unset-key (kbd "TAB"))
-
-;; Rebind keys in exwm bufffers
-(setq exwm-input-simulation-keys
-      '(
-	;; Delete char
-	([?\C-l] . [delete])
-	([?\C-f] . [backspace])
-
-	;; movement
-	([?\C-p] . [up])
-	([?\C-n] . [down])
-
-	;; ([?\C-u] . [prior])
-	;; ([?\C-w] . [next])
-	([?\C-w] . [?\C-d])
-
-	([?\C-s] . [?\C-f])
-
-	([?\C-a] . [return])
-	([?\r] . [return])
-
-	;;([?\C-e] . [?\C-[])
-	;; ([?\C-e] . [escape])
-	;; ([?\e] . [escape])
-
-	([?\C-t] . [tab])
-	([?\t] . [tab])
-
-	;; ([escape] . [escape])
-	([?\C-g] . [escape])
-	([?\C-e] . [escape])
-
-	;; Firefox hard-coded open url hotkey
-	;;([?\C-o] . [f6])
-
-	;; Redo
-	([?\C-r] . [?\C-y])
-	;; Undo
-	([?\M-u] . [?\C-z])
-
-	;; cut/paste.
-	([?\C-y] . [?\C-c])
-	([?\C-k] . [?\C-v])
-
-	([?\M-f] . [?\C-å])
-	([?\M-u] . [?\C-ä])
-	([?\M-b] . [?\C-ö])
-
-	([?\M-F] . [?\C-Å])
-	([?\M-U] . [?\C-Ä])
-	([?\M-B] . [?\C-Ö])
-
-	([?\C-c] . [?\C-c])))
-
 (setq exwm-input-prefix-keys nil)
 ;; Exwm don't send back these keys
 (dolist (k '(
@@ -6884,38 +6816,117 @@ do the
 	     XF86Forward
 	     Scroll_Lock
 	     print
+
+	     ;; (read-event)
+	     6 ;; C-f
+	     delete
+	     ;; <delete>
+	     ;; <deletechar> ;; C-l
+	     20 ;; C-t
+	     11 ;; C-k
+	     13 ;; C-a
+	     10 ;; C-j
+
+	     ;; Doesn't seem to work, I'm getting errors when running the insert functions
+	     ;; 134217835 ;; å
+	     ;; 134217772 ;; ä
+	     ;; 134217774 ;; ö
+	     ;; 134217808 ;; Å
+	     ;; 134217788 ;; Ä
+	     ;; 134217790 ;; Ö
+
+	     tab ;; Actual tab
+
+	     134217848 ;; M-x
+
+	     21 ;; C-u
+	     23 ;; C-w
+
+	     5 ;; C-e
+	     7 ;; C-g
 	     ))
   (cl-pushnew k exwm-input-prefix-keys))
 
 (setq exwm-input-global-keys nil)
 
-;; ** load exwm
-;; https://emacs.stackexchange.com/questions/33326/how-do-i-cut-and-paste-effectively-between-applications-while-using-exwm
-(straight-use-package 'exwm)
+;; ** Init
+(eval-and-compile
+  (straight-use-package 'exwm)
+  (require 'exwm-core))
 
-;; enable exwm
-(exwm-enable)
+;; ** keys
+;; *** Define mode
+(defvar my/exwm-mode-map (make-sparse-keymap))
 
-;; ** exwm keys
-(exwm-input-set-key (kbd my/mod-leader-map-key) 'my/leader-map)
+(define-minor-mode my/exwm-mode nil nil nil my/exwm-mode-map)
+(add-hook 'exwm-manage-finish-hook 'my/exwm-mode)
 
-(exwm-input-set-key (kbd "M-<tab>") 'my/toggle-switch-to-minibuffer)
+;; *** Define functions
+(defun my/exwm-backspace () (interactive) (exwm-input--fake-key 'backspace))
+(defun my/exwm-delete () (interactive) (exwm-input--fake-key 'delete))
+(defun my/exwm-tab () (interactive) (exwm-input--fake-key 'tab))
 
-(exwm-input-set-key (kbd "<escape>") 'keyboard-quit)
+(defun my/exwm-å () (interactive) (exwm-input--fake-key "å"))
+(defun my/exwm-ä () (interactive) (exwm-input--fake-key "ä"))
+(defun my/exwm-ö () (interactive) (exwm-input--fake-key "ö"))
 
-;; (exwm-input-set-key (kbd "C-?") (lambda () (my/exwm-fake-key 'backspace)))
+(defun my/exwm-Å () (interactive) (exwm-input--fake-key "Å"))
+(defun my/exwm-Ä () (interactive) (exwm-input--fake-key "Ä"))
+(defun my/exwm-Ö () (interactive) (exwm-input--fake-key "Ö"))
 
-(exwm-input-set-key (kbd "<tab>") 'my/window-hydra/body)
-(exwm-input-set-key (kbd "C-=") 'my/window-hydra/body)
+(defun my/exwm-paste () (interactive) (exwm-input--fake-key ?\C-v))
 
-(exwm-input-set-key (kbd "M-x") 'counsel-M-x)
+(defun my/exwm-page-up () (interactive) (exwm-input--fake-key 'next))
+(defun my/exwm-page-down () (interactive) (exwm-input--fake-key 'prior))
 
-;; (exwm-input-set-key (kbd "DEL") (lambda () (interactive) (exwm-input--fake-key 'backspace)))
-;; (exwm-input-set-key (kbd "<deletechar>") (lambda () (interactive) (exwm-input--fake-key 'delete)))
+(defun my/exwm-return () (interactive) (exwm-input--fake-key 'return))
+(defun my/exwm-escape () (interactive) (exwm-input--fake-key 'escape))
 
-;; (exwm-input-set-key (kbd "M-w") (lambda () (interactive) (exwm-input--fake-key ?\å)))
-;; (exwm-input-set-key (kbd "M-r") (lambda () (interactive) (exwm-input--fake-key ?\ä)))
-;; (exwm-input-set-key (kbd "M-j") (lambda () (interactive) (exwm-input--fake-key ?\ö)))
+;; *** Keys
+(setq exwm-mode-map (make-sparse-keymap))
+
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "DEL") 'my/exwm-backspace)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "<delete>") 'my/exwm-delete)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "TAB") 'my/exwm-tab)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "M-x") 'counsel-M-x)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-k") 'my/exwm-paste)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-u") 'my/exwm-page-up)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-w") 'my/exwm-page-down)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "RET") 'my/exwm-return)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-g") 'my/exwm-escape)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "å") 'my/exwm-å)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "ä") 'my/exwm-ä)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "ö") 'my/exwm-ö)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "Å") 'my/exwm-Å)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "Ä") 'my/exwm-Ä)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "Ö") 'my/exwm-Ö)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd my/mod-leader-map-key) 'my/leader-map)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-=") 'my/window-hydra/body)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "M-x") 'counsel-M-x)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-d") #'exwm-edit--compose)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-j") 'my/toggle-switch-to-minibuffer)
+
+;; Needs to be kept same as above
+(define-key my/exwm-mode-map (kbd "DEL") 'my/exwm-backspace)
+(define-key my/exwm-mode-map (kbd "<delete>") 'my/exwm-delete)
+(define-key my/exwm-mode-map (kbd "TAB") 'my/exwm-tab)
+(define-key my/exwm-mode-map (kbd "M-x") 'counsel-M-x)
+(define-key my/exwm-mode-map (kbd "C-k") 'my/exwm-paste)
+(define-key my/exwm-mode-map (kbd "C-u") 'my/exwm-page-up)
+(define-key my/exwm-mode-map (kbd "C-w") 'my/exwm-page-down)
+(define-key my/exwm-mode-map (kbd "RET") 'my/exwm-return)
+(define-key my/exwm-mode-map (kbd "C-g") 'my/exwm-escape)
+(define-key my/exwm-mode-map (kbd "å") 'my/exwm-å)
+(define-key my/exwm-mode-map (kbd "ä") 'my/exwm-ä)
+(define-key my/exwm-mode-map (kbd "ö") 'my/exwm-ö)
+(define-key my/exwm-mode-map (kbd "Å") 'my/exwm-Å)
+(define-key my/exwm-mode-map (kbd "Ä") 'my/exwm-Ä)
+(define-key my/exwm-mode-map (kbd "Ö") 'my/exwm-Ö)
+(define-key my/exwm-mode-map (kbd my/mod-leader-map-key) 'my/leader-map)
+(define-key my/exwm-mode-map (kbd "C-=") 'my/window-hydra/body)
+(define-key my/exwm-mode-map (kbd "M-x") 'counsel-M-x)
+(define-key my/exwm-mode-map (kbd "C-d") #'exwm-edit--compose)
+(define-key my/exwm-mode-map (kbd "C-j") 'my/toggle-switch-to-minibuffer)
 
 ;; ** Exwm-edit
 (setq exwm-edit-bind-default-keys nil)
@@ -6927,9 +6938,8 @@ do the
 ;; *** Remove header
 (add-hook 'exwm-edit-mode-hook (lambda () (kill-local-variable 'header-line-format)))
 
-;; *** Keys
-(exwm-input-set-key (kbd "C-d") #'exwm-edit--compose)
-;; (exwm-input-set-key (kbd "M-j") #'exwm-edit--compose)
+;; *** Run exwm
+(add-hook 'after-init-hook 'exwm-enable)
 
 ;; ** Set exwm buffer name
 ;; *** Manually set buffer name
@@ -7042,11 +7052,11 @@ do the
   (el-patch-feature shr)
   (el-patch-defun shr-browse-url (&optional external mouse-event)
     "Browse the URL at point using `browse-url'.
-   If EXTERNAL is non-nil (interactively, the prefix argument), browse
-   the URL using `shr-external-browser'.
-   If this function is invoked by a mouse click, it will browse the URL
-   at the position of the click.  Optional argument MOUSE-EVENT describes
-   the mouse click event."
+    If EXTERNAL is non-nil (interactively, the prefix argument), browse
+    the URL using `shr-external-browser'.
+    If this function is invoked by a mouse click, it will browse the URL
+    at the position of the click.  Optional argument MOUSE-EVENT describes
+    the mouse click event."
     (interactive (list current-prefix-arg last-nonmenu-event))
     (mouse-set-point mouse-event)
     (let ((url (get-text-property (point) 'shr-url)))
@@ -7207,8 +7217,6 @@ do the
 (with-eval-after-load 'exwm
   (progn
        ;;; Normal
-    (evil-define-key '(insert visual normal motion) exwm-firefox-evil-mode-map (kbd "C-d") 'exwm-edit--compose)
-
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up)
@@ -7241,10 +7249,6 @@ do the
     (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-find-next)
     (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-find-previous)
 
-    ;; Bind tab
-    (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "TAB") (lambda () (interactive)
-											     (exwm-input--fake-key 'tab)))
-
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "f") 'exwm-firefox-evil-link-hint)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "F") 'exwm-firefox-evil-link-hint-new-tab)
 
@@ -7264,21 +7268,21 @@ do the
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-u") (lambda () (interactive) (exwm-firefox-evil-normal) (exwm-firefox-core-half-page-up)))
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-w") (lambda () (interactive) (exwm-firefox-evil-normal) (exwm-firefox-core-half-page-down)))
     ;;
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-f") (lambda () (interactive) (my/exwm-fake-key "å")))
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-u") (lambda () (interactive) (my/exwm-fake-key "ä")))
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-b") (lambda () (interactive) (my/exwm-fake-key "ö")))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-f") (lambda () (interactive) (exwm-input--fake-key "å")))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-u") (lambda () (interactive) (exwm-input--fake-key "ä")))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-b") (lambda () (interactive) (exwm-input--fake-key "ö")))
     ;;
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-F") (lambda () (interactive) (my/exwm-fake-key "Å")))
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-U") (lambda () (interactive) (my/exwm-fake-key "Ä")))
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-B") (lambda () (interactive) (my/exwm-fake-key "Ö")))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-F") (lambda () (interactive) (exwm-input--fake-key "Å")))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-U") (lambda () (interactive) (exwm-input--fake-key "Ä")))
+    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-B") (lambda () (interactive) (exwm-input--fake-key "Ö")))
 
     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-,") (lambda () (interactive) (exwm-input--fake-key ?ä)))
     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "ä") (lambda () (interactive) (exwm-input--fake-key ?ä)))
 
     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-l") (lambda () (interactive) (exwm-input--fake-key 'delete)))
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "DEL") (lambda () (interactive) (exwm-input--fake-key 'backspace)))))
+    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)))
+;; (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-l") (lambda () (interactive) (exwm-input--fake-key 'delete)))
+;; (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "DEL") (lambda () (interactive) (exwm-input--fake-key 'backspace)))))
 
 ;; ** Next browser
 ;; (defun my/write-next-config ()
@@ -9229,7 +9233,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (global-hl-line-mode t)
 
 ;; ** Symbol overlay
-;; Supposed to be faster thang highlight-thing
+;; Supposed to be faster than highlight-thing
 (straight-use-package '(symbol-overlay :type git :host github :repo "walseb/symbol-overlay"))
 
 (setq symbol-overlay-idle-time nil)
