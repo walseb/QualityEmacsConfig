@@ -6827,6 +6827,9 @@ do the
 	     10 ;; C-j
 	     19 ;; C-s
 
+	     14 ;; C-n
+	     16 ;; C-p
+
 	     ;; Doesn't seem to work, I'm getting errors when running the insert functions
 	     ;; 134217835 ;; å
 	     ;; 134217772 ;; ä
@@ -6912,6 +6915,9 @@ do the
 (defun my/exwm-escape () (interactive) (exwm-input--fake-key 'escape))
 (defun my/exwm-find () (interactive) (exwm-input--fake-key ?\C-f))
 
+(defun my/exwm-up () (interactive) (exwm-input--fake-key 'up))
+(defun my/exwm-down () (interactive) (exwm-input--fake-key 'down))
+
 (defun my/exwm-m-q () (interactive) (exwm-input--fake-key ?\!))
 (defun my/exwm-m-g () (interactive) (exwm-input--fake-key ?\@))
 (defun my/exwm-m-m () (interactive) (exwm-input--fake-key ?\#))
@@ -6958,6 +6964,8 @@ do the
 (evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-d") #'exwm-edit--compose)
 (evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-j") 'my/toggle-switch-to-minibuffer)
 (evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-s") 'my/exwm-find)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-n") 'my/exwm-down)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-p") 'my/exwm-up)
 
 (evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "!") 'my/exwm-m-q)
 (evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "@") 'my/exwm-m-g)
@@ -7003,6 +7011,8 @@ do the
 (define-key my/exwm-mode-map (kbd "C-d") #'exwm-edit--compose)
 (define-key my/exwm-mode-map (kbd "C-j") 'my/toggle-switch-to-minibuffer)
 (define-key my/exwm-mode-map (kbd "C-s") 'my/exwm-find)
+(define-key my/exwm-mode-map (kbd "C-n") 'my/exwm-down)
+(define-key my/exwm-mode-map (kbd "C-p") 'my/exwm-up)
 
 (define-key my/exwm-mode-map (kbd "!") 'my/exwm-m-q)
 (define-key my/exwm-mode-map (kbd "@") 'my/exwm-m-g)
@@ -7343,9 +7353,8 @@ do the
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<prior>") 'exwm-firefox-core-page-up)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<next>") 'exwm-firefox-core-page-down)
 
-
-    (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-find-next)
-    (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-find-previous)
+    ;; (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-find-next)
+    ;; (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-find-previous)
 
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "f") 'exwm-firefox-evil-link-hint)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "F") 'exwm-firefox-evil-link-hint-new-tab)
