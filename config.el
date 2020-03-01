@@ -6570,11 +6570,11 @@ do the
 ;; (global-set-key (kbd "DEL") 'backward-delete-char)
 
 ;; *** Rebind delete with
-(keyboard-translate ?\C-l 'delete)
-;; (define-key input-decode-map (kbd "C-l") (kbd "<deletechar>"))
+;; (keyboard-translate ?\C-l 'delete)
+(define-key input-decode-map (kbd "C-l") (kbd "<deletechar>"))
 ;; There are 2 unbinds here for compatibility
-;; (define-key input-decode-map (kbd "<deletechar>") (kbd "C-="))
-;; (define-key input-decode-map (kbd "<delete>") (kbd "C-="))
+(define-key input-decode-map (kbd "<deletechar>") (kbd "C-="))
+(define-key input-decode-map (kbd "<delete>") (kbd "C-="))
 
 ;; *** k(Move up) <--> p(Paste)
 ;; **** k
@@ -6687,9 +6687,9 @@ do the
 ;; (keyboard-translate ?\C-e ?\C-\[)
 
 ;; *** Rebind enter
-;;  (define-key input-decode-map (kbd "RET") (kbd "C-a"))
-;; (define-key input-decode-map (kbd "C-a") (kbd "RET"))
-(keyboard-translate ?\C-a ?\C-m)
+(define-key input-decode-map (kbd "RET") (kbd "C-a"))
+(define-key input-decode-map (kbd "C-a") (kbd "RET"))
+;; (keyboard-translate ?\C-a ?\C-m)
 
 ;; *** Rebind tab
 ;; (define-key my/keys-mode-map (kbd "C-e") 'my/simulate-esc)
@@ -6817,15 +6817,15 @@ do the
 	     Scroll_Lock
 	     print
 
+
 	     ;; (read-event)
 	     6 ;; C-f
-	     delete
-	     ;; <delete>
-	     ;; <deletechar> ;; C-l
+	     12 ;; C-l
 	     20 ;; C-t
 	     11 ;; C-k
-	     13 ;; C-a
+	     1 ;; C-a
 	     10 ;; C-j
+	     19 ;; C-s
 
 	     ;; Doesn't seem to work, I'm getting errors when running the insert functions
 	     ;; 134217835 ;; å
@@ -6844,6 +6844,11 @@ do the
 
 	     5 ;; C-e
 	     7 ;; C-g
+
+	     67108896 ;; C-space
+
+	     8388653 ;; Decrease volume: Win--
+	     8388669 ;; Increase volume: Win-=
 	     ))
   (cl-pushnew k exwm-input-prefix-keys))
 
@@ -6881,12 +6886,13 @@ do the
 
 (defun my/exwm-return () (interactive) (exwm-input--fake-key 'return))
 (defun my/exwm-escape () (interactive) (exwm-input--fake-key 'escape))
+(defun my/exwm-find () (interactive) (exwm-input--fake-key ?\C-f))
 
 ;; *** Keys
 (setq exwm-mode-map (make-sparse-keymap))
 
 (evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "DEL") 'my/exwm-backspace)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "<delete>") 'my/exwm-delete)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "<deletechar>") 'my/exwm-delete)
 (evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "TAB") 'my/exwm-tab)
 (evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "M-x") 'counsel-M-x)
 (evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-k") 'my/exwm-paste)
@@ -6905,10 +6911,11 @@ do the
 (evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "M-x") 'counsel-M-x)
 (evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-d") #'exwm-edit--compose)
 (evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-j") 'my/toggle-switch-to-minibuffer)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-s") 'my/exwm-find)
 
 ;; Needs to be kept same as above
 (define-key my/exwm-mode-map (kbd "DEL") 'my/exwm-backspace)
-(define-key my/exwm-mode-map (kbd "<delete>") 'my/exwm-delete)
+(define-key my/exwm-mode-map (kbd "<deletechar>") 'my/exwm-delete)
 (define-key my/exwm-mode-map (kbd "TAB") 'my/exwm-tab)
 (define-key my/exwm-mode-map (kbd "M-x") 'counsel-M-x)
 (define-key my/exwm-mode-map (kbd "C-k") 'my/exwm-paste)
@@ -6927,6 +6934,7 @@ do the
 (define-key my/exwm-mode-map (kbd "M-x") 'counsel-M-x)
 (define-key my/exwm-mode-map (kbd "C-d") #'exwm-edit--compose)
 (define-key my/exwm-mode-map (kbd "C-j") 'my/toggle-switch-to-minibuffer)
+(define-key my/exwm-mode-map (kbd "C-s") 'my/exwm-find)
 
 ;; ** Exwm-edit
 (setq exwm-edit-bind-default-keys nil)
@@ -7170,8 +7178,8 @@ do the
 ;; ** Firefox exwm integration
 (with-eval-after-load 'exwm
   (progn
-    (straight-use-package '(exwm-firefox-core :type git :host github :repo "walseb/exwm-firefox-core"  :branch "new-exwm-edit-version"))
-    (straight-use-package '(exwm-firefox-evil :type git :host github :repo "walseb/exwm-firefox-evil"  :branch "new-exwm-edit-version"))
+    (straight-use-package '(exwm-firefox-core :type git :host github :repo "walseb/exwm-firefox-core"))
+    (straight-use-package '(exwm-firefox-evil :type git :host github :repo "walseb/exwm-firefox-evil"))
     ;;    (straight-use-package 'exwm-firefox-core)
     ;;    (straight-use-package 'exwm-firefox-evil)
     (require 'exwm-firefox-evil)
