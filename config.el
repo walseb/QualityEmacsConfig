@@ -6849,6 +6849,30 @@ do the
 
 	     8388653 ;; Decrease volume: Win--
 	     8388669 ;; Increase volume: Win-=
+
+	     ;; M-top letter row
+	     134217841
+	     134217831
+	     134217837
+	     134217836
+	     134217847
+	     134217849
+	     134217830
+	     134217845
+	     134217826
+	     134217787
+
+	     ;; M-middle letter row
+	     134217828
+	     134217843
+	     134217844
+	     134217838
+	     134217842
+	     134217833
+	     134217825
+	     134217829
+	     134217839
+	     134217832
 	     ))
   (cl-pushnew k exwm-input-prefix-keys))
 
@@ -6888,6 +6912,28 @@ do the
 (defun my/exwm-escape () (interactive) (exwm-input--fake-key 'escape))
 (defun my/exwm-find () (interactive) (exwm-input--fake-key ?\C-f))
 
+(defun my/exwm-m-q () (interactive) (exwm-input--fake-key ?\!))
+(defun my/exwm-m-g () (interactive) (exwm-input--fake-key ?\@))
+(defun my/exwm-m-m () (interactive) (exwm-input--fake-key ?\#))
+(defun my/exwm-m-l () (interactive) (exwm-input--fake-key ?\$))
+(defun my/exwm-m-w () (interactive) (exwm-input--fake-key ?\%))
+(defun my/exwm-m-y () (interactive) (exwm-input--fake-key ?\*))
+(defun my/exwm-m-f () (interactive) (exwm-input--fake-key ?\())
+(defun my/exwm-m-u () (interactive) (exwm-input--fake-key ?\)))
+(defun my/exwm-m-b () (interactive) (exwm-input--fake-key ?\&))
+(defun my/exwm-m-comma () (interactive) (exwm-input--fake-key ?^))
+
+(defun my/exwm-1 () (interactive) (exwm-input--fake-key ?1))
+(defun my/exwm-2 () (interactive) (exwm-input--fake-key ?2))
+(defun my/exwm-3 () (interactive) (exwm-input--fake-key ?3))
+(defun my/exwm-4 () (interactive) (exwm-input--fake-key ?4))
+(defun my/exwm-5 () (interactive) (exwm-input--fake-key ?5))
+(defun my/exwm-6 () (interactive) (exwm-input--fake-key ?6))
+(defun my/exwm-7 () (interactive) (exwm-input--fake-key ?7))
+(defun my/exwm-8 () (interactive) (exwm-input--fake-key ?8))
+(defun my/exwm-9 () (interactive) (exwm-input--fake-key ?9))
+(defun my/exwm-0 () (interactive) (exwm-input--fake-key ?0))
+
 ;; *** Keys
 (setq exwm-mode-map (make-sparse-keymap))
 
@@ -6913,6 +6959,28 @@ do the
 (evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-j") 'my/toggle-switch-to-minibuffer)
 (evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-s") 'my/exwm-find)
 
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "!") 'my/exwm-m-q)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "@") 'my/exwm-m-g)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "#") 'my/exwm-m-m)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "$") 'my/exwm-m-l)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "%") 'my/exwm-m-w)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "*") 'my/exwm-m-y)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "(") 'my/exwm-m-f)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd ")") 'my/exwm-m-u)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "&") 'my/exwm-m-b)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "^") 'my/exwm-m-comma)
+
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "1") 'my/exwm-1)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "2") 'my/exwm-2)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "3") 'my/exwm-3)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "4") 'my/exwm-4)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "5") 'my/exwm-5)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "6") 'my/exwm-6)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "7") 'my/exwm-7)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "8") 'my/exwm-8)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "9") 'my/exwm-9)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "0") 'my/exwm-0)
+
 ;; Needs to be kept same as above
 (define-key my/exwm-mode-map (kbd "DEL") 'my/exwm-backspace)
 (define-key my/exwm-mode-map (kbd "<deletechar>") 'my/exwm-delete)
@@ -6935,6 +7003,28 @@ do the
 (define-key my/exwm-mode-map (kbd "C-d") #'exwm-edit--compose)
 (define-key my/exwm-mode-map (kbd "C-j") 'my/toggle-switch-to-minibuffer)
 (define-key my/exwm-mode-map (kbd "C-s") 'my/exwm-find)
+
+(define-key my/exwm-mode-map (kbd "!") 'my/exwm-m-q)
+(define-key my/exwm-mode-map (kbd "@") 'my/exwm-m-g)
+(define-key my/exwm-mode-map (kbd "#") 'my/exwm-m-m)
+(define-key my/exwm-mode-map (kbd "$") 'my/exwm-m-l)
+(define-key my/exwm-mode-map (kbd "%") 'my/exwm-m-w)
+(define-key my/exwm-mode-map (kbd "*") 'my/exwm-m-y)
+(define-key my/exwm-mode-map (kbd "(") 'my/exwm-m-f)
+(define-key my/exwm-mode-map (kbd ")") 'my/exwm-m-u)
+(define-key my/exwm-mode-map (kbd "&") 'my/exwm-m-b)
+(define-key my/exwm-mode-map (kbd "^") 'my/exwm-m-comma)
+
+(define-key my/exwm-mode-map (kbd "1") 'my/exwm-1)
+(define-key my/exwm-mode-map (kbd "2") 'my/exwm-2)
+(define-key my/exwm-mode-map (kbd "3") 'my/exwm-3)
+(define-key my/exwm-mode-map (kbd "4") 'my/exwm-4)
+(define-key my/exwm-mode-map (kbd "5") 'my/exwm-5)
+(define-key my/exwm-mode-map (kbd "6") 'my/exwm-6)
+(define-key my/exwm-mode-map (kbd "7") 'my/exwm-7)
+(define-key my/exwm-mode-map (kbd "8") 'my/exwm-8)
+(define-key my/exwm-mode-map (kbd "9") 'my/exwm-9)
+(define-key my/exwm-mode-map (kbd "0") 'my/exwm-0)
 
 ;; ** Exwm-edit
 (setq exwm-edit-bind-default-keys nil)
