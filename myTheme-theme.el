@@ -199,6 +199,8 @@
    `(org-brain-friend ((,class (:foreground ,my/background-color :background ,my/mark-color))))
    `(org-brain-title ((,class (:inherit outline-1))))
 
+   `(org-agenda-date-weekend ((,class (:foreground ,my/mark-color))))
+
    ;; Used by org src-blocks when in use, might also be used for other things
    `(secondary-selection ((,class (:background ,(color-darken-name my/background-color-1 5)))))
 

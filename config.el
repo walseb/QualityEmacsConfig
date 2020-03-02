@@ -1043,6 +1043,7 @@
 				 ;;(org-agenda-mode . insert)
 				 (magit-popup-mode . insert)
 				 (proced-mode . insert)
+				 (org-agenda-mode . insert)
 				 (emms-playlist-mode . insert))
 	 do (evil-set-initial-state mode state))
 
@@ -2184,6 +2185,13 @@ or go back to just one window (by deleting all but the selected window)."
 
 (define-key my/open-map (kbd "A") 'my/agenda-file-visit)
 
+;; ** Open backup
+(defun my/backups-visit ()
+  (interactive)
+  (find-file (concat user-emacs-directory ".git-backup")))
+
+(define-key my/open-map (kbd "b") 'my/backups-visit)
+
 ;; ** Open firefox
 (defvar my/gui-browser
   (if (my/is-system-package-installed 'icecat)
@@ -2248,6 +2256,10 @@ or go back to just one window (by deleting all but the selected window)."
 ;; *** Disable warnings in org mode before evaluating source block
 (setq org-confirm-babel-evaluate nil)
 
+;; ** Export
+;; *** Twitter bootstrap
+(straight-use-package 'ox-twbs)
+
 ;; ** Bullets
 (straight-use-package 'org-bullets)
 
@@ -2306,6 +2318,32 @@ or go back to just one window (by deleting all but the selected window)."
 
 (setq org-agenda-window-setup 'current-window)
 
+(setq org-agenda-start-day "-1d")
+(setq org-agenda-start-on-weekday nil)
+(setq org-agenda-span 50)
+
+;; *** org-timeline
+;; (straight-use-package 'org-timeline)
+
+;; (with-eval-after-load 'org-agenda
+;;   (require 'org-timeline))
+
+;; (add-hook 'org-agenda-finalize-hook 'org-timeline-insert-timeline :append)
+
+;; *** Open on init
+(add-hook 'after-init-hook '(lambda () (my/org-agenda-show-agenda-and-todo)))
+
+;; *** Keys
+(with-eval-after-load 'org-agenda
+  (setq org-agenda-mode-map (make-sparse-keymap))
+
+  (define-key org-agenda-mode-map (kbd "n") 'org-agenda-next-line)
+
+  (define-key org-agenda-mode-map (kbd "p") 'org-agenda-previous-line)
+
+  (define-key org-agenda-mode-map (kbd "l") 'org-agenda-later)
+  (define-key org-agenda-mode-map (kbd "h") 'org-agenda-earlier))
+
 ;; ** Clock
 ;; (setq org-clock-mode-line-total today)
 
@@ -2318,59 +2356,6 @@ or go back to just one window (by deleting all but the selected window)."
 ;; (define-key my/clock-map (kbd "C-s") 'org-clock-in-last)
 
 ;; (define-key my/clock-map (kbd "e") 'org-clock-modify-effort-estimate)
-
-;; ** Export
-(define-prefix-command 'my/org-export-map)
-(define-key my/org-mode-map (kbd "E") 'my/org-export-map)
-
-;; *** Syntax highlighting for HTML export
-(straight-use-package 'htmlize)
-
-;; *** Twitter bootstrap
-(straight-use-package 'ox-twbs)
-
-;; *** ASCII
-(define-prefix-command 'my/org-export-ascii-map)
-(define-key my/org-export-map (kbd "a") 'my/org-export-ascii-map)
-
-(define-key my/org-export-ascii-map (kbd "a") 'org-ascii-export-to-ascii)
-
-;; *** HTML
-(define-prefix-command 'my/org-export-html-map)
-(define-key my/org-export-map (kbd "h") 'my/org-export-html-map)
-
-(define-key my/org-export-html-map (kbd "h") 'org-html-export-to-html)
-(define-key my/org-export-html-map (kbd "t") 'org-twbs-export-to-html)
-
-;; *** PDF
-(define-prefix-command 'my/org-export-pdf-map)
-(define-key my/org-export-map (kbd "p") 'my/org-export-pdf-map)
-
-(define-key my/org-export-pdf-map (kbd "p") 'org-latex-export-to-pdf)
-
-;; *** Beamer presentation
-(define-prefix-command 'my/org-export-slides-map)
-(define-key my/org-export-map (kbd "s") 'my/org-export-slides-map)
-
-(define-key my/org-export-slides-map (kbd "b") 'org-beamer-export-to-pdf)
-
-;; *** Markdown
-(define-prefix-command 'my/org-export-markdown-map)
-(define-key my/org-export-map (kbd "m") 'my/org-export-markdown-map)
-
-(define-key my/org-export-markdown-map (kbd "m") 'org-md-export-to-markdown)
-
-;; *** ODT
-(define-prefix-command 'my/org-export-odt-map)
-(define-key my/org-export-map (kbd "o") 'my/org-export-odt-map)
-
-(define-key my/org-export-odt-map (kbd "o") 'org-odt-export-to-odt)
-
-;; *** Latex
-(define-prefix-command 'my/org-export-latex-map)
-(define-key my/org-export-map (kbd "l") 'my/org-export-latex-map)
-
-(define-key my/org-export-latex-map (kbd "l") 'org-latex-export-to-latex)
 
 ;; ** Present
 (defun my/org-present-next ()
@@ -2594,8 +2579,15 @@ or go back to just one window (by deleting all but the selected window)."
   (define-key org-brain-visualize-mode-map "\C-c\C-w" 'org-brain-refile)
   (define-key org-brain-visualize-mode-map "\C-c\C-x\C-v" 'org-toggle-inline-images))
 
+;; ** Disable syntax highlighting in source code blocks
+(setq org-src-fontify-natively nil)
+
 ;; ** Key
+(define-key my/org-mode-map (kbd "s") 'org-schedule)
+
 (define-key my/org-mode-map (kbd "i") 'org-toggle-inline-images)
+(define-key my/org-mode-map (kbd "I") 'org-toggle-link-display)
+
 (define-key my/org-mode-map (kbd "e") 'org-insert-link)
 
 (define-key my/org-mode-map (kbd "p") 'org-shiftup)
@@ -2617,16 +2609,7 @@ or go back to just one window (by deleting all but the selected window)."
 
 (define-key my/org-mode-map (kbd "d") 'org-deadline)
 
-;; (define-key org-mode-map "\t" 'nil)
-
-;; *** Show map
-(define-prefix-command 'my/org-show-mode-map)
-;; (define-key my/org-mode-map (kbd "s") 'my/org-show-mode-map)
-
-(define-key my/org-mode-map (kbd "s") 'org-toggle-link-display)
-
-;; *** Disable syntax highlighting in source code blocks
-(setq org-src-fontify-natively nil)
+(define-key my/org-mode-map (kbd "E") (lambda () (interactive) (counsel-M-x "^org export-")))
 
 ;; * Outline
 ;; Must be set before outline is loaded
@@ -2685,18 +2668,18 @@ or go back to just one window (by deleting all but the selected window)."
 (setq counsel-outline-settings
       '((emacs-lisp-mode
 	 :outline-regexp ";; [*]\\{1,8\\} "
-	 :outline-level counsel-outline-level-emacs-lisp)
-	(org-mode
-	 :outline-title counsel-outline-title-org
-	 :action counsel-org-goto-action
-	 :history counsel-org-goto-history
-	 :caller counsel-org-goto)
-	;; markdown-mode package
-	(markdown-mode
-	 :outline-title counsel-outline-title-markdown)
-	;; Built-in mode or AUCTeX package
-	(latex-mode
-	 :outline-title counsel-outline-title-latex)))
+    :outline-level counsel-outline-level-emacs-lisp)
+	     (org-mode
+	      :outline-title counsel-outline-title-org
+	      :action counsel-org-goto-action
+	      :history counsel-org-goto-history
+	      :caller counsel-org-goto)
+	     ;; markdown-mode package
+	     (markdown-mode
+	      :outline-title counsel-outline-title-markdown)
+	     ;; Built-in mode or AUCTeX package
+	     (latex-mode
+	      :outline-title counsel-outline-title-latex)))
 
 ;; ** Outshine
 (straight-use-package 'outshine)
@@ -3370,7 +3353,7 @@ If the input is empty, select the previous history element instead."
 (define-key company-active-map (kbd "C-w") 'company-next-page)
 
 ;; Complete on tab
-(define-key company-active-map (kbd "TAB") 'company-complete-selection)
+;; (define-key company-active-map (kbd "TAB") 'company-complete-selection)
 
 ;; using C-h is better in every way
 (define-key company-active-map (kbd "<f1>") 'nil)
@@ -4781,11 +4764,11 @@ If the input is empty, select the previous history element instead."
   (define-key lsp-ui-flycheck-list-mode-map [remap evil-ret] 'lsp-ui-flycheck-list--view)
   (define-key lsp-ui-flycheck-list-mode-map [remap newline] 'lsp-ui-flycheck-list--view))
 
-  ;; ** DAP
-  ;; I have to clear the mode map before it's defined otherwise I can't unbind it
-  (setq-default dap-mode-map nil)
+;; ** DAP
+;; I have to clear the mode map before it's defined otherwise I can't unbind it
+(setq-default dap-mode-map nil)
 
-  (straight-use-package 'dap-mode)
+(straight-use-package 'dap-mode)
 (dap-mode 1)
 (dap-ui-mode 1)
 
@@ -6002,8 +5985,8 @@ do the
   ;; Make the first report after the idle timer has been run
   (run-with-timer my/wakatime-report-time my/wakatime-report-time
 		  (lambda () (when my/wakatime-user-present
-			  (message (concat "Reporting to wakatime at: " (current-time-string)))
-			  (wakatime-save))))
+			       (message (concat "Reporting to wakatime at: " (current-time-string)))
+			       (wakatime-save))))
   (message "custom wakatime save mechanism loaded"))
 
 ;; * Macros
@@ -6540,7 +6523,7 @@ do the
 
 ;; * Keys
 ;; ** Key rebinds
-;;(require 'evil-maps)
+;; (require 'evil-maps)
 
 ;; *** General
 (eval-and-compile
@@ -7179,27 +7162,27 @@ do the
 	    (funcall shr-external-browser url)
 	  (browse-url url)))))))
 
-  ;; * Browser
-  (defun my/get-search-url ()
-    (interactive)
-    (let ((search (counsel-google)))
-      ;; Don't do a google search for anything that has a dot then a letter
-      ;; There are two (not whitespace) here because otherwise the * wildcard would accept strings without any char after a dot
-      (if (or
-	   (string-match-p (rx whitespace) search)
-	   (not (string-match-p (rx (regexp "\\.") (not whitespace) (not whitespace) (regexp "*") eol) search)))
-	  (concat "https://www.google.com/search?q=" search)
-	search)))
+;; * Browser
+(defun my/get-search-url ()
+  (interactive)
+  (let ((search (counsel-google)))
+    ;; Don't do a google search for anything that has a dot then a letter
+    ;; There are two (not whitespace) here because otherwise the * wildcard would accept strings without any char after a dot
+    (if (or
+	 (string-match-p (rx whitespace) search)
+	 (not (string-match-p (rx (regexp "\\.") (not whitespace) (not whitespace) (regexp "*") eol) search)))
+	(concat "https://www.google.com/search?q=" search)
+      search)))
 
-  ;; ** w3m
-  (straight-use-package 'w3m)
-  (when (and (my/is-system-package-installed 'w3m) my/use-w3m)
-    (require 'w3m)
-    (w3m-display-mode 'plain))
+;; ** w3m
+(straight-use-package 'w3m)
+(when (and (my/is-system-package-installed 'w3m) my/use-w3m)
+  (require 'w3m)
+  (w3m-display-mode 'plain))
 
-  (setq w3m-use-title-buffer-name t)
+(setq w3m-use-title-buffer-name t)
 
-  (setq w3m-session-crash-recovery nil)
+(setq w3m-session-crash-recovery nil)
 
 (setq w3m-search-word-at-point nil)
 
