@@ -60,6 +60,7 @@
        ;; "deep sky blue"
        (my/error-color "blue")
        (my/warning-color "LightBlue")
+       (my/info-color "CadetBlue")
 
        (my/spell-error-color "green")
        (my/spell-warning-color "green3")
@@ -98,6 +99,8 @@
    `(flycheck-warning ((,class (:underline (:style wave :color ,my/warning-color)))))
    `(flymake-warning ((,class (:inherit flycheck-warning))))
    `(haskell-warning-face ((,class (:inherit flycheck-warning))))
+
+   `(flycheck-info ((,class (:underline (:style wave :color ,my/info-color)))))
 
    `(font-lock-comment-face ((,class (:foreground ,my/comment-face))))
    `(font-lock-comment-delimiter-face ((,class (:foreground ,my/comment-delimiter-foreground-face :background ,my/comment-delimiter-background-face))))

@@ -859,6 +859,12 @@
     (beginning-of-line)
     (point)))
 
+;; ** Is file gpg protected
+;; Send in ~buffer-file-name~ to check current file
+(defun my/is-file-gpg-protected (file)
+  (let ((file-name (and file (file-name-nondirectory file))))
+    (and file-name (string-match-p "\.gpg" file-name))))
+
 ;; * Fonts
 (defun my/get-best-font ()
   (if (my/font-installed "Liga Inconsolata LGC")
@@ -3046,9 +3052,9 @@ If the input is empty, select the previous history element instead."
 ;; *** Counsel-yank-pop
 ;; Delete text under selection when pasing just like with normal evil paste
 (advice-add #'counsel-yank-pop :before (lambda (&optional arg) (if (string= evil-state 'visual)
-								   (delete-region (point) (mark)))))
+							      (delete-region (point) (mark)))))
 
-;; *** Always run counsel ag in defalut directory
+;; *** Always run counsel ag in default directory
 (defun my/counsel-ag ()
   (interactive)
   (counsel-ag nil default-directory))
@@ -3076,7 +3082,6 @@ If the input is empty, select the previous history element instead."
 
 ;; ** Counsel flycheck
 ;;   https://github.com/nathankot/dotemacs/blob/master/init.el
-
 (defvar my/counsel-flycheck-history nil
   "History for `counsel-flycheck'")
 
@@ -3101,8 +3106,8 @@ If the input is empty, select the previous history element instead."
 		  (revert-buffer t t t)
 		  (split-string (buffer-string) "\n" t)))
 	      :action (lambda (s &rest _)
-			(-when-let* ( (error (get-text-property 0 'tabulated-list-id s))
-				      (pos (flycheck-error-pos error)) )
+			(let* ((error (get-text-property 0 'tabulated-list-id s))
+			       (pos (flycheck-error-pos error)) )
 			  (goto-char (flycheck-error-pos error))))
 	      :history 'my/counsel-flycheck-history)))
 
@@ -4617,9 +4622,16 @@ If the input is empty, select the previous history element instead."
     ('csharp-mode (my/csharp-run-repl))
     ('racket-mode (racket--send-region-to-repl (point-min) (point-max)))
     ('haskell-mode (progn (haskell-process-load-file) (haskell-interactive-bring) (end-of-buffer) (recenter)))
-    ;; For now disable elisp evaluation
-    (_ (when (not (string= (buffer-name) "config.el"))
+    (_ (when (not (string= (file-name-nondirectory buffer-file-name) "config.el"))
 	 (eval-buffer nil)))))
+
+(defun my/auto-eval-buffer-run ()
+  (interactive)
+  (pcase major-mode
+    ('haskell-mode (progn
+		     (haskell-process-load-specific-file (buffer-local-value 'buffer-file-name (get-buffer "Main.hs")))
+		     (my/haskell-interactive-mode-run-expr "main")))
+    (_ (message "Mode not supported"))))
 
 (defun my/auto-eval-print ()
   (interactive)
@@ -4632,7 +4644,8 @@ If the input is empty, select the previous history element instead."
 
 ;; (define-key my/leader-map (kbd "e") 'my/auto-eval)
 (define-key my/leader-map (kbd "e") 'my/auto-eval-buffer)
-(define-key my/leader-map (kbd "M-e") 'my/auto-eval-print)
+(define-key my/leader-map (kbd "E") 'my/auto-eval-buffer-run)
+;; (define-key my/leader-map (kbd "M-e") 'my/auto-eval-print)
 
 ;; *** Auto debug
 (defun my/auto-debug ()
@@ -5117,6 +5130,19 @@ the overlay."
 
 (setq haskell-interactive-mode-read-only t)
 (setq haskell-interactive-popup-errors nil)
+
+;; **** Load specific file
+(defun haskell-process-load-specific-file (file)
+  "Load a specific file."
+  (interactive)
+  (save-buffer)
+  (haskell-interactive-mode-reset-error (haskell-session))
+  (haskell-process-file-loadish (format "load \"%s\"" (replace-regexp-in-string
+						       "\""
+						       "\\\\\""
+						       file))
+				nil
+				(current-buffer)))
 
 ;; **** Disable auto completion
 ;; Disable auto completion in haskell-interactive-mode because it's slow
@@ -10402,6 +10428,12 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 ;; *** Disable modes in visualizer
 (add-hook 'undo-tree-visualizer-mode-hook (lambda () (add-hook 'visual-line-mode-hook (lambda () (when visual-line-mode (visual-line-mode -1))) nil t)))
+
+;; *** Disable for gpg files
+(add-hook 'undo-tree-mode-hook '(lambda ()
+				  (interactive)
+				  (when (my/is-file-gpg-protected buffer-file-name)
+				    (setq-local undo-tree-auto-save-history nil))))
 
 ;; *** Keys
 (with-eval-after-load 'undo-tree
