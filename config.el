@@ -2257,6 +2257,7 @@ or go back to just one window (by deleting all but the selected window)."
   (org-babel-do-load-languages
    'org-babel-load-languages
    '((emacs-lisp . t)
+     (shell . t)
      (gnuplot . t))))
 
 ;; *** Disable warnings in org mode before evaluating source block
@@ -3398,10 +3399,11 @@ If the input is empty, select the previous history element instead."
 
 ;; *** Flycheck at cursor
 ;; **** Flycheck-posframe
-(straight-use-package 'flycheck-posframe)
+(when window-system
+  (straight-use-package 'flycheck-posframe)
 
-(with-eval-after-load 'flycheck
-  (add-hook 'flycheck-mode-hook #'flycheck-posframe-mode))
+  (with-eval-after-load 'flycheck
+    (add-hook 'flycheck-mode-hook #'flycheck-posframe-mode)))
 
 (setq my/flycheck-posframe-symbol nil)
 ;; (setq my/flycheck-posframe-symbol "→ ")
