@@ -5679,7 +5679,7 @@ do the
       (my/auto-format-region)
     (pcase major-mode
       ('csharp-mode (omnisharp-code-format-entire-file))
-      ('nix-mode (nix-mode-format))
+      ('nix-mode (nix-format-buffer))
       ('haskell-mode (haskell-mode-stylish-buffer))
       (_ ()))))
 
