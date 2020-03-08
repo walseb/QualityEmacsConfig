@@ -980,7 +980,7 @@
 (straight-use-package 'evil-mc)
 
 ;; *** Clear default keys
-(setq evil-mc-key-map nil)
+(setq evil-mc-key-map (make-sparse-keymap))
 
 ;; *** Start mc-mode in this buffer
 (evil-mc-mode)
@@ -2675,18 +2675,18 @@ or go back to just one window (by deleting all but the selected window)."
 (setq counsel-outline-settings
       '((emacs-lisp-mode
 	 :outline-regexp ";; [*]\\{1,8\\} "
-    :outline-level counsel-outline-level-emacs-lisp)
-	     (org-mode
-	      :outline-title counsel-outline-title-org
-	      :action counsel-org-goto-action
-	      :history counsel-org-goto-history
-	      :caller counsel-org-goto)
-	     ;; markdown-mode package
-	     (markdown-mode
-	      :outline-title counsel-outline-title-markdown)
-	     ;; Built-in mode or AUCTeX package
-	     (latex-mode
-	      :outline-title counsel-outline-title-latex)))
+	 :outline-level counsel-outline-level-emacs-lisp)
+	(org-mode
+	 :outline-title counsel-outline-title-org
+	 :action counsel-org-goto-action
+	 :history counsel-org-goto-history
+	 :caller counsel-org-goto)
+	;; markdown-mode package
+	(markdown-mode
+	 :outline-title counsel-outline-title-markdown)
+	;; Built-in mode or AUCTeX package
+	(latex-mode
+	 :outline-title counsel-outline-title-latex)))
 
 ;; ** Outshine
 (straight-use-package 'outshine)
@@ -2894,7 +2894,9 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; *** Visuals
 ;; Ivy height
-(add-hook 'exwm-init-hook (lambda () (run-with-timer 1 nil (lambda () (setq ivy-height (+ (window-height) 1))))))
+(add-hook 'exwm-init-hook (lambda () (run-with-timer 5 nil (lambda () (setq ivy-height (+ (window-height) 1))))))
+;; Make sure it's updated
+(add-hook 'after-init-hook (lambda () (run-with-timer 5 nil (lambda () (setq ivy-height (+ (window-height) 1))))))
 
 ;; Make counsel-yank-pop use default height
 ;; (delete `(counsel-yank-pop . 5) ivy-height-alist)
@@ -2904,7 +2906,8 @@ or go back to just one window (by deleting all but the selected window)."
 			     (setq-default ivy-height-alist nil)
 			     (add-to-list 'ivy-height-alist '(swiper . 10))
 			     (add-to-list 'ivy-height-alist '(swiper-isearch . 10))
-			     (add-to-list 'ivy-height-alist '(counsel-switch-buffer . 10))))
+			     (add-to-list 'ivy-height-alist '(counsel-switch-buffer . 10))
+			     ))
 
 ;; **** Highlight whole row in minibuffer
 ;; Change the default emacs formatter to highlight whole row in minibuffer
@@ -3009,39 +3012,6 @@ If the input is empty, select the previous history element instead."
 								 (evil-delete-char (+ 1 (point)) (point-max))
 								 (delete-char 1)))
 
-;; **** Ivy occur
-;; Also ivy-occur-grep
-(define-prefix-command 'my/ivy-occur-map)
-(evil-define-key 'normal ivy-occur-mode-map (kbd (concat my/leader-map-key " a")) 'my/ivy-occur-map)
-(evil-define-key 'normal ivy-occur-grep-mode-map (kbd (concat my/leader-map-key " a")) 'my/ivy-occur-map)
-
-(define-key my/ivy-occur-map (kbd "w") 'ivy-wgrep-change-to-wgrep-mode)
-(define-key my/ivy-occur-map (kbd "r") 'ivy-occur-revert-buffer)
-
-(evil-define-key '(normal visual insert) ivy-occur-mode-map (kbd "RET") 'ivy-occur-press)
-(evil-define-key '(normal visual) ivy-occur-mode-map (kbd "p") 'evil-previous-line)
-(evil-define-key '(normal visual) ivy-occur-mode-map (kbd "n") 'evil-next-line)
-(evil-define-key '(normal visual) ivy-occur-mode-map (kbd "C-y") 'ivy-occur-read-action)
-
-(evil-define-key '(normal visual insert) ivy-occur-grep-mode-map (kbd "RET") 'ivy-occur-press)
-(evil-define-key '(normal visual) ivy-occur-grep-mode-map (kbd "p") 'evil-previous-line)
-(evil-define-key '(normal visual) ivy-occur-grep-mode-map (kbd "n") 'evil-next-line)
-(evil-define-key '(normal visual) ivy-occur-grep-mode-map (kbd "C-y") 'ivy-occur-read-action)
-
-;; (define-key map (kbd "a") 'ivy-occur-read-action)
-;; (define-key map (kbd "o") 'ivy-occur-dispatch)
-;; (define-key map (kbd "c") 'ivy-occur-toggle-calling)
-
-;; **** wgrep
-;; Used in ivy occur
-(setq wgrep-mode-map (make-sparse-keymap))
-
-(define-prefix-command 'my/wgrep-map)
-(evil-define-key 'normal wgrep-mode-map (kbd (concat my/leader-map-key " a")) 'my/wgrep-map)
-
-(define-key my/wgrep-map (kbd "s") 'wgrep-finish-edit)
-(define-key my/wgrep-map (kbd "k") 'wgrep-abort-changes)
-
 ;; ** Counsel
 (straight-use-package 'counsel)
 
@@ -3056,9 +3026,13 @@ If the input is empty, select the previous history element instead."
 							      (delete-region (point) (mark)))))
 
 ;; *** Always run counsel ag in default directory
-(defun my/counsel-ag ()
+(defvar my/rg-available (executable-find "rg"))
+
+(defun my/counsel-grep ()
   (interactive)
-  (counsel-ag nil default-directory))
+  (if my/rg-available
+      (counsel-rg nil default-directory)
+    (counsel-ag nil default-directory)))
 
 ;; *** Remove dups
 ;; **** Remove duplicate entries in kill ring
@@ -3202,8 +3176,8 @@ If the input is empty, select the previous history element instead."
 	  ;;(ivy-rich-switch-buffer-size (:width 7 :face my/ivy-rich-switch-buffer-size-face))
 	  (ivy-rich-switch-buffer-indicators (:width 4 :face my/ivy-rich-switch-buffer-indicator-face :align right))
 	  (ivy-rich-switch-buffer-major-mode (:width 12 :face my/ivy-rich-switch-buffer-major-mode-face))
-	  (ivy-rich-switch-buffer-project (:width 15 :face my/ivy-rich-switch-buffer-project-face))
-	  (my/ivy-rich-path)
+	  ;; (ivy-rich-switch-buffer-project (:width 15 :face my/ivy-rich-switch-buffer-project-face))
+	  ;; (my/ivy-rich-path)
 
 	  ;; These two takes a lot of memory and cpu
 	  ;;(ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))) :face my/ivy-rich-switch-buffer-path-face))
@@ -3489,34 +3463,6 @@ If the input is empty, select the previous history element instead."
 (my/evil-insert-define-key "TAB" #'my/auto-tab)
 
 ;; * Movement
-;; ** Loccur
-(straight-use-package 'loccur)
-
-(defvar-local my/loccur-search-running nil)
-
-(defun my/loccur-isearch ()
-  (interactive)
-  (setq-local my/loccur-search-running t)
-  (my/isearch-forward-regexp)
-  (setq-local my/loccur-search-running nil))
-
-(add-hook 'isearch-update-post-hook 'my/loccur-isearch-update)
-
-(defun my/loccur-isearch-update ()
-  (when my/loccur-search-running
-    (loccur-mode -1)
-    (if (not (string= isearch-string ""))
-	(loccur (ivy--regex-plus isearch-string)))))
-
-(add-hook 'isearch-mode-end-hook 'my/loccur-isearch-quit)
-
-(defun my/loccur-isearch-quit ()
-  (if (and my/loccur-search-running isearch-mode-end-hook-quit)
-      (loccur-mode -1)))
-
-;; *** Keys
-(my/evil-normal-define-key "C-S-s" 'my/loccur-isearch)
-
 ;; ** Isearch
 (define-key isearch-mode-map (kbd "C-n") 'my/isearch-repeat-forward)
 (define-key isearch-mode-map (kbd "C-p") 'my/isearch-repeat-backward)
@@ -4042,7 +3988,7 @@ If the input is empty, select the previous history element instead."
 
   ;; Find
   ("f" my/auto-find nil)
-  ("F" my/counsel-ag nil)
+  ("F" my/auto-grep nil)
 
   ;; Browser
   ("b" my/switch-w3m-buffer nil)
@@ -4075,10 +4021,8 @@ If the input is empty, select the previous history element instead."
 
   ;; Projectile
   ("y" counsel-projectile-switch-to-buffer nil)
-  ("Y" counsel-projectile-find-file nil)
-  ("*" counsel-projectile-ag nil)
-  ("C-y" counsel-projectile-switch-project nil)
-  ("C-Y" projectile-kill-buffers nil)
+  ("Y" counsel-projectile-switch-project nil)
+  ("C-y" projectile-kill-buffers nil)
 
   ("u" winner-undo nil)
   ("C-r" winner-redo nil)
@@ -4631,7 +4575,7 @@ If the input is empty, select the previous history element instead."
   (interactive)
   (pcase major-mode
     ('haskell-mode (progn
-		     (haskell-process-load-specific-file (buffer-local-value 'buffer-file-name (get-buffer "Main.hs")))
+		     (haskell-process-load-specific-file (my/projectile-find-file "Main.hs"))
 		     (my/haskell-interactive-mode-run-expr "main")))
     (_ (message "Mode not supported"))))
 
@@ -4781,7 +4725,7 @@ If the input is empty, select the previous history element instead."
 
 ;; ** DAP
 ;; I have to clear the mode map before it's defined otherwise I can't unbind it
-(setq-default dap-mode-map nil)
+(setq dap-mode-map (make-sparse-keymap))
 
 (straight-use-package 'dap-mode)
 (dap-mode 1)
@@ -5467,11 +5411,12 @@ do the
 
 ;; *** Dante
 (when (not my/haskell-hie-enable)
-  (setq dante-tap-type-time 0)
-
-  (straight-use-package 'dante)
-
   (with-eval-after-load 'haskell-mode
+    (setq dante-tap-type-time nil)
+    ;; (setq dante-tap-type-time 0)
+
+    (straight-use-package 'dante)
+
     (require 'dante)
     (add-hook 'haskell-mode-hook 'dante-mode)
 
@@ -5479,6 +5424,17 @@ do the
       (my/dante-fix-flycheck))
 
     (add-hook 'dante-mode-hook 'my/dante-mode)))
+
+;; **** Fix eval selection bug
+(when (not my/haskell-hie-enable)
+  (with-eval-after-load 'dante
+    (defun my/dante-idle-function-checks ()
+      (when (or (string= evil-state "normal") (string= evil-state "insert"))
+	(dante-idle-function)))
+
+    (add-hook 'haskell-mode-hook
+	      (lambda () (add-hook 'post-command-hook
+				   #'my/dante-idle-function-checks nil t)))))
 
 ;; **** Set flycheck settings
 (defun my/dante-fix-flycheck ()
@@ -6446,13 +6402,14 @@ do the
 
 ;; ** Clear
 ;; Default eshell/clear only spams newlines
-(defun eshell/clear ()
-  "Clear the eshell buffer."
-  (let ((inhibit-read-only t))
-    (erase-buffer)
-    ;; Probably not needed
-    ;;(eshell-send-input)
-    ))
+(with-eval-after-load 'eshell
+  (defun eshell/clear ()
+    "Clear the eshell buffer."
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      ;; Probably not needed
+      ;;(eshell-send-input)
+      )))
 
 ;; ** Term
 (define-key my/leader-map (kbd "{") 'ansi-term)
@@ -6671,19 +6628,12 @@ do the
 ;; (define-key evil-visual-state-map "?" 'evil-change-whole-line)
 
 ;; *** Rebind save key
-;; (defun my/save-and-backup-buffer()
-;; (interactive)
-;; (my/backup-buffer)
-;; (my/fake-open-keymap "C-x")
-;; (my/fake-key (kbd "C-s") ?\C-s)
-;; )
-
 (general-simulate-key "C-x C-s")
 
 (defun my/save-and-backup-buffer ()
   (interactive)
   ;; (my/backup-buffer-per-session)
-  (my/backup-original-buffer)
+  ;; (my/backup-original-buffer)
   (general-simulate-C-x_C-s))
 
 (define-key my/leader-map (kbd "s") 'my/save-and-backup-buffer)
@@ -7165,11 +7115,10 @@ do the
 (with-eval-after-load 'shr
   (advice-add #'shr-colorize-region :around (defun shr-no-colourise-region (&rest ignore))))
 
-;; ** Auto-open image at point
-;; Redefine function to attempt to open image if link at point wasn't found
+;; ;; ** Auto-open image at point
+;; ;; Redefine function to attempt to open image if link at point wasn't found
 (with-eval-after-load 'shr
-  (el-patch-feature shr)
-  (el-patch-defun shr-browse-url (&optional external mouse-event)
+  (defun shr-browse-url (&optional external mouse-event)
     "Browse the URL at point using `browse-url'.
     If EXTERNAL is non-nil (interactively, the prefix argument), browse
     the URL using `shr-external-browser'.
@@ -7193,7 +7142,7 @@ do the
 ;; * Browser
 (defun my/get-search-url ()
   (interactive)
-  (let ((search (counsel-google)))
+  (let ((search (completing-read "search: " nil)))
     ;; Don't do a google search for anything that has a dot then a letter
     ;; There are two (not whitespace) here because otherwise the * wildcard would accept strings without any char after a dot
     (if (or
@@ -7500,6 +7449,15 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 ;; *** Set completion system
 (setq projectile-completion-system 'ivy)
+
+;; *** Find file in project
+(defun my/projectile-find-file (target-name)
+  (let ((file (seq-find
+	       (lambda (name)
+		 (string-match (concat target-name "$") name))
+	       (projectile-current-project-files))))
+    (when file
+      (projectile-expand-root file))))
 
 ;; ** Counsel projectile
 ;; If enabled it auto enables projectile, which has high CPU usage
@@ -8651,47 +8609,48 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 ;; ** CPU
 ;; Linux temps
-(if (file-exists-p "/proc/cpuinfo") (progn
-				      (define-prefix-command 'my/cpu-info-map)
-				      (define-key my/hardware-info-map (kbd "c") 'my/cpu-info-map)
+(if (file-exists-p "/proc/cpuinfo")
+    (progn
+      (define-prefix-command 'my/cpu-info-map)
+      (define-key my/hardware-info-map (kbd "c") 'my/cpu-info-map)
 
-				      (defun my/unix-cpu-get-clock()
-					(interactive)
-					(shell-command "grep \"cpu MHz\" /proc/cpuinfo"))
-				      ;; Clock speed
-				      (define-key my/cpu-info-map (kbd "f") 'my/unix-cpu-get-clock)
-				      ;; Model name
-				      (defun my/unix-cpu-get-name()
-					(interactive)
-					(shell-command "grep \"model name\" /proc/cpuinfo"))
-				      (define-key my/cpu-info-map (kbd "n") 'my/unix-cpu-get-name)
-				      ;; Core count
-				      (defun my/unix-cpu-get-core-count()
-					(interactive)
-					;; Linux
-					(shell-command "grep \"cores\" /proc/cpuinfo"))
+      (defun my/unix-cpu-get-clock()
+	(interactive)
+	(shell-command "grep \"cpu MHz\" /proc/cpuinfo"))
+      ;; Clock speed
+      (define-key my/cpu-info-map (kbd "f") 'my/unix-cpu-get-clock)
+      ;; Model name
+      (defun my/unix-cpu-get-name()
+	(interactive)
+	(shell-command "grep \"model name\" /proc/cpuinfo"))
+      (define-key my/cpu-info-map (kbd "n") 'my/unix-cpu-get-name)
+      ;; Core count
+      (defun my/unix-cpu-get-core-count()
+	(interactive)
+	;; Linux
+	(shell-command "grep \"cores\" /proc/cpuinfo"))
 
-				      (define-key my/cpu-info-map (kbd "c") 'my/unix-cpu-get-core-count)
-				      ;; Flags
-				      (defun my/unix-cpu-get-flags()
-					(interactive)
-					(shell-command "grep \"flags\" /proc/cpuinfo"))
-				      (define-key my/cpu-info-map (kbd "F") 'my/unix-cpu-get-flags)
-				      ;; Vendor
-				      (defun my/unix-cpu-get-vendor-id()
-					(interactive)
-					(shell-command "grep \"vendor_id\" /proc/cpuinfo"))
-				      (define-key my/cpu-info-map (kbd "v") 'my/unix-cpu-get-vendor-id)
-				      ;; Bugs (Bugs that has affected CPU model)
-				      (defun my/unix-cpu-get-bugs()
-					(interactive)
-					(shell-command "grep \"bugs\" /proc/cpuinfo"))
-				      (define-key my/cpu-info-map (kbd "b") 'my/unix-cpu-get-bugs)
-				      ;; Cache size
-				      (defun my/unix-cpu-get-cache-size()
-					(interactive)
-					(shell-command "grep \"cache size\" /proc/cpuinfo"))
-				      (define-key my/cpu-info-map (kbd "C") 'my/unix-cpu-get-cache-size)))
+      (define-key my/cpu-info-map (kbd "c") 'my/unix-cpu-get-core-count)
+      ;; Flags
+      (defun my/unix-cpu-get-flags()
+	(interactive)
+	(shell-command "grep \"flags\" /proc/cpuinfo"))
+      (define-key my/cpu-info-map (kbd "F") 'my/unix-cpu-get-flags)
+      ;; Vendor
+      (defun my/unix-cpu-get-vendor-id()
+	(interactive)
+	(shell-command "grep \"vendor_id\" /proc/cpuinfo"))
+      (define-key my/cpu-info-map (kbd "v") 'my/unix-cpu-get-vendor-id)
+      ;; Bugs (Bugs that has affected CPU model)
+      (defun my/unix-cpu-get-bugs()
+	(interactive)
+	(shell-command "grep \"bugs\" /proc/cpuinfo"))
+      (define-key my/cpu-info-map (kbd "b") 'my/unix-cpu-get-bugs)
+      ;; Cache size
+      (defun my/unix-cpu-get-cache-size()
+	(interactive)
+	(shell-command "grep \"cache size\" /proc/cpuinfo"))
+      (define-key my/cpu-info-map (kbd "C") 'my/unix-cpu-get-cache-size)))
 
 ;; Windows cpu core count
 ;; (if (or (eq system-type 'windows-nt) (eq system-type 'cygwin))
@@ -8703,12 +8662,98 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; ** Ellocate
 (straight-use-package '(ellocate :type git :host github :repo "walseb/ellocate"))
 
+;; ** Auto grep
+(defun my/auto-grep ()
+  (interactive)
+  (if (projectile-project-p)
+      (counsel-projectile-rg)
+    (my/counsel-grep)))
+
 ;; ** Auto find
 (defun my/auto-find ()
   (interactive)
   (if (projectile-project-p)
       (projectile-find-file)
     (ellocate)))
+
+;; ** grep
+(with-eval-after-load 'grep
+  (setq grep-mode-map (make-sparse-keymap)))
+
+;; ** wgrep
+;; Disable confirmation when saving edits
+(setq wgrep-auto-save-buffer t)
+
+;; *** Keys
+;; Used in ivy occur
+(with-eval-after-load 'wgrep
+  (setq wgrep-mode-map (make-sparse-keymap))
+
+  (define-prefix-command 'my/wgrep-map)
+  (evil-define-key 'normal wgrep-mode-map (kbd (concat my/leader-map-key " a")) 'my/wgrep-map)
+
+  (define-key my/wgrep-map (kbd "s") 'wgrep-finish-edit)
+  (define-key my/wgrep-map (kbd "k") 'wgrep-abort-changes))
+
+;; ** Occur
+(with-eval-after-load 'occur
+  (setq occur-mode-map (make-sparse-keymap))
+  (setq occur-edit-mode-map (make-sparse-keymap)))
+
+;; ** Ivy occur
+;; *** Keys
+;; Also ivy-occur-grep
+(with-eval-after-load 'ivy
+  (setq ivy-occur-mode-map (make-sparse-keymap))
+  (define-prefix-command 'my/ivy-occur-map)
+  (evil-define-key 'normal ivy-occur-mode-map (kbd (concat my/leader-map-key " a")) 'my/ivy-occur-map)
+  (evil-define-key 'normal ivy-occur-grep-mode-map (kbd (concat my/leader-map-key " a")) 'my/ivy-occur-map)
+
+  (define-key my/ivy-occur-map (kbd "w") 'ivy-wgrep-change-to-wgrep-mode)
+  (define-key my/ivy-occur-map (kbd "r") 'ivy-occur-revert-buffer)
+
+  (evil-define-key '(normal visual insert) ivy-occur-mode-map (kbd "RET") 'ivy-occur-press)
+  (evil-define-key '(normal visual) ivy-occur-mode-map (kbd "p") 'evil-previous-line)
+  (evil-define-key '(normal visual) ivy-occur-mode-map (kbd "n") 'evil-next-line)
+  (evil-define-key '(normal visual) ivy-occur-mode-map (kbd "C-y") 'ivy-occur-read-action)
+
+  (evil-define-key '(normal visual insert) ivy-occur-grep-mode-map (kbd "RET") 'ivy-occur-press)
+  (evil-define-key '(normal visual) ivy-occur-grep-mode-map (kbd "p") 'evil-previous-line)
+  (evil-define-key '(normal visual) ivy-occur-grep-mode-map (kbd "n") 'evil-next-line)
+  (evil-define-key '(normal visual) ivy-occur-grep-mode-map (kbd "C-y") 'ivy-occur-read-action))
+
+;; (define-key map (kbd "a") 'ivy-occur-read-action)
+;; (define-key map (kbd "o") 'ivy-occur-dispatch)
+;; (define-key map (kbd "c") 'ivy-occur-toggle-calling)
+
+;; ** Loccur
+(straight-use-package 'loccur)
+
+(defvar-local my/loccur-search-running nil)
+
+(defun my/loccur-isearch ()
+  (interactive)
+  (require 'loccur)
+  (setq-local my/loccur-search-running t)
+  (my/isearch-forward-regexp)
+  (setq-local my/loccur-search-running nil))
+
+(add-hook 'isearch-update-post-hook 'my/loccur-isearch-update)
+
+(defun my/loccur-isearch-update ()
+  (when my/loccur-search-running
+    (loccur-mode -1)
+    (if (not (string= isearch-string ""))
+	(loccur (ivy--regex-plus isearch-string)))))
+
+(add-hook 'isearch-mode-end-hook 'my/loccur-isearch-quit)
+
+(defun my/loccur-isearch-quit ()
+  (if (and my/loccur-search-running isearch-mode-end-hook-quit)
+      (loccur-mode -1)))
+
+;; *** Keys
+(my/evil-normal-define-key "C-S-s" 'my/loccur-isearch)
 
 ;; * Spelling
 (define-prefix-command 'my/spell-map)
@@ -9303,10 +9348,10 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 	 (syntaxes-end (if (memq (char-syntax (char-before end)) '(?w ?_))
 			   '(?w ?_) '(?. ?\\))))
     (not (or (memq (char-syntax (or (char-before start) ?\s)) syntaxes-beg)
-	   (memq (char-syntax (or (char-after end) ?\s)) syntaxes-end)
-	   ;; It looks like this part makes it ignore comments, remove it
-	   ;;(nth 8 (syntax-ppss))
-	   ))))
+	     (memq (char-syntax (or (char-after end) ?\s)) syntaxes-end)
+	     ;; It looks like this part makes it ignore comments, remove it
+	     ;;(nth 8 (syntax-ppss))
+	     ))))
 
 (setq-default prettify-symbols-compose-predicate #'my/prettify-symbols-default-compose-p)
 
@@ -10334,70 +10379,24 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   (add-hook 'my/gnus-mail-counter-update-hook 'my/lv-line-update))
 
 ;; * Backups
-;; Stop emacs from creating backup files on every save
+;; Stop emacs from creating backup files
 (setq make-backup-files nil)
-;; Max amount of characters, 200 000 ~200kb
-(defvar my/per-session-backup-limit 200000)
 
-(defvar my/backup-directory (concat (expand-file-name user-emacs-directory) "backups/"))
-(defvar my/backup-per-session-directory (concat my/backup-directory "per-session/"))
-(defvar my/auto-saves-directory (concat (expand-file-name user-emacs-directory) "auto-saves/"))
-
-(my/create-dir-if-not-exist my/backup-directory)
-(my/create-dir-if-not-exist my/backup-per-session-directory)
+;; ** Auto-save
+;; Saves so that no data is lost in the event of a crash
+(defvar my/auto-saves-directory (expand-file-name (concat user-emacs-directory "auto-saves/")))
 (my/create-dir-if-not-exist my/auto-saves-directory)
-(defun my/backup-buffer-mode-ok ()
-  (pcase (file-name-extension (buffer-name))
-    ("gpg" nil)
-    (_ (pcase major-mode
-	 ('image-mode nil)
-	 (_ t)))))
 
-(defun my/should-backup-buffer ()
-  (and (buffer-modified-p) buffer-file-name (my/backup-buffer-mode-ok) (< (point-max) my/per-session-backup-limit)))
+(setq auto-save-file-name-transforms
+      `((".*" ,my/auto-saves-directory t)))
 
-(defun my/backup-format-file-path (path)
-  (replace-regexp-in-string "/" "!" path))
-
-(defun my/backup-buffer (backup-path)
-  (interactive)
-  (if (my/should-backup-buffer)
-      (save-restriction (widen) (write-region (point-min) (point-max) (concat backup-path (number-to-string (floor (float-time))) (my/backup-format-file-path (buffer-file-name)))))))
-
-;; ** Make backup on first save
-(defvar my/first-save t)
-
-(defun my/backup-original-buffer ()
-  (interactive)
-  (if my/first-save
-      (progn
-	(my/backup-buffer my/backup-directory)
-	(setq-local my/first-save nil))))
-
-;; ** Make backup on every save
-;; *** git-backup
+;; ** git-backup
 (straight-use-package '(git-backup :type git :host github :repo "antham/git-backup"))
 (straight-use-package '(git-backup-ivy :type git :host github :repo "walseb/git-backup-ivy"))
 
 (add-hook 'after-save-hook (lambda () (require 'git-backup-ivy) (git-backup-version-file git-backup-ivy-git-path git-backup-ivy-backup-path nil (buffer-file-name))))
 
 (define-key my/leader-map (kbd "C-u") 'git-backup-ivy)
-
-;; *** Manual way
-;; (defun my/backup-buffer-per-session ()
-;;   (interactive)
-;;   (if (not my/first-save)
-;;       (my/backup-buffer my/backup-per-session-directory)))
-
-;; **** Delete old backups
-;; Automatically delete old backup files older than a week
-;; (message "Deleting old long term backup files...")
-;; (my/delete-everything-older-than my/backup-directory (* 60 60 24 7))
-
-;; ** Delete per-session backups on startup
-(ignore-errors
-  ;; Delete anything older than a day
-  (my/delete-everything-older-than my/backup-directory (* 60 60 24 1)))
 
 ;; ** Undo
 ;; *** Disable undo warning buffer
@@ -10434,7 +10433,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; *** Disable for gpg files
 (add-hook 'undo-tree-mode-hook '(lambda ()
 				  (interactive)
-				  (when (my/is-file-gpg-protected buffer-file-name)
+				  (when (or (my/is-file-gpg-protected buffer-file-name) (string= major-mode 'image-mode))
 				    (setq-local undo-tree-auto-save-history nil))))
 
 ;; *** Keys
