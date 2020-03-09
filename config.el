@@ -2894,20 +2894,17 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; *** Visuals
 ;; Ivy height
-(add-hook 'exwm-init-hook (lambda () (run-with-timer 5 nil (lambda () (setq ivy-height (+ (window-height) 1))))))
-;; Make sure it's updated
-(add-hook 'after-init-hook (lambda () (run-with-timer 5 nil (lambda () (setq ivy-height (+ (window-height) 1))))))
+(add-hook 'exwm-init-hook (lambda () (run-with-timer 5 nil (lambda () (setq ivy-height (+ (frame-height) 1))))))
 
-;; Make counsel-yank-pop use default height
-;; (delete `(counsel-yank-pop . 5) ivy-height-alist)
-;; Disable set height depending on command
-(add-hook 'after-init-hook (lambda ()
-			     (setq ivy-height-alist nil)
-			     (setq-default ivy-height-alist nil)
-			     (add-to-list 'ivy-height-alist '(swiper . 10))
-			     (add-to-list 'ivy-height-alist '(swiper-isearch . 10))
-			     (add-to-list 'ivy-height-alist '(counsel-switch-buffer . 10))
-			     ))
+(with-eval-after-load 'ivy
+  ;; Make counsel-yank-pop use default height
+  ;; (delete `(counsel-yank-pop . 5) ivy-height-alist)
+  ;; Disable set height depending on command
+  (setq ivy-height-alist nil)
+  (setq-default ivy-height-alist nil)
+  (add-to-list 'ivy-height-alist '(swiper . 10))
+  (add-to-list 'ivy-height-alist '(swiper-isearch . 10))
+  (add-to-list 'ivy-height-alist '(counsel-switch-buffer . 10)))
 
 ;; **** Highlight whole row in minibuffer
 ;; Change the default emacs formatter to highlight whole row in minibuffer
@@ -8666,7 +8663,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (defun my/auto-grep ()
   (interactive)
   (if (projectile-project-p)
-      (counsel-projectile-rg)
+      ;; (counsel-projectile-rg)
+      (counsel-git-grep)
     (my/counsel-grep)))
 
 ;; ** Auto find
@@ -8762,7 +8760,12 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; http://aspell.net/0.50-doc/man-html/4_Customizing.html#suggestion
 ;; Allow 5 words to be connected without spaces. Default is 2
 ;; Run-together causes a performance loss while typing but bad-spellers only
-(setq ispell-extra-args (list "--sug-mode=bad-spellers" "--run-together" "--run-together-limit=5"))
+
+;; ** Spelling configuration
+;; Run-together makes it so words can be linked together without spaces
+;; (setq ispell-extra-args (list "--sug-mode=bad-spellers" "--run-together" "--run-together-limit=5"))
+
+(setq ispell-extra-args (list "--sug-mode=bad-spellers"))
 
 ;; ** Flyspell
 (define-key my/spell-map (kbd "d") 'ispell-change-dictionary)
