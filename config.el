@@ -2132,7 +2132,7 @@ or go back to just one window (by deleting all but the selected window)."
 ;; ** Open agenda
 (defun my/org-agenda-show-agenda-and-todo (&optional arg)
   (interactive "P")
-  (org-agenda arg "a"))
+  (org-agenda arg "n"))
 
 (define-key my/open-map (kbd "a") 'my/org-agenda-show-agenda-and-todo)
 
@@ -2305,13 +2305,17 @@ or go back to just one window (by deleting all but the selected window)."
 ;; ** Agenda
 ;; Give agenda file to use
 (if (file-exists-p "~/Notes/Agenda.org")
-    (setq org-agenda-files (quote ("~/Notes/Agenda.org"))))
+    (setq org-agenda-files (directory-files-recursively "~/Notes/Agenda/" ".org$")))
 
 (setq org-agenda-window-setup 'current-window)
 
 (setq org-agenda-start-day "-1d")
 (setq org-agenda-start-on-weekday nil)
 (setq org-agenda-span 50)
+
+;; Put todos on top
+(setq org-agenda-custom-commands
+      '(("n" "Agenda and all TODOs" ((alltodo "") (agenda "")))))
 
 ;; *** org-timeline
 ;; (straight-use-package 'org-timeline)
