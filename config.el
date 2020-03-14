@@ -1869,6 +1869,9 @@ documentation: True")
 
 (dired-async-mode 1)
 
+;; ** Async-shell-command
+(setq async-shell-command-buffer 'new-buffer)
+
 ;; ** Zoom
 ;; (defun my/increase-volume ()
 ;; (interactive)
@@ -2081,26 +2084,6 @@ or go back to just one window (by deleting all but the selected window)."
   (interactive)
   (find-file (concat user-emacs-directory "scratch.org")))
 
-;; *** A persistent scratch buffer without being a file
-;; (defun my/switch-to-scratch()
-;;   (interactive)
-;;   (let ((scratch-buffer (get-buffer "*scratch*")))
-;;     (if scratch-buffer
-;;	(switch-to-buffer scratch-buffer)
-;;       (switch-to-buffer "*scratch*")
-;;       (when (not (file-exists-p (concat user-emacs-directory "scratch")))
-;;	(write-region "" nil (concat user-emacs-directory "scratch")))
-;;       (insert-file-contents (concat user-emacs-directory "scratch"))
-;;       ;; This generates a new mode map and uses it. This makes it possible to modify the current mode map without modifying the org mode map.
-;;       (org-mode)
-;;       (use-local-map (copy-keymap org-mode-map))
-;;       (local-set-key [remap my/save-and-backup-buffer] (lambda () (interactive)
-;;							 ;; Using write-region instead of write-file here makes it so that the scratch buffer doesn't get assigned to a file, which means it can be used without any problems in a direnv buffer
-;;							 (save-restriction
-;;							   (widen)
-;;							   (write-region (point-min) (point-max) (concat user-emacs-directory "scratch")))))))
-;;   )
-
 (define-key my/open-map (kbd "s") 'my/switch-to-scratch)
 
 ;; ** Org-brain notes
@@ -2112,14 +2095,15 @@ or go back to just one window (by deleting all but the selected window)."
 						(file-in-directory-p
 						 buffer-file-name
 						 org-brain-path))
-				       (org-brain-visualize (org-brain-path-entry-name buffer-file-name) nil nil nil t))
-				     (org-brain-visualize "Origo" nil nil nil t))))
+				       (org-brain-visualize (org-brain-path-entry-name buffer-file-name) nil nil nil))
+				     (org-brain-visualize "Origo" nil nil nil))))
 
 (define-key my/open-map (kbd "N") (lambda () (interactive)
 				    (require 'org-brain)
 				    (org-brain-visualize
 				     (completing-read "Entry: "
-						      (mapcan #'org-brain--file-targets (org-brain-files))) nil nil nil t)))
+						      (org-brain--all-targets)))))
+
 (define-key my/open-map (kbd "C-n") '(lambda () (interactive) (find-file org-brain-path)))
 
 ;; ** Visit nixos config
@@ -2401,10 +2385,11 @@ or go back to just one window (by deleting all but the selected window)."
 ;;    (org-src--get-lang-mode LANG))
 
 ;; ** Brain
-(straight-use-package '(org-brain :type git :host github :repo "walseb/org-brain" :branch "File-header-prompt-speedup"))
+(straight-use-package 'org-brain)
 (setq org-brain-path "~/Notes")
 (setq org-brain-show-history nil)
 (setq org-brain-show-resources nil)
+(setq org-brain-open-same-window t)
 
 (add-hook 'org-brain-visualize-text-hook 'org-toggle-inline-images)
 
@@ -2426,104 +2411,6 @@ or go back to just one window (by deleting all but the selected window)."
   (dolist (child-entry children)
     (org-brain-add-relationship entry child-entry))
   (org-brain--revert-if-visualizing))
-
-;; *** Allow running in same window
-(with-eval-after-load 'org-brain
-  (defun org-brain-visualize (entry &optional nofocus nohistory wander same-window)
-    "View a concept map with ENTRY at the center.
-
-    When run interactively, prompt for ENTRY and suggest
-    `org-brain-entry-at-pt'.  By default, the choices presented is
-    determined by `org-brain-visualize-default-choices': 'all will
-    show all entries, 'files will only show file entries and 'root
-    will only show files in the root of `org-brain-path'.
-
-    You can override `org-brain-visualize-default-choices':
-    `\\[universal-argument]' will use 'all.
-    `\\[universal-argument] \\[universal-argument]' will use 'files.
-    `\\[universal-argument] \\[universal-argument] \\[universal-argument]' will use 'root.
-
-    Unless NOFOCUS is non-nil, the `org-brain-visualize' buffer will gain focus.
-    Unless NOHISTORY is non-nil, add the entry to `org-brain--vis-history'.
-    Setting NOFOCUS to t implies also having NOHISTORY as t.
-    Unless WANDER is t, `org-brain-stop-wandering' will be run.
-    Unless SAME-WINDOW is t, the buffer will be opened in another window."
-    (interactive
-     (progn
-       (org-brain-maybe-switch-brain)
-       (let ((choices (cond ((equal current-prefix-arg '(4)) 'all)
-			    ((equal current-prefix-arg '(16)) 'files)
-			    ((equal current-prefix-arg '(64)) 'root)
-			    (t org-brain-visualize-default-choices)))
-	     (def-choice (unless (eq major-mode 'org-brain-visualize-mode)
-			   (ignore-errors (org-brain-entry-name (org-brain-entry-at-pt))))))
-	 (org-brain-stop-wandering)
-	 (list
-	  (org-brain-choose-entry
-	   "Entry: "
-	   (cond ((equal choices 'all)
-		  'all)
-		 ((equal choices 'files)
-		  (org-brain-files t))
-		 ((equal choices 'root)
-		  (make-directory org-brain-path t)
-		  (mapcar #'org-brain-path-entry-name
-			  (directory-files org-brain-path t (format "\\.%s$" org-brain-files-extension)))))
-	   nil nil def-choice)))))
-    (unless wander (org-brain-stop-wandering))
-    (with-current-buffer (get-buffer-create "*org-brain*")
-      (setq-local indent-tabs-mode nil)
-      (read-only-mode 1)
-      (setq-local default-directory (file-name-directory (org-brain-entry-path entry)))
-      (org-brain-maybe-switch-brain)
-      (unless (eq org-brain--vis-entry entry)
-	(setq org-brain--vis-entry entry)
-	(setq org-brain-mind-map-parent-level (default-value 'org-brain-mind-map-parent-level))
-	(setq org-brain-mind-map-child-level (default-value 'org-brain-mind-map-child-level)))
-      (setq org-brain--vis-entry-keywords (when (org-brain-filep entry)
-					    (org-brain-keywords entry)))
-      (let ((inhibit-read-only t)
-	    (entry-pos))
-	(delete-region (point-min) (point-max))
-	(org-brain--vis-pinned)
-	(org-brain--vis-selected)
-	(when (not nohistory)
-	  (setq org-brain--vis-history
-		(seq-filter (lambda (elt) (not (equal elt entry))) org-brain--vis-history))
-	  (setq org-brain--vis-history (seq-take org-brain--vis-history 15))
-	  (push entry org-brain--vis-history))
-	(when org-brain-show-history (org-brain--vis-history))
-	(if org-brain-visualizing-mind-map
-	    (setq entry-pos (org-brain-mind-map org-brain--vis-entry org-brain-mind-map-parent-level org-brain-mind-map-child-level))
-	  (insert "\n\n")
-	  (org-brain--vis-parents-siblings entry)
-	  ;; Insert entry title
-	  (let ((title (org-brain-vis-title entry)))
-	    (let ((half-title-length (/ (string-width title) 2)))
-	      (if (>= half-title-length (current-column))
-		  (delete-char (- (current-column)))
-		(ignore-errors (delete-char (- half-title-length)))))
-	    (setq entry-pos (point))
-	    (insert (propertize title
-				'face (org-brain-display-face entry 'org-brain-title)
-				'aa2u-text t))
-	    (org-brain--vis-friends entry)
-	    (org-brain--vis-children entry)))
-	(when (and org-brain-show-resources)
-	  (org-brain--vis-resources (org-brain-resources entry)))
-	(if org-brain-show-text
-	    (org-brain--vis-text entry)
-	  (run-hooks 'org-brain-after-visualize-hook))
-	(unless (eq major-mode 'org-brain-visualize-mode)
-	  (org-brain-visualize-mode))
-	(goto-char entry-pos))
-      (unless nofocus
-	(when org-brain--visualize-follow
-	  (org-brain-goto-current)
-	  (run-hooks 'org-brain-visualize-follow-hook))
-	(if same-window
-	    (pop-to-buffer-same-window "*org-brain*")
-	  (pop-to-buffer "*org-brain*"))))))
 
 ;; *** Keys
 (with-eval-after-load 'org-brain
@@ -2895,6 +2782,8 @@ or go back to just one window (by deleting all but the selected window)."
 ;; *** Visuals
 ;; Ivy height
 (add-hook 'exwm-init-hook (lambda () (run-with-timer 5 nil (lambda () (setq ivy-height (+ (frame-height) 1))))))
+(add-hook 'exwm-init-hook (lambda () (run-with-timer 10 nil (lambda () (setq ivy-height (+ (frame-height) 1))))))
+(add-hook 'exwm-init-hook (lambda () (run-with-timer 15 nil (lambda () (setq ivy-height (+ (frame-height) 1))))))
 
 (with-eval-after-load 'ivy
   ;; Make counsel-yank-pop use default height
@@ -3420,7 +3309,6 @@ If the input is empty, select the previous history element instead."
 
 ;; *** Company integration
 ;; https://emacs.stackexchange.com/questions/10431/get-company-to-show-suggestions-for-yasnippet-names
-
 (defvar company-mode/enable-yas t
   "Enable yasnippet for all backends.")
 
@@ -3443,17 +3331,16 @@ If the input is empty, select the previous history element instead."
 (defun my/auto-tab ()
   (interactive)
   (pcase major-mode
-    ('org-mode
-     (unless
-	 (ignore-errors (progn
-			  (org-cycle)
-			  ;; This is here so that "ignore-errors" doesn't return nil, cause then you wouldn't know if an error occurred or not
-			  t
-			  ))
-       (call-interactively 'yas-expand)))
+    ('org-mode (org-cycle))
     (_
      ;; Fixes a bug where if cursor is at heading, the one above gets narrowed
      (call-interactively 'yas-expand))))
+
+;; *** Fix org-mode
+(with-eval-after-load 'org
+  (add-to-list 'org-tab-first-hook (lambda ()
+				     (let ((yas-fallback-behavior 'return-nil))
+				       (yas-expand)))))
 
 ;; *** Keys
 (my/evil-normal-define-key "TAB" #'my/auto-tab)
@@ -7940,7 +7827,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; ***** org-mime
 (straight-use-package 'org-mime)
 
-(with-eval-after-load 'org-mode
+(with-eval-after-load 'org
   (require 'org-mime))
 
 (setq org-mime-library 'mml)
@@ -10191,9 +10078,10 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 			  my/available-mem-formatted)
 			" | ")))
 
-		    ;;(:eval (concat "Org:" org-mode-line-string))
-		    (:eval (if (boundp 'org-mode-line-string)
-			       (concat "Org:" org-mode-line-string " | ")))
+		    ;; Org clock
+		    ;; (:eval (if (boundp 'org-mode-line-string)
+		    ;;	       (concat "Org:" org-mode-line-string " | ")))
+
 		    (:eval (if (not (eq battery-mode-line-string ""))
 			       (concat "BAT: " battery-mode-line-string "%%%   | ")))
 
@@ -10225,53 +10113,6 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 		    (:eval my/date)
 		    ))))))
 
-;; **** Posframe status line
-;; https://github.com/dakra/statusbar.el
-
-;; (posframe-delete-frame (get-buffer-create "*window*"))
-
-;; (posframe-show "*window*"
-;;	       :string "test"
-;;	       :x-pixel-offset 100
-;;	       :poshandler 'my/posframe-poshandler-right-side-minibuffer
-;;	       ;; :left-fringe 100
-;;	       :right-fringe 200
-;;	       )
-
-;; (defun my/posframe-poshandler-right-side-minibuffer (info)
-;;   (cons (- -1 (plist-get info :minibuffer-height) ) 0))
-
-;; (setq buf "*window*")
-
-;; (defun statusbar--line-length (buf)
-;;   "Return current line length of the statusbar text.
-;; BUF is the statusbar buffer."
-;;   (with-current-buffer buf
-;;     (point-max)))
-
-;; (defun statusbar--position-handler (info)
-;;   "Posframe position handler.
-;; INFO is the childframe plist from `posframe'.
-;; Position the statusbar in the bottom right over the minibuffer."
-;;   (let* ((font-width (plist-get info :font-width))
-;;	 (buf (plist-get info :posframe-buffer))
-;;	 (buf-width (* font-width (statusbar--line-length buf)))
-;;	 (parent-frame (plist-get info :parent-frame))
-;;	 (parent-frame-width (frame-pixel-width parent-frame))
-;;	 (exwm-systemtray-offset
-;;	  (if-let* ((tray-list (and (boundp 'exwm-systemtray--list) exwm-systemtray--list))
-;;		    (icon-size (+ exwm-systemtray--icon-min-size exwm-systemtray-icon-gap))
-;;		    (tray-width (* (length exwm-systemtray--list) icon-size)))
-;;	      tray-width
-;;	    0))
-;;	 (x-offset (plist-get info :x-pixel-offset))
-;;	 (x-pos (- parent-frame-width buf-width x-offset exwm-systemtray-offset))
-;;	 ;; (y-pos (+ exwm-floating--cursor-top-right))
-;;	 (font-height (plist-get info :font-width))
-;;     ;; (y-pos exwm-floating--cursor-top-right))
-;;     ;; (y-pos 2097070))
-;;     (cons x-pos y-pos)))
-
 ;; **** mini-modeline
 (when (string= my/status-bar 'mini-modeline)
   (straight-use-package 'mini-modeline)
@@ -10285,101 +10126,6 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
   (setq-default mini-modeline-r-format my/status-line-format)
   (mini-modeline-mode 1))
-
-;; **** LV-line (top modeline)
-;; Use lv-line to create a mode line on the top of the screen
-(defvar my/lv-line-format "")
-(defconst my/lv-line--buffer " *LV-line*")
-(defvar my/lv-line-window nil)
-
-(when (string= my/status-bar 'lv-line)
-  (setq my/lv-line-format my/status-line-format))
-
-;; ***** Init
-(when (string= my/status-bar 'lv-line)
-  (add-hook 'exwm-init-hook (lambda () (interactive) (run-with-timer 1 nil (lambda () (interactive) (my/frame-width-update) (my/lv-line-update)))) t))
-
-;; ***** Create LV-line at top
-(defun my/lv-line-set-buffer ()
-  (setq-local mode-line-format nil)
-  (setq-local header-line-format nil)
-  (setq indicate-empty-lines nil)
-  (set-window-hscroll my/lv-line-window 0)
-  (setq window-size-fixed t)
-  (setq truncate-lines t)
-  (visual-line-mode -1)
-
-  ;; Offset by 10 pixels to make text fit
-  ;;(set-window-fringes (selected-window) 10 0)
-
-  ;; Disable char at end of line
-  (set-display-table-slot standard-display-table 0 ?\ )
-
-  ;; Disable cursor
-  (setq cursor-type nil)
-  (setq cursor-in-non-selected-windows nil)
-
-  (set-window-dedicated-p my/lv-line-window t)
-  (set-window-parameter my/lv-line-window 'no-other-window t))
-
-(defun my/lv-line-create ()
-  (interactive)
-  (if (not (get-buffer my/lv-line--buffer))
-      (generate-new-buffer my/lv-line--buffer))
-  (if (not (window-live-p my/lv-line-window))
-      (let* ((original-window (selected-window)))
-	(setq my/lv-line-window
-	      (select-window
-	       (let ((ignore-window-parameters t))
-		 (split-window
-		  (frame-root-window) -1 'above))))
-	(switch-to-buffer my/lv-line--buffer)
-	(my/lv-line-set-buffer)
-	(select-window original-window)))
-  (my/frame-width-update))
-
-;; (defun my/lv-line-create ()
-;; "Ensure that LV window is live and return it."
-;; (if (window-live-p my/lv-line-window)
-;; my/lv-line-window
-;; (let ((ori (selected-window)) buf)
-;; (prog1 (setq my/lv-line-window
-;; (select-window
-;; (let ((ignore-window-parameters t))
-;; (split-window
-;; (frame-root-window) -1 'above))))
-;; (my/lv-line-create-buffer)
-;; (select-window ori)))))
-
-;; ***** Update it
-(defun my/lv-line-update ()
-  (interactive)
-  (let* ((buffer (get-buffer my/lv-line--buffer)))
-    (if (not buffer)
-	(progn
-	  (message "LV-line buffer not found - creating new one")
-	  (my/lv-line-create)))
-    (with-current-buffer buffer
-      (erase-buffer)
-      (insert (format-mode-line my/lv-line-format)))))
-
-(defun my/lv-line-start ()
-  (my/lv-line-create)
-  (my/lv-line-update)
-  (run-with-timer my/status-line-update-offset 60 'my/lv-line-update))
-
-(when (string= my/status-bar 'lv-line)
-  (if window-system
-      (add-hook 'exwm-init-hook 'my/lv-line-start)
-    (my/lv-line-start)))
-
-;; ****** Update on new events
-(when (string= my/status-bar 'lv-line)
-  ;; Update on alert
-  (add-hook 'my/alert-updated-hook 'my/lv-line-update)
-
-  ;; Update on mail counter change
-  (add-hook 'my/gnus-mail-counter-update-hook 'my/lv-line-update))
 
 ;; * Backups
 ;; Stop emacs from creating backup files
