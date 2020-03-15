@@ -2337,7 +2337,9 @@ or go back to just one window (by deleting all but the selected window)."
   (define-key org-agenda-mode-map (kbd "p") 'org-agenda-previous-line)
 
   (define-key org-agenda-mode-map (kbd "l") 'org-agenda-later)
-  (define-key org-agenda-mode-map (kbd "h") 'org-agenda-earlier))
+  (define-key org-agenda-mode-map (kbd "h") 'org-agenda-earlier)
+
+  (define-key org-agenda-mode-map [remap newline] 'org-agenda-goto))
 
 ;; ** Clock
 ;; (setq org-clock-mode-line-total today)
@@ -4617,7 +4619,9 @@ If the input is empty, select the previous history element instead."
 
 (straight-use-package 'dap-mode)
 (dap-mode 1)
-(dap-ui-mode 1)
+
+(with-eval-after-load 'dap-mode
+  (dap-ui-mode 1))
 
 ;; ** Elgot
 ;; (straight-use-package 'eglot)
@@ -7734,8 +7738,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 ;; *** Settings
 ;; https://www.reddit.com/r/emacs/comments/bfsck6/mu4e_for_dummies/
-(when my/mu4epath
-  (require 'mu4e))
+;; (when my/mu4epath
+;;   (require 'mu4e))
 
 (setq mu4e-get-mail-command "mbsync -c ~/.mbsyncrc -a"
       ;; mu4e-html2text-command "w3m -T text/html" ;;using the default mu4e-shr2text
@@ -7748,8 +7752,9 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 ;; to view selected message in the browser, no signin, just html mail
 (when my/mu4epath
-  (add-to-list 'mu4e-view-actions
-	       '("ViewInBrowser" . mu4e-action-view-in-browser) t))
+  (with-eval-after-load 'mu4e-view
+    (add-to-list 'mu4e-view-actions
+		 '("ViewInBrowser" . mu4e-action-view-in-browser) t)))
 
 ;; enable inline images
 (setq mu4e-view-show-images t)
@@ -7761,10 +7766,11 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; I want mu4e to display images in w3m and not switch to the mail buffer whenever you open a mail
 
 ;; ***** Display email in w3m duffer
-(defun mu4e-view (msg)
-  (mu4e~view-define-mode)
-  (unless (mu4e~view-mark-as-read-maybe msg)
-    (my/mu4e-w3m-display msg)))
+(with-eval-after-load 'mu4e-view
+  (defun mu4e-view (msg)
+    (mu4e~view-define-mode)
+    (unless (mu4e~view-mark-as-read-maybe msg)
+      (my/mu4e-w3m-display msg))))
 
 (defun my/mu4e-w3m-display (msg)
   (when (get-buffer mu4e~view-buffer-name)
@@ -7779,53 +7785,55 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   (select-window (get-buffer-window (get-buffer "*mu4e-headers*"))))
 
 ;; ***** Don't autoselect new buffers
-(defun mu4e-headers-view-message ()
-  (interactive)
-  (unless (eq major-mode 'mu4e-headers-mode)
-    (mu4e-error "Must be in mu4e-headers-mode (%S)" major-mode))
-  (let* ((msg (mu4e-message-at-point))
-	 (docid (or (mu4e-message-field msg :docid)
-		    (mu4e-warn "No message at point")))
-	 (decrypt (mu4e~decrypt-p msg))
-	 (viewwin (mu4e~headers-redraw-get-view-window)))
-    (unless (window-live-p viewwin)
-      (mu4e-error "Cannot get a message view"))
-    (let ((curr-window (selected-window)))
-      (select-window viewwin)
-      (switch-to-buffer (mu4e~headers-get-loading-buf))
-      (mu4e~proc-view docid mu4e-view-show-images decrypt)
-      ;; (select-window curr-window)
-      )))
+(with-eval-after-load 'mu4e-headers
+  (defun mu4e-headers-view-message ()
+    (interactive)
+    (unless (eq major-mode 'mu4e-headers-mode)
+      (mu4e-error "Must be in mu4e-headers-mode (%S)" major-mode))
+    (let* ((msg (mu4e-message-at-point))
+	   (docid (or (mu4e-message-field msg :docid)
+		      (mu4e-warn "No message at point")))
+	   (decrypt (mu4e~decrypt-p msg))
+	   (viewwin (mu4e~headers-redraw-get-view-window)))
+      (unless (window-live-p viewwin)
+	(mu4e-error "Cannot get a message view"))
+      (let ((curr-window (selected-window)))
+	(select-window viewwin)
+	(switch-to-buffer (mu4e~headers-get-loading-buf))
+	(mu4e~proc-view docid mu4e-view-show-images decrypt)
+	;; (select-window curr-window)
+	))))
 
 ;; ***** Fix windows splitting
-(defun mu4e~headers-redraw-get-view-window ()
-  (if (eq mu4e-split-view 'single-window)
-      (or (and (buffer-live-p (mu4e-get-view-buffer))
-	       (get-buffer-window (mu4e-get-view-buffer)))
-	  (selected-window))
-    ;; (mu4e-hide-other-mu4e-buffers)
-    (unless (buffer-live-p (mu4e-get-headers-buffer))
-      (mu4e-error "No headers buffer available"))
-    (switch-to-buffer (mu4e-get-headers-buffer))
-    ;; kill the existing view buffer
-    (when (buffer-live-p (mu4e-get-view-buffer))
-      (if (get-buffer-window (mu4e-get-view-buffer))
-	  (progn
-	    (select-window (get-buffer-window (mu4e-get-view-buffer)))
-	    (kill-buffer-and-window))
-	(kill-buffer (mu4e-get-view-buffer))))
-    ;; get a new view window
-    (setq mu4e~headers-view-win
-	  (let* ((new-win-func
-		  (cond
-		   ((eq mu4e-split-view 'horizontal) ;; split horizontally
-		    '(split-window-vertically mu4e-headers-visible-lines))
-		   ((eq mu4e-split-view 'vertical) ;; split vertically
-		    '(split-window-horizontally mu4e-headers-visible-columns)))))
-	    (cond ((with-demoted-errors "Unable to split window: %S"
-		     (eval new-win-func)))
-		  (t ;; no splitting; just use the currently selected one
-		   (selected-window)))))))
+(with-eval-after-load 'mu4e-headers
+  (defun mu4e~headers-redraw-get-view-window ()
+    (if (eq mu4e-split-view 'single-window)
+	(or (and (buffer-live-p (mu4e-get-view-buffer))
+		 (get-buffer-window (mu4e-get-view-buffer)))
+	    (selected-window))
+      ;; (mu4e-hide-other-mu4e-buffers)
+      (unless (buffer-live-p (mu4e-get-headers-buffer))
+	(mu4e-error "No headers buffer available"))
+      (switch-to-buffer (mu4e-get-headers-buffer))
+      ;; kill the existing view buffer
+      (when (buffer-live-p (mu4e-get-view-buffer))
+	(if (get-buffer-window (mu4e-get-view-buffer))
+	    (progn
+	      (select-window (get-buffer-window (mu4e-get-view-buffer)))
+	      (kill-buffer-and-window))
+	  (kill-buffer (mu4e-get-view-buffer))))
+      ;; get a new view window
+      (setq mu4e~headers-view-win
+	    (let* ((new-win-func
+		    (cond
+		     ((eq mu4e-split-view 'horizontal) ;; split horizontally
+		      '(split-window-vertically mu4e-headers-visible-lines))
+		     ((eq mu4e-split-view 'vertical) ;; split vertically
+		      '(split-window-horizontally mu4e-headers-visible-columns)))))
+	      (cond ((with-demoted-errors "Unable to split window: %S"
+		       (eval new-win-func)))
+		    (t ;; no splitting; just use the currently selected one
+		     (selected-window))))))))
 
 ;; **** Send messages
 ;; ***** org-mime
@@ -7938,14 +7946,14 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   (evil-define-key '(normal insert) gnus-group-mode-map (kbd "TAB") 'gnus-topic-select-group)
 
   (define-prefix-command 'my/gnus-group-map)
-  (evil-define-key 'normal gnus-group-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-group-map))
+  (evil-define-key 'normal gnus-group-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-group-map)
 
-(defun my/gnus-group-list-all-subscribed-groups ()
-  "List all subscribed groups with or without un-read messages"
-  (interactive)
-  (gnus-group-list-all-groups 5))
+  (defun my/gnus-group-list-all-subscribed-groups ()
+    "List all subscribed groups with or without un-read messages"
+    (interactive)
+    (gnus-group-list-all-groups 5))
 
-(define-key 'my/gnus-group-map (kbd "s") 'my/gnus-group-list-all-subscribed-groups)
+  (define-key 'my/gnus-group-map (kbd "s") 'my/gnus-group-list-all-subscribed-groups))
 
 ;; *** Topic mode
 ;; Adds headers to each server, tree view
@@ -9794,7 +9802,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 ;; ****** Enable
 (when my/mu4epath
-  (mu4e-alert-enable-mode-line-display))
+  (with-eval-after-load 'mu4e
+    (mu4e-alert-enable-mode-line-display)))
 
 ;; **** Battery
 ;; If there is a battery, display it in the mode line
