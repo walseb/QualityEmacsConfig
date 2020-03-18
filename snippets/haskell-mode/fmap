@@ -1,4 +1,4 @@
 # name: fmap
 # key: f
 # --
-<\$> $0
+${1:func} <\$> ${2:arg}

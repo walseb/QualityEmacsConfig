@@ -1,0 +1,4 @@
+# name: lens get
+# key: lg
+# --
+${1:data} ^. ${2:lens}

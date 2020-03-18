@@ -1,0 +1,4 @@
+# name: import qualified
+# key: iq
+# --
+import qualified $0

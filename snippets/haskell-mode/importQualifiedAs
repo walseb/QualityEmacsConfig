@@ -1,0 +1,4 @@
+# name: import qualified as
+# key: iqa
+# --
+import qualified ${1:Module} as $0

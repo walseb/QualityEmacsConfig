@@ -3216,22 +3216,19 @@ If the input is empty, select the previous history element instead."
 (setq company-lighter-base "company")
 
 ;; *** Keys
-(define-key company-active-map (kbd "M-n") nil)
-(define-key company-active-map (kbd "M-p") nil)
-(define-key company-active-map (kbd "C-n") 'company-select-next)
-(define-key company-active-map (kbd "C-p") 'company-select-previous)
+(with-eval-after-load 'company
+  (setq company-active-map (make-sparse-keymap))
+  (define-key company-active-map (kbd "C-n") 'company-select-next)
+  (define-key company-active-map (kbd "C-p") 'company-select-previous)
+  (define-key company-active-map (kbd "C-h") 'company-show-doc-buffer)
+  (define-key company-active-map (kbd "C-g") 'company-abort)
+  (define-key company-active-map (kbd "RET") 'company-complete-selection)
+  (define-key company-active-map (kbd "C-u") 'company-previous-page)
+  (define-key company-active-map (kbd "C-w") 'company-next-page)
 
-(define-key company-active-map (kbd "C-u") 'company-previous-page)
-(define-key company-active-map (kbd "C-w") 'company-next-page)
-
-;; Complete on tab
-;; (define-key company-active-map (kbd "TAB") 'company-complete-selection)
-
-;; using C-h is better in every way
-(define-key company-active-map (kbd "<f1>") 'nil)
-
-;; Force autocomplete
-(my/evil-universal-define-key "C-." 'company-complete)
+  ;; Complete on tab
+  ;; (define-key company-active-map (kbd "TAB") 'company-complete-selection)
+  (define-key company-active-map (kbd "<f1>") 'nil))
 
 ;; ** Company-box
 ;; Company with icons
@@ -3308,8 +3305,6 @@ If the input is empty, select the previous history element instead."
 (setq yas-minor-mode-map (make-sparse-keymap))
 
 (straight-use-package 'yasnippet)
-
-(straight-use-package 'yasnippet-snippets)
 
 (yas-global-mode 1)
 
@@ -8562,8 +8557,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (defun my/auto-grep ()
   (interactive)
   (if (projectile-project-p)
-      ;; (counsel-projectile-rg)
-      (counsel-git-grep)
+      (counsel-projectile-rg)
+    ;; (counsel-git-grep)
     (my/counsel-grep)))
 
 ;; ** Auto find
@@ -9438,6 +9433,9 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 (defun haskell-font-lock-keywords ()
   '())
+
+;; ***** Cabal
+(setq haskell-cabal-font-lock-keywords '())
 
 ;; **** Elisp
 (setq lisp-el-font-lock-keywords '())

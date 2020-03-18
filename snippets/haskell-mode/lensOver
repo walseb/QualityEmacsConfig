@@ -1,0 +1,4 @@
+# name: lens over
+# key: lo
+# --
+${1:lens} %~ ${2:new} \$ ${3:data}

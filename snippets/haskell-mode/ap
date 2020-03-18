@@ -1,0 +1,4 @@
+# name: ap
+# key: ap
+# --
+${1:func} <*> ${2:arg}

@@ -1,0 +1,4 @@
+# name: import as
+# key: ia
+# --
+import ${1:Module} as $0

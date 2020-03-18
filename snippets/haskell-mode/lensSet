@@ -1,0 +1,4 @@
+# name: lens set
+# key: ls
+# --
+${1:lens} .~ ${2:new} \$ ${3:data}

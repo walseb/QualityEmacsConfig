@@ -1,0 +1,4 @@
+# name: language
+# key: l
+# --
+{-# LANGUAGE $0 #-}
