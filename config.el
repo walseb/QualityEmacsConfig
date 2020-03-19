@@ -1,575 +1,4 @@
 ;; -*- lexical-binding:t -*-
-;; * Docs
-;; ** Requirements
-;; *** All
-;; =xorg-server xorg-xrandr xorg-xinit xorg-setxkbmap mlocate atool unzip mono pulseaudio pavucontrol firefox the_silver_searcher imagemagick ttf-inconsolata ttf-opensans ttf-dejavu aspell aspell-en aspell-sv mpd mpc poppler poppler-glib=
-;; *** All optional
-;; =msbuild dotnet-sdk godot-mono guile fsharp ghc ghc-static=
-
-;; *** Firefox
-;; **** Plugins
-;; https://addons.mozilla.org/en-US/firefox/addon/plasma-integration/
-
-;; https://addons.mozilla.org/en-US/firefox/addon/yet-another-hints-extension/
-;; OR
-;; https://addons.mozilla.org/en-US/firefox/addon/vim-vixen/
-
-;; ***** Vim vixen config
-;; #+begin_src example
-;; {
-;;   "keymaps": {
-;;     "<C-m>": { "type": "follow.start", "newTab": false },
-;;     "<C-j>": { "type": "follow.start", "newTab": true }
-;;   },
-;;   "search": {
-;;     "default": "google",
-;;     "engines": {
-;;       "google": "https://google.com/search?q={}",
-;;       "yahoo": "https://search.yahoo.com/search?p={}",
-;;       "bing": "https://www.bing.com/search?q={}",
-;;       "duckduckgo": "https://duckduckgo.com/?q={}",
-;;       "twitter": "https://twitter.com/search?q={}",
-;;       "wikipedia": "https://en.wikipedia.org/w/index.php?search={}"
-;;     }
-;;   },
-;;   "properties": {
-;;     "hintchars": "anetoshdirgmlwyfubxcvkp,.q;j/z",
-;;     "smoothscroll": false,
-;;     "complete": "sbh"
-;;   },
-;;   "blacklist": [
-;;   ]
-;; }
-;; #+end_src
-
-;; **** System packages
-;; plasma-browser-integration
-
-;; *** UTF-8 support
-;; =ttf-dejavu= fills in the gaps where opensans doesn't have the character
-
-;; *** Music
-;; =mpd= =mpc=
-;; =pulse audio= if alsa, etc, edit "MPD/Create config".
-
-;; *** Search
-;; =the silver searcher/ ag=
-;; =grep=
-
-;; *** Code
-;; **** Documentation
-;; =zeal=
-
-;; **** C#
-;; =mono=
-;; =M-x omnisharp-install-server=
-
-;; **** F#
-;; =mono= (3.10.X or higher) =F#= (3.0 or higher)
-;; To create solution file, check github
-;; On windows, you may need to manually point to server path, see github
-
-;; **** Clojure
-;; =leiningen= =clojure=
-
-;; *** Screenshots
-;; =imagemagick=
-
-;; *** Overtone
-;; =jack2= =leiningen= =cider=
-
-;; To start =leiningen= in emacs do =cider-jack-in=
-
-;; Input =(use 'overtone.live)= into leiningen to install
-
-;; **** To use with pulse audio
-;; =cadence= and =pulseaudio-jack=
-
-;; *** Spelling
-;; =aspell-en= etc
-
-;; *** Gnus
-;; Set adress in gnus.el
-
-;; *** Laptop
-;; =xorg-xbacklight=
-;; =wpa_supplicant=
-
-;; *** Switch Ctrl and Caps
-;; =xmodmap= =xsession=
-;;  functions
-;; *** PDF tools
-;; =poppler= =poppler-glib=
-;; M-x =pdf-tools-install=
-
-;; *** GPG pinentry
-;; =gpg2= =pinentry=
-
-;; ** Emacs events
-;; *** Key to number
-;; Run:
-;; (read-event)
-;; Then press a key
-
-;; ** Firefox vimium
-;; *** Config
-;; #+begin_src
-;; # Rebind up/down
-;; unbind n
-;; unbind N
-;; map n scrollDown
-;; map N previousTab
-;; unbind p
-;; unbind P
-;; map p scrollUp
-;; map P nextTab
-
-;; unbind k
-;; unbind K
-;; map k openCopiedUrlInCurrentTab
-;; map K openCopiedUrlInNewTab
-
-;; # Rebind scroll
-;; unbind <c-u>
-;; unbind <c-d>
-;; map <c-u> scrollPageUp
-;; map <c-d> scrollPageDown
-
-;; # Rebind tab close
-;; unbind s
-;; map s removeTab
-;; #+end_src
-
-;; *** Hint characters
-;; #+begin_src
-;; anetoshdirgmlwyfubxcvkp,.q;j/z
-;; #+end_src
-
-;; ** FSharp
-;; *** File is not part of the loaded projects
-;; Try having the =fsproj= file open in a buffer or try moving the project folder directly to the home folder
-
-;; ** Overtone
-;; *** Pulse-jack
-;; **** How to configure jack2 to work with pulse
-;; https://wiki.archlinux.org/index.php/PulseAudio/Examples#PulseAudio_through_JACK
-;; (The KXStudio method)
-
-;; 1. get =cadence= and =pulseaudio-jack=
-
-;; 2. Bridge alsa -> pulse -> jack
-
-;; 3. Autostart maybe???
-
-;; 4. Configure -> Alsa -> Good settings
-
-;; **** Pauvcontrol measures sound but can't hear anything
-;; Unmute the sound device in pauvcontrol
-
-;; **** How should jack be started???
-;; Let overtone (actually it's supercollider, since overtone is just a wrapper for using supercollider in clojure) do it (it does it automatically when inputting =(use 'overtone.live)= in leiningen)
-
-;; *** Jack only
-;; 1. add =autospawn = no= in =~/.config/pulse/client.conf=
-;; 2. kill pulseaudio with =pulseaudio -k=
-;; 3. get =jack2= (NOT jack2-dbus, does't work)
-;; 4. start overtone
-
-;; **** Still doesn't work
-;; Get =qjackctl= and start =jack2= from there
-
-;; *** Sounds only play in one ear??
-;; https://github.com/overtone/overtone/wiki/Multi-channel-expansion,-stereo-and-panning
-;; You have to specify sound channel in the code when using certain sounds
-
-;; *** Overtone errors out all the time
-;; Execute script up to down, put =(use 'overtone.live)= on top of file, and in leiningen
-
-;; *** Shit doesn't work
-;; just fiddle around with cadence (check if bridge type is correct, then force restart until it works)
-
-;; ** Dired
-;; *** Archives in dired
-;; Press c to compress, Z to extract
-;; To stop dired from creating new folder when unpacking, change in section "Dired atool"
-
-;; ** Can't find package error in package.el
-;; run
-;; =package-refresh-contents=
-;; or restart emacs
-
-;; ** Gnus
-;; *** Setup mail with dovecot
-;; 1. Use nixos config
-;; 2. run my/write-mail-configs
-;; 3. Change permissions =chmod 600 ~/.dovecot-pass; chmod 600 ~/.msmtprc; chmod 600 ~/.mbsyncrc;=
-;; 4. Enter google app password, etc into ~/.msmtprc, ~/.mbsyncrc Don't modify .dovecot-pass
-;; 5.
-;; 6. Enable mail in device.el
-;; 7. Restart emacs, restart dovecot, etc
-
-;; *** How to setup name and password without dovecot
-;; Create authinfo.pgp file. It is auto encrypted/decrypted
-
-;; Format for gmail is currently
-;; #+begin_src
-;; machine imap.gmail.com login <USER> password <APP-PASSWORD> port imaps
-;; machine smtp.gmail.com login <USER> password <APP-PASSWORD> port 587
-;; machine imap-mail.outlook.com login my-username@hotmail.com password my-secret-password port 993
-;; #+end_src
-
-;; *** gnus mails are not updating
-;; Try doing C-u M-g twice inside that inbox
-
-;; *** Where are my servers/passwords stored?
-;; =~/.authinfo.gpg=
-
-;; *** How to download articles using gnus?
-;; use =M-x gnus-agent-add-server=
-
-;; *** Mail server mails aren't marked as read when marking as read in gnus, and gnus isn't marking them as read either after exit
-;; You have to press =q= in order to save changes
-
-;; ** wpa supplicant
-;; https://wiki.archlinux.org/index.php/WPA_supplicant#Connecting_with_wpa_cli
-
-;; ** MPD
-;; *** "no mpd daemon running"
-;; Disable daemon if using systemctl with =systemctl disable mpd.service mpd.socket=
-
-;; ** Eww
-;; *** Opening local file results in raw page
-;; This is because the file isn't named =FILE.html=, when eww saves pages, it doesn't add =.html= at the end
-
-;; ** Keybinds
-;; To find what keycode is fired when you press a key run (read-event)
-;; This can be used to figure what keycode to bind with (keyboard-translate
-
-;; ** Keyboard setup
-;; *** Change keyboard layout
-;; To list keymaps, do =localectl list-keymaps=
-
-;; =carpalx= is example layout
-;; To load keymaps, in terminal do: =loadkeys carpalx=
-
-;; To make permanent:
-;; in =/etc/vconsole.conf=
-;; #+begin_src
-;; KEYMAP=carpalx
-;; FONT=lat9w-16
-;; #+end_src
-
-;; *** Swap Ctrl and Caps_Lock
-;; Load correct keymap
-;; 1. Do =sudo dumpkeys | head -1 > ~/Keys.map=
-;; 2. Add this under the one line long Keys.map
-;; #+begin_src maps
-;; keycode 58 = Control # Makes Caps Lock act as ctrl
-;; keycode 29 = Caps_Lock # Makes ctrl act as caps
-;; # alt_is_meta # Fix the alt key?
-;; #+end_src
-;; 3. Do =sudo loadkeys ~/Keys.map=
-
-;; ** Color picking
-;; Get =gpick=
-
-;; ** C libraries not imported
-;; Add a .ccls file and format it like this
-;; #+begin_src
-;;   g++
-;;   -lstdc++
-;;   -I/usr/include/SDL2
-;; #+end_src
-;; (can also use clang++, etc)
-
-;; *** Other reason
-;; It could be that LSP doesn't tell CCLS the correct workspace
-;; To fix this do =M-x lsp-workspace-folders-remove= then select what you think is the current workspace then =M-x lsp-workspace-folders-add= and select the actual root (the file with a =.ccls= file in it)
-
-;; ** GDB doesn't work properly
-;; make sure you compiled with the =-g= flag
-
-;; ** Compatibility
-;; *** Mesa 3d software rendering
-;; Makes godot work with old computers
-;; #+begin_src command
-;; LIBGL_ALWAYS_SOFTWARE=1 godot-mono
-;; #+end_src
-
-;; ** Sharing folders via virtualbox
-;; https://wiki.archlinux.org/index.php/VirtualBox#Enable_shared_folders
-;; 1.
-;; Devices -> Insert guest additions CD images
-
-;; 2.
-;; On guest if arch install =virtualbox-guest-utils=
-
-;; 3.
-;; Run
-;; #+begin_src bash
-;; sudo mount -t vboxsf -o uid=1000,gid=1000 SHARED_FOLDER_NAME MOUNT_DIR
-;; #+end_src
-;; 1000 in the command is fetched from running =id=
-
-;; ** Omnisharp
-;; ALWAYS check *omnisharp-log* for errors
-;; Try building the program atleast once first before trying any of this, it could just fix the problem
-
-;; *** Errors everywhere
-;; Probably missing system.dll, etc reference
-;; Could be that the references in your csproj are tailored to windows, etc
-
-;; *** Only basic errors
-;; Check this https://github.com/OmniSharp/omnisharp-emacs/issues/459
-;; Otherwise it's probably because there are errors in *omnisharp-log*
-
-;; *** Errors everywhere because of missing references
-;; Check your csproj file
-;; Remember that wildstars probably aren't supported in omnisharp! Add every script manually via counsel-locate, macros or whatever
-;; Not like this
-;; <Compile Include="*.cs" />
-;; Like this
-;; <Compile Include="Assets/Script.cs" />
-
-;; ** Magit
-;; *** Rename commit
-;; magit replace (r) in log buffer -> w for reword
-
-;; ** Regexps
-;; Make regexps easier by using (rx)
-;; E.g.
-;; #+begin_src
-;;   (rx bol "*.$" space)
-;; #+end_src
-;; Where =bol= is beginning of line, and =space= is anything that has whitespace syntax
-;; For more symbols read =rx= help docs, it has everything
-
-;; ** WSL
-;; *** When typing citation mark an @ is pasted using X11 passthrough
-;; X11 probably uses UK language layout. Fix it with
-;; #+begin_src shell
-;;   setxkbmap us
-;; #+end_src
-
-;; ** Haskell IDE engine / HIE
-;; *** Error on first line of file
-;; **** Cabal V2 related problem
-;; It could be that HIE still doesn't support cabal V2, just run =cabal configure= to fix this
-
-;; ** Nix
-;; *** Create project with cabal2nix
-;; cabal init
-
-;; Setup cabal2nix
-;; #+BEGIN_SRC shell
-;; # Not really necessary
-;; cabal2nix . > default.nix
-
-;; cabal2nix --shell . > shell.nix
-;; # beware that HIE might not work with new-configure, run normal configure instead for V1 project
-;; *nix-shell --command 'cabal new-configure'
-;; #+END_SRC
-
-;; **** Automatically create default.nix and shell.nix from the cabal file
-;; Add to default.nix
-;; #+BEGIN_SRC
-;; # default.nix
-;; { pkgs ? import <nixpkgs> {} }:
-
-;; pkgs.haskellPackages.callCabal2nix "name" ./. {}
-;; #+END_SRC
-
-;; ***** optional
-;; And lastly add to shell.nix
-;; #+BEGIN_SRC
-;; # shell.nix
-;; (import ./. {}).env
-;; #+END_SRC
-;; and just run *nix-shell then cabal build or whatver
-;; Edit dependencies in cabal project file
-;; Nix will always be used
-
-;; OR
-;; just run
-;; #+BEGIN_SRC
-;; *nix-shell -A env
-;; #+END_SRC
-;; always instead
-
-;; ** Java LSP with gradle doesn't start
-;; This could be because of permissions. LSP builds it's own gradle build and for example .gradle dir in the project root needs to have the correct permissions to allow LSP to build everything
-
-;; * Todo
-;; ** Packages to try
-;; nix-buffer
-
-;; ** PR evil-mc changes
-;; ** Delete around char 'c'
-;; Need to find how to use the "inside" operator, etc
-;; #+begin_src
-;;   (evil-define-motion evil-find-char (char)
-;;     (interactive "<C>")
-;;     (evil-find-char 1 char)
-;;     )
-;; #+end_src
-
-;; ** Firefox
-;; *** Bookmarks
-;; https://www.reddit.com/r/emacs/comments/9bly3d/linkmarksel_use_orgmode_links_for_bookmarks/
-;; https://www.emacswiki.org/emacs/BookMarks
-
-;; ** Annotations
-;; https://github.com/bastibe/annotate.el
-
-;; ** Make magit-status faster during huge edits, or create new magit-status-fast command
-;; ** Should save-window-excursion be disabled?
-;; Steps to reproduce: open two window split, do M-x, close the window you focused when doing M-x, cancel the M-x with C-g
-
-;; ** GPG doesn't remember last password when saving a symmetrically encryped buffer
-;; ** Automate gnus
-;; *** Notmuch gnus integration
-;; ** Fix ivy grep/occur
-;; Colors change when you put your cursor over custom faces
-;; ** Fix change defalut directory to change save dir
-;; ** Customize ivy more
-;; ** Make macros faster
-;; Temporarily disable "global-hl-line-mode" while running macro (takes like 70% cpu in worst cases)
-;; Disable symbol-overlay while in macro (takes little cpu, but you can still gain speed)
-
-;; ** Make macros work both ways
-;; Right now macros only work if they go from the top down
-
-;; ** Read large files package
-;; There is one for dired too
-
-;; ** Refractor config
-;; Maybe split up because of bad performance?
-;; Should probably create some sort of guideline for where to write down prefix keys, where to write visual headers
-;; I should probably not just have a header named just "visuals"
-
-;; ** Track down more performance problems
-;; Especially when using highlight-indent-guides on large files
-
-;; ** Org-noter
-;; Great for commenting pdfs
-
-;; ** Org-capture
-;; Great for referencing to source code
-
-;; ** Fix swiper in man mode
-;; ** Easier way of accesing nix docs
-;; man 5 configuration.nix
-;; ??
-;; man configuration.nix
-
-;; ** Bake xdefaults into nix config
-
-;; ** Improve nix config
-;; https://github.com/magnetophon/nixosConfig/blob/master/common.nix
-
-;; ** Fix lsp-ui
-;; eldoc-doesn't work so i have to use  lsp-ui-sideline-show-hover
-
-;; ** Overhaul imenu
-;; imenu-anywhere
-;; imenu-list
-
-;; ** I shouldn't have one function that modifies all faces
-;; Since then i have to load every package i want to modify the faces of before running the function
-
-;; ** Bind recenter screen to singe key in normal mode
-;; ** Structured-haskell-mode
-;; ** Navigate headers like parens
-;; ** Make locate work on all harddrives
-;; Save the database on the main c drive under name of the drive though
-
-;; ** Eshell status in modeline
-;; Checkout
-;; (setq-default eshell-status-in-mode-line nil)
-
-;; Then you can have a number like how many processes are running
-
-;; ** C-k in dired should go back dir
-
-;; ** Flycheck posframe should be in top right
-;; Atleast not at point
-
-;; ** Add heading face to my/theme function
-;; Make them bold?
-;; Maybe different background color
-
-;; ** Maybe remove bold font from ivy match faces
-;; I think bold fonts are slightly higher than normal fonts, which I think causes the minibuffer to not match ivy fully sometimes
-
-;; ** Make org-indent work with outlines
-;; 1. (setq org-outline-regexp "^;;\s\\*+")
-;; 2. Modify =org-indent--compute-prefixes= so that =org-indent--heading-line-prefixes= and maybe other variables are correct
-
-;; ** Fix config compile errors
-
-;; ** Compile before loading config for faster start times after modifying config
-;; This gives me an error which seems to be related to straight.el where it can't require basic libraries
-;; It might be related to the lexical bindings?
-;; Right now I put a compilation step at the end of the config
-
-;; ** clone-indirect-buffer shouldn't make the new buffer appear in a different window than the selected one
-
-;; ** Make use of global mode map
-;; evil-universal-define-key overwrites the evil mode map, this should use global-mode-map instead
-
-;; ** Fix keys
-;; Exwm keys are really messy, remove 'my/keys-mode-map'
-
-;; *** Clean global mode map
-;; It's currently full of unused keys
-
-;; *** Maybe only use evil-edit instead
-
-;; ** Try to fix performance of yascrollbar
-
-;; ** Fix unicode fonts
-;; Right now unicode fonts are most of the time taller than the normal fonts
-
-;; ** Outlines
-;; Fix the heading font-lock so that it also covers the comment part
-;; *** Highlight to end of window
-;; Maybe the outlines should be highlighted to the end of the window
-
-;; ** Optimize number key symbol placement
-;; ** Fix meta keys
-;; *** my/switch-monitor
-
-;; ** Ivy menu for suspend-map
-;; Also rename it to something better
-
-;; ** Heading text-object
-
-;; ** Fix my/gnus-topic-add-gmane-groups
-;; It doesn't work and it's badly written
-
-;; ** Automate email setup
-;; You could easily create prompts when creating the config files that modify the password and user fields
-
-;; ** Fix so that you can use counsel-yank in minibuffer again
-
-;; ** Make evil-commentary also comment multiple empty lines
-
-;; ** Haskell
-;; *** Get ghc-imported-from
-;; Currently broken
-
-;; *** Get hlive
-;; Currently broken
-
-;; *** Direnv binds
-;; Maybe add direnv bind for creating a .envrc with content "use nix"
-
-;; ** Prettify symbol sometimes not working
-;; This is because ~prettify-symbols--current-symbol-bounds~ sometimes gets set to a value outside the range of the current buffer like ~(2689 2691)~
-;; This can be solved by setting it to nil
-;; This is the full error:
-;; Error in post-command-hook (prettify-symbols--post-command-hook): (args-out-of-range 2689 2691)
-
 ;; * Startup processes
 ;; ** Garbage collection
 (setq garbage-collection-messages t)
@@ -2088,6 +1517,7 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; ** Org-brain notes
 (define-key my/open-map (kbd "n") (lambda () (interactive)
+				    (require 'org-brain)
 				    (or
 				     (and (get-buffer "*org-brain*")
 					  (switch-to-buffer "*org-brain*"))
@@ -4935,34 +4365,58 @@ the overlay."
 ;; (straight-use-package '(haskell-mode :type git :host github :repo "walseb/haskell-mode"))
 (straight-use-package 'haskell-mode)
 
+(with-eval-after-load 'haskell-mode
+  (define-prefix-command 'my/haskell-mode-map)
+  (evil-define-key 'normal haskell-mode-map (kbd (concat my/leader-map-key " a")) 'my/haskell-mode-map)
+  (evil-define-key '(insert visual replace) haskell-mode-map (kbd (concat my/mod-leader-map-key " a")) 'my/haskell-mode-map))
+
 (defun my/haskell-mode ()
   (interactive)
-  (setq-local evil-shift-width 2)
-
-  ;; Fix incorrect comment formatting
-  (setq-local comment-start "--")
-  (setq-local comment-padding 1))
+  (setq-local evil-shift-width 2))
 
 (add-hook 'haskell-mode-hook 'my/haskell-mode)
+
+(setq haskell-process-auto-import-loaded-modules t)
+;; Disable ghci error overlay
+(setq haskell-process-show-overlays nil)
+(setq haskell-process-suggest-overloaded-strings nil)
+
+;; Disable startup message
+(setq haskell-process-show-debug-tips nil)
+
+(setq haskell-interactive-mode-read-only nil)
+(setq haskell-interactive-prompt-read-only nil)
+(setq haskell-interactive-popup-errors nil)
 
 ;; *** org-mode (ob) support
 (with-eval-after-load 'haskell-mode
   (require 'ob-haskell))
 
-;; *** haskell-process
-(setq haskell-process-auto-import-loaded-modules t)
-;; Disable ghci error overlay
-(setq haskell-process-show-overlays nil)
+;; *** Make init messages read only
+(with-eval-after-load 'haskell-interactive-mode
+  (defun haskell-interactive-mode-echo (session message &optional mode)
+    "Echo a read only piece of text before the prompt."
+    (with-current-buffer (haskell-session-interactive-buffer session)
+      (save-excursion
+	(haskell-interactive-mode-goto-end-point)
+	(insert (if mode
+		    (haskell-fontify-as-mode
+		     (concat message "\n")
+		     mode)
+		  (propertize (concat message "\n")
+			      'front-sticky t
+			      'read-only nil
+			      'rear-nonsticky t)))))))
 
 ;; **** Start using nix-shell
 ;; (setq haskell-process-wrapper-function (lambda (argv) (append (list "nix-shell" "--pure" "-I" "." "--command" )
 ;;							 (list (mapconcat ’identity argv " ")))))
 
-;; *** haskell-interactive-mode
-;; (add-hook 'haskell-mode-hook (lambda () (add-hook 'after-save-hook 'haskell-process-load-file nil t)))
-
-(setq haskell-interactive-mode-read-only t)
-(setq haskell-interactive-popup-errors nil)
+;; *** Haskell process/prompt
+(with-eval-after-load 'haskell-interactive-mode
+  (evil-define-key '(normal insert visual replace) haskell-interactive-mode-map (kbd "C-c") 'haskell-process-interrupt)
+  (evil-define-key '(normal insert) haskell-interactive-mode-map (kbd "C-n") 'haskell-interactive-mode-history-next)
+  (evil-define-key '(normal insert) haskell-interactive-mode-map (kbd "C-p") 'haskell-interactive-mode-history-previous))
 
 ;; **** Load specific file
 (defun haskell-process-load-specific-file (file)
@@ -4993,7 +4447,7 @@ the overlay."
 ;; (add-to-list 'haskell-process-args-cabal-new-repl "--ghc-options="+RTS -M100m"")
 ;; (add-to-list 'haskell-process-args-cabal-repl "--ghc-options="+RTS -M100m"")
 
-;; *** Run expr
+;; **** Run expr
 ;; Just patch the :complete to also run eros overlay
 ;; Also removed the (insert "\n") cause it was causing everything that I evaled to add one newline
 (defun my/haskell-interactive-mode-run-expr (expr)
@@ -5031,7 +4485,7 @@ the overlay."
 	  (haskell-interactive-mode-expr-result state response)
 	  (eros--eval-overlay response (my/next-line-pos))))))))
 
-;; *** Patch multi-line
+;; **** Patch multi-line
 ;; Turn 'prompt2' into prompt-cont. 'prompt2' might be deprecated
 (with-eval-after-load 'haskell-interactive-mode
   (defun haskell-interactive-mode-multi-line (expr)
@@ -5065,16 +4519,7 @@ do the
 	       (string= (substring l 0 (length haskell-interactive-prompt))
 			haskell-interactive-prompt))
       (setq l (substring l (length haskell-interactive-prompt))))
-
     (haskell-interactive-mode-set-prompt l)))
-
-
-;; **** Keys
-(add-hook 'haskell-interactive-mode-hook
-	  (lambda ()
-	    (evil-define-key '(normal insert visual replace) haskell-interactive-mode-map (kbd "C-c") 'haskell-process-interrupt)
-	    (evil-define-key '(normal insert) haskell-interactive-mode-map (kbd "C-n") 'haskell-interactive-mode-history-next)
-	    (evil-define-key '(normal insert) haskell-interactive-mode-map (kbd "C-p") 'haskell-interactive-mode-history-previous)))
 
 ;; *** nix-haskell-mode
 ;; It's buggy for me
@@ -5176,7 +4621,7 @@ do the
 
 ;; *** Project management
 ;; **** Stack
-(straight-use-package 'hasky-stack)
+;; (straight-use-package 'hasky-stack)
 
 ;; **** Cabal
 ;; (straight-use-package 'hasky-cabal)
@@ -5192,109 +4637,101 @@ do the
 
 ;; *** Extension management
 (straight-use-package 'hasky-extensions)
+(with-eval-after-load 'haskell-mode
+(define-key my/haskell-mode-map (kbd "e") 'hasky-extensions)
+(define-key my/haskell-mode-map (kbd "E") 'hasky-extensions-browse-docs))
 
 ;; *** Haskell-cabal
 (straight-use-package 'company-cabal)
-
-;; *** Fix lockup
-;; ;; This fixes a lockup that sometimes happens. I think this has to do with flycheck-mode
-;; (add-hook 'haskell-mode-hook (lambda ()
-;;			       ;; Fixes lockups due to prettify-symbol I think
-;;			       (setq-local syntax-propertize-function nil)))
+(add-to-list 'company-backends 'company-cabal)
 
 ;; *** lsp-haskell
 (when my/haskell-hie-enable
   ;; (straight-use-package 'lsp-haskell)
   (straight-use-package '(lsp-haskell :type git :host github :repo "walseb/lsp-haskell"))
 
-  (require 'lsp-haskell)
+  (with-eval-after-load 'haskell-mode
+    (require 'lsp-haskell)
 
-  (defun my/haskell-lsp-mode ()
-    ;; haskll-doc-mode is buggy if eldoc is on
-    (setq-local lsp-eldoc-enable-hover nil)
+    (defun my/haskell-lsp-mode ()
+      ;; haskll-doc-mode is buggy if eldoc is on
+      (setq-local lsp-eldoc-enable-hover nil)
 
-    ;; (setq-local lsp-ui-flycheck-enable nil)
+      ;; (setq-local lsp-ui-flycheck-enable nil)
 
-    ;; lsp-haskell doesn't work with native json
-    ;; (setq-local lsp-use-native-json nil)
+      ;; lsp-haskell doesn't work with native json
+      ;; (setq-local lsp-use-native-json nil)
 
-    (lsp)
+      (lsp)
 
-    ;; Disable flycheck because errors are generated by haskell-interactive-mode anyways
-    ;; (flycheck-disable-checker 'lsp-ui)
-    (setq-local flycheck-checker 'haskell-ghc)
+      ;; Disable flycheck because errors are generated by haskell-interactive-mode anyways
+      ;; (flycheck-disable-checker 'lsp-ui)
+      (setq-local flycheck-checker 'haskell-ghc)
 
-    ;; (setq-local flycheck-checkers (remove 'lsp-ui flycheck-checkers))
-    )
-
-  (add-hook 'haskell-mode-hook 'my/haskell-lsp-mode))
-
-;; **** Make it start in nix-shell
-;; (setq lsp-haskell-process-wrapper-function (lambda (argv)
-;;					     (append
-;;					      (append (list "nix-shell" "-I" "." "--command" )
-;;						      (list (mapconcat 'identity argv " ")))
-;;					      (list (concat (lsp-haskell--get-root) "/shell.nix")))))
+      ;; (setq-local flycheck-checkers (remove 'lsp-ui flycheck-checkers))
+      )
+    (add-hook 'haskell-mode-hook 'my/haskell-lsp-mode)))
 
 ;; **** Hack in eldoc support
 (when my/haskell-hie-enable
-  (setq my/haskell-lsp-eldoc-entries '())
+  (with-eval-after-load 'lsp-haskell
+    (setq my/haskell-lsp-eldoc-entries '())
 
-  ;; This function modifies what's displayed in lsp-ui-sideline. Here it is redefined so that it takes what's supposed to be displayed in the sideline, and instead sends it to an eldoc cache
-  (defun lsp-ui-sideline--push-info (symbol tag bounds info bol eol)
-    (when (and (= tag (lsp-ui-sideline--calculate-tag))
-	       (not (lsp-ui-sideline--stop-p)))
-      (let* ((info (concat (thread-first (gethash "contents" info)
-			     lsp-ui-sideline--extract-info
-			     lsp-ui-sideline--format-info)))
-	     (current (and (>= (point) (car bounds)) (<= (point) (cdr bounds)))))
-	(when (and (> (length info) 0)
-		   (lsp-ui-sideline--check-duplicate symbol info))
-	  (let* ((final-string (lsp-ui-sideline--make-display-string info symbol current))
-		 (pos-ov (lsp-ui-sideline--find-line (length final-string) bol eol))
-		 (ov (when pos-ov (make-overlay (car pos-ov) (car pos-ov)))))
+    ;; This function modifies what's displayed in lsp-ui-sideline. Here it is redefined so that it takes what's supposed to be displayed in the sideline, and instead sends it to an eldoc cache
+    (defun lsp-ui-sideline--push-info (symbol tag bounds info bol eol)
+      (when (and (= tag (lsp-ui-sideline--calculate-tag))
+		 (not (lsp-ui-sideline--stop-p)))
+	(let* ((info (concat (thread-first (gethash "contents" info)
+			       lsp-ui-sideline--extract-info
+			       lsp-ui-sideline--format-info)))
+	       (current (and (>= (point) (car bounds)) (<= (point) (cdr bounds)))))
+	  (when (and (> (length info) 0)
+		     (lsp-ui-sideline--check-duplicate symbol info))
+	    (let* ((final-string (lsp-ui-sideline--make-display-string info symbol current))
+		   (pos-ov (lsp-ui-sideline--find-line (length final-string) bol eol))
+		   (ov (when pos-ov (make-overlay (car pos-ov) (car pos-ov)))))
 
-	    ;; My changes:
-	    (let ((final-string-formatted (substring-no-properties final-string)))
-	      (add-to-list 'my/haskell-lsp-eldoc-entries final-string-formatted))
+	      ;; My changes:
+	      (let ((final-string-formatted (substring-no-properties final-string)))
+		(add-to-list 'my/haskell-lsp-eldoc-entries final-string-formatted))
 
-	    (when pos-ov
-	      ;; (overlay-put ov 'info info)
-	      ;; (overlay-put ov 'symbol symbol)
-	      (overlay-put ov 'bounds bounds)
-	      (overlay-put ov 'current current)
-	      ;;(overlay-put ov 'after-string final-string)
-	      (overlay-put ov 'window (get-buffer-window))
-	      (overlay-put ov 'kind 'info)
-	      (push ov lsp-ui-sideline--ovs)))))))
+	      (when pos-ov
+		;; (overlay-put ov 'info info)
+		;; (overlay-put ov 'symbol symbol)
+		(overlay-put ov 'bounds bounds)
+		(overlay-put ov 'current current)
+		;;(overlay-put ov 'after-string final-string)
+		(overlay-put ov 'window (get-buffer-window))
+		(overlay-put ov 'kind 'info)
+		(push ov lsp-ui-sideline--ovs)))))))
 
-  (defun my/haskell-lsp-eldoc-print ()
-    (interactive)
-    (when my/haskell-lsp-eldoc-entries
-      (let ((at-point (thing-at-point 'symbol t)))
-	(when at-point
-	  (let ((str (seq-find
-		      (lambda (candidate)
-			(let ((candidate-last-word (string-match (rx (not whitespace) (regexp "*") space eol) candidate)))
-			  (if candidate-last-word
-			      (progn
-				(string=
-				 (substring candidate candidate-last-word (- (length candidate) 1))
-				 at-point))
-			    nil)))
-		      my/haskell-lsp-eldoc-entries)))
+    (defun my/haskell-lsp-eldoc-print ()
+      (interactive)
+      (when my/haskell-lsp-eldoc-entries
+	(let ((at-point (thing-at-point 'symbol t)))
+	  (when at-point
+	    (let ((str (seq-find
+			(lambda (candidate)
+			  (let ((candidate-last-word (string-match (rx (not whitespace) (regexp "*") space eol) candidate)))
+			    (if candidate-last-word
+				(progn
+				  (string=
+				   (substring candidate candidate-last-word (- (length candidate) 1))
+				   at-point))
+			      nil)))
+			my/haskell-lsp-eldoc-entries)))
 
-	    (if str
-		(s-trim str)
-	      nil))))))
+	      (if str
+		  (s-trim str)
+		nil))))))
 
-  ;; No idea why but eldoc doesn't run the documentation function unless i press escape, this fixes that
-  (add-hook 'haskell-mode-hook (lambda ()
+    ;; No idea why but eldoc doesn't run the documentation function unless i press escape, this fixes that
+    (add-hook 'haskell-mode-hook (lambda ()
 				 (eldoc-mode -1)
 				 (setq-local eldoc-documentation-function 'my/haskell-lsp-eldoc-print)
 
 				 (add-hook 'post-command-hook
-					   'eldoc-print-current-symbol-info nil t))))
+					   'eldoc-print-current-symbol-info nil t)))))
 
 ;; *** Dante
 (when (not my/haskell-hie-enable)
@@ -5304,13 +4741,21 @@ do the
 
     (straight-use-package 'dante)
 
-    (require 'dante)
+    ;; (require 'dante)
     (add-hook 'haskell-mode-hook 'dante-mode)
 
-    (defun my/dante-mode ()
-      (my/dante-fix-flycheck))
+    ;; (defun my/dante-mode ()
+    ;;   (my/dante-fix-flycheck))
 
-    (add-hook 'dante-mode-hook 'my/dante-mode)))
+    ;; (add-hook 'dante-mode-hook 'my/dante-mode)
+    ))
+
+;; ;; Set flycheck settings
+;; (defun my/dante-fix-flycheck ()
+;;   ;; Settings good for both dante and the haskell repl
+;;   (setq-local flymake-no-changes-timeout nil)
+;;   (setq-local flymake-start-syntax-check-on-newline nil)
+;;   (setq-local flycheck-check-syntax-automatically '(save mode-enabled idle-buffer-switch))) ;; idle-change
 
 ;; **** Fix eval selection bug
 (when (not my/haskell-hie-enable)
@@ -5321,14 +4766,7 @@ do the
 
     (add-hook 'haskell-mode-hook
 	      (lambda () (add-hook 'post-command-hook
-				   #'my/dante-idle-function-checks nil t)))))
-
-;; **** Set flycheck settings
-(defun my/dante-fix-flycheck ()
-  ;; Settings good for both dante and the haskell repl
-  (setq-local flymake-no-changes-timeout nil)
-  (setq-local flymake-start-syntax-check-on-newline nil)
-  (setq-local flycheck-check-syntax-automatically '(save mode-enabled idle-buffer-switch))) ;; idle-change
+			      #'my/dante-idle-function-checks nil t)))))
 
 ;; **** Add more warnings
 (when (not my/haskell-hie-enable)
@@ -5337,6 +4775,7 @@ do the
 	(remove "-Wmissing-home-modules" my/ghc-flags))
 
   (with-eval-after-load 'haskell-mode
+    (require 'dante)
     (setq dante-load-flags (append dante-load-flags my/ghc-warning-parameters)))
   )
 
@@ -5355,7 +4794,7 @@ do the
 				 (add-to-list 'flycheck-disabled-checkers 'haskell-ghc))))
 
 ;; **** Apply GHC hints
-(straight-use-package 'attrap)
+;; (straight-use-package 'attrap)
 
 ;; **** Disable nix boot
 (setq dante-methods '(bare-cabal))
@@ -6884,6 +6323,12 @@ do the
 (define-key my/exwm-mode-map (kbd "9") 'my/exwm-9)
 (define-key my/exwm-mode-map (kbd "0") 'my/exwm-0)
 
+;; ** Run exwm
+(add-hook 'after-init-hook 'exwm-enable)
+
+;; ** Don't remove header in exwm-buffers
+(add-hook 'exwm-manage-finish-hook (lambda () (kill-local-variable 'header-line-format)))
+
 ;; ** Exwm-edit
 (setq exwm-edit-bind-default-keys nil)
 (straight-use-package '(exwm-edit :type git :host github :repo "walseb/exwm-edit" :branch "AllFixes"))
@@ -6893,9 +6338,6 @@ do the
 
 ;; *** Remove header
 (add-hook 'exwm-edit-mode-hook (lambda () (kill-local-variable 'header-line-format)))
-
-;; *** Run exwm
-(add-hook 'after-init-hook 'exwm-enable)
 
 ;; ** Set exwm buffer name
 ;; *** Manually set buffer name
@@ -8580,6 +8022,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; Used in ivy occur
 (with-eval-after-load 'wgrep
   (setq wgrep-mode-map (make-sparse-keymap))
+
+  (define-key wgrep-mode-map [remap save-buffer] 'wgrep-finish-edit)
 
   (define-prefix-command 'my/wgrep-map)
   (evil-define-key 'normal wgrep-mode-map (kbd (concat my/leader-map-key " a")) 'my/wgrep-map)
