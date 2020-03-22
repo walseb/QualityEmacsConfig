@@ -2223,7 +2223,7 @@ or go back to just one window (by deleting all but the selected window)."
 
 (with-eval-after-load 'ivy
   ;; Make counsel-yank-pop use default height
-  ;; (delete `(counsel-yank-pop . 5) ivy-height-alist)
+  (delete `(counsel-yank-pop . 5) ivy-height-alist)
   ;; Disable set height depending on command
   (setq ivy-height-alist nil)
   (setq-default ivy-height-alist nil)
@@ -4636,10 +4636,21 @@ do the
 (setq haskell-mode-stylish-haskell-path "ormolu")
 
 ;; *** Extension management
-(straight-use-package 'hasky-extensions)
+(defun my/haskell-add-language-extension ()
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (let ((extension (completing-read "Extension: " haskell-ghc-supported-extensions)))
+      (insert (concat "{-# LANGUAGE "  extension " #-}\n")))))
+
 (with-eval-after-load 'haskell-mode
-(define-key my/haskell-mode-map (kbd "e") 'hasky-extensions)
-(define-key my/haskell-mode-map (kbd "E") 'hasky-extensions-browse-docs))
+  (define-key my/haskell-mode-map (kbd "e") 'my/haskell-add-language-extension))
+
+;; **** Hasky
+(straight-use-package 'hasky-extensions)
+
+(with-eval-after-load 'haskell-mode
+  (define-key my/haskell-mode-map (kbd "E") 'hasky-extensions-browse-docs))
 
 ;; *** Haskell-cabal
 (straight-use-package 'company-cabal)

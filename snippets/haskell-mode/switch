@@ -1,0 +1,8 @@
+# name: switch
+# key: sw
+# --
+mySwitch :: Arg -> SF input output
+mySwitch arg =
+  switch
+    func -- :: SF a (b, Event c)
+    (\eventData -> mySwitch eventData)

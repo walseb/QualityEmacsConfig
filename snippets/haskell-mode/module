@@ -1,0 +1,4 @@
+# name: module
+# key: mod
+# --
+module ${1:`(file-name-base (buffer-file-name))`} ${2:(func, func')} where

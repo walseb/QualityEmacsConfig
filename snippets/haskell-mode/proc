@@ -1,0 +1,4 @@
+# name: proc
+# key: proc
+# --
+proc ${1:input} -> do
