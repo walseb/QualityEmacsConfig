@@ -27,7 +27,7 @@
 	     '("\\*Async Shell Command\\*.*" display-buffer-no-window))
 
 ;; * Security
-(setq network-security-level 'high)
+(setq network-security-level 'medium)
 
 ;; ** Cert settings
 (setq gnutls-verify-error t)
@@ -1472,6 +1472,28 @@ or go back to just one window (by deleting all but the selected window)."
 					(copy-region-as-kill (point-min) (point-max))
 					(switch-to-buffer curr-buf))))
 
+;; ** Break timer
+;; In seconds
+(defvar my/break-time (* 21 60))
+(defvar my/enable-breaks t)
+
+(defun my/break-screen ()
+  (when my/enable-breaks
+    ;; Restart timer
+    (my/break-timer-run)
+
+    ;; Show break buffer
+    (switch-to-buffer "Break")
+    (insert "Break")
+    (message (concat "Break at " (format-time-string "%H:%M")))))
+
+(defun my/break-timer-run ()
+  (interactive)
+  (run-with-timer my/break-time nil #'my/break-screen))
+
+(when my/enable-breaks
+  (my/break-timer-run))
+
 ;; * File options
 (define-prefix-command 'my/file-options-map)
 (define-key my/leader-map (kbd "`") 'my/file-options-map)
@@ -1681,14 +1703,19 @@ or go back to just one window (by deleting all but the selected window)."
 ;; *** Twitter bootstrap
 (straight-use-package 'ox-twbs)
 
+;; ** org-superstar
+(straight-use-package 'org-superstar)
+
+(add-hook 'org-mode-hook 'org-superstar-mode)
+
 ;; ** Bullets
 (straight-use-package 'org-bullets)
 
-(with-eval-after-load 'org
-  (when window-system
-    (if (eq system-type 'windows-nt)
-	(setq inhibit-compacting-font-caches t))
-    (add-hook 'org-mode-hook (lambda () (interactive) (org-bullets-mode)))))
+;; (with-eval-after-load 'org
+;;   (when window-system
+;;     (if (eq system-type 'windows-nt)
+;;	(setq inhibit-compacting-font-caches t))
+;;     (add-hook 'org-mode-hook (lambda () (interactive) (org-bullets-mode)))))
 
 ;; ** Visuals
 ;; *** Highlight whole heading line
@@ -2345,7 +2372,7 @@ If the input is empty, select the previous history element instead."
 ;; *** Counsel-yank-pop
 ;; Delete text under selection when pasing just like with normal evil paste
 (advice-add #'counsel-yank-pop :before (lambda (&optional arg) (if (string= evil-state 'visual)
-							      (delete-region (point) (mark)))))
+								   (delete-region (point) (mark)))))
 
 ;; *** Always run counsel ag in default directory
 (defvar my/rg-available (executable-find "rg"))
@@ -4738,11 +4765,11 @@ do the
 
     ;; No idea why but eldoc doesn't run the documentation function unless i press escape, this fixes that
     (add-hook 'haskell-mode-hook (lambda ()
-				 (eldoc-mode -1)
-				 (setq-local eldoc-documentation-function 'my/haskell-lsp-eldoc-print)
+				   (eldoc-mode -1)
+				   (setq-local eldoc-documentation-function 'my/haskell-lsp-eldoc-print)
 
-				 (add-hook 'post-command-hook
-					   'eldoc-print-current-symbol-info nil t)))))
+				   (add-hook 'post-command-hook
+					     'eldoc-print-current-symbol-info nil t)))))
 
 ;; *** Dante
 (when (not my/haskell-hie-enable)
@@ -4777,7 +4804,7 @@ do the
 
     (add-hook 'haskell-mode-hook
 	      (lambda () (add-hook 'post-command-hook
-			      #'my/dante-idle-function-checks nil t)))))
+				   #'my/dante-idle-function-checks nil t)))))
 
 ;; **** Add more warnings
 (when (not my/haskell-hie-enable)
@@ -8128,6 +8155,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 				 term-mode
 
 				 wdired-mode
+
+				 haskell-interactive-mode
 				 ))
 
 (defun my/flyspell-mode-auto-select ()
@@ -8930,22 +8959,122 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (with-eval-after-load 'nix-mode
   (setq nix-font-lock-keywords '()))
 
-;; ** Modeline
-;; Make mode line appear in echo area instead of in the mode line area. This saves space and makes it so that the mode line can't be split
-
-;; *** Calculate frame width
+;; * Modeline
+;; ** Calculate frame width
 (defvar my/frame-width (frame-width))
 
 (defun my/frame-width-update()
   (interactive)
   (setq my/frame-width (frame-width)))
 
-;; *** Mode line highlight face
+;; ** Mode line highlight face
 (defface my/mode-line-highlight
   '((t :inherit highlight))
   "Face for highlighting something in mode line")
 
-;; *** Mode line contents
+;; ** Mode line contents
+;; *** Cursor position settings
+(setq mode-line-position
+      '(;; %p print percent of buffer above top of window, o Top, Bot or All
+	;; (-3 "%p")
+	;; %I print the size of the buffer, with kmG etc
+	;; (size-indication-mode ("/" (-4 "%I")))
+	;; " "
+	;; %l print the current line number
+	;; %c print the current column
+	(line-number-mode ("%l" (column-number-mode ":%c")))))
+
+;; ** Modules
+;; *** Git project and branch name
+(require 'vc-git)
+
+;; When projectile-mode is on, project name is updated on every keypress, here it is fixed
+(defvar-local my/projectile-project-name nil)
+(defvar-local my/buffer-git-branch nil)
+;; Make sure every buffer is only scanned once
+(defvar-local my/projectile-project-buffer-already-scanned nil)
+
+(defun my/update-projectile-project-name()
+  (interactive)
+  ;; Some virtual buffers don't work, but dired-mode does
+  (when (or (string= major-mode 'dired-mode) (and buffer-file-name (file-exists-p buffer-file-name) (not my/projectile-project-buffer-already-scanned)))
+    (setq my/projectile-project-buffer-already-scanned t)
+    (setq my/projectile-project-name (projectile-project-name))
+    (setq my/buffer-git-branch (car (vc-git-branches)))))
+
+(if (>= emacs-major-version 27)
+    (add-hook 'window-state-change-hook 'my/update-projectile-project-name)
+  (add-hook 'window-configuration-change-hook 'my/update-projectile-project-name))
+
+;; *** Git changes
+(defvar-local my/git-changes-string nil)
+
+(defvar-local my/vc-insert-count 0)
+(defvar-local my/vc-change-count 0)
+(defvar-local my/vc-delete-count 0)
+
+(defun my/mode-line-update-git-changes-string ()
+  (setq my/git-changes-string (format "+%d ~%d -%d"
+				      my/vc-insert-count
+				      my/vc-change-count
+				      my/vc-delete-count)))
+
+(defun my/mode-line-update-git-changes-string-reset ()
+  (setq my/vc-insert-count 0)
+  (setq my/vc-change-count 0)
+  (setq my/vc-delete-count 0)
+  (setq my/git-changes-string nil))
+
+(defun my/modeline-update-git-changes (changes)
+  "CHANGES is generated by `(diff-hl-changes)'"
+  (my/mode-line-update-git-changes-string-reset)
+  (mapc (lambda (entry)
+	  (pcase (nth 2 entry)
+	    ('insert (setq my/vc-insert-count (+ my/vc-insert-count (nth 1 entry))))
+	    ('change (setq my/vc-change-count (+ my/vc-change-count (nth 1 entry))))
+	    ('delete (setq my/vc-delete-count (+ my/vc-delete-count (nth 1 entry))))))
+	changes)
+  (my/mode-line-update-git-changes-string))
+
+;; **** Override old function
+(with-eval-after-load 'diff-hl
+  (defun diff-hl-changes ()
+    (my/mode-line-update-git-changes-string-reset)
+    (let* ((file buffer-file-name)
+	   (backend (vc-backend file)))
+      (when backend
+	(let ((state (vc-state file backend)))
+	  (cond
+	   ((diff-hl-modified-p state)
+	    (let* (diff-auto-refine-mode res)
+	      (with-current-buffer (diff-hl-changes-buffer file backend)
+		(goto-char (point-min))
+		(unless (eobp)
+		  (ignore-errors
+		    (diff-beginning-of-hunk t))
+		  (while (looking-at diff-hunk-header-re-unified)
+		    (let ((line (string-to-number (match-string 3)))
+			  (len (let ((m (match-string 4)))
+				 (if m (string-to-number m) 1)))
+			  (beg (point)))
+		      (diff-end-of-hunk)
+		      (let* ((inserts (diff-count-matches "^\\+" beg (point)))
+			     (deletes (diff-count-matches "^-" beg (point)))
+			     (type (cond ((zerop deletes) 'insert)
+					 ((zerop inserts) 'delete)
+					 (t 'change))))
+			(when (eq type 'delete)
+			  (setq len 1)
+			  (cl-incf line))
+			(push (list line len type) res))))))
+	      (my/modeline-update-git-changes res)
+	      (nreverse res)))
+	   ((eq state 'added)
+	    `((1 ,(line-number-at-pos (point-max)) insert)))
+	   ((eq state 'removed)
+	    `((1 ,(line-number-at-pos (point-max)) delete)))))))))
+
+;; ** Format
 ;; Don't set it directly here, because the variable is needed to fix exwm
 (setq-default header-line-format
 	      (quote
@@ -9042,22 +9171,11 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 		  ""))
 		)))
 
-;; *** Keys
-(define-prefix-command 'my/mode-line-map)
-(define-key my/leader-map (kbd "M-m") 'my/mode-line-map)
-
-;; **** Garbage Collection
-(defvar my/mode-line-show-GC-stats nil)
-(defun my/mode-line-toggle-show-GC-stats ()
-  (interactive)
-  (setq my/mode-line-show-GC-stats (not my/mode-line-show-GC-stats)))
-
-(define-key my/mode-line-map (kbd "G") 'my/mode-line-toggle-show-GC-stats)
-
-;; *** Mode line modules
+;; * Status line
+;; ** Modules
 ;; http://www.holgerschurig.de/en/emacs-tayloring-the-built-in-mode-line/
 
-;; **** Allocate status line update timings
+;; *** Allocate status line update timings
 (defvar my/status-line-update-offset 8)
 (defvar my/status-line-allocated-update-current 0)
 
@@ -9066,76 +9184,14 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
       (setq my/status-line-allocated-update-current 0)
     (setq my/status-line-allocated-update-current (+ my/status-line-allocated-update-current 1))
     (run-with-timer my/status-line-allocated-update-current 60 task)))
-;; **** Cursor position
-(setq mode-line-position
-      '(;; %p print percent of buffer above top of window, o Top, Bot or All
-	;; (-3 "%p")
-	;; %I print the size of the buffer, with kmG etc
-	;; (size-indication-mode ("/" (-4 "%I")))
-	;; " "
-	;; %l print the current line number
-	;; %c print the current column
-	(line-number-mode ("%l" (column-number-mode ":%c")))))
 
-;; **** Buffer name
-;; (defvar my/buffer-name "")
-;; (defvar my/max-buffer-name-length 10)
+;; *** Garbage Collection
+(defvar my/mode-line-show-GC-stats nil)
+(defun my/mode-line-toggle-show-GC-stats ()
+  (interactive)
+  (setq my/mode-line-show-GC-stats (not my/mode-line-show-GC-stats)))
 
-;; (defun my/update-max-buffer-name-length()
-;; (interactive)
-;; (setq my/max-buffer-name-length (floor (/ (frame-width) 10))))
-
-;; (defun my/update-buffer-name-string (BUFFER)
-;; (interactive)
-;; (setq my/buffer-name
-;; (if (> (string-width BUFFER) my/max-buffer-name-length)
-;; (concat (string-trim-right (substring BUFFER 0 my/max-buffer-name-length)) "...")
-;; BUFFER)))
-
-;; (if window-system
-;; ;; At this point in the code, exwm hasn't had time to maximize the emacs frame
-;; (add-hook 'exwm-init-hook 'my/update-max-buffer-name-length)
-;; ;; If on terminal, just run it now since it's always maximized
-;; (my/update-max-buffer-name-length))
-
-;; ;;(add-hook 'buffer-list-update-hook (lambda () (interactive) (my/update-buffer-name-string (buffer-name)) t) t)
-;; (add-hook 'my/switch-buffer-hook (lambda () (interactive) (my/update-buffer-name-string (buffer-name)) t) t)
-
-;; ;;(add-hook 'window-configuration-change-hook (lambda () (interactive) (my/update-buffer-name-string (buffer-name)) t) t)
-
-;; **** Which function
-(setq which-func-unknown "")
-
-(setq which-func-current
-      '(:eval
-	(let ((result (gethash (selected-window) which-func-table)))
-	  (if result
-	      (concat
-	       " | < "
-	       (replace-regexp-in-string "%" "%%" result)
-	       " >"
-	       )))))
-
-;; (which-function-mode 1)
-
-;; (remove-hook 'my/switch-buffer-hook 'which-func-update)
-
-;; (replace-regexp-in-string "%" "%%"
-;; (or
-;; (gethash
-;; (selected-window)
-;; which-func-table)
-;; which-func-unknown)))
-;; Could be used if doing func mode manually
-;; (setq my/which-function-modes '(c-mode emacs-lisp-mode))
-
-;; (defun my/enable-which-function ()
-;; (if (member major-mode my/which-function-modes)
-;; (which-function-mode 1)))
-
-;; (add-hook 'prog-mode-hook 'my/enable-which-function)
-
-;; **** CPU heat
+;; *** CPU heat
 (defvar my/mode-line-enable-cpu-temp nil)
 
 (if (and
@@ -9145,8 +9201,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
      (= 0 (string-match-p ""
 			  (shell-command-to-string "sensors | grep \"Core 0:\"")))
      ;; If it returns "no sensors found"
-     (not (= 0 (string-match-p "No sensors found"
-			       (shell-command-to-string "sensors | grep \"Core 0:\"")))))
+     (not (string-match-p "No sensors found"
+			(shell-command-to-string "sensors | grep \"Core 0:\""))))
     (setq my/mode-line-enable-cpu-temp t))
 
 (defvar my/cpu-temp "")
@@ -9160,20 +9216,20 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (if my/mode-line-enable-cpu-temp
     (my/status-bar-allocate-update-time 'my/update-cpu-temp))
 
-;; **** Disk space
+;; *** Disk space
 (defvar my/disk-space nil)
 (defun my/update-disk-space ()
   (interactive)
   (setq my/disk-space (my/file-size-human-readable (floor (* 1000 (string-to-number (get-free-disk-space user-emacs-directory)))))))
 
-;; **** Network traffic
-;; ***** Linux
+;; *** Network traffic
+;; **** Linux
 (defvar my/mode-line-enable-network-traffic nil)
 
 (if (file-exists-p "/proc/net/dev")
     (setq my/mode-line-enable-network-traffic t))
 
-;; ****** RX
+;; ***** RX
 ;; Received
 (defvar my/rx 0)
 (defvar my/rx-delta-formatted "0")
@@ -9199,7 +9255,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 (my/linux-update-network-rx-delta)
 
-;; ****** TX
+;; ***** TX
 ;; Transmitted
 (setq my/tx 0)
 (defvar my/tx-delta-formatted "0")
@@ -9226,8 +9282,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 (my/linux-update-network-tx-delta)
 
-;; **** Mail
-;; ***** Gnus mail counter
+;; *** Mail
+;; **** Gnus mail counter
 (defvar my/gnus-unread-string nil)
 
 (defvar my/gnus-mail-counter-update-hook nil)
@@ -9245,7 +9301,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (add-hook 'my/sync-gnus-hook 'my/gnus-update-unread)
 (add-hook 'gnus-summary-exit-hook 'my/gnus-update-unread)
 
-;; ***** mu4e mail counter
+;; **** mu4e mail counter
 (straight-use-package 'mu4e-alert)
 
 (defvar my/mu4e-unread-mail-count nil)
@@ -9253,19 +9309,19 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (setq mu4e-alert-modeline-formatter (lambda (count)
 				      (setq my/mu4e-unread-mail-count (number-to-string count))))
 
-;; ****** Enable
+;; ***** Enable
 (when my/mu4epath
   (with-eval-after-load 'mu4e
     (mu4e-alert-enable-mode-line-display)))
 
-;; **** Battery
+;; *** Battery
 ;; If there is a battery, display it in the mode line
 (require 'battery)
 
 (display-battery-mode 1)
 (setq battery-mode-line-format "%th - %p")
 
-;; ***** Reload battery display mode
+;; **** Reload battery display mode
 (defun my/battery-display-mode-reload ()
   (interactive)
   (display-battery-mode -1)
@@ -9295,7 +9351,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 	       #'w32-battery-status)))
   (display-battery-mode 1))
 
-;; **** Date and time
+;; *** Date and time
 ;; Display time and date in good format (also displays CPU load)
 (defvar my/date "")
 (defvar my/time "")
@@ -9315,96 +9371,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (my/update-time)
 (my/update-date)
 
-;; **** Git project and branch name
-(require 'vc-git)
-
-;; When projectile-mode is on, project name is updated on every keypress, here it is fixed
-(defvar-local my/projectile-project-name nil)
-(defvar-local my/buffer-git-branch nil)
-;; Make sure every buffer is only scanned once
-(defvar-local my/projectile-project-buffer-already-scanned nil)
-
-(defun my/update-projectile-project-name()
-  (interactive)
-  ;; Some virtual buffers don't work, but dired-mode does
-  (when (or (string= major-mode 'dired-mode) (and buffer-file-name (file-exists-p buffer-file-name) (not my/projectile-project-buffer-already-scanned)))
-    (setq my/projectile-project-buffer-already-scanned t)
-    (setq my/projectile-project-name (projectile-project-name))
-    (setq my/buffer-git-branch (car (vc-git-branches)))))
-
-(if (>= emacs-major-version 27)
-    (add-hook 'window-state-change-hook 'my/update-projectile-project-name)
-  (add-hook 'window-configuration-change-hook 'my/update-projectile-project-name))
-
-;; **** Git changes
-(defvar-local my/git-changes-string nil)
-
-(defvar-local my/vc-insert-count 0)
-(defvar-local my/vc-change-count 0)
-(defvar-local my/vc-delete-count 0)
-
-(defun my/mode-line-update-git-changes-string ()
-  (setq my/git-changes-string (format "+%d ~%d -%d"
-				      my/vc-insert-count
-				      my/vc-change-count
-				      my/vc-delete-count)))
-
-(defun my/mode-line-update-git-changes-string-reset ()
-  (setq my/vc-insert-count 0)
-  (setq my/vc-change-count 0)
-  (setq my/vc-delete-count 0)
-  (setq my/git-changes-string nil))
-
-(defun my/modeline-update-git-changes (changes)
-  "CHANGES is generated by `(diff-hl-changes)'"
-  (my/mode-line-update-git-changes-string-reset)
-  (mapc (lambda (entry)
-	  (pcase (nth 2 entry)
-	    ('insert (setq my/vc-insert-count (+ my/vc-insert-count (nth 1 entry))))
-	    ('change (setq my/vc-change-count (+ my/vc-change-count (nth 1 entry))))
-	    ('delete (setq my/vc-delete-count (+ my/vc-delete-count (nth 1 entry))))))
-	changes)
-  (my/mode-line-update-git-changes-string))
-
-;; ***** Override old function
-(with-eval-after-load 'diff-hl
-  (defun diff-hl-changes ()
-    (my/mode-line-update-git-changes-string-reset)
-    (let* ((file buffer-file-name)
-	   (backend (vc-backend file)))
-      (when backend
-	(let ((state (vc-state file backend)))
-	  (cond
-	   ((diff-hl-modified-p state)
-	    (let* (diff-auto-refine-mode res)
-	      (with-current-buffer (diff-hl-changes-buffer file backend)
-		(goto-char (point-min))
-		(unless (eobp)
-		  (ignore-errors
-		    (diff-beginning-of-hunk t))
-		  (while (looking-at diff-hunk-header-re-unified)
-		    (let ((line (string-to-number (match-string 3)))
-			  (len (let ((m (match-string 4)))
-				 (if m (string-to-number m) 1)))
-			  (beg (point)))
-		      (diff-end-of-hunk)
-		      (let* ((inserts (diff-count-matches "^\\+" beg (point)))
-			     (deletes (diff-count-matches "^-" beg (point)))
-			     (type (cond ((zerop deletes) 'insert)
-					 ((zerop inserts) 'delete)
-					 (t 'change))))
-			(when (eq type 'delete)
-			  (setq len 1)
-			  (cl-incf line))
-			(push (list line len type) res))))))
-	      (my/modeline-update-git-changes res)
-	      (nreverse res)))
-	   ((eq state 'added)
-	    `((1 ,(line-number-at-pos (point-max)) insert)))
-	   ((eq state 'removed)
-	    `((1 ,(line-number-at-pos (point-max)) delete)))))))))
-
-;; **** Load average
+;; *** Load average
 (defvar my/load-average 0)
 (defvar my/high-load-average 2)
 
@@ -9416,7 +9383,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 (my/update-load-average)
 
-;; **** Ram usage
+;; *** Ram usage
 (defvar my/mode-line-enable-available-mem nil)
 
 (if (and (file-exists-p "/proc/meminfo")
@@ -9455,7 +9422,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; Update available mem on startup
 (my/linux-update-available-mem)
 
-;; **** Uptime
+;; *** Uptime
 (defvar my/uptime-start-time (float-time))
 (defvar my/uptime-total-time-formated "0M")
 
@@ -9471,32 +9438,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 (my/status-bar-allocate-update-time 'my/update-uptime-timer)
 
-;; **** Break timer
-;; In seconds
-(defvar my/break-time (* 21 60))
-(defvar my/enable-breaks t)
-
-(defun my/break-screen ()
-  (when my/enable-breaks
-    ;; Restart timer
-    (my/break-timer-run)
-
-    ;; Show break buffer
-    (switch-to-buffer "Break")
-    (insert "Break")
-    (message (concat "Break at " (format-time-string "%H:%M")))))
-
-(defun my/break-timer-run ()
-  (interactive)
-  (run-with-timer my/break-time nil #'my/break-screen))
-
-(when my/enable-breaks
-  (my/break-timer-run))
-
-;; *** Status line
-(setq my/status-bar 'mini-modeline)
-
-;; **** Status line format
+;; ** Format
 ;; Only applicable to X since terminal never stretches, etc
 (add-hook 'exwm-workspace-switch-hook 'my/frame-width-update)
 
@@ -9505,7 +9447,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   (let* ((available-width (- my/frame-width (length left) 2)))
     (format (format "%%s %%%ds" available-width) left right)))
 
-;; mode-line-format
+;; Remember to update `mini-modeline-r-format' after setting this manually
 (setq-default my/status-line-format
 	      '(:eval
 		(my/mode-line-align
@@ -9552,7 +9494,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 			       (concat "BAT: " battery-mode-line-string "%%%   | ")))
 
 		    (:eval (if my/mode-line-enable-cpu-temp
-			       (concat " - " my/cpu-temp)))
+			       (concat "HT: " my/cpu-temp " | ")))
 
 		    "C: "
 		    (:eval (number-to-string my/load-average))
@@ -9579,19 +9521,21 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 		    (:eval my/date)
 		    ))))))
 
-;; **** mini-modeline
-(when (string= my/status-bar 'mini-modeline)
-  (straight-use-package 'mini-modeline)
+;; ** mini-modeline
+(straight-use-package 'mini-modeline)
 
-  (setq mini-modeline-enhance-visual nil)
-  ;; Mini-modeline flashes during GC if this is t
-  (setq garbage-collection-messages nil)
+(setq mini-modeline-enhance-visual nil)
+;; Mini-modeline flashes during GC if this is t
+(setq garbage-collection-messages nil)
 
-  ;; This fixes a bug with ~counsel-describe-function~
-  (setq mini-modeline-echo-duration 99999)
+;; This fixes a bug with ~counsel-describe-function~
+(setq mini-modeline-echo-duration 99999)
 
-  (setq-default mini-modeline-r-format my/status-line-format)
-  (mini-modeline-mode 1))
+(setq-default mini-modeline-r-format my/status-line-format)
+(mini-modeline-mode 1)
+
+(setq mode-line-format nil)
+(setq-default mode-line-format nil)
 
 ;; * Backups
 ;; Stop emacs from creating backup files
