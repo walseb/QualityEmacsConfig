@@ -82,7 +82,8 @@
        (my/outline-background-face (my/ifc (color-darken-name my/foreground-color 50)
 					   "black"))
 
-       )
+       (my/header-color (color-darken-name "DeepSkyBlue4" 10)))
+
   (custom-theme-set-faces
    'myTheme
    `(default ((,class (:foreground ,my/foreground-color :background ,my/background-color))))
@@ -120,7 +121,7 @@
 
    `(hl-line ((,class (:foreground ,my/foreground-color :background ,my/hl-line-color :underline nil))))
 
-   `(outline-1 ((,class (:foreground ,my/outline-foreground-face :background ,my/outline-background-face))))
+   `(outline-1 ((,class (:foreground ,my/outline-foreground-face :background ,my/header-color))))
    `(outline-2 ((,class (:inherit outline-1))))
    `(outline-3 ((,class (:inherit outline-1))))
    `(outline-4 ((,class (:inherit outline-1))))

@@ -2246,7 +2246,7 @@ or go back to just one window (by deleting all but the selected window)."
 ;; Ivy height
 (add-hook 'exwm-init-hook (lambda () (run-with-timer 5 nil (lambda () (setq ivy-height (+ (frame-height) 1))))))
 (add-hook 'exwm-init-hook (lambda () (run-with-timer 10 nil (lambda () (setq ivy-height (+ (frame-height) 1))))))
-(add-hook 'exwm-init-hook (lambda () (run-with-timer 15 nil (lambda () (setq ivy-height (+ (frame-height) 1))))))
+;; (add-hook 'exwm-init-hook (lambda () (run-with-timer 15 nil (lambda () (setq ivy-height (+ (frame-height) 1))))))
 
 (with-eval-after-load 'ivy
   ;; Make counsel-yank-pop use default height
@@ -7801,15 +7801,11 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (if (window-system)
     (async-shell-command my/device/monitor-setup-command "xrandr setup buffer"))
 
-;; ** Process monitors
-(define-prefix-command 'my/processes-map)
-(define-key my/system-commands-map (kbd "p") 'my/processes-map)
-
-;; *** Proced
+;; ** Proced
 (setq proced-tree-flag t)
-(define-key my/processes-map (kbd "t") 'proced)
+(define-key my/system-commands-map (kbd "e") 'proced)
 
-;; **** Disable line wrapping
+;; *** Disable line wrapping
 (defun my/proced-mode ()
   (interactive)
   (visual-line-mode -1)
@@ -7820,60 +7816,17 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; (add-hook 'proced-post-display-hook 'my/proced-mode)
 (add-hook 'proced-mode-hook 'my/proced-mode)
 
-;; **** Auto update interval
+;; *** Auto update interval
 (setq proced-auto-update-interval 0.5)
 
-;; *** Profiler
+;; ** Profiler
 (define-prefix-command 'my/profiler-map)
-(define-key my/processes-map (kbd "p") 'my/profiler-map)
+(define-key my/system-commands-map (kbd "p") 'my/profiler-map)
 
 (define-key my/profiler-map (kbd "s") 'profiler-start)
 (define-key my/profiler-map (kbd "e") 'profiler-stop)
 (define-key my/profiler-map (kbd "r") 'profiler-report)
 (define-key my/profiler-map (kbd "R") 'profiler-reset)
-
-;; ** Install software
-(define-prefix-command 'my/software-install-map)
-(define-key my/system-commands-map (kbd "i") 'my/software-install-map)
-
-;; *** Install eclipse java language server
-;; For use with lsp-java
-(defun my/install-eclipse-java-language-server()
-  (interactive)
-  (shell-command "
-   cd ~
-   rm -rf ~/.emacs.d/eclipse.jdt.ls/server/
-   mkdir -p ~/.emacs.d/eclipse.jdt.ls/server/
-   wget http://download.eclipse.org/jdtls/snapshots/jdt-language-server-latest.tar.gz -O /tmp/jdt-latest.tar
-   tar xf /tmp/jdt-latest.tar -C ~/.emacs.d/eclipse.jdt.ls/server/
-   "))
-
-(define-key my/software-install-map (kbd "j") 'my/install-eclipse-java-language-server)
-
-;; *** Install pdf tools
-(define-key my/software-install-map (kbd "p") 'pdf-tools-install)
-
-;; *** Install omnisharp
-(define-key my/software-install-map (kbd "o") 'omnisharp-install-server)
-
-;; *** Install rtags
-;; You need llvm
-;; (defun my/install-rtags ()
-;; (interactive)
-;; (async-shell-command " cd ~
-;; git clone --recursive https://github.com/Andersbakken/rtags.git
-;; cd rtags
-;; cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 .
-;; make"))
-
-;; (define-key my/software-install-map (kbd "r") 'my/install-rtags)
-
-;; *** Compile config
-(defun my/compile-config ()
-  (interactive)
-  (byte-compile-file my/config-exported-location nil))
-
-(define-key my/software-install-map (kbd "C-c") 'my/compile-config)
 
 ;; * Networking
 (define-prefix-command 'my/network-map)
@@ -8236,6 +8189,30 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 (evil-define-key 'normal calc-mode-map [remap evil-delete-whole-line] 'my/calc-kill-current-line)
 (evil-define-key 'visual calc-mode-map (kbd "d") 'calc-kill-region)
+
+;; ** calc-at-point
+(straight-use-package '(calc-at-point :type git :host github :repo "walseb/calc-at-point"))
+
+(evil-define-operator my/calc-at-point-repeat (beg end type)
+  (interactive "<R>")
+  (calc-at-point-repeat-last beg end))
+
+(my/evil-normal-define-key "_" 'my/calc-at-point-repeat)
+(my/evil-visual-define-key "_" 'my/calc-at-point-repeat)
+
+(evil-define-operator my/calc-at-point-add (beg end type)
+  (interactive "<R>")
+  (calc-at-point-add-1 beg end))
+
+(my/evil-normal-define-key "+" 'my/calc-at-point-add)
+(my/evil-visual-define-key "+" 'my/calc-at-point-add)
+
+(evil-define-operator my/calc-at-point-neg (beg end type)
+  (interactive "<R>")
+  (calc-at-point-neg beg end))
+
+(my/evil-normal-define-key "-" 'my/calc-at-point-neg)
+(my/evil-visual-define-key "-" 'my/calc-at-point-neg)
 
 ;; * Artist mode
 ;; ** Completing read
