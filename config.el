@@ -1324,11 +1324,22 @@ documentation: True")
 ;; ** Help mode
 (setq help-mode-map (make-sparse-keymap))
 
+;; ** Ibuffer
+(with-eval-after-load 'ibuffer
+  (setq ibuffer-mode-map (make-sparse-keymap)))
+
 ;; ** Compilation mode
-(setq compilation-mode-map (make-sparse-keymap))
-(setq compilation-minor-mode-map (make-sparse-keymap))
-(setq compilation-shell-minor-mode-map (make-sparse-keymap))
-(setq compilation-mode-tool-bar-map (make-sparse-keymap))
+(with-eval-after-load 'compile
+  (setq compilation-mode-map (make-sparse-keymap))
+  (setq compilation-minor-mode-map (make-sparse-keymap))
+  (setq compilation-shell-minor-mode-map (make-sparse-keymap))
+  (setq compilation-mode-tool-bar-map (make-sparse-keymap)))
+
+(with-eval-after-load 'compile
+  (define-key compilation-mode-map (kbd "j") 'my/compilation-change-command)
+  (define-key compilation-mode-map (kbd "g") 'recompile)
+  (define-key compilation-mode-map (kbd "C-c") 'kill-compilation)
+  (evil-define-key '(normal insert visual replace) compilation-mode-map (kbd "C-c") 'kill-compilation))
 
 ;; ** Prefer loading newest lisp source file
 (setq load-prefer-newer t)
@@ -1454,14 +1465,6 @@ or go back to just one window (by deleting all but the selected window)."
 ;; ** Timer
 ;; Set timer to only run expired repeating hooks once after sleep
 (setq timer-max-repeats 1)
-
-;; ** Auto kill buffer
-(defun my/auto-kill-buffer ()
-  (interactive)
-  (pcase major-mode
-    ('gnus-summary-mode (gnus-summary-exit))
-    ('ediff-mode (call-interactively #'ediff-quit))
-    (_ (kill-current-buffer))))
 
 ;; ** Copy minibuffer contents
 (define-key my/leader-map (kbd "Y") (lambda ()
@@ -2243,9 +2246,17 @@ or go back to just one window (by deleting all but the selected window)."
   nil)
 
 ;; *** Visuals
+(defun my/ivy-set-height ()
+  (remove-hook 'post-command-hook 'my/ivy-set-height)
+  (setq ivy-height (+ (frame-height) 1)))
+
 ;; Ivy height
-(add-hook 'exwm-init-hook (lambda () (run-with-timer 5 nil (lambda () (setq ivy-height (+ (frame-height) 1))))))
-(add-hook 'exwm-init-hook (lambda () (run-with-timer 10 nil (lambda () (setq ivy-height (+ (frame-height) 1))))))
+(add-hook 'after-init-hook
+	  (lambda ()
+	    (add-hook 'post-command-hook 'my/ivy-set-height)))
+
+;; (add-hook 'exwm-init-hook (lambda () (run-with-timer 5 nil (lambda () (setq ivy-height (+ (frame-height) 1))))))
+;; (add-hook 'exwm-init-hook (lambda () (run-with-timer 10 nil (lambda () (setq ivy-height (+ (frame-height) 1))))))
 ;; (add-hook 'exwm-init-hook (lambda () (run-with-timer 15 nil (lambda () (setq ivy-height (+ (frame-height) 1))))))
 
 (with-eval-after-load 'ivy
@@ -2783,23 +2794,6 @@ If the input is empty, select the previous history element instead."
 ;; Needed because its font isn't loaded on install, but is needed in theme
 (define-key my/leader-map (kbd "i") 'ivy-yasnippet)
 
-;; ** Autotab
-;; By default modes like outshine and org-mode redefines TAB. This changes the meaning of tab depending on modes
-;; If for example you are in org-mode it checks if org-cycle did anything, if it didn't, then run yas-expand
-(defun my/auto-tab ()
-  (interactive)
-  (pcase major-mode
-    ('org-mode (org-cycle))
-    (_
-     ;; Fixes a bug where if cursor is at heading, the one above gets narrowed
-     (call-interactively 'yas-expand))))
-
-;; *** Fix org-mode
-(with-eval-after-load 'org
-  (add-to-list 'org-tab-first-hook (lambda ()
-				     (let ((yas-fallback-behavior 'return-nil))
-				       (yas-expand)))))
-
 ;; *** Keys
 (my/evil-normal-define-key "TAB" #'my/auto-tab)
 (my/evil-insert-define-key "TAB" #'my/auto-tab)
@@ -3307,7 +3301,7 @@ If the input is empty, select the previous history element instead."
   ("V" my/window-split-up nil)
 
   ;; ("i" my/clone-indirect-buffer-other-window nil)
-  ("I" my/clone-indirect-buffer nil)
+  ("Y" my/clone-indirect-buffer nil)
 
   ;; Search
   ("C-s" swiper-all nil)
@@ -3362,9 +3356,10 @@ If the input is empty, select the previous history element instead."
   ("C-;" my/delete-bookmark nil)
 
   ;; Projectile
-  ("y" counsel-projectile-switch-to-buffer nil)
-  ("Y" counsel-projectile-switch-project nil)
-  ("C-y" projectile-kill-buffers nil)
+  ("i" counsel-projectile-switch-to-buffer nil)
+  ("I" projectile-switch-open-project nil)
+  ("6" my/open-project nil)
+  ("C-i" projectile-kill-buffers nil)
 
   ("u" winner-undo nil)
   ("C-r" winner-redo nil)
@@ -3631,7 +3626,7 @@ If the input is empty, select the previous history element instead."
 (evil-define-key 'insert dired-mode-map (kbd "RET") 'dired-maybe-insert-subdir)
 (evil-define-key 'insert dired-mode-map (kbd "i") 'dired-maybe-insert-subdir)
 (evil-define-key 'insert dired-mode-map (kbd "k") 'dired-kill-subdir)
-;; Maybe bind this??
+
 (evil-define-key 'insert dired-mode-map (kbd "l") 'dired-do-redisplay)
 (evil-define-key 'normal dired-mode-map (kbd "M-m") 'dired-mark-subdir-files)
 (evil-define-key '(normal insert) dired-mode-map (kbd "m") 'dired-mark)
@@ -3980,7 +3975,7 @@ If the input is empty, select the previous history element instead."
 ;; (define-key my/leader-map (kbd "M-D") 'my/auto-start-debugger)
 
 ;; *** Auto compile
-(defun my/auto-compile ()
+(defun my/auto-local-compile ()
   (interactive)
   (pcase major-mode
     ('emacs-lisp-mode (emacs-lisp-byte-compile))
@@ -3988,7 +3983,7 @@ If the input is empty, select the previous history element instead."
     ('plantuml-mode (plantuml-preview-buffer 0))
     (_ (recompile))))
 
-(define-key my/leader-map (kbd "C") 'my/auto-compile)
+(define-key my/leader-map (kbd "C") 'my/auto-local-compile)
 
 ;; *** Auto docs
 (defun my/auto-docs ()
@@ -4643,8 +4638,7 @@ do the
 
 ;; *** Disable haskell-doc
 ;; Haskell-doc is loaded in as the eldoc-documentation-function.
-(add-hook 'haskell-mode-hook (lambda ()
-			       (setq-local eldoc-documentation-function nil)))
+(add-hook 'haskell-mode-hook (lambda () (setq-local eldoc-documentation-function nil)))
 
 ;; *** Project management
 ;; **** Stack
@@ -4652,6 +4646,54 @@ do the
 
 ;; **** Cabal
 ;; (straight-use-package 'hasky-cabal)
+
+;; ***** Compile
+(defvar my/profiler-graph-gen-program "hp2pretty")
+
+;; Show graph after compilation of profiling command
+(add-to-list 'compilation-finish-functions (lambda (_a _b)
+					     (when (string-match-p my/profiler-graph-gen-program compile-command)
+					       (find-file (car (directory-files default-directory nil ".svg$"))))))
+
+(defun my/cabal-compile ()
+  (let ((default-directory (projectile-compilation-dir)))
+    (compile
+     (my/cabal-create-compile-command))))
+
+(defun my/cabal-create-compile-command ()
+  (let ((input (completing-read "" '("cabal build" "cabal run" "profiling"))))
+    (if (string= input "profiling")
+	(my/cabal-build-profiling-command)
+      input)))
+
+(defun my/cabal-build-profiling-command ()
+  (concat "cabal run --enable-profiling exes -- +RTS -p "
+	  (my/cabal-get-profiling-method)
+	  " -L100; " my/profiler-graph-gen-program " *.hp;"))
+;; find-file FRPSimpleGame.svg
+
+(defun my/cabal-get-profiling-method ()
+  (car (split-string
+	(completing-read "" my/cabal-profiling-methods)
+	" =")))
+
+(defvar my/cabal-profiling-methods
+  '(
+    "-hc = Breaks down the graph by the cost-centre stack which produced the data."
+    "-hm = Break down the live heap by the module containing the code which produced the data."
+    "-hd = Breaks down the graph by closure description. For actual data, the description is just the constructor name, for other closures it is a compiler-generated string identifying the closure."
+    "-hy = Breaks down the graph by type. For closures which have function type or unknown/polymorphic type, the string will represent an approximation to the actual type."
+    "-hr = Break down the graph by retainer set. Retainer profiling is described in more detail below (Section 5.4.2, “Retainer Profiling”)."
+    "-hb = Break down the graph by biography. Biographical profiling is described in more detail below (Section 5.4.3, “Biographical Profiling”)."
+    "-hcname,... = Restrict the profile to closures produced by cost-centre stacks with one of the specified cost centres at the top."
+    "-hCname,... = Restrict the profile to closures produced by cost-centre stacks with one of the specified cost centres anywhere in the stack."
+    "-hmmodule,... = Restrict the profile to closures produced by the specified modules."
+    "-hddesc,... = Restrict the profile to closures with the specified description strings."
+    "-hytype,... = Restrict the profile to closures with the specified types."
+    "-hrcc,... = Restrict the profile to closures with retainer sets containing cost-centre stacks with one of the specified cost centres at the top."
+    "-hbbio,... = Restrict the profile to closures with one of the specified biographies, where bio is one of lag, drag, void, or use."
+    "-isecs: = Set the profiling (sampling) interval to secs seconds (the default is 0.1 second). Fractions are allowed: for example -i0.2 will get 5 samples per second. This only affects heap profiling; time profiles are always sampled with the frequency of the RTS clock. See Section 5.3, “Time and allocation profiling” for changing that."
+    "-xt = Include the memory occupied by threads in a heap profile. Each thread takes up a small area for its thread state in addition to the space allocated for its stack (stacks normally start small and then grow as necessary). This includes the main thread, so using -xt is a good way to see how much stack space the program is using."))
 
 ;; **** Nix cabal
 ;; Use nix-haskell-mode for automatic project management
@@ -4967,52 +5009,6 @@ do the
 
 (define-key my/c-mode-map (kbd "b") 'gdb-display-breakpoints-buffer)
 
-;; *** Auto view documentation
-(defun my/auto-view-docs ()
-  (interactive)
-  (pcase major-mode
-    ('csharp-mode (omnisharp-current-type-documentation))
-    ('haskell-mode
-     (if my/haskell-hie-enable
-	 (lsp-describe-thing-at-point)
-       (call-interactively 'dante-info)))
-    (_
-     (if lsp-mode
-	 (lsp-describe-thing-at-point)
-       (call-interactively 'describe-function)))))
-
-(define-key my/leader-map (kbd "d") 'my/auto-view-docs)
-
-;; *** Auto rename
-(defun my/auto-rename ()
-  (interactive)
-  (pcase major-mode
-    ('csharp-mode (omnisharp-rename))
-    (_ (find-function-at-point))))
-
-(define-key my/leader-map (kbd "R") 'my/auto-rename)
-
-;; *** Auto format
-(defun my/auto-format-buffer ()
-  (interactive)
-  (if (string= evil-state 'visual)
-      (my/auto-format-region)
-    (pcase major-mode
-      ('csharp-mode (omnisharp-code-format-entire-file))
-      ('nix-mode (nix-format-buffer))
-      ('haskell-mode (haskell-mode-stylish-buffer))
-      (_ ()))))
-
-(defun my/auto-format-region ()
-  (interactive)
-  (pcase major-mode
-    ('csharp-mode (omnisharp-code-format-region))
-    ('emacs-lisp-mode (elisp-format-region))
-    (_ ())))
-
-(define-key my/leader-map (kbd "<") 'my/auto-format-buffer)
-(define-key my/leader-map (kbd ">") 'my/auto-format-buffer)
-
 ;; ** C#
 (straight-use-package 'csharp-mode)
 
@@ -5319,6 +5315,78 @@ do the
 ;; (my/evil-visual-define-key "z" 'my/structural-navigation-state)
 ;; (my/evil-normal-define-key "z" 'my/structural-navigation-state)
 
+;; * Auto functions
+;; ** Auto view documentation
+(defun my/auto-view-docs ()
+  (interactive)
+  (pcase major-mode
+    ('csharp-mode (omnisharp-current-type-documentation))
+    ('haskell-mode
+     (if my/haskell-hie-enable
+	 (lsp-describe-thing-at-point)
+       (call-interactively 'dante-info)))
+    (_
+     (if lsp-mode
+	 (lsp-describe-thing-at-point)
+       (call-interactively 'describe-function)))))
+
+(define-key my/leader-map (kbd "d") 'my/auto-view-docs)
+
+;; ** Auto rename
+(defun my/auto-rename ()
+  (interactive)
+  (pcase major-mode
+    ('csharp-mode (omnisharp-rename))
+    (_ (find-function-at-point))))
+
+(define-key my/leader-map (kbd "R") 'my/auto-rename)
+
+;; ** Auto format
+(defun my/auto-format-buffer ()
+  (interactive)
+  (if (string= evil-state 'visual)
+      (my/auto-format-region)
+    (pcase major-mode
+      ('csharp-mode (omnisharp-code-format-entire-file))
+      ('nix-mode (nix-format-buffer))
+      ('haskell-mode (haskell-mode-stylish-buffer))
+      (_ ()))))
+
+(defun my/auto-format-region ()
+  (interactive)
+  (pcase major-mode
+    ('csharp-mode (omnisharp-code-format-region))
+    ('emacs-lisp-mode (elisp-format-region))
+    (_ ())))
+
+(define-key my/leader-map (kbd "<") 'my/auto-format-buffer)
+(define-key my/leader-map (kbd ">") 'my/auto-format-buffer)
+
+;; ** Auto kill buffer
+(defun my/auto-kill-buffer ()
+  (interactive)
+  (pcase major-mode
+    ('gnus-summary-mode (gnus-summary-exit))
+    ('ediff-mode (call-interactively #'ediff-quit))
+    (_ (kill-current-buffer))))
+
+;; ** Autotab
+;; By default modes like outshine and org-mode redefines TAB. This changes the meaning of tab depending on modes
+;; If for example you are in org-mode it checks if org-cycle did anything, if it didn't, then run yas-expand
+(defun my/auto-tab ()
+  (interactive)
+  (pcase major-mode
+    ('org-mode (org-cycle))
+    (_
+     ;; Fixes a bug where if cursor is at heading, the one above gets narrowed
+     (call-interactively 'yas-expand))))
+
+;; *** Fix org-mode
+(with-eval-after-load 'org
+  (add-to-list 'org-tab-first-hook (lambda ()
+				     (let ((yas-fallback-behavior 'return-nil))
+				       (yas-expand)))))
+
 ;; * Wakatime
 ;; ** Custom wakatime-save mechanism
 (with-eval-after-load 'wakatime-mode
@@ -5333,8 +5401,8 @@ do the
   ;; Make the first report after the idle timer has been run
   (run-with-timer my/wakatime-report-time my/wakatime-report-time
 		  (lambda () (when my/wakatime-user-present
-			       (message (concat "Reporting to wakatime at: " (current-time-string)))
-			       (wakatime-save))))
+			  (message (concat "Reporting to wakatime at: " (current-time-string)))
+			  (wakatime-save))))
   (message "custom wakatime save mechanism loaded"))
 
 ;; * Macros
@@ -6826,6 +6894,21 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
     (when file
       (projectile-expand-root file))))
 
+;; *** Open projects in projects folder
+(defun my/open-project ()
+  (interactive)
+  (find-file
+   (concat "~/Projects/"
+	   (completing-read "Project: "
+			    (directory-files "~/Projects/" nil directory-files-no-dot-files-regexp))))
+  (projectile-find-file))
+
+;; *** Auto compile project
+(defun my/auto-compile-project ()
+  (interactive)
+  (pcase (projectile-project-type)
+    ('haskell-cabal (my/cabal-compile))))
+
 ;; ** Counsel projectile
 ;; If enabled it auto enables projectile, which has high CPU usage
 (straight-use-package 'counsel-projectile)
@@ -6927,18 +7010,18 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (define-key my/vc-map (kbd "F") 'projectile-ibuffer)
 
 (define-key my/vc-map (kbd "O") 'projectile-save-project-buffers)
-(define-key my/vc-map (kbd "C") 'projectile-compile-project)
+(define-key my/vc-map (kbd "e") 'my/auto-compile-project)
 
 (define-key my/vc-map (kbd "!") 'projectile-run-shell-command-in-root)
 (define-key my/vc-map (kbd "&") 'projectile-run-async-shell-command-in-root)
 
 (define-key my/vc-map (kbd "o") 'magit-status)
 
-(define-key my/vc-map (kbd "a") 'counsel-projectile-switch-to-buffer)
-(define-key my/vc-map (kbd "A") 'counsel-projectile-switch-project)
+;; (define-key my/vc-map (kbd "a") 'counsel-projectile-switch-to-buffer)
+;; (define-key my/vc-map (kbd "A") 'counsel-projectile-switch-project)
 
-(define-key my/vc-map (kbd "f") 'counsel-projectile-find-file)
-(define-key my/vc-map (kbd "F") 'counsel-projectile-ag)
+;; (define-key my/vc-map (kbd "f") 'counsel-projectile-find-file)
+;; (define-key my/vc-map (kbd "F") 'counsel-projectile-ag)
 
 ;; * Media
 ;; ** Volume keys
@@ -7819,6 +7902,10 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; *** Auto update interval
 (setq proced-auto-update-interval 0.5)
 
+;; *** Keys
+(with-eval-after-load 'proced
+  (define-key proced-mode-map (kbd "d") 'proced-send-signal))
+
 ;; ** Profiler
 (define-prefix-command 'my/profiler-map)
 (define-key my/system-commands-map (kbd "p") 'my/profiler-map)
@@ -8080,7 +8167,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
       (loccur-mode -1)))
 
 ;; *** Keys
-(my/evil-normal-define-key "C-S-s" 'my/loccur-isearch)
+(my/evil-universal-define-key "C-S-s" 'my/loccur-isearch)
 
 ;; * Spelling
 (define-prefix-command 'my/spell-map)
@@ -8733,6 +8820,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 	  (_ (olivetti-mode)))))
 
 (global-olivetti-mode 1)
+
+(setq olivetti-mode-map (make-sparse-keymap))
 
 (define-key my/leader-map (kbd "V") 'olivetti-mode)
 
