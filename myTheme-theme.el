@@ -186,9 +186,6 @@
    `(org-quote ((,class (:slant italic))))
    `(org-mode-line-clock ((,class (:foreground ,my/foreground-color :background ,my/foreground-color :height unspecified))))
    `(org-mode-line-clock-overrun ((,class (:foreground ,my/foreground-color :background ,my/error-color :height unspecified))))
-   `(org-agenda-filter-effort ((,class (:foreground ,my/foreground-color :background ,my/background-color :height unspecified))))
-   `(org-agenda-filter-regexp ((,class (:foreground ,my/foreground-color :background ,my/background-color :height unspecified))))
-   `(org-agenda-filter-tags ((,class (:foreground ,my/foreground-color :background ,my/background-color :height unspecified))))
 
    `(org-code ((,class (:background ,my/background-color-3))))
    `(org-block ((,class (:background ,my/background-color-1))))
@@ -203,7 +200,25 @@
    `(org-brain-friend ((,class (:foreground ,my/background-color :background ,my/mark-color))))
    `(org-brain-title ((,class (:inherit outline-1))))
 
-   `(org-agenda-date-weekend ((,class (:foreground ,my/mark-color))))
+   `(org-todo ((,class (:foreground ,my/mark-color))))
+
+   `(org-agenda-calendar-event ((,class (:foreground ,my/mark-color))))
+   `(org-agenda-calendar-sexp ((,class (:inherit default))))
+   `(org-agenda-clocking ((,class (:inherit secondary-selection))))
+   `(org-agenda-column-dateline ((,class (:inherit org-column))))
+   `(org-agenda-current-time ((,class (:inherit org-time-grid))))
+   `(org-agenda-date ((,class (:inherit default))))
+   `(org-agenda-date-today ((,class (:inherit default :underline (:style line :color ,"white")))))
+   `(org-agenda-date-weekend ((,class (:foreground ,my/comment-face))))
+   `(org-agenda-diary ((,class (:inherit default))))
+   `(org-agenda-dimmed-todo-face ((,class (:foreground ,my/comment-face))))
+   `(org-agenda-done ((,class (:foreground ,my/diff-added-color))))
+   `(org-agenda-filter-category ((,class (:inherit default))))
+   `(org-agenda-filter-effort ((,class (:inherit default))))
+   `(org-agenda-filter-regexp ((,class (:inherit default))))
+   `(org-agenda-filter-tags ((,class (:inherit default))))
+   `(org-agenda-restriction-lock ((,class (:inherit default))))
+   `(org-agenda-structure ((,class (:foreground ,my/background-color :background ,my/mark-color))))
 
    ;; Used by org src-blocks when in use, might also be used for other things
    `(secondary-selection ((,class (:background ,(color-darken-name my/background-color-1 5)))))

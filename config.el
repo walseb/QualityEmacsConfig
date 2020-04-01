@@ -1785,9 +1785,6 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; (add-hook 'org-agenda-finalize-hook 'org-timeline-insert-timeline :append)
 
-;; *** Open on init
-(add-hook 'after-init-hook '(lambda () (my/org-agenda-show-agenda-and-todo)))
-
 ;; *** Keys
 (with-eval-after-load 'org-agenda
   (setq org-agenda-mode-map (make-sparse-keymap))
@@ -2259,9 +2256,7 @@ or go back to just one window (by deleting all but the selected window)."
 ;; (add-hook 'exwm-init-hook (lambda () (run-with-timer 10 nil (lambda () (setq ivy-height (+ (frame-height) 1))))))
 ;; (add-hook 'exwm-init-hook (lambda () (run-with-timer 15 nil (lambda () (setq ivy-height (+ (frame-height) 1))))))
 
-(with-eval-after-load 'ivy
-  ;; Make counsel-yank-pop use default height
-  (delete `(counsel-yank-pop . 5) ivy-height-alist)
+(with-eval-after-load 'counsel
   ;; Disable set height depending on command
   (setq ivy-height-alist nil)
   (setq-default ivy-height-alist nil)
@@ -2293,7 +2288,7 @@ If the input is empty, select the previous history element instead."
 (defun my/ivy-switch-buffer-ignore (str)
   (let ((buf (get-buffer str)))
     (and buf (or
-	      (my/ignore-dired-buffers buf)
+	      ;; (my/ignore-dired-buffers buf)
 	      ;; (my/ignore-org-brain-buffers buf)
 	      ))))
 
@@ -9672,6 +9667,15 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "l") #'undo-tree-visualize-switch-branch-right)
   (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "h") #'undo-tree-visualize-switch-branch-left)
   (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "d") #'undo-tree-visualizer-toggle-diff))
+
+;; *  Open on init
+(add-hook 'exwm-init-hook '(lambda ()
+			     (my/org-agenda-show-agenda-and-todo)
+			     (split-window-below)
+			     (other-window 1)
+			     (let ((path "~/Notes/Report.org"))
+			       (when (file-exists-p path)
+				 (find-file path)))))
 
 ;; * Run command on boot
 (if my/run-command-on-boot
