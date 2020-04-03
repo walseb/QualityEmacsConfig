@@ -3352,7 +3352,7 @@ If the input is empty, select the previous history element instead."
 
   ;; Projectile
   ("i" counsel-projectile-switch-to-buffer nil)
-  ("I" projectile-switch-open-project nil)
+  ("I" (lambda () (interactive) (require 'projectile) (projectile-switch-open-project)) nil)
   ("6" my/open-project nil)
   ("C-i" projectile-kill-buffers nil)
 
@@ -4432,6 +4432,7 @@ the overlay."
 ;; *** Haskell process/prompt
 (with-eval-after-load 'haskell-interactive-mode
   (evil-define-key '(normal insert visual replace) haskell-interactive-mode-map (kbd "C-c") 'haskell-process-interrupt)
+  (evil-define-key '(normal insert visual replace) haskell-interactive-mode-map (kbd "C-z") 'haskell-process-interrupt)
   (evil-define-key '(normal insert) haskell-interactive-mode-map (kbd "C-n") 'haskell-interactive-mode-history-next)
   (evil-define-key '(normal insert) haskell-interactive-mode-map (kbd "C-p") 'haskell-interactive-mode-history-previous))
 
@@ -5401,189 +5402,52 @@ do the
   (message "custom wakatime save mechanism loaded"))
 
 ;; * Macros
-;; (define-prefix-command 'my/macro-map)
+;; ** New macro manager
+(defun my/macro-choose ()
+  (intern (completing-read "Insert kbd macro (name): "
+			   obarray
+			   (lambda (elt)
+			     (and (fboundp elt)
+				  (or (stringp (symbol-function elt))
+				      (vectorp (symbol-function elt))
+				      (get elt 'kmacro))))
+			   t)))
 
-;; (define-key my/leader-map (kbd "q") 'my/macro-map)
+(defun my/run-macro (arg)
+  (interactive "p")
+  (kmacro-call-macro nil nil nil (my/macro-choose)))
 
-;; ** Macro manager
-(defvar my/current-macro-number 0)
-(defvar my/macro-store '())
-(defvar my/macro-last-name nil)
+(defun my/start-macro (arg)
+(interactive "p")
+(if (or defining-kbd-macro executing-kbd-macro)
+    (kmacro-end-macro arg)
+  (kmacro-start-macro arg)))
 
-(defun my/macro-record-toggle ()
-  (interactive)
-  (if defining-kbd-macro
-      (my/macro-record-stop)
-    (call-interactively #'start-kbd-macro)))
+;; *** Edit macro
+;; Seems hardcoded, the best I came up with is to edit the last macro
+;; (edit-kbd-macro 'kmacro-call-macro)
 
-(defun my/macro-record-stop ()
-  (interactive)
-  (call-interactively #'end-kbd-macro)
-  (let
-      ((macro-name (completing-read "Name macro: " nil nil nil "macro-")))
-    (name-last-kbd-macro (intern macro-name))
-    (add-to-list 'my/macro-store macro-name)))
-
-(defun my/macro-run (&optional count)
-  "If COUNT is a number repeat that amount of times, otherwise if it's nil run the macro until an error is thrown."
-  (let ((to-run-string (completing-read "Run macro: " my/macro-store)))
-    (unwind-protect
-	(progn
-	  (my/macro-run-optimize)
-	  (if (>= emacs-major-version 27)
-	      (my/macro-run-new to-run-string count)
-	    (my/macro-run-legacy to-run-string count)))
-      (my/macro-run-reset))))
-
-(defun my/macro-run-optimize ()
-  (font-lock-mode -1)
-  (flyspell-mode -1)
-  (symbol-overlay-mode -1)
-  (global-hl-line-mode -1)
-  (yascroll-bar-mode -1)
-  (highlight-parentheses-mode -1))
-
-(defun my/macro-run-reset ()
-  (font-lock-mode 1)
-  (my/flyspell-mode-auto-select)
-  (symbol-overlay-mode)
-  (global-hl-line-mode 1)
-  (yascroll-bar-mode 1)
-  (highlight-parentheses-mode 1))
-
-(defun my/macro-run-new (to-run-string count)
-  "Emacs >= 27"
-  (let ((to-run (symbol-function (intern to-run-string))))
-    (if count
-	(dotimes (i count)
-	  (funcall to-run))
-      (while (ignore-errors (funcall to-run))))))
-
-(defun my/macro-run-legacy (to-run-string count)
-  "Emacs <= 26"
-  (let ((to-run (intern to-run-string)))
-    (if count
-	(execute-kbd-macro to-run count)
-      (execute-kbd-macro to-run 0))))
-
-(defun my/macro-modify (&optional prefix)
+(defun my/macro-modify (prefix)
   (interactive "P")
-  (let
-      ((chosen-macro (completing-read "Modify macro: " my/macro-store)))
-    ;; Just simulate the keypresses collected
-    (setq unread-command-events (listify-key-sequence (concat chosen-macro "\C-a")))
-    ;;            Anything other than this and nil is not accepted it seems
-    (edit-kbd-macro 'execute-extended-command prefix)))
-
-;; *** Evil operator
-(evil-define-operator evil-macro-run (beg end type)
-  "Run macro on BEG to END."
-  (interactive "<R>")
-  (evil-normal-state)
-  (save-restriction
-    (beginning-of-line)
-    (narrow-to-region (point) end)
-    (goto-char beg)
-    ;; current-prefix-arg here is used because I don't know how to access the universal argument in this function
-    (my/macro-run current-prefix-arg)))
+  ;; Just simulate the keypresses collected
+  (setq unread-command-events (listify-key-sequence (concat (symbol-name (my/macro-choose)) "\C-a")))
+  (edit-kbd-macro 'execute-extended-command prefix))
 
 ;; *** Keys
-(my/evil-normal-define-key "q" 'my/macro-record-toggle)
-(my/evil-visual-define-key "q" 'my/macro-record-toggle)
+(my/evil-normal-define-key "q" 'my/start-macro)
+(my/evil-visual-define-key "q" 'my/start-macro)
 
-(my/evil-normal-define-key "Q" 'evil-macro-run)
-(my/evil-visual-define-key "Q" 'evil-macro-run)
+(my/evil-normal-define-key "Q" 'kmacro-call-macro)
+(my/evil-visual-define-key "Q" 'kmacro-call-macro)
 
-(my/evil-normal-define-key "C-q" 'my/macro-modify)
-(my/evil-visual-define-key "C-q" 'my/macro-modify)
+(my/evil-normal-define-key "C-q" 'name-last-kbd-macro)
+(my/evil-visual-define-key "C-q" 'name-last-kbd-macro)
 
-;; ** Simple search
-;; Search useful for making macros because it's fast
-;; But is it really faster than isearch?
-;; (defvar my/last-search)
-;; (defun my/search-forward ()
-;;  (interactive)
-;;  (setq my/last-search (completing-read "Search: " nil))
-;;  (search-forward-regexp my/last-search))
+(my/evil-normal-define-key "!" 'my/run-macro)
+(my/evil-visual-define-key "!" 'my/run-macro)
 
-;; (defun my/search-backward ()
-;;  (interactive)
-;;  (setq my/last-search (completing-read "Search: " nil))
-;;  (search-backward-regexp my/last-search))
-
-;; (defun my/repeat-search-forward ()
-;;  (interactive)
-;;  (search-forward-regexp my/last-search))
-
-;; (defun my/repeat-search-backward ()
-;;  (interactive)
-;;  (search-backward-regexp my/last-search))
-
-;; (my/evil-normal-define-key "/" 'my/search-forward)
-;; (my/evil-visual-define-key "/" 'my/search-forward)
-
-;; (my/evil-normal-define-key "?" 'my/search-backward)
-;; (my/evil-visual-define-key "?" 'my/search-backward)
-
-;; (my/evil-normal-define-key "j" 'my/repeat-search-forward)
-;; (my/evil-visual-define-key "j" 'my/repeat-search-forward)
-
-;; (my/evil-normal-define-key "J" 'my/repeat-search-backward)
-;; (my/evil-visual-define-key "J" 'my/repeat-search-backward)
-
-;; ** Elmacro
-;; Elmacro doesn't work with evil
-;; (straight-use-package 'elmacro)
-;; (require 'elmacro)
-
-;; (define-globalized-minor-mode my/elmacro-global-mode elmacro-mode
-;; (lambda ()
-;; (elmacro-mode 1)))
-
-;; (my/elmacro-global-mode 1)
-
-;; *** Macro mechanisms
-;; (defun my/get-interactive-commands ()
-;; (let ((cmds  ()))
-;; (mapatoms (lambda (s) (when (commandp s) (push s cmds))))
-;; cmds))
-
-;; (defvar my/current-macro-name "")
-;; (defvar my/current-macro-number 0)
-
-;; (defun my/macro-record-toggle ()
-;; (interactive)
-;; (if elmacro-mode
-;; (my/macro-record-stop)
-;; (my/macro-record)))
-
-;; (defun my/macro-record ()
-;; (setq my/current-macro-number (+ my/current-macro-number 1))
-;; (setq my/current-macro-name (concat "my/rec-macro-" (number-to-string my/current-macro-number) "-" (completing-read "Macro name: " nil)))
-;; (elmacro-mode 1)
-;; (call-interactively 'kmacro-start-macro-or-insert-counter))
-
-;; (defun my/macro-record-stop ()
-;; (call-interactively 'kmacro-end-or-call-macro)
-;; (elmacro-show-last-macro my/current-macro-name)
-;; (elmacro-mode -1)
-;; (eval-buffer)
-;; )
-
-;; (defun my/macro-run()
-;; (interactive)
-;; (call-interactively
-;; (intern (ivy-read "Macros: " (reverse (sort (my/get-interactive-commands) 'string-lessp))
-;; :initial-input "^my/rec-macro- "))))
-
-;; Get thing
-;; (call-interactively  (intern "counsel-M-x"))
-
-;; (my/evil-normal-define-key "q" 'my/macro-record-toggle)
-;; (my/evil-normal-define-key "Q" 'my/macro-run)
-
-;; (my/evil-visual-define-key "q" 'my/macro-record-toggle)
-;; (my/evil-visual-define-key "Q" 'my/macro-run)
+;; (my/evil-normal-define-key "!" 'my/macro-modify)
+;; (my/evil-visual-define-key "!" 'my/macro-modify)
 
 ;; * Encryption
 ;; ** GPG
