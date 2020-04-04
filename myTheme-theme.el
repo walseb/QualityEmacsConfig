@@ -108,7 +108,7 @@
    `(font-lock-string-face ((,class (:inherit default))))
    `(font-lock-function-name-face ((,class (:inherit default))))
    `(font-lock-keyword-face ((,class (:inherit default))))
-   `(font-lock-doc-face ((,class (:inherit default))))
+   `(font-lock-doc-face ((,class (:inherit font-lock-comment-face))))
    `(font-lock-builtin-face ((,class (:inherit default))))
    `(font-lock-constant-face ((,class (:inherit default))))
    `(font-lock-negation-char-face ((,class (:inherit default))))

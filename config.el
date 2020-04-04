@@ -5402,52 +5402,75 @@ do the
   (message "custom wakatime save mechanism loaded"))
 
 ;; * Macros
-;; ** New macro manager
-(defun my/macro-choose ()
-  (intern (completing-read "Insert kbd macro (name): "
-			   obarray
-			   (lambda (elt)
-			     (and (fboundp elt)
-				  (or (stringp (symbol-function elt))
-				      (vectorp (symbol-function elt))
-				      (get elt 'kmacro))))
-			   t)))
+;; ** Newer macro manager
+(setq my/macro-store nil)
+(setq my/macro-last-temp nil)
 
-(defun my/run-macro (arg)
+;; *** Macro funcs
+(defun my/macro-find-in-store (name)
+  (cdr (seq-find (lambda (a) (string= (car a) name)) my/macro-store)))
+
+;; **** Run
+(defun my/macro-run-last (arg)
   (interactive "p")
-  (kmacro-call-macro nil nil nil (my/macro-choose)))
+  (if my/macro-last-temp
+      (my/macro-run arg my/macro-last-temp)
+    (error "No macros has been run yet")))
 
-(defun my/start-macro (arg)
-(interactive "p")
-(if (or defining-kbd-macro executing-kbd-macro)
-    (kmacro-end-macro arg)
-  (kmacro-start-macro arg)))
+(defun my/macro-run-store (arg)
+  (interactive "p")
+  (if macro-store
+      (let ((entry (my/macro-find-in-store (completing-read "Run macro: " my/macro-store))))
+	(my/macro-run arg entry))
+    (error "No saved macros")))
 
-;; *** Edit macro
-;; Seems hardcoded, the best I came up with is to edit the last macro
-;; (edit-kbd-macro 'kmacro-call-macro)
+(defun my/macro-run (arg string-macro)
+  (kmacro-call-macro arg nil nil string-macro))
 
-(defun my/macro-modify (prefix)
-  (interactive "P")
-  ;; Just simulate the keypresses collected
-  (setq unread-command-events (listify-key-sequence (concat (symbol-name (my/macro-choose)) "\C-a")))
-  (edit-kbd-macro 'execute-extended-command prefix))
+;; **** Start stop
+(defun my/macro-record (arg)
+  (interactive "p")
+  (if (or defining-kbd-macro executing-kbd-macro)
+      (progn
+	(kmacro-end-macro arg)
+	(setq my/macro-last-temp last-kbd-macro))
+    (kmacro-start-macro arg)))
+
+;; **** Add
+(defun my/macro-save-last ()
+  (interactive)
+  (add-to-list 'my/macro-store (cons (read-string "Macro name: ") my/macro-last-temp)))
+
+;; **** Insert in buffer
+(defun my/macro-insert ()
+  (interactive)
+  (insert
+   (concat
+    "(defun macro- (arg)
+       (interactive \"p\")
+       (my/macro-run arg \""
+    (my/macro-find-in-store (completing-read "Insert macro: " my/macro-store))
+    "\"))")))
+
+;; **** Edit macro
+(defun my/macro-edit ()
+  (interactive)
+  (let* ((input (completing-read "Insert macro: " my/macro-store))
+	 (found (my/macro-find-in-store input)))
+    (setq my/macro-store (-replace-first (cons input found) (cons input (read-string "Edit macro: " found)) my/macro-store))))
 
 ;; *** Keys
-(my/evil-normal-define-key "q" 'my/start-macro)
-(my/evil-visual-define-key "q" 'my/start-macro)
+(my/evil-normal-define-key "q" 'my/macro-record)
+(my/evil-visual-define-key "q" 'my/macro-record)
 
-(my/evil-normal-define-key "Q" 'kmacro-call-macro)
-(my/evil-visual-define-key "Q" 'kmacro-call-macro)
+(my/evil-normal-define-key "Q" 'my/macro-run-last)
+(my/evil-visual-define-key "Q" 'my/macro-run-last)
 
-(my/evil-normal-define-key "C-q" 'name-last-kbd-macro)
-(my/evil-visual-define-key "C-q" 'name-last-kbd-macro)
+(my/evil-normal-define-key "C-q" 'my/macro-save-last)
+(my/evil-visual-define-key "C-q" 'my/macro-save-last)
 
-(my/evil-normal-define-key "!" 'my/run-macro)
-(my/evil-visual-define-key "!" 'my/run-macro)
-
-;; (my/evil-normal-define-key "!" 'my/macro-modify)
-;; (my/evil-visual-define-key "!" 'my/macro-modify)
+(my/evil-normal-define-key "!" 'my/macro-edit)
+(my/evil-visual-define-key "!" 'my/macro-edit)
 
 ;; * Encryption
 ;; ** GPG
@@ -8148,17 +8171,17 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 (evil-define-operator my/calc-at-point-add (beg end type)
   (interactive "<R>")
-  (calc-at-point-add-1 beg end))
+  (calc-at-point-add beg end))
 
 (my/evil-normal-define-key "+" 'my/calc-at-point-add)
 (my/evil-visual-define-key "+" 'my/calc-at-point-add)
 
-(evil-define-operator my/calc-at-point-neg (beg end type)
+(evil-define-operator my/calc-at-point-sub (beg end type)
   (interactive "<R>")
-  (calc-at-point-neg beg end))
+  (calc-at-point-sub beg end))
 
-(my/evil-normal-define-key "-" 'my/calc-at-point-neg)
-(my/evil-visual-define-key "-" 'my/calc-at-point-neg)
+(my/evil-normal-define-key "-" 'my/calc-at-point-sub)
+(my/evil-visual-define-key "-" 'my/calc-at-point-sub)
 
 ;; * Artist mode
 ;; ** Completing read
@@ -8775,7 +8798,9 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; Highlights surrounding parens
 (straight-use-package 'highlight-parentheses)
 
-(global-highlight-parentheses-mode)
+(setq hl-paren-colors '("Green4" "Green3" "Green2" "Green1"))
+
+(global-highlight-parentheses-mode 1)
 
 ;; *** Set delay
 (setq hl-paren-delay 0)
