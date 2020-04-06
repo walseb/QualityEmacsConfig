@@ -8183,6 +8183,16 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (my/evil-normal-define-key "-" 'my/calc-at-point-sub)
 (my/evil-visual-define-key "-" 'my/calc-at-point-sub)
 
+;; ** macro-math
+(straight-use-package 'macro-math)
+
+(evil-define-operator evil-macro-math (beg end type)
+  "Run eval on BEG to END."
+  (interactive "<R>")
+  (macro-math-eval-region beg end))
+
+(my/evil-normal-define-key "'" 'evil-macro-math)
+
 ;; * Artist mode
 ;; ** Completing read
 ;; https://www.emacswiki.org/emacs/ArtistMode
