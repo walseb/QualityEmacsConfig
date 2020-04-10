@@ -1796,6 +1796,8 @@ or go back to just one window (by deleting all but the selected window)."
   (define-key org-agenda-mode-map (kbd "l") 'org-agenda-later)
   (define-key org-agenda-mode-map (kbd "h") 'org-agenda-earlier)
 
+  (define-key org-agenda-mode-map (kbd "g") 'org-agenda-redo-all)
+
   (define-key org-agenda-mode-map [remap newline] 'org-agenda-goto))
 
 ;; ** Clock
@@ -5419,12 +5421,14 @@ do the
 
 (defun my/macro-run-store (arg)
   (interactive "p")
-  (if macro-store
-      (let ((entry (my/macro-find-in-store (completing-read "Run macro: " my/macro-store))))
-	(my/macro-run arg entry))
-    (error "No saved macros")))
+  (let* ((name (completing-read "Run or save last macro: " my/macro-store))
+	 (entry (my/macro-find-in-store name)))
+    (if entry
+	(my/macro-run arg entry)
+      (my/macro-save-last name))))
 
 (defun my/macro-run (arg string-macro)
+  (setq my/macro-last-temp string-macro)
   (kmacro-call-macro arg nil nil string-macro))
 
 ;; **** Start stop
@@ -5437,9 +5441,27 @@ do the
     (kmacro-start-macro arg)))
 
 ;; **** Add
-(defun my/macro-save-last ()
+(defun my/macro-save-override-with-last (&optional name)
   (interactive)
-  (add-to-list 'my/macro-store (cons (read-string "Macro name: ") my/macro-last-temp)))
+  (let ((to-override (or name (completing-read "Override macro with last: " my/macro-store nil t))))
+    (my/macro-delete to-override)
+    (my/macro-save-last to-override)))
+
+(defun my/macro-save-last (&optional name)
+  (interactive)
+  (my/macro-save (or name (read-string "Store macro as: ")) my/macro-last-temp))
+
+;; **** Basic operations
+(defun my/macro-save (name string-macro)
+  (add-to-list 'my/macro-store (cons name string-macro)))
+
+(defun my/macro-delete (name)
+  (setq my/macro-store (remove-if
+			(lambda (entry)
+			  (if (string= name (car entry))
+			      t
+			    nil))
+			my/macro-store)))
 
 ;; **** Insert in buffer
 (defun my/macro-insert ()
@@ -5455,7 +5477,7 @@ do the
 ;; **** Edit macro
 (defun my/macro-edit ()
   (interactive)
-  (let* ((input (completing-read "Insert macro: " my/macro-store))
+  (let* ((input (completing-read "Edit macro: " my/macro-store))
 	 (found (my/macro-find-in-store input)))
     (setq my/macro-store (-replace-first (cons input found) (cons input (read-string "Edit macro: " found)) my/macro-store))))
 
@@ -5466,11 +5488,14 @@ do the
 (my/evil-normal-define-key "Q" 'my/macro-run-last)
 (my/evil-visual-define-key "Q" 'my/macro-run-last)
 
-(my/evil-normal-define-key "C-q" 'my/macro-save-last)
-(my/evil-visual-define-key "C-q" 'my/macro-save-last)
+(my/evil-normal-define-key "C-q" 'my/macro-save-override-with-last)
+(my/evil-visual-define-key "C-q" 'my/macro-save-override-with-last)
 
-(my/evil-normal-define-key "!" 'my/macro-edit)
-(my/evil-visual-define-key "!" 'my/macro-edit)
+(my/evil-normal-define-key "!" 'my/macro-run-store)
+(my/evil-visual-define-key "!" 'my/macro-run-store)
+
+;; (my/evil-normal-define-key "!" 'my/macro-edit)
+;; (my/evil-visual-define-key "!" 'my/macro-edit)
 
 ;; * Encryption
 ;; ** GPG
@@ -7786,7 +7811,8 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 ;; *** Keys
 (with-eval-after-load 'proced
-  (define-key proced-mode-map (kbd "d") 'proced-send-signal))
+  (define-key proced-mode-map (kbd "d") 'proced-send-signal)
+  (define-key proced-mode-map (kbd "s") 'proced-sort-interactive))
 
 ;; ** Profiler
 (define-prefix-command 'my/profiler-map)
@@ -9139,11 +9165,11 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (defvar my/status-line-update-offset 8)
 (defvar my/status-line-allocated-update-current 0)
 
-(defun my/status-bar-allocate-update-time (task)
+(defun my/status-bar-allocate-update-time (task &optional delay)
   (if (> my/status-line-allocated-update-current my/status-line-update-offset)
       (setq my/status-line-allocated-update-current 0)
     (setq my/status-line-allocated-update-current (+ my/status-line-allocated-update-current 1))
-    (run-with-timer my/status-line-allocated-update-current 60 task)))
+    (run-with-timer my/status-line-allocated-update-current (or delay 60) task)))
 
 ;; *** Garbage Collection
 (defvar my/mode-line-show-GC-stats nil)
@@ -9167,11 +9193,23 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 (defvar my/cpu-temp "")
 
+(defun my/validate-cpu-temp (temp)
+  (if (and temp (not (string= temp "")))
+      temp
+    nil))
+
 (defun my/update-cpu-temp ()
   (interactive)
-  ;; FIXME emacs regexes are wierd, use position of temp in print insead
-  (string-match "\+.*C\s" (shell-command-to-string "sensors | grep \"Core 0:\""))
-  (setq my/cpu-temp (substring (match-string 0 (shell-command-to-string "sensors | grep \"Core 0:\"")) 0 -3)))
+  ;; Ryzen test string:
+  ;; "Tdie:         +40.2°C  (high = +70.0°C)\n"
+  ;; Intel test string:
+  ;; "Core 0:       +46.0°C  (high = +105.0°C, crit = +105.0°C)\n"
+  (let* ((intel-cpu-temp-str (my/validate-cpu-temp (shell-command-to-string "sensors | grep \"Core 0:\"")))
+	 (ryzen-cpu-temp-str (my/validate-cpu-temp (shell-command-to-string "sensors | grep \"Tdie\:\"")))
+	 (cpu-temp-str (or intel-cpu-temp-str ryzen-cpu-temp-str))
+	 (cpu-temp-pos-beg (string-match-p "\+.*C\s" cpu-temp-str))
+	 (cpu-temp-pos-end (string-match-p "  " cpu-temp-str cpu-temp-pos-beg)))
+    (setq my/cpu-temp (substring cpu-temp-str cpu-temp-pos-beg cpu-temp-pos-end))))
 
 (if my/mode-line-enable-cpu-temp
     (my/status-bar-allocate-update-time 'my/update-cpu-temp))
@@ -9331,17 +9369,17 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (my/update-time)
 (my/update-date)
 
-;; *** Load average
-(defvar my/load-average 0)
-(defvar my/high-load-average 2)
+;; *** CPU load average
+(defvar my/cpu-load-average 0)
+(defvar my/high-cpu-load-average 2)
 
-(defun my/update-load-average ()
+(defun my/update-cpu-load-average ()
   (interactive)
-  (setq my/load-average (/ (nth 0 (load-average)) 100.0)))
+  (setq my/cpu-load-average (/ (nth 0 (load-average)) 100.0)))
 
-(my/status-bar-allocate-update-time 'my/update-load-average)
+(my/status-bar-allocate-update-time 'my/update-cpu-load-average)
 
-(my/update-load-average)
+(my/update-cpu-load-average)
 
 ;; *** Ram usage
 (defvar my/mode-line-enable-available-mem nil)
@@ -9457,7 +9495,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 			       (concat "HT: " my/cpu-temp " | ")))
 
 		    "C: "
-		    (:eval (number-to-string my/load-average))
+		    (:eval (number-to-string my/cpu-load-average))
 
 		    " |"
 
