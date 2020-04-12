@@ -1,22 +1,5 @@
 ;; -*- lexical-binding:t -*-
 ;; * Startup processes
-;; ** Garbage collection
-(setq garbage-collection-messages t)
-
-(setq my/after-gc-mem gc-cons-threshold)
-(setq gc-cons-threshold 800000000)
-
-;; ** Disable frame resize on font change
-(setq frame-inhibit-implied-resize t)
-
-;; ** Stop custom from writing to init
-;; Stop custom from editing init.el
-(setq custom-file (concat user-emacs-directory ".emacs-custom.el"))
-
-;; ** Disable mode-line
-(setq mode-line-format nil)
-(setq-default mode-line-format nil)
-
 ;; ** Theme
 (unless custom-enabled-themes
   (load-theme 'myTheme t))
@@ -62,11 +45,6 @@
 ;; ** Private config
 (my/load-if-exists (concat user-emacs-directory "private.el"))
 
-;; ** Device config
-;; If a device config is not made, load the default one
-(if (not (my/load-if-exists (concat user-emacs-directory "device.el")))
-    (load-file (concat user-emacs-directory "device-template.el")))
-
 ;; * Libraries
 (straight-use-package 's)
 (straight-use-package 'dash)
@@ -78,13 +56,6 @@
 ;; * Persistent keys
 (defvar my/keys-mode-map (make-sparse-keymap))
 
-;; Emacs 27 doesn't support :init-value, :keymap, etc
-;; (if (string< emacs-version "27")
-;; (define-minor-mode my/keys-mode
-;; ;; init value t to enable it in fundamental mode
-;; ;; More info: http://emacs.stackexchange.com/q/16693/115
-;; :init-value t
-;; :keymap my/keys-mode-map)
 (define-minor-mode my/keys-mode nil t nil my/keys-mode-map)
 
 (add-to-list 'emulation-mode-map-alists `((my/keys-mode . ,my/keys-mode-map)))
@@ -123,6 +94,30 @@
   ;; The 1 here is used to stop write-region from printing when it writes something
   (write-region string nil file t 1))
 
+;; *** Open if exists
+(defun my/open-if-exists (path)
+  (when (file-exists-p path)
+    (find-file path)))
+
+;; ** List
+;; *** Get random element from list
+(defun my/get-random-element (list)
+  (let* ((size (length list))
+	 (index (random size)))
+    (nth index list)))
+
+;; ** Process
+;; *** Run async process shell command
+;; As opposed to `async-shell-command', this runs the shell command without a visual terminal, although it does have a buffer where it collects everything printed
+(defun my/async-start-process-shell-command (buffer-name package &rest args)
+  (message (concat "Starting async shell command process. Buffer name: " buffer-name " Packages: " package))
+  (async-start-process buffer-name
+		       (executable-find package)
+		       (lambda (a)
+			 (my/alert nil 'high)
+			 (message (concat "ERROR: async process: " package " has died!")))
+		       (mapconcat 'identity args " ")))
+
 ;; ** Is external package installed
 ;; Checks variable =exec-path= for package
 (defun my/is-system-package-installed (package)
@@ -138,14 +133,6 @@
 ;; ** Give buffer unique name
 (defun my/give-buffer-unique-name (base-name)
   (rename-buffer base-name t))
-
-;; ** Is font installed
-(defvar my/font-family-list (font-family-list))
-
-(defun my/font-installed (font)
-  (if (member font my/font-family-list)
-      t
-    nil))
 
 ;; ** Fake key
 ;; *** Normal emacs buffers
@@ -215,21 +202,6 @@
 	      (car post-fixes))
 	    (if (eq flavor 'iec) "iB" ""))))
 
-;; ** Set font
-(defun my/set-default-font (font)
-  (if window-system
-      (set-face-attribute 'default nil
-			  ;;:family font
-			  :font font
-			  ;;:fontset "fontset-default"
-			  :height my/default-face-height)))
-
-;; *** Set size
-(defun my/set-default-font-size ()
-  (if window-system
-      (set-face-attribute 'default nil
-			  :height my/default-face-height)))
-
 ;; ** Overlay
 (defun my/inline-overlay-print (string)
   (let ((inline-overlay (make-overlay (point) (line-end-position))))
@@ -293,48 +265,6 @@
 (defun my/is-file-gpg-protected (file)
   (let ((file-name (and file (file-name-nondirectory file))))
     (and file-name (string-match-p "\.gpg" file-name))))
-
-;; * Fonts
-(defun my/get-best-font ()
-  (if (my/font-installed "Liga Inconsolata LGC")
-      "Liga Inconsolata LGC"
-    (if (my/font-installed "Inconsolata LGC")
-	"Inconsolata LGC"
-      (if (my/font-installed "Inconsolata")
-	  "Inconsolata"
-	(if (my/font-installed "DejaVu Sans Mono")
-	    "DejaVu Sans Mono"
-	  (if (my/font-installed "Fira Mono")
-	      "Fira Mono"
-	    (if (my/font-installed "dejavu sans mono")
-		"DejaVuSansMono"
-	      (if (my/font-installed "Noto Sans Mono")
-		  "NotoSansMono"
-		(if (my/font-installed "Perfect DOS VGA 437")
-		    "Perfect DOS VGA 437")))))))))
-
-(defun my/get-best-symbol-font ()
-  (if (my/font-installed "Liga Inconsolata LGC")
-      "Liga Inconsolata LGC"
-    (if (my/font-installed "DejaVu Sans Mono")
-	"DejaVu Sans Mono"
-      (if (my/font-installed "dejavu sans mono")
-	  "DejaVuSansMono"
-	(if (my/font-installed "Noto Sans Mono")
-	    "NotoSansMono")))))
-
-(setq my/font (my/get-best-font))
-(setq my/symbol-font (my/get-best-symbol-font))
-
-(when my/font
-  ;; Set default font
-  (add-to-list 'default-frame-alist (cons 'font my/font))
-
-  (my/set-default-font-size)
-  ;; (my/set-default-font my/font)
-
-  ;; Set symbol font
-  (set-fontset-font t 'symbol my/symbol-font))
 
 ;; * Evil
 (setq evil-search-module 'evil-search)
@@ -470,8 +400,6 @@
 (setq evil-insert-state-modes nil)
 
 (cl-loop for (mode . state) in '(
-				 ;; So i C-leader works for exwm windows
-				 (exwm-mode . emacs)
 				 (eshell-mode . insert)
 				 (interactive-haskell-mode . insert)
 				 (term-mode . insert)
@@ -807,7 +735,16 @@ Borrowed from mozc.el."
 (setq evil-insert-state-cursor '("orange" box))
 (setq evil-replace-state-cursor '("green" box))
 (setq evil-operator-state-cursor '("white" hollow))
-(setq evil-operator-state-cursor '("white" hollow))
+
+;; *** Get current evil cursor color
+(defun my/get-current-evil-cursor-color ()
+  (pcase evil-state
+    ('normal (car evil-normal-state-cursor))
+    ('insert (car evil-insert-state-cursor))
+    ('replace (car evil-replace-state-cursor))
+    ('visual (car evil-visual-state-cursor))
+    ('emacs (car evil-emacs-state-cursor))
+    ('operator (car evil-operator-state-cursor))))
 
 ;; ** Keys
 ;; Prevent emacs state from being exited with esc, fixes exwm since it uses emacs state and to exit hydra you have to do esc
@@ -1037,12 +974,7 @@ Borrowed from mozc.el."
 (defun my/write-configs ()
   (interactive)
   (pcase (completing-read "Which config to write: "
-			  '("xdefaults" "xinit" "xmodmap" "mpd" "gpg-agent" "cabal" "mbsync" "msmtp" "dovecot" "direnv") nil t)
-    ("xdefaults"
-     ;; With emacs 27 gui is disabled in early-init.el instead of xdefaults
-     (if (string< emacs-version "27")
-	 (my/write-xdefaults)
-       (message "Not writing xdefault file, emacs version is > 27 so you shouldn't need a xdefaults file")))
+			  '("xinit" "xmodmap" "mpd" "gpg-agent" "cabal" "mbsync" "msmtp" "dovecot" "direnv") nil t)
     ("xinit" (my/write-xinitrc))
     ("xmodmap" (my/write-xmodmap))
     ("mpd" (my/write-mpd-config))
@@ -1066,16 +998,6 @@ AddYourEmailHereThenDeleteThis
 (defun my/write-gnus ()
   (my/create-file-with-content-if-not-exist
    "~/.gnus.el" my/gnus-config-text))
-
-;; ** Write .Xdefaults
-;; emacs. commands to disable scrollbar, etc before launching emacs, improving startup time
-(defconst my/xdefaults-config-text "
-emacs.toolBar: 0
-emacs.menuBar: 0
-emacs.verticalScrollBars: off")
-
-(defun my/write-xdefaults ()
-  (my/create-file-with-content-if-not-exist "~/.Xdefaults" my/xdefaults-config-text))
 
 ;; ** Write .xinitrc
 ;; =xset s= disables screen saver
@@ -1475,6 +1397,16 @@ or go back to just one window (by deleting all but the selected window)."
 					(copy-region-as-kill (point-min) (point-max))
 					(switch-to-buffer curr-buf))))
 
+;; ** Quit emacs
+(defun my/quit-emacs ()
+  (interactive)
+  (my/open-if-exists "~/Notes/Report.org")
+  (save-buffers-kill-terminal nil))
+
+(with-eval-after-load 'files
+  (define-key ctl-x-map (kbd "C-c") 'my/quit-emacs))
+
+;; * Productivity
 ;; ** Break timer
 ;; In seconds
 (defvar my/break-time (* 21 60))
@@ -1485,10 +1417,15 @@ or go back to just one window (by deleting all but the selected window)."
     ;; Restart timer
     (my/break-timer-run)
 
+    ;; Clock
+    (run-with-timer 0.5 nil (lambda () (sleep-for 3)))
+    (org-mru-clock-in)
+
     ;; Show break buffer
-    (switch-to-buffer "Break")
-    (insert "Break")
-    (message (concat "Break at " (format-time-string "%H:%M")))))
+    ;; (switch-to-buffer "Break")
+    ;; (insert "Break")
+    ;; (message (concat "Break at " (format-time-string "%H:%M")))
+    ))
 
 (defun my/break-timer-run ()
   (interactive)
@@ -1626,7 +1563,7 @@ or go back to just one window (by deleting all but the selected window)."
 ;; ** Visit agenda file
 (defun my/agenda-file-visit ()
   (interactive)
-  (find-file "~/Notes/Agenda.org"))
+  (org-brain-visualize "Agenda"))
 
 (define-key my/open-map (kbd "A") 'my/agenda-file-visit)
 
@@ -1711,15 +1648,6 @@ or go back to just one window (by deleting all but the selected window)."
 
 (add-hook 'org-mode-hook 'org-superstar-mode)
 
-;; ** Bullets
-(straight-use-package 'org-bullets)
-
-;; (with-eval-after-load 'org
-;;   (when window-system
-;;     (if (eq system-type 'windows-nt)
-;;	(setq inhibit-compacting-font-caches t))
-;;     (add-hook 'org-mode-hook (lambda () (interactive) (org-bullets-mode)))))
-
 ;; ** Visuals
 ;; *** Highlight whole heading line
 (setq org-fontify-whole-heading-line t)
@@ -1775,7 +1703,12 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; Put todos on top
 (setq org-agenda-custom-commands
-      '(("n" "Agenda and all TODOs" ((alltodo "") (agenda "")))))
+      '(("n" "Agenda and all TODOs" ((alltodo "")
+				     (agenda "")
+				     ;; Add org-agenda time budgets integration
+				     ;; (agenda "" ((org-agenda-sorting-strategy '(habit-down time-up priority-down category-keep user-defined-up))))
+				     ;; (org-time-budgets-in-agenda)
+				     ))))
 
 ;; *** org-timeline
 ;; (straight-use-package 'org-timeline)
@@ -1801,7 +1734,19 @@ or go back to just one window (by deleting all but the selected window)."
   (define-key org-agenda-mode-map [remap newline] 'org-agenda-goto))
 
 ;; ** Clock
+(setq org-clock-mode-line-total 'today)
 ;; (setq org-clock-mode-line-total today)
+(org-clock-auto-clockout-insinuate)
+
+;; *** org-mru-clock
+(straight-use-package 'org-mru-clock)
+(setq org-mru-clock-files (lambda () '("~/Notes/Report.org")))
+
+(define-key my/leader-map (kbd "k") 'org-mru-clock-in)
+(define-key my/leader-map (kbd "C-k") 'org-clock-out)
+
+;; *** org-time-budgets
+;; (straight-use-package 'org-time-budgets)
 
 ;; *** Keys
 ;; (define-prefix-command 'my/clock-map)
@@ -2527,6 +2472,7 @@ If the input is empty, select the previous history element instead."
 ;; (setq ivy-rich-path-style 'abbrev)
 
 (setq ivy-rich-display-transformers-list
+      ;; Switch buffer
       `(ivy-switch-buffer
 	(:columns
 	 ((ivy-rich-candidate (:width 30))
@@ -2541,22 +2487,27 @@ If the input is empty, select the previous history element instead."
 	  )
 	 :predicate
 	 (lambda (cand) (get-buffer cand)))
+	;; Find file
 	counsel-find-file
 	(:columns
 	 ((ivy-read-file-transformer)
 	  (ivy-rich-counsel-find-file-truename (:face my/ivy-rich-find-file-symlink-face))))
+	;; M-x
 	counsel-M-x
 	(:columns
-	 ((counsel-M-x-transformer (:width ,my/ivy-rich-docstring-spacing))
-	  (ivy-rich-counsel-function-docstring (:face my/ivy-rich-doc-face))))
+	 ((counsel-M-x-transformer (:width 40))
+	  (ivy-rich-counsel-function-docstring (:face font-lock-doc-face))))
+	;; Describe function
 	counsel-describe-function
 	(:columns
 	 ((counsel-describe-function-transformer (:width ,my/ivy-rich-docstring-spacing))
 	  (ivy-rich-counsel-function-docstring (:face my/ivy-rich-doc-face))))
+	;; Describe variable
 	counsel-describe-variable
 	(:columns
 	 ((counsel-describe-variable-transformer (:width ,my/ivy-rich-docstring-spacing))
 	  (ivy-rich-counsel-variable-docstring (:face my/ivy-rich-doc-face))))
+	;; Recentf
 	counsel-recentf
 	(:columns
 	 ((ivy-rich-candidate (:width 0.8))
@@ -4659,7 +4610,7 @@ do the
      (my/cabal-create-compile-command))))
 
 (defun my/cabal-create-compile-command ()
-  (let ((input (completing-read "" '("cabal build" "cabal run" "profiling"))))
+  (let ((input (completing-read "" '("cabal build" "cabal run" "profiling" "cabal build -O2"))))
     (if (string= input "profiling")
 	(my/cabal-build-profiling-command)
       input)))
@@ -6072,6 +6023,12 @@ do the
 (straight-use-package 'direnv)
 (direnv-mode)
 
+;; *** Lorri
+(message "lorri run up")
+(when (my/is-system-package-installed 'lorri)
+  (message "lorri running")
+  (my/async-start-process-shell-command "lorri" "lorri" "daemon"))
+
 ;; ** Nix-mode
 (straight-use-package 'nix-mode)
 
@@ -6586,11 +6543,14 @@ do the
     ;;    (straight-use-package 'exwm-firefox-evil)
     (require 'exwm-firefox-evil)
 
-    ;; Auto enable exwm-firefox-evil-mode on all firefox buffers
-    (add-hook 'exwm-manage-finish-hook 'exwm-firefox-evil-activate-if-firefox)
-
     ;; Run firefox buffers in normal mode
     (add-hook 'exwm-firefox-evil-mode-hook 'exwm-firefox-evil-normal)))
+
+;; Auto enable exwm-firefox-evil-mode on all firefox buffers
+(add-hook 'exwm-manage-finish-hook '(lambda ()
+				      (evil-emacs-state)
+				      (exwm-firefox-evil-activate-if-firefox)))
+
 
 (setq exwm-firefox-core-search-bookmarks '(("google.com")
 					   ("youtube.com")
@@ -6648,6 +6608,7 @@ do the
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "t") 'exwm-firefox-core-tab-new)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "O") 'exwm-firefox-core-tab-new)
 
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "s") 'exwm-firefox-core-find)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "S") 'exwm-firefox-core-find)
@@ -6750,12 +6711,12 @@ do the
 			      :pre (progn
 				     (setq hydra-hint-display-type 'posframe)))
   "
-^Buffers           Files           VC                     Ediff regions
-----------------------------------------------------------------------
-_b_uffers           _f_iles (_=_)       _r_evisions              _l_inewise
-_B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
-		  _c_urrent file
-"
+    ^Buffers           Files           VC                     Ediff regions
+    ----------------------------------------------------------------------
+    _b_uffers           _f_iles (_=_)       _r_evisions              _l_inewise
+    _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
+    _c_urrent file
+    "
   ("b" ediff-buffers)
   ("B" ediff-buffers3)
   ("=" ediff-files)
@@ -6814,7 +6775,18 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 (defun my/auto-compile-project ()
   (interactive)
   (pcase (projectile-project-type)
-    ('haskell-cabal (my/cabal-compile))))
+    ('haskell-cabal (my/cabal-compile))
+    ('generic
+     (pcase major-mode
+       ('nix-mode
+	(if (string= "/etc/nixos/" default-directory)
+	    (progn
+	      ;; Not sure why but this is required
+	      (require 'ivy)
+
+	      ;; Run rebuild as sudo
+	      (let ((default-directory (concat "/sudo::" default-directory)))
+		(compile "nixos-rebuild switch")))))))))
 
 ;; ** Counsel projectile
 ;; If enabled it auto enables projectile, which has high CPU usage
@@ -6822,16 +6794,6 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 (projectile-mode 1)
 (counsel-projectile-mode 1)
-
-;; ** Compile project
-;; *** Gradlew
-;; The default gradlew compile command doesn't do a clean build
-(projectile-register-project-type 'gradlew '("gradlew")
-				  :compile "./gradlew clean build"
-				  :test "./gradlew test"
-				  :test-suffix "Spec")
-;; *** Keys
-(define-key my/leader-map (kbd "C-y") 'projectile-compile-project)
 
 ;; *** Disable mode line
 (defun projectile-update-mode-line()
@@ -7532,18 +7494,18 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 	       "\t"
 	       ;; Date as specified by `gnus-user-date-format-alist`
 	       "%&user-date; \t"
-	       ;; Linecount, leave -5,5 spacing
-	       "%-5,5L"
-	       ;; Sender taken from header, leave -20,20 spacing
-	       "%-20,20n"
+    ;; Linecount, leave -5,5 spacing
+    "%-5,5L"
+    ;; Sender taken from header, leave -20,20 spacing
+    "%-20,20n"
 
-	       "\t"
-	       ;; Reply tree
-	       "%B"
-	       ;; Article subject string
-	       "%-80,80S"
-	       ;; End
-	       "\n"))
+    "\t"
+    ;; Reply tree
+    "%B"
+    ;; Article subject string
+    "%-80,80S"
+    ;; End
+    "\n"))
 
 (setq gnus-user-date-format-alist '((t . "%Y-%m-%d %H:%M")))
 (setq gnus-thread-sort-functions '(gnus-thread-sort-by-date))
@@ -8372,6 +8334,9 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 
 (setq eimp-enable-undo t)
 
+(with-eval-after-load 'eimp
+  (setq eimp-minor-mode-map (make-sparse-keymap)))
+
 (add-hook 'image-mode-hook 'blimp-mode)
 
 ;; **** Recolor
@@ -8384,8 +8349,6 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 ;; *** Keys
 (evil-define-key 'normal image-mode-map (kbd "-") 'image-decrease-size)
 (evil-define-key 'normal image-mode-map (kbd "=") 'image-increase-size)
-(evil-define-key 'normal image-mode-map (kbd "_") 'image-transform-fit-to-height)
-(evil-define-key 'normal image-mode-map (kbd "+") 'image-transform-fit-to-width)
 
 (evil-define-key 'normal image-mode-map (kbd "C-u") 'image-scroll-down)
 (evil-define-key 'normal image-mode-map (kbd "C-w") 'image-scroll-up)
@@ -8735,6 +8698,7 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
 	  ('exwm-mode)
 	  ('mu4e-headers-mode)
 	  ('pdf-view-mode)
+	  ('image-mode)
 	  (_ (olivetti-mode)))))
 
 (global-olivetti-mode 1)
@@ -9446,78 +9410,85 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
     (format (format "%%s %%%ds" available-width) left right)))
 
 ;; Remember to update `mini-modeline-r-format' after setting this manually
-(setq-default my/status-line-format
-	      '(:eval
-		(my/mode-line-align
-		 (format-mode-line
-		  (quote
-		   (
-		    (:eval my/past-alerts)
-		    )))
+(progn
+  (setq-default my/status-line-format
+		'(:eval
+		  (my/mode-line-align
+		   (format-mode-line
+		    (quote
+		     (
+		      (:eval my/past-alerts)
+		      )))
 
-		 (format-mode-line
-		  (quote
-		   (
-		    "| "
+		   (format-mode-line
+		    (quote
+		     (
+		      (:eval
+		       (when (string= major-mode 'exwm-mode)
+			 (concat
+			  (propertize (concat " ") 'face `(:background ,(my/get-current-evil-cursor-color)))
+			  " ")))
 
-		    (:eval (if my/mode-line-show-GC-stats
-			       (concat
-				" GC: " (number-to-string (truncate gc-elapsed))
-				"(" (number-to-string gcs-done) ")"
-				" |"
-				)))
+		      ;; Org clock
+		      (:eval (if (org-clocking-p)
+				 (concat "Org: " (propertize (string-trim-left (substring-no-properties org-mode-line-string)) 'face 'warning) " | ")
+			       (concat "Org: " (propertize "No clock" 'face 'error) " | ")))
 
-		    (:eval (if my/mode-line-enable-network-traffic
-			       (concat
-				my/tx-delta-formatted " ↑ "
-				my/rx-delta-formatted " ↓ "
-				"| "
-				)))
+		      (:eval (if my/mode-line-show-GC-stats
+				 (concat
+				  " GC: " (number-to-string (truncate gc-elapsed))
+				  "(" (number-to-string gcs-done) ")"
+				  " |"
+				  )))
 
-		    (:eval
-		     (when my/mode-line-enable-available-mem
-		       (concat
-			"MEM: "
-			;; If < 100 mb mem, make text red
-			(if (< my/available-mem 1000000000)
-			    (propertize my/available-mem-formatted 'face `(:background "red"))
-			  my/available-mem-formatted)
-			" | ")))
+		      (:eval (if my/mode-line-enable-network-traffic
+				 (concat
+				  my/tx-delta-formatted " ↑ "
+				  my/rx-delta-formatted " ↓ "
+				  "| "
+				  )))
 
-		    ;; Org clock
-		    ;; (:eval (if (boundp 'org-mode-line-string)
-		    ;;	       (concat "Org:" org-mode-line-string " | ")))
+		      (:eval
+		       (when my/mode-line-enable-available-mem
+			 (concat
+			  "MEM: "
+			  ;; If < 100 mb mem, make text red
+			  (if (< my/available-mem 1000000000)
+			      (propertize my/available-mem-formatted 'face `(:background "red"))
+			    my/available-mem-formatted)
+			  " | ")))
 
-		    (:eval (if (not (eq battery-mode-line-string ""))
-			       (concat "BAT: " battery-mode-line-string "%%%   | ")))
+		      (:eval (if (not (eq battery-mode-line-string ""))
+				 (concat "BAT: " battery-mode-line-string "%%%   | ")))
 
-		    (:eval (if my/mode-line-enable-cpu-temp
-			       (concat "HT: " my/cpu-temp " | ")))
+		      (:eval (if my/mode-line-enable-cpu-temp
+				 (concat "HT: " my/cpu-temp " | ")))
 
-		    "C: "
-		    (:eval (number-to-string my/cpu-load-average))
+		      "C: "
+		      (:eval (number-to-string my/cpu-load-average))
 
-		    " |"
+		      " |"
 
-		    (:eval (concat " Up: " my/uptime-total-time-formated))
+		      (:eval (concat " Up: " my/uptime-total-time-formated))
 
-		    ;; (:eval (if (and my/gnus-unread-string (not (string= my/gnus-unread-string "")))
-		    ;;	       (concat " | "
-		    ;;		       my/gnus-unread-string)))
+		      ;; (:eval (if (and my/gnus-unread-string (not (string= my/gnus-unread-string "")))
+		      ;;	       (concat " | "
+		      ;;		       my/gnus-unread-string)))
 
-		    (:eval (if (and my/mu4e-unread-mail-count)
-			       (concat " | Mail: "
-				       my/mu4e-unread-mail-count)))
+		      (:eval (if (and my/mu4e-unread-mail-count)
+				 (concat " | Mail: "
+					 my/mu4e-unread-mail-count)))
 
 
-		    " | "
+		      " | "
 
-		    (:eval my/time)
+		      (:eval my/time)
 
-		    " - "
+		      " - "
 
-		    (:eval my/date)
-		    ))))))
+		      (:eval my/date)
+		      ))))))
+  (setq-default mini-modeline-r-format my/status-line-format))
 
 ;; ** mini-modeline
 (straight-use-package 'mini-modeline)
@@ -9605,21 +9576,22 @@ _B_uffers (3-way)   _F_iles (3-way)                          _w_ordwise
   (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "h") #'undo-tree-visualize-switch-branch-left)
   (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "d") #'undo-tree-visualizer-toggle-diff))
 
-;; *  Open on init
+;; * Startup view
 (add-hook 'exwm-init-hook '(lambda ()
 			     (my/org-agenda-show-agenda-and-todo)
 			     (split-window-below)
 			     (other-window 1)
-			     (let ((path "~/Notes/Report.org"))
-			       (when (file-exists-p path)
-				 (find-file path)))))
+			     (my/open-if-exists  "~/Notes/Report.org")
+			     (split-window-horizontally)
+			     (find-file
+			      (my/get-random-element (directory-files-recursively "~/Notes/Wallpapers" ".")))))
 
 ;; * Run command on boot
 (if my/run-command-on-boot
     (async-shell-command my/run-command-on-boot))
 
 ;; * Restore gc mem
-(setq gc-cons-threshold my/after-gc-mem)
+(setq gc-cons-threshold my/gc-mem)
 (garbage-collect)
 
 ;; * Report start time
