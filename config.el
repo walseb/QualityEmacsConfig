@@ -1735,8 +1735,10 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; ** Clock
 (setq org-clock-mode-line-total 'today)
-;; (setq org-clock-mode-line-total today)
-(org-clock-auto-clockout-insinuate)
+
+(add-hook 'after-init-hook (lambda ()
+			     (require 'org)
+			     (org-clock-auto-clockout-insinuate)))
 
 ;; *** org-mru-clock
 (straight-use-package 'org-mru-clock)
@@ -5495,11 +5497,11 @@ do the
 ;; (message "Password removed"))
 ;; (setq my/pass-in-killring nil))))
 
-(defun my/pop-killring ()
-  (pop kill-ring)
-  (setq my/pass-in-killring nil))
+;; (defun my/pop-killring ()
+;;   (pop kill-ring)
+;;   (setq my/pass-in-killring nil))
 
-(define-key my/leader-map (kbd "C-k") 'my/pop-killring)
+;; (define-key my/leader-map (kbd "C-k") 'my/pop-killring)
 ;; (advice-add 'evil-goggles--paste-advice :before (lambda () (interactive) (my/pass-pop-killring)))
 ;; (advice-add 'evil-goggles--paste-advice :before
 ;; (advice-add 'evil-paste-after :after (lambda (&rest r) (interactive) (my/pass-pop-killring)))
@@ -6912,7 +6914,7 @@ do the
   (interactive)
   (my/pulse-update-audio-sink)
   ;; Unmute
-  (shell-command (concat "pactl set-sink-mute " my/audio-sink " 0"))
+  ;; (shell-command (concat "pactl set-sink-mute " my/audio-sink " 0"))
   (shell-command (concat "pactl set-sink-volume " my/audio-sink " +2.5%")))
 
 (global-set-key (kbd "<XF86AudioRaiseVolume>") 'my/pulse-raise-volume)
@@ -6922,7 +6924,7 @@ do the
   (interactive)
   (my/pulse-update-audio-sink)
   ;; Unmute
-  (shell-command (concat "pactl set-sink-mute " my/audio-sink " 0"))
+  ;; (shell-command (concat "pactl set-sink-mute " my/audio-sink " 0"))
   (shell-command (concat "pactl set-sink-volume " my/audio-sink " -2.5%")))
 
 (global-set-key (kbd "<XF86AudioLowerVolume>") 'my/pulse-lower-volume)
@@ -7707,10 +7709,11 @@ do the
 (define-prefix-command 'my/system-suspend-map)
 (define-key my/system-commands-map (kbd "s") 'my/system-suspend-map)
 
-(defun my/systemd-suspend-PC()
+(defun my/systemd-suspend-PC ()
   (interactive)
   (shell-command "systemctl suspend"))
 (define-key my/system-suspend-map (kbd "C-s") 'my/systemd-suspend-PC)
+(defalias 'my/systemd-sleep #'my/systemd-suspend-PC)
 
 ;; (defun my/systemd-hibernate-PC()
 ;;  (interactive)
@@ -7732,25 +7735,7 @@ do the
   (shell-command "xrandr"))
 (define-key my/system-monitor-map (kbd "p") 'my/print-monitors)
 
-(defun my/monitor-home-setup ()
-  (interactive)
-  (shell-command "xrandr --output DP-1 --mode 2560x1440 --rate 60 --left-of DVI-D-1 --output DVI-D-1 --mode 1280x800 --rate 59.81"))
-(define-key my/system-monitor-map (kbd "h") 'my/monitor-home-setup)
-
-(defun my/auto-connect-screen ()
-  (interactive)
-  (with-temp-buffer
-    (call-process "xrandr" nil t nil)
-    (beginning-of-buffer)
-    (if (search-forward "VGA1 connected" nil 'noerror)
-	(start-process-shell-command
-	 "xrandr" nil "xrandr --output VGA1 --primary --auto --output LVDS1 --off")
-      (start-process-shell-command
-       "xrandr" nil "xrandr --output LVDS1 --auto"))))
-
-(define-key my/system-monitor-map (kbd "a") 'my/auto-connect-screen)
-
-(if (window-system)
+(if (and (window-system) my/device/monitor-setup-command)
     (async-shell-command my/device/monitor-setup-command "xrandr setup buffer"))
 
 ;; ** Proced
@@ -9126,14 +9111,12 @@ do the
 ;; http://www.holgerschurig.de/en/emacs-tayloring-the-built-in-mode-line/
 
 ;; *** Allocate status line update timings
-(defvar my/status-line-update-offset 8)
-(defvar my/status-line-allocated-update-current 0)
+(defvar my/status-line-update-time-max 8)
+(defvar my/status-line-update-time 0)
 
 (defun my/status-bar-allocate-update-time (task &optional delay)
-  (if (> my/status-line-allocated-update-current my/status-line-update-offset)
-      (setq my/status-line-allocated-update-current 0)
-    (setq my/status-line-allocated-update-current (+ my/status-line-allocated-update-current 1))
-    (run-with-timer my/status-line-allocated-update-current (or delay 60) task)))
+  (setq my/status-line-update-time (+ my/status-line-update-time 1))
+  (run-with-timer (mod my/status-line-update-time my/status-line-update-time-max) (or delay 60) task))
 
 ;; *** Garbage Collection
 (defvar my/mode-line-show-GC-stats nil)
