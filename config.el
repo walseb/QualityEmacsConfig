@@ -1747,6 +1747,7 @@ or go back to just one window (by deleting all but the selected window)."
 (setq org-mru-clock-how-many 999)
 
 (define-key my/leader-map (kbd "k") 'org-mru-clock-in)
+(define-key my/leader-map (kbd "M-k") '(lambda () (interactive) (find-file "~/Notes/Planning/Report/Clocks.org")))
 (define-key my/leader-map (kbd "C-k") 'org-clock-out)
 
 ;; **** Custom prompt
@@ -5341,7 +5342,11 @@ do the
   (pcase major-mode
     ('gnus-summary-mode (gnus-summary-exit))
     ('ediff-mode (call-interactively #'ediff-quit))
-    (_ (kill-current-buffer))))
+    (_
+     (let ((clocking (org-clocking-buffer)))
+     (if (and clocking (eq (current-buffer) clocking))
+	 (read-string "Clock out before killing this buffer.")
+     (kill-current-buffer))))))
 
 ;; ** Autotab
 ;; By default modes like outshine and org-mode redefines TAB. This changes the meaning of tab depending on modes
