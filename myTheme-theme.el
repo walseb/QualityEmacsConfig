@@ -203,7 +203,7 @@
 
    `(org-todo ((,class (:foreground ,my/mark-color))))
 
-   `(org-agenda-calendar-event ((,class (:foreground ,my/mark-color))))
+   `(org-agenda-calendar-event ((,class (:foreground "DeepSkyBlue"))))
    `(org-agenda-calendar-sexp ((,class (:inherit default))))
    `(org-agenda-clocking ((,class (:inherit secondary-selection))))
    `(org-agenda-column-dateline ((,class (:inherit org-column))))

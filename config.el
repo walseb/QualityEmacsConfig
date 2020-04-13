@@ -1735,6 +1735,7 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; ** Clock
 (setq org-clock-mode-line-total 'today)
+(setq org-extend-today-until 6)
 
 (add-hook 'after-init-hook (lambda ()
 			     (require 'org)
@@ -1742,35 +1743,56 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; *** org-mru-clock
 (straight-use-package 'org-mru-clock)
-(setq org-mru-clock-files (lambda () '("~/Notes/Report.org")))
+(setq org-mru-clock-files (lambda () '("~/Notes/Planning/Report/Clocks.org")))
+(setq org-mru-clock-how-many 999)
 
 (define-key my/leader-map (kbd "k") 'org-mru-clock-in)
 (define-key my/leader-map (kbd "C-k") 'org-clock-out)
 
-;; *** org-time-budgets
-;; (straight-use-package 'org-time-budgets)
+;; **** Custom prompt
+(with-eval-after-load 'org-mru-clock
+  (defun org-mru-clock-format-entry ()
+    "Return the parent heading string appended to the heading at point."
+    (let* ((heading (org-get-heading 'no-tags 'no-todo))
+	   (time (org-clock-sum-current-item
+		  (org-clock-get-sum-start)))
+	   (limit (org-entry-get nil "MinTime"))
+	   (parent
+	    (save-excursion
+	      (org-up-heading-safe)
+	      (org-get-heading 'no-tags 'no-todo)))
+	   (parent-post (if parent
+			    (format "%s / %s min | " time limit)
+			  ""))
+	   (with-parent (concat parent-post heading)))
+      (if org-mru-clock-keep-formatting
+	  with-parent
+	(substring-no-properties with-parent))))
 
-;; *** Keys
-;; (define-prefix-command 'my/clock-map)
-;; (define-key my/leader-map (kbd "c") 'my/clock-map)
+  ;; *** org-time-budgets
+  ;; (straight-use-package 'org-time-budgets)
 
-;; (define-key my/clock-map (kbd "s") 'org-clock-in)
-;; (define-key my/clock-map (kbd "S") 'org-clock-out)
-;; (define-key my/clock-map (kbd "C-s") 'org-clock-in-last)
+  ;; *** Keys
+  ;; (define-prefix-command 'my/clock-map)
+  ;; (define-key my/leader-map (kbd "c") 'my/clock-map)
 
-;; (define-key my/clock-map (kbd "e") 'org-clock-modify-effort-estimate)
+  ;; (define-key my/clock-map (kbd "s") 'org-clock-in)
+  ;; (define-key my/clock-map (kbd "S") 'org-clock-out)
+  ;; (define-key my/clock-map (kbd "C-s") 'org-clock-in-last)
 
-;; ** Present
-(defun my/org-present-next ()
-  (interactive)
-  (widen)
-  (if (string= (string (char-after)) "*")
-      (forward-line))
-  (narrow-to-region
-   (- (re-search-forward "^*") 1)
-   (- (re-search-forward "^*") 1))
-  (evil-open-fold)
-  (goto-char (point-min)))
+  ;; (define-key my/clock-map (kbd "e") 'org-clock-modify-effort-estimate)
+
+  ;; ** Present
+  (defun my/org-present-next ()
+    (interactive)
+    (widen)
+    (if (string= (string (char-after)) "*")
+	(forward-line))
+    (narrow-to-region
+     (- (re-search-forward "^*") 1)
+     (- (re-search-forward "^*") 1))
+    (evil-open-fold)
+    (goto-char (point-min)))
 
 (defun my/org-present-prev ()
   (interactive)
