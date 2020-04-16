@@ -1,0 +1,4 @@
+# name: makePrisms
+# key: lmp
+# --
+makePrisms ''${1:`(my/get-data-name)`}

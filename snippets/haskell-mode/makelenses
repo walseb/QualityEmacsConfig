@@ -1,0 +1,4 @@
+# name: makelenses
+# key: lm
+# --
+makeLenses ''${1:`(my/get-data-name)`}

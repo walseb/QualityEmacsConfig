@@ -1,0 +1,4 @@
+# name: newtype
+# key: nt
+# --
+newtype ${1:State a} = ${2:State} { ${3:runState} :: ${4:s -> (s, a)} }

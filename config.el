@@ -110,7 +110,7 @@
 ;; *** Run async process shell command
 ;; As opposed to `async-shell-command', this runs the shell command without a visual terminal, although it does have a buffer where it collects everything printed
 (defun my/async-start-process-shell-command (buffer-name package &rest args)
-  (message (concat "Starting async shell command process. Buffer name: " buffer-name " Packages: " package))
+  (message (concat "Starting async shell command process. Buffer name: " buffer-name " Package: " package))
   (async-start-process buffer-name
 		       (executable-find package)
 		       (lambda (a)
@@ -1743,6 +1743,7 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; *** org-mru-clock
 (straight-use-package 'org-mru-clock)
+
 (setq org-mru-clock-files (lambda () '("~/Notes/Planning/Report/Clocks.org")))
 (setq org-mru-clock-how-many 999)
 
@@ -1763,37 +1764,37 @@ or go back to just one window (by deleting all but the selected window)."
 	      (org-up-heading-safe)
 	      (org-get-heading 'no-tags 'no-todo)))
 	   (parent-post (if parent
-			    (format "%s / %s min | " time limit)
+			    (format "%\ 3s / %\ 3s min | " time limit)
 			  ""))
 	   (with-parent (concat parent-post heading)))
       (if org-mru-clock-keep-formatting
 	  with-parent
-	(substring-no-properties with-parent))))
+	(substring-no-properties with-parent)))))
 
-  ;; *** org-time-budgets
-  ;; (straight-use-package 'org-time-budgets)
+;; *** org-time-budgets
+;; (straight-use-package 'org-time-budgets)
 
-  ;; *** Keys
-  ;; (define-prefix-command 'my/clock-map)
-  ;; (define-key my/leader-map (kbd "c") 'my/clock-map)
+;; *** Keys
+;; (define-prefix-command 'my/clock-map)
+;; (define-key my/leader-map (kbd "c") 'my/clock-map)
 
-  ;; (define-key my/clock-map (kbd "s") 'org-clock-in)
-  ;; (define-key my/clock-map (kbd "S") 'org-clock-out)
-  ;; (define-key my/clock-map (kbd "C-s") 'org-clock-in-last)
+;; (define-key my/clock-map (kbd "s") 'org-clock-in)
+;; (define-key my/clock-map (kbd "S") 'org-clock-out)
+;; (define-key my/clock-map (kbd "C-s") 'org-clock-in-last)
 
-  ;; (define-key my/clock-map (kbd "e") 'org-clock-modify-effort-estimate)
+;; (define-key my/clock-map (kbd "e") 'org-clock-modify-effort-estimate)
 
-  ;; ** Present
-  (defun my/org-present-next ()
-    (interactive)
-    (widen)
-    (if (string= (string (char-after)) "*")
-	(forward-line))
-    (narrow-to-region
-     (- (re-search-forward "^*") 1)
-     (- (re-search-forward "^*") 1))
-    (evil-open-fold)
-    (goto-char (point-min)))
+;; ** Present
+(defun my/org-present-next ()
+  (interactive)
+  (widen)
+  (if (string= (string (char-after)) "*")
+      (forward-line))
+  (narrow-to-region
+   (- (re-search-forward "^*") 1)
+   (- (re-search-forward "^*") 1))
+  (evil-open-fold)
+  (goto-char (point-min)))
 
 (defun my/org-present-prev ()
   (interactive)
@@ -4875,6 +4876,15 @@ do the
 (add-hook 'haskell-mode-hook (lambda ()
 			       (add-to-list 'flycheck-disabled-checkers 'haskell-stack-ghc)))
 
+;; *** Snippet utils
+(defun my/get-data-name ()
+  "Finds the variable name of the data declaration above cursor"
+  (save-excursion
+    (search-backward-regexp "^data\ ")
+    (search-forward-regexp "[:word:]")
+    (search-forward-regexp "[:word:]")
+    (thing-at-point 'symbol t)))
+
 ;; ** C/CPP
 ;; *** LSP CCLS
 (straight-use-package 'ccls)
@@ -6053,9 +6063,7 @@ do the
 (direnv-mode)
 
 ;; *** Lorri
-(message "lorri run up")
 (when (my/is-system-package-installed 'lorri)
-  (message "lorri running")
   (my/async-start-process-shell-command "lorri" "lorri" "daemon"))
 
 ;; ** Nix-mode
@@ -6443,7 +6451,7 @@ do the
 (with-eval-after-load 'shr
   (advice-add #'shr-colorize-region :around (defun shr-no-colourise-region (&rest ignore))))
 
-;; ;; ** Auto-open image at point
+;; ** Auto-open image at point
 ;; ;; Redefine function to attempt to open image if link at point wasn't found
 (with-eval-after-load 'shr
   (defun shr-browse-url (&optional external mouse-event)
@@ -7738,6 +7746,8 @@ do the
 
 (defun my/systemd-suspend-PC ()
   (interactive)
+  (ignore-errors
+    (org-clock-out))
   (shell-command "systemctl suspend"))
 (define-key my/system-suspend-map (kbd "C-s") 'my/systemd-suspend-PC)
 (defalias 'my/systemd-sleep #'my/systemd-suspend-PC)
@@ -8704,14 +8714,13 @@ do the
 
 (define-globalized-minor-mode global-olivetti-mode
   nil (lambda ()
-	;; (when (not (my/line-longer-than olivetti-body-width))
 	(pcase major-mode
 	  ('minibuffer-inactive-mode)
 	  ('exwm-mode)
 	  ('mu4e-headers-mode)
 	  ('pdf-view-mode)
 	  ('image-mode)
-	  (_ (olivetti-mode)))))
+	  (_ (olivetti-mode 1)))))
 
 (global-olivetti-mode 1)
 
@@ -9410,6 +9419,14 @@ do the
 
 (my/status-bar-allocate-update-time 'my/update-uptime-timer)
 
+;; *** Org-clock mode line
+(defun my/org-clock-mode-line-schedule ()
+  (remove-hook 'org-clock-in-hook 'my/org-clock-mode-line-schedule)
+  (my/status-bar-allocate-update-time 'org-clock-update-mode-line))
+
+(with-eval-after-load 'org-clock
+  (add-hook 'org-clock-in-hook 'my/org-clock-mode-line-schedule))
+
 ;; ** Format
 ;; Only applicable to X since terminal never stretches, etc
 (add-hook 'exwm-workspace-switch-hook 'my/frame-width-update)
@@ -9423,81 +9440,84 @@ do the
 (progn
   (setq-default my/status-line-format
 		'(:eval
-		  (my/mode-line-align
-		   (format-mode-line
-		    (quote
-		     (
-		      (:eval my/past-alerts)
-		      )))
+		  ;; (my/mode-line-align
+		  ;;  (format-mode-line
+		  ;;   (quote
+		  ;;    (
+		  ;;     (:eval my/past-alerts)
+		  ;;     )))
 
-		   (format-mode-line
-		    (quote
-		     (
-		      (:eval
-		       (when (string= major-mode 'exwm-mode)
-			 (concat
-			  (propertize (concat " ") 'face `(:background ,(my/get-current-evil-cursor-color)))
-			  " ")))
+		  (format-mode-line
+		   (quote
+		    (
+		     (:eval
+		      (when (string= major-mode 'exwm-mode)
+			(concat
+			 (propertize (concat " ") 'face `(:background ,(my/get-current-evil-cursor-color)))
+			 " ")))
 
-		      ;; Org clock
-		      (:eval (if (org-clocking-p)
-				 (concat "Org: " (propertize (string-trim-left (substring-no-properties org-mode-line-string)) 'face 'warning) " | ")
-			       (concat "Org: " (propertize "No clock" 'face 'error) " | ")))
+		     (:eval my/past-alerts)
 
-		      (:eval (if my/mode-line-show-GC-stats
-				 (concat
-				  " GC: " (number-to-string (truncate gc-elapsed))
-				  "(" (number-to-string gcs-done) ")"
-				  " |"
-				  )))
+		     ;; Org clock
+		     (:eval (if (org-clocking-p)
+				(concat "Org: " (propertize (string-trim-left (substring-no-properties org-mode-line-string)) 'face 'warning) " | ")
+			      (concat "Org: " (propertize "No clock" 'face 'error) " | ")))
 
-		      (:eval (if my/mode-line-enable-network-traffic
-				 (concat
-				  my/tx-delta-formatted " ↑ "
-				  my/rx-delta-formatted " ↓ "
-				  "| "
-				  )))
+		     (:eval (if my/mode-line-show-GC-stats
+				(concat
+				 " GC: " (number-to-string (truncate gc-elapsed))
+				 "(" (number-to-string gcs-done) ")"
+				 " |"
+				 )))
 
-		      (:eval
-		       (when my/mode-line-enable-available-mem
-			 (concat
-			  "MEM: "
-			  ;; If < 100 mb mem, make text red
-			  (if (< my/available-mem 1000000000)
-			      (propertize my/available-mem-formatted 'face `(:background "red"))
-			    my/available-mem-formatted)
-			  " | ")))
+		     (:eval (if my/mode-line-enable-network-traffic
+				(concat
+				 my/tx-delta-formatted " ↑ "
+				 my/rx-delta-formatted " ↓ "
+				 "| "
+				 )))
 
-		      (:eval (if (not (eq battery-mode-line-string ""))
-				 (concat "BAT: " battery-mode-line-string "%%%   | ")))
+		     (:eval
+		      (when my/mode-line-enable-available-mem
+			(concat
+			 "MEM: "
+			 ;; If < 100 mb mem, make text red
+			 (if (< my/available-mem 1000000000)
+			     (propertize my/available-mem-formatted 'face `(:background "red"))
+			   my/available-mem-formatted)
+			 " | ")))
 
-		      (:eval (if my/mode-line-enable-cpu-temp
-				 (concat "HT: " my/cpu-temp " | ")))
+		     (:eval (if (not (eq battery-mode-line-string ""))
+				(concat "BAT: " battery-mode-line-string "%%%   | ")))
 
-		      "C: "
-		      (:eval (number-to-string my/cpu-load-average))
+		     (:eval (if my/mode-line-enable-cpu-temp
+				(concat "HT: " my/cpu-temp " | ")))
 
-		      " |"
+		     "C: "
+		     (:eval (number-to-string my/cpu-load-average))
 
-		      (:eval (concat " Up: " my/uptime-total-time-formated))
+		     " |"
 
-		      ;; (:eval (if (and my/gnus-unread-string (not (string= my/gnus-unread-string "")))
-		      ;;	       (concat " | "
-		      ;;		       my/gnus-unread-string)))
+		     (:eval (concat " Up: " my/uptime-total-time-formated))
 
-		      (:eval (if (and my/mu4e-unread-mail-count)
-				 (concat " | Mail: "
-					 my/mu4e-unread-mail-count)))
+		     ;; (:eval (if (and my/gnus-unread-string (not (string= my/gnus-unread-string "")))
+		     ;;	       (concat " | "
+		     ;;		       my/gnus-unread-string)))
+
+		     (:eval (if (and my/mu4e-unread-mail-count)
+				(concat " | Mail: "
+					my/mu4e-unread-mail-count)))
 
 
-		      " | "
+		     " | "
 
-		      (:eval my/time)
+		     (:eval my/time)
 
-		      " - "
+		     " - "
 
-		      (:eval my/date)
-		      ))))))
+		     (:eval my/date)
+		     )))))
+  ;; )
   (setq-default mini-modeline-r-format my/status-line-format))
 
 ;; ** mini-modeline
