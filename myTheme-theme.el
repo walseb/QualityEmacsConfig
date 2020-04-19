@@ -87,7 +87,7 @@
   (custom-theme-set-faces
    'myTheme
    `(default ((,class (:foreground ,my/foreground-color :background ,my/background-color))))
-   `(link ((,class (:foreground ,my/background-color :background ,my/foreground-color))))
+   `(link ((,class (:foreground ,my/background-color :background ,my/mark-color-5))))
    `(highlight ((,class (:background ,my/mark-color))))
    `(region ((,class (:foreground ,my/foreground-color :background ,my/mark-color))))
    `(error ((,class (:foreground ,my/error-color))))
@@ -341,6 +341,10 @@
 
    `(lsp-lens-face ((,class (:foreground unspecified :background ,my/background-color :inherit font-lock-comment-face))))
 
+   `(my/alert-prio-high-face ((,class (:foreground ,my/background-color :background ,my/diff-removed-color))))
+   `(my/alert-prio-med-face ((,class (:foreground ,my/background-color :background ,my/diff-changed-color))))
+   `(my/alert-prio-low-face ((,class (:foreground ,my/background-color :background ,my/diff-ancestor-color))))
+   `(my/alert-prio-none-face ((,class (:foreground ,my/background-color :background ,my/diff-ancestor-hl-color))))
    ))
 
 (provide-theme 'myTheme)

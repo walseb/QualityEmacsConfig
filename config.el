@@ -872,33 +872,32 @@ Borrowed from mozc.el."
 ;; * Alert
 (defvar my/past-alerts (list))
 
-(defun my/alert (&optional str severity flash-once)
-  (let ((color
+(defun my/alert (&optional str severity flash)
+  (let ((severity-face
 	 (pcase severity
-	   ('low "green")
-	   ('med  "yellow")
-	   ('high  "red")
-	   (_   "blue"))))
+	   ('low 'my/alert-prio-low-face)
+	   ('med 'my/alert-prio-med-face)
+	   ('high 'my/alert-prio-high-face)
+	   (_ 'my/alert-prio-none-face))))
 
-    (if flash-once
-	(my/alert-blink-fringe-once color)
-      (my/alert-blink-fringe color))
-
+    (when flash
+      (if (eq flash 1)
+	  (my/alert-blink-fringe-once severity-face)
+	(my/alert-blink-fringe severity-face)))
     (if str
 	(progn
-	  (push " " my/past-alerts)
-	  (push (propertize (concat "[" str "]") 'face `(:background ,color)) my/past-alerts)
+	  (push (concat " " (propertize str 'face severity-face)) my/past-alerts)
 	  (message str)))))
 
-(defvar my/alert-blink-fringe-color "red")
+(defvar my/alert-blink-fringe-color)
 
 (defun my/alert-blink-fringe-once (color)
-  (setq my/alert-blink-fringe-color color)
+  (setq my/alert-blink-fringe-color (face-attribute color :background))
   (my/alert-fringe-set-color)
   (run-with-timer 0.25 nil 'my/alert-fringe-restore))
 
 (defun my/alert-blink-fringe (color)
-  (setq my/alert-blink-fringe-color color)
+  (setq my/alert-blink-fringe-color (face-attribute color :background))
   (my/alert-fringe-set-color)
   (run-with-timer 0.25 nil 'my/alert-fringe-restore)
   (run-with-timer 0.5 nil 'my/alert-fringe-set-color)
@@ -919,10 +918,36 @@ Borrowed from mozc.el."
   (setq my/past-alerts (list))
   (run-hooks 'my/alert-updated-hook))
 
-(defun my/alert-remove ()
+(defun my/alert-remove (&optional name)
   (interactive)
-  (setq my/past-alerts (remove (completing-read "Remove entry" my/past-alerts) my/past-alerts))
-  (run-hooks 'my/alert-updated-hook))
+  (let ((new-name (when name (concat " " name))))
+    (setq my/past-alerts (remove (or new-name (completing-read "Remove entry" my/past-alerts)) my/past-alerts))
+    (run-hooks 'my/alert-updated-hook)))
+
+;; ** Faces
+(defface my/alert-prio-high-face
+  '((t :inherit default))
+  "")
+
+(defface my/alert-prio-med-face
+  '((t :inherit default))
+  "")
+
+(defface my/alert-prio-low-face
+  '((t :inherit default))
+  "")
+
+(defface my/alert-prio-none-face
+  '((t :inherit default))
+  "")
+
+;; ** Process completed alert
+(defun my/process-completed-alert ()
+  (let* ((buf-name (buffer-name))
+	 (alert-str (concat "Completed: " buf-name)))
+    (my/alert alert-str 'low)
+    (run-with-timer 5 nil (lambda () (my/alert-remove alert-str)))
+    (message (concat "Process complete. Buffer: " buf-name))))
 
 ;; * Package management
 ;; ** Guix
@@ -1236,7 +1261,6 @@ documentation: True")
 (define-key my/leader-map (kbd "C--") (lambda () (interactive) (text-scale-decrease 4)))
 (define-key my/leader-map (kbd "C-=") (lambda () (interactive) (text-scale-increase 4)))
 
-
 (define-key my/leader-map (kbd "+") (lambda () (interactive) (text-scale-mode 0)))
 (define-key my/leader-map (kbd "_") (lambda () (interactive) (text-scale-mode 0)))
 
@@ -1255,13 +1279,18 @@ documentation: True")
   (setq compilation-mode-map (make-sparse-keymap))
   (setq compilation-minor-mode-map (make-sparse-keymap))
   (setq compilation-shell-minor-mode-map (make-sparse-keymap))
-  (setq compilation-mode-tool-bar-map (make-sparse-keymap)))
+  (setq compilation-mode-tool-bar-map (make-sparse-keymap))
 
-(with-eval-after-load 'compile
-  (define-key compilation-mode-map (kbd "j") 'my/compilation-change-command)
-  (define-key compilation-mode-map (kbd "g") 'recompile)
-  (define-key compilation-mode-map (kbd "C-c") 'kill-compilation)
-  (evil-define-key '(normal insert visual replace) compilation-mode-map (kbd "C-c") 'kill-compilation))
+  (define-derived-mode my/compilation-mode compilation-mode "my/compilation-mode")
+  (define-key my/compilation-mode-map (kbd "j") 'my/compilation-change-command)
+  (define-key my/compilation-mode-map (kbd "g") 'recompile)
+  (define-key my/compilation-mode-map (kbd "C-c") 'kill-compilation)
+  (evil-define-key '(normal insert visual replace) my/compilation-mode-map (kbd "C-c") 'kill-compilation))
+
+
+;; *** Show alert after compilation completed
+(add-to-list 'compilation-finish-functions (lambda (_a _b)
+					     (my/process-completed-alert)))
 
 ;; ** Prefer loading newest lisp source file
 (setq load-prefer-newer t)
@@ -1759,12 +1788,15 @@ or go back to just one window (by deleting all but the selected window)."
 	   (time (org-clock-sum-current-item
 		  (org-clock-get-sum-start)))
 	   (limit (org-entry-get nil "MinTime"))
+	   (is-done (if (< time (string-to-number limit))
+			"todo"
+		      ""))
 	   (parent
 	    (save-excursion
 	      (org-up-heading-safe)
 	      (org-get-heading 'no-tags 'no-todo)))
 	   (parent-post (if parent
-			    (format "%\ 3s / %\ 3s min | " time limit)
+			    (format "%\ 4s %\ 3s / %\ 3s min | " is-done time limit)
 			  ""))
 	   (with-parent (concat parent-post heading)))
       (if org-mru-clock-keep-formatting
@@ -1881,7 +1913,6 @@ or go back to just one window (by deleting all but the selected window)."
 
   ;; Select
   (define-key org-brain-visualize-mode-map "m" 'org-brain-select)
-
 
   ;; (define-key org-brain-visualize-mode-map "m" 'org-brain-visualize-mind-map)
 
@@ -2220,17 +2251,11 @@ or go back to just one window (by deleting all but the selected window)."
   (remove-hook 'post-command-hook 'my/ivy-set-height)
   (setq ivy-height (+ (frame-height) 1)))
 
-;; Ivy height
 (add-hook 'after-init-hook
 	  (lambda ()
 	    (add-hook 'post-command-hook 'my/ivy-set-height)))
 
-;; (add-hook 'exwm-init-hook (lambda () (run-with-timer 5 nil (lambda () (setq ivy-height (+ (frame-height) 1))))))
-;; (add-hook 'exwm-init-hook (lambda () (run-with-timer 10 nil (lambda () (setq ivy-height (+ (frame-height) 1))))))
-;; (add-hook 'exwm-init-hook (lambda () (run-with-timer 15 nil (lambda () (setq ivy-height (+ (frame-height) 1))))))
-
 (with-eval-after-load 'counsel
-  ;; Disable set height depending on command
   (setq ivy-height-alist nil)
   (setq-default ivy-height-alist nil)
   (add-to-list 'ivy-height-alist '(swiper . 10))
@@ -4630,13 +4655,23 @@ do the
 					     (when (string-match-p my/profiler-graph-gen-program compile-command)
 					       (find-file (car (directory-files default-directory nil ".svg$"))))))
 
+(defvar my/haskell-compile-commands
+  '("cabal build"
+    "cabal run"
+    "profiling"
+    "cabal build -O2"
+
+    ;; Reflex
+    "nix-shell -A shells.ghc --run \"cabal new-build all\""
+    "nix-shell -A shells.ghcjs --run \"cabal --project-file=cabal-ghcjs.project --builddir=dist-ghcjs new-build all\""))
+
 (defun my/cabal-compile ()
   (let ((default-directory (projectile-compilation-dir)))
     (compile
      (my/cabal-create-compile-command))))
 
 (defun my/cabal-create-compile-command ()
-  (let ((input (completing-read "" '("cabal build" "cabal run" "profiling" "cabal build -O2"))))
+  (let ((input (completing-read "" my/haskell-compile-commands)))
     (if (string= input "profiling")
 	(my/cabal-build-profiling-command)
       input)))
@@ -5776,11 +5811,10 @@ do the
       (concat "^[^#$\n]* [#" my/eshell-prompt-symbol "] "))
 
 ;; ** Alert when task is done
-(add-hook 'eshell-post-command-hook (lambda () (interactive)
-				      (if (not (= 1 (line-number-at-pos (point))))
-					  (progn
-					    (my/alert nil 'low)
-					    (message "Eshell command done!")))))
+(add-hook 'eshell-post-command-hook (lambda ()
+				      ;; Fix for eshell-mode boot-up triggering hook
+				      (when (or (not eshell-mode) (not (= 2 (line-number-at-pos (point)))))
+					(my/process-completed-alert))))
 
 ;; ** Custom Goto beg of line
 (defun my/eshell-goto-beg-of-line ()
@@ -6448,8 +6482,8 @@ do the
 ;; (setq shr-color-visible-distance-min 5)
 
 ;; Fully disables colors
-(with-eval-after-load 'shr
-  (advice-add #'shr-colorize-region :around (defun shr-no-colourise-region (&rest ignore))))
+;; (with-eval-after-load 'shr
+;;   (advice-add #'shr-colorize-region :around (defun shr-no-colourise-region (&rest ignore))))
 
 ;; ** Auto-open image at point
 ;; ;; Redefine function to attempt to open image if link at point wasn't found
@@ -6474,6 +6508,10 @@ do the
 	(if external
 	    (funcall shr-external-browser url)
 	  (browse-url url)))))))
+
+;; ** Shrface
+;; (straight-use-package '(shrface :type git :host github :repo "chenyanming/shrface"))
+;;(require 'shrface)
 
 ;; * Browser
 (defun my/get-search-url ()
@@ -8009,28 +8047,25 @@ do the
 ;; ** Ivy occur
 ;; *** Keys
 ;; Also ivy-occur-grep
-(with-eval-after-load 'ivy
-  (setq ivy-occur-mode-map (make-sparse-keymap))
-  (define-prefix-command 'my/ivy-occur-map)
-  (evil-define-key 'normal ivy-occur-mode-map (kbd (concat my/leader-map-key " a")) 'my/ivy-occur-map)
-  (evil-define-key 'normal ivy-occur-grep-mode-map (kbd (concat my/leader-map-key " a")) 'my/ivy-occur-map)
+(dont-compile
+  (with-eval-after-load 'ivy
+    (setq ivy-occur-mode-map (make-sparse-keymap))
+    (setq-default ivy-occur-mode-map (make-sparse-keymap))
 
-  (define-key my/ivy-occur-map (kbd "w") 'ivy-wgrep-change-to-wgrep-mode)
-  (define-key my/ivy-occur-map (kbd "r") 'ivy-occur-revert-buffer)
+    (define-prefix-command 'my/ivy-occur-map)
+    (evil-define-key 'normal ivy-occur-mode-map (kbd (concat my/leader-map-key " a")) 'my/ivy-occur-map)
+    (evil-define-key 'normal ivy-occur-grep-mode-map (kbd (concat my/leader-map-key " a")) 'my/ivy-occur-map)
 
-  (evil-define-key '(normal visual insert) ivy-occur-mode-map (kbd "RET") 'ivy-occur-press)
-  (evil-define-key '(normal visual) ivy-occur-mode-map (kbd "p") 'evil-previous-line)
-  (evil-define-key '(normal visual) ivy-occur-mode-map (kbd "n") 'evil-next-line)
-  (evil-define-key '(normal visual) ivy-occur-mode-map (kbd "C-y") 'ivy-occur-read-action)
+    (define-key my/ivy-occur-map (kbd "w") 'ivy-wgrep-change-to-wgrep-mode)
+    (define-key ivy-occur-grep-mode-map (kbd "w") 'ivy-wgrep-change-to-wgrep-mode)
 
-  (evil-define-key '(normal visual insert) ivy-occur-grep-mode-map (kbd "RET") 'ivy-occur-press)
-  (evil-define-key '(normal visual) ivy-occur-grep-mode-map (kbd "p") 'evil-previous-line)
-  (evil-define-key '(normal visual) ivy-occur-grep-mode-map (kbd "n") 'evil-next-line)
-  (evil-define-key '(normal visual) ivy-occur-grep-mode-map (kbd "C-y") 'ivy-occur-read-action))
+    (evil-define-key '(normal visual insert) ivy-occur-mode-map (kbd "RET") 'ivy-occur-press)
+    (evil-define-key '(normal visual) ivy-occur-mode-map (kbd "C-y") 'ivy-occur-read-action)
 
-;; (define-key map (kbd "a") 'ivy-occur-read-action)
-;; (define-key map (kbd "o") 'ivy-occur-dispatch)
-;; (define-key map (kbd "c") 'ivy-occur-toggle-calling)
+    (define-key ivy-occur-mode-map "g" 'ivy-occur-revert-buffer)
+
+    (setq ivy-occur-grep-mode-map (copy-keymap ivy-occur-mode-map))
+    (setq-default ivy-occur-grep-mode-map (copy-keymap ivy-occur-mode-map))))
 
 ;; ** Loccur
 (straight-use-package 'loccur)
@@ -8714,13 +8749,14 @@ do the
 
 (define-globalized-minor-mode global-olivetti-mode
   nil (lambda ()
-	(pcase major-mode
-	  ('minibuffer-inactive-mode)
-	  ('exwm-mode)
-	  ('mu4e-headers-mode)
-	  ('pdf-view-mode)
-	  ('image-mode)
-	  (_ (olivetti-mode 1)))))
+	(unless (string= " *diff-hl* " (buffer-name (current-buffer)))
+	  (pcase major-mode
+	    ('minibuffer-inactive-mode)
+	    ('exwm-mode)
+	    ('mu4e-headers-mode)
+	    ('pdf-view-mode)
+	    ('image-mode)
+	    (_ (olivetti-mode 1))))))
 
 (global-olivetti-mode 1)
 
@@ -9457,6 +9493,7 @@ do the
 			 " ")))
 
 		     (:eval my/past-alerts)
+		     " "
 
 		     ;; Org clock
 		     (:eval (if (org-clocking-p)
