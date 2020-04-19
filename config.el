@@ -9476,24 +9476,17 @@ do the
 (progn
   (setq-default my/status-line-format
 		'(:eval
-		  ;; (my/mode-line-align
-		  ;;  (format-mode-line
-		  ;;   (quote
-		  ;;    (
-		  ;;     (:eval my/past-alerts)
-		  ;;     )))
-
 		  (format-mode-line
 		   (quote
 		    (
+		     (:eval my/past-alerts)
+		     " "
+
 		     (:eval
 		      (when (string= major-mode 'exwm-mode)
 			(concat
 			 (propertize (concat " ") 'face `(:background ,(my/get-current-evil-cursor-color)))
 			 " ")))
-
-		     (:eval my/past-alerts)
-		     " "
 
 		     ;; Org clock
 		     (:eval (if (org-clocking-p)
@@ -9554,7 +9547,6 @@ do the
 
 		     (:eval my/date)
 		     )))))
-  ;; )
   (setq-default mini-modeline-r-format my/status-line-format))
 
 ;; ** mini-modeline
