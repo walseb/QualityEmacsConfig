@@ -29,5 +29,7 @@
 
 (defvar my/use-w3m nil)
 
-;; Should be true if in either WSL or VM with windows host
-(defvar my/windows-host t)
+(defvar my/disable-touchpad nil)
+
+(setq my/spotify-client-id "")
+(setq my/spotify-client-secret "")

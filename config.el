@@ -99,6 +99,11 @@
   (when (file-exists-p path)
     (find-file path)))
 
+;; ** Sudo shell-command
+(defun my/sudo-shell-command (command &optional output-buffer error-buffer)
+  (let ((default-directory "/sudo::"))
+    (shell-command command output-buffer error-buffer)))
+
 ;; ** List
 ;; *** Get random element from list
 (defun my/get-random-element (list)
@@ -848,26 +853,26 @@ Borrowed from mozc.el."
 ;; * Compatibility
 ;; ** Windows host clipboard crash
 ;; Emacs crashes from time to time when it's run in linux but the clipboard contents are from windows.
-(setq x-select-request-type 'STRING)
+;; (setq x-select-request-type 'STRING)
 
-(when my/windows-host
-  (with-eval-after-load 'select
-    (defun gui--selection-value-internal (type)
-      (let ((request-type (if (eq window-system 'x)
-			      (or x-select-request-type
-				  '(UTF8_STRING COMPOUND_TEXT STRING))
-			    'STRING))
-	    text)
-	(with-demoted-errors "gui-get-selection: %S"
-	  (if (consp request-type)
-	      (while (and request-type (not text))
-		(setq text (gui-get-selection type (car request-type)))
-		(setq request-type (cdr request-type)))
-	    (setq text (gui-get-selection type request-type))))
-	;; This seems to be the problem
-	;; (if text
-	;; (remove-text-properties 0 (length text) '(foreign-selection nil) text))
-	text))))
+;; (when my/windows-host
+;;   (with-eval-after-load 'select
+;;     (defun gui--selection-value-internal (type)
+;;       (let ((request-type (if (eq window-system 'x)
+;;			      (or x-select-request-type
+;;				  '(UTF8_STRING COMPOUND_TEXT STRING))
+;;			    'STRING))
+;;	    text)
+;;	(with-demoted-errors "gui-get-selection: %S"
+;;	  (if (consp request-type)
+;;	      (while (and request-type (not text))
+;;		(setq text (gui-get-selection type (car request-type)))
+;;		(setq request-type (cdr request-type)))
+;;	    (setq text (gui-get-selection type request-type))))
+;;	;; This seems to be the problem
+;;	;; (if text
+;;	;; (remove-text-properties 0 (length text) '(foreign-selection nil) text))
+;;	text))))
 
 ;; * Alert
 (defvar my/past-alerts (list))
@@ -999,16 +1004,14 @@ Borrowed from mozc.el."
 (defun my/write-configs ()
   (interactive)
   (pcase (completing-read "Which config to write: "
-			  '("xinit" "xmodmap" "mpd" "gpg-agent" "cabal" "mbsync" "msmtp" "dovecot" "direnv") nil t)
+			  '("xinit" "xmodmap" "mpd" "cabal" "mbsync" "msmtp" "dovecot") nil t)
     ("xinit" (my/write-xinitrc))
     ("xmodmap" (my/write-xmodmap))
     ("mpd" (my/write-mpd-config))
-    ("gpg-agent" (my/write-gpg-agent-config))
     ("cabal" (my/write-cabal-config))
     ("mbsync" (my/write-mbsync-config))
     ("msmtp" (my/write-msmtp-config))
-    ("dovecot" (my/write-dovecot-config))
-    ("direnv" (my/write-direnv-config))))
+    ("dovecot" (my/write-dovecot-config))))
 
 (define-key my/leader-map (kbd "C-c") 'my/write-configs)
 
@@ -1091,14 +1094,6 @@ name \"pulse audio\"
     (my/create-file-if-not-exist (concat mpd-dir "mpd.db"))
     (my/create-dir-if-not-exist (concat mpd-dir "playlists/"))))
 
-;; ** Write GPG pinentry
-(defun my/write-gpg-agent-config ()
-  (let* ((gpg-dir "~/.gnupg/")
-	 (gpg-file (concat gpg-dir "gpg-agent.conf")))
-    (my/create-dir-if-not-exist gpg-dir)
-    (my/create-file-with-content-if-not-exist gpg-file (concat "allow-emacs-pinentry\n" "pinentry-program " (shell-command-to-string "which pinentry-emacs")))
-    (shell-command "gpgconf --reload gpg-agent")))
-
 ;; ** Write cabal config
 (defconst my/nix-config-text "nix: true
 documentation: True")
@@ -1131,12 +1126,6 @@ documentation: True")
 (defun my/write-dovecot-config ()
   (let ((config-dir  "~/.dovecot-pass"))
     (my/create-file-with-content-if-not-exist config-dir "admin:{PLAIN}")))
-
-;; ** Write direnv config
-(defun my/write-direnv-config ()
-  (let ((config-target  "~/.direnvrc")
-	(config-source (concat user-emacs-directory "configs/direnv/.direnvrc")))
-    (copy-file config-source config-target)))
 
 ;; * Minor
 ;; ** Startup
@@ -1208,11 +1197,11 @@ documentation: True")
 ;; ** Increase and decrease brightness
 (defun my/increase-brightness ()
   (interactive)
-  (shell-command "xbacklight +5"))
+  (my/sudo-shell-command "brightnessctl s +5%"))
 
 (defun my/decrease-brightness ()
   (interactive)
-  (shell-command "xbacklight -5"))
+  (my/sudo-shell-command "brightnessctl s 5%-"))
 
 (global-set-key (kbd "<XF86MonBrightnessUp>") 'my/increase-brightness)
 (global-set-key (kbd "<XF86MonBrightnessDown>") 'my/decrease-brightness)
@@ -1249,12 +1238,6 @@ documentation: True")
 (setq async-shell-command-buffer 'new-buffer)
 
 ;; ** Zoom
-;; (defun my/increase-volume ()
-;; (interactive)
-;; (text-scale-set 0))
-;; (define-key my/leader-map (kbd "+") ')
-;; (define-key my/leader-map (kbd "_") (lambda () (interactive) (text-scale-set 0)))
-
 (define-key my/leader-map (kbd "-") (lambda () (interactive) (text-scale-decrease 1)))
 (define-key my/leader-map (kbd "=") (lambda () (interactive) (text-scale-increase 1)))
 
@@ -1374,6 +1357,15 @@ or go back to just one window (by deleting all but the selected window)."
 ;; *** Disable mouse wheel acceleration
 (setq mouse-wheel-progressive-speed nil)
 
+;; ** Mouse-avoidance
+(mouse-avoidance-mode 'banish)
+
+(setq mouse-avoidance-banish-position '((frame-or-window . frame)
+					(side . right)
+					(side-pos . 0)
+					(top-or-bottom . bottom)
+					(top-or-bottom-pos . 0)))
+
 ;; ** Minibuffer-depth
 ;; Enable and show minibuffer recursive depth
 (setq enable-recursive-minibuffers t)
@@ -1429,7 +1421,7 @@ or go back to just one window (by deleting all but the selected window)."
 ;; ** Quit emacs
 (defun my/quit-emacs ()
   (interactive)
-  (my/open-if-exists "~/Notes/Report.org")
+  (my/open-if-exists "~/Notes/Planning/Report Weekly.org")
   (save-buffers-kill-terminal nil))
 
 (with-eval-after-load 'files
@@ -1533,6 +1525,13 @@ or go back to just one window (by deleting all but the selected window)."
   (find-file "/etc/nixos/configuration.nix"))
 
 (define-key my/open-map (kbd "C") 'my/nixos-config-visit)
+
+;; ** Visit nix home config
+(defun my/nix-home-config-visit ()
+  (interactive)
+  (find-file "~/.config/nixpkgs/home.nix"))
+
+(define-key my/open-map (kbd "C-c") 'my/nix-home-config-visit)
 
 ;; ** Visit config
 (defun my/config-visit ()
@@ -2029,7 +2028,7 @@ or go back to just one window (by deleting all but the selected window)."
 (setq counsel-outline-settings
       '((emacs-lisp-mode
 	 :outline-regexp ";; [*]\\{1,8\\} "
-	 :outline-level counsel-outline-level-emacs-lisp)
+    :outline-level counsel-outline-level-emacs-lisp)
 	(org-mode
 	 :outline-title counsel-outline-title-org
 	 :action counsel-org-goto-action
@@ -2260,7 +2259,8 @@ or go back to just one window (by deleting all but the selected window)."
   (setq-default ivy-height-alist nil)
   (add-to-list 'ivy-height-alist '(swiper . 10))
   (add-to-list 'ivy-height-alist '(swiper-isearch . 10))
-  (add-to-list 'ivy-height-alist '(counsel-switch-buffer . 10)))
+  (add-to-list 'ivy-height-alist '(counsel-switch-buffer . 10))
+  (add-to-list 'ivy-height-alist '(git-backup-ivy . 3)))
 
 ;; **** Highlight whole row in minibuffer
 ;; Change the default emacs formatter to highlight whole row in minibuffer
@@ -2373,10 +2373,13 @@ If the input is empty, select the previous history element instead."
 ;; (setq-default counsel-grep-base-command "rg -i -M 120 --no-heading --line-number --color never '%s' %s")
 (setq counsel-grep-base-command "grep -i -E -n -e %s %s")
 
+;; *** Counsel-rg
+(setq counsel-rg-base-command "rg --with-filename --no-heading --line-number --color never %s")
+
 ;; *** Counsel-yank-pop
 ;; Delete text under selection when pasing just like with normal evil paste
 (advice-add #'counsel-yank-pop :before (lambda (&optional arg) (if (string= evil-state 'visual)
-								   (delete-region (point) (mark)))))
+							      (delete-region (point) (mark)))))
 
 ;; *** Always run counsel ag in default directory
 (defvar my/rg-available (executable-find "rg"))
@@ -3992,7 +3995,10 @@ If the input is empty, select the previous history element instead."
      ;; (let ((browse-url-browser-function 'eww-browse-url))
      (my/ivy-hoogle))
     ('haskell-interactive-mode (my/ivy-hoogle))
-    ('nix-mode (my/nixos-options-ivy))))
+    ('nix-mode
+     (if (string= (file-name-nondirectory (buffer-file-name)) "home.nix")
+	 (man "home-configuration.nix")
+       (my/nixos-options-ivy)))))
 
 (define-key my/leader-map (kbd "h") help-map)
 (define-key my/leader-map (kbd "H") 'my/auto-docs)
@@ -5641,8 +5647,8 @@ do the
 (setq eshell-prefer-lisp-variables nil)
 
 ;; ** Use tramp for sudo
-;; (require 'em-tramp)
-;; (defalias 'sudo 'eshell/sudo)
+(require 'em-tramp)
+(defalias 'sudo 'eshell/sudo)
 
 ;; ** Completion
 ;; *** Bash-completion
@@ -6096,10 +6102,6 @@ do the
 (straight-use-package 'direnv)
 (direnv-mode)
 
-;; *** Lorri
-(when (my/is-system-package-installed 'lorri)
-  (my/async-start-process-shell-command "lorri" "lorri" "daemon"))
-
 ;; ** Nix-mode
 (straight-use-package 'nix-mode)
 
@@ -6475,6 +6477,54 @@ do the
 
 (add-hook 'exwm-init-hook (lambda () (interactive) (exwm-workspace-attach-minibuffer)))
 
+;; * Xinput
+(defun my/get-xinput-device-ID (search-term)
+  (let* ((xinput-list (shell-command-to-string "xinput --list"))
+	 (correct-line-pos (string-match-p search-term xinput-list))
+	 (id-pos (string-match-p "id=" xinput-list correct-line-pos))
+	 (number-pos-beg (string-match-p "[[:digit:]]" xinput-list id-pos))
+	 (number-pos-end (string-match-p "[[:blank:]]" xinput-list (+ 1 number-pos-beg)))
+	 (num (string-to-number (substring-no-properties xinput-list number-pos-beg number-pos-end))))
+    num))
+
+(defun my/xinput-is-device-enabled (device-id)
+  (let* ((xinput-list (shell-command-to-string (concat "xinput list-props " (number-to-string device-id))))
+	 (enabled-pos (string-match-p "Device Enabled" xinput-list))
+	 (colon-pos (string-match-p "\:[[:blank:]]*" xinput-list enabled-pos))
+	 (num-pos-beg (string-match-p "[[:digit:]]" xinput-list colon-pos))
+	 (num-pos-end (string-match-p "$" xinput-list num-pos-beg))
+	 (num (string-to-number (substring-no-properties xinput-list num-pos-beg num-pos-end))))
+    (if (= num 1)
+	t
+      nil)))
+
+(defun my/xinput-toggle-device (device-id)
+  (if (my/xinput-is-device-enabled device-id)
+      (my/xinput-disable-device device-id)
+    (my/xinput-enable-device device-id)))
+
+(defun my/xinput-enable-device (device-id)
+  (shell-command (concat "xinput --enable " (number-to-string device-id))))
+
+(defun my/xinput-disable-device (device-id)
+  (shell-command (concat "xinput --disable " (number-to-string device-id))))
+
+;; ** Touchpad
+(defun my/xinput-toggle-touchpad ()
+  (interactive)
+  (my/xinput-toggle-device (my/get-xinput-device-ID "Touchpad")))
+
+(defun my/xinput-enable-touchpad ()
+  (interactive)
+  (my/xinput-enable-device (my/get-xinput-device-ID "Touchpad")))
+
+(defun my/xinput-disable-touchpad ()
+  (interactive)
+  (my/xinput-disable-device (my/get-xinput-device-ID "Touchpad")))
+
+(if my/disable-touchpad
+    (my/xinput-disable-touchpad))
+
 ;; * Shr
 ;; ** Fix background colors shr
 ;; Try fixing colors
@@ -6584,6 +6634,10 @@ do the
 (evil-define-key 'normal w3m-mode-map (kbd "U") 'w3m-db-history)
 
 ;; ** Eww/shr
+;; *** Disable header line
+(with-eval-after-load 'eww
+  (defun eww-update-header-line-format () nil))
+
 ;; *** Add URL to buffer name
 (with-eval-after-load 'eww
   (add-hook 'eww-after-render-hook (lambda () (interactive) (my/give-buffer-unique-name (concat "eww - " (plist-get eww-data :title))))))
@@ -6677,6 +6731,7 @@ do the
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "N") 'exwm-firefox-core-tab-next)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "P") 'exwm-firefox-core-tab-previous)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "k") 'exwm-firefox-core-tab-close)
+    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "K") 'exwm-firefox-core-tab-close)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "g n") 'exwm-firefox-core-find-next)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "g p") 'exwm-firefox-core-find-previous)
     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-s") 'exwm-firefox-core-quick-find)
@@ -6854,14 +6909,18 @@ do the
     ('generic
      (pcase major-mode
        ('nix-mode
-	(if (string= "/etc/nixos/" default-directory)
+	(if (file-in-directory-p (buffer-file-name) "/etc/nixos/")
 	    (progn
 	      ;; Not sure why but this is required
 	      (require 'ivy)
 
 	      ;; Run rebuild as sudo
 	      (let ((default-directory (concat "/sudo::" default-directory)))
-		(compile "nixos-rebuild switch")))))))))
+		(compile "nixos-rebuild switch"))
+
+	      )
+	  (if (string= (file-name-nondirectory (buffer-file-name)) "home.nix" )
+	      (compile "home-manager switch"))))))))
 
 ;; ** Counsel projectile
 ;; If enabled it auto enables projectile, which has high CPU usage
@@ -6969,44 +7028,87 @@ do the
 
 ;; * Media
 ;; ** Volume keys
-(defvar my/audio-sink nil)
-;; Pulse sometimes first starts when a video, etc starts
-(defun my/pulse-update-audio-sink ()
-  (interactive)
-  (setq my/audio-sink (substring (shell-command-to-string "pacmd list-sinks | grep \"\* index\"") (string-match "[0-9]" (shell-command-to-string "pacmd list-sinks | grep \"index\"")) -1)))
-
 (defun my/pulse-mute-toggle ()
   (interactive)
-  (my/pulse-update-audio-sink)
-  (shell-command (concat "pactl set-sink-mute " my/audio-sink " toggle")))
-
-(global-set-key (kbd "<XF86AudioMute>") 'my/pulse-mute-toggle)
-(global-set-key (kbd "s-`") 'my/pulse-mute-toggle)
+  (shell-command "amixer -M set Master toggle"))
 
 (defun my/pulse-raise-volume ()
   (interactive)
-  (my/pulse-update-audio-sink)
-  ;; Unmute
-  ;; (shell-command (concat "pactl set-sink-mute " my/audio-sink " 0"))
-  (shell-command (concat "pactl set-sink-volume " my/audio-sink " +2.5%")))
-
-(global-set-key (kbd "<XF86AudioRaiseVolume>") 'my/pulse-raise-volume)
-(global-set-key (kbd "s-=") 'my/pulse-raise-volume)
+  (shell-command "amixer -M set Master 2.5%+"))
 
 (defun my/pulse-lower-volume ()
   (interactive)
-  (my/pulse-update-audio-sink)
-  ;; Unmute
-  ;; (shell-command (concat "pactl set-sink-mute " my/audio-sink " 0"))
-  (shell-command (concat "pactl set-sink-volume " my/audio-sink " -2.5%")))
+  (shell-command "amixer -M set Master 2.5%-"))
 
+;; *** Hydra
+(with-eval-after-load 'hydra
+  (defhydra my/pulse-hydra (:hint nil
+				  :color red
+				  :pre
+				  (progn
+				    (setq hydra-hint-display-type 'message)
+				    (setq my/pulse-hydra/hint "Pulse control")))
+    ("p" my/pulse-raise-volume)
+    ("n" my/pulse-lower-volume)
+    ("m" my/pulse-mute-toggle)))
+
+;; *** Keys
 (global-set-key (kbd "<XF86AudioLowerVolume>") 'my/pulse-lower-volume)
+(global-set-key (kbd "<XF86AudioRaiseVolume>") 'my/pulse-raise-volume)
+(global-set-key (kbd "<XF86AudioMute>") 'my/pulse-mute-toggle)
 
 (global-set-key (kbd "s--") 'my/pulse-lower-volume)
+(global-set-key (kbd "s-=") 'my/pulse-raise-volume)
+
+(global-set-key (kbd "s-`") 'my/pulse-mute-toggle)
 
 ;; ** Music
 (define-prefix-command 'my/music-map)
-(define-key my/leader-map (kbd "M") 'my/music-map)
+(define-key my/leader-map (kbd "m") 'my/music-map)
+
+(define-key my/music-map (kbd "p") '(lambda ()
+				      (interactive)
+				      (require 'hydra)
+				      (my/pulse-raise-volume)
+				      (my/pulse-hydra/body)))
+
+(define-key my/music-map (kbd "n") '(lambda ()
+				      (interactive)
+				      (require 'hydra)
+				      (my/pulse-lower-volume)
+				      (my/pulse-hydra/body)))
+
+;; ***  Spotify
+(setq spotify-oauth2-client-id my/spotify-client-id)
+(setq spotify-oauth2-client-secret my/spotify-client-secret)
+
+(setq counsel-spotify-client-id my/spotify-client-id)
+(setq counsel-spotify-client-secret my/spotify-client-secret)
+
+;; **** Counsel-spotify
+(straight-use-package 'counsel-spotify)
+
+(with-eval-after-load 'counsel-spotify
+  (my/async-start-process-shell-command "spotify" "spotify"))
+
+;; ***** Keys
+(define-key my/music-map (kbd "e") 'counsel-spotify-search-track)
+(define-key my/music-map (kbd "E") 'counsel-spotify-search-playlist)
+(define-key my/music-map (kbd "s") 'counsel-spotify-toggle-play-pause)
+
+(define-key my/music-map (kbd "l") 'counsel-spotify-next)
+(define-key my/music-map (kbd "h") 'counsel-spotify-previous)
+
+(define-key my/music-map (kbd "o") '(lambda () (interactive) (switch-to-buffer "Spotify")))
+
+(global-set-key (kbd "<XF86AudioPlay>") 'counsel-spotify-play)
+(global-set-key (kbd "<XF86AudioStop>") 'counsel-spotify-toggle-play-pause)
+
+;; **** Spotify.el
+;; Not on melpa
+;; (straight-use-package '(spotify.el :type git :host github :repo "danielfm/spotify.el"))
+;; (setq spotify-transport 'dbus)
+;; (setq spotify-transport 'connect)
 
 ;; *** EMMS
 ;; Setup emms
@@ -7061,21 +7163,21 @@ do the
   (message "MPD database and emms updated!"))
 
 ;; **** Keys
-(define-key my/music-map (kbd "u") 'my/sync-mpd-and-emms)
+;; (define-key my/music-map (kbd "u") 'my/sync-mpd-and-emms)
 
-(define-key my/music-map (kbd "o") 'my/open-emms-and-connect)
-(define-key my/music-map (kbd "g") 'emms-seek-to)
-(define-key my/music-map (kbd "s") 'emms-pause)
+;; (define-key my/music-map (kbd "o") 'my/open-emms-and-connect)
+;; (define-key my/music-map (kbd "g") 'emms-seek-to)
+;; (define-key my/music-map (kbd "s") 'emms-pause)
 
-(with-eval-after-load 'emms-browser
-  (define-key emms-browser-mode-map (kbd "s") 'emms-pause)
+;; (with-eval-after-load 'emms-browser
+;;   (define-key emms-browser-mode-map (kbd "s") 'emms-pause)
 
-  (evil-define-key 'normal emms-browser-mode-map (kbd "RET") 'emms-browser-add-tracks)
+;;   (evil-define-key 'normal emms-browser-mode-map (kbd "RET") 'emms-browser-add-tracks)
 
-  (evil-define-key 'normal emms-playlist-mode-map (kbd "RET") 'emms-playlist-mode-play-smart))
+;;   (evil-define-key 'normal emms-playlist-mode-map (kbd "RET") 'emms-playlist-mode-play-smart))
 
-(global-set-key (kbd "<XF86AudioPlay>") 'emms-pause)
-(global-set-key (kbd "<XF86AudioStop>") 'emms-stop)
+;; (global-set-key (kbd "<XF86AudioPlay>") 'emms-pause)
+;; (global-set-key (kbd "<XF86AudioStop>") 'emms-stop)
 
 ;; *** MPD
 ;; **** Start MPD
@@ -7156,26 +7258,26 @@ do the
   (shell-command "mpc seek -60"))
 
 ;; **** Keys
-(define-key my/music-map (kbd "C-s") 'my/start-mpd)
-(define-key my/music-map (kbd "C-k") 'my/kill-music-daemon)
-(define-key my/music-map (kbd "i") 'my/mpd-info)
+;; (define-key my/music-map (kbd "C-s") 'my/start-mpd)
+;; (define-key my/music-map (kbd "C-k") 'my/kill-music-daemon)
+;; (define-key my/music-map (kbd "i") 'my/mpd-info)
 
-(define-key my/music-map (kbd "r") 'my/mpd-random-on)
-(define-key my/music-map (kbd "C-r") 'my/mpd-random-off)
+;; (define-key my/music-map (kbd "r") 'my/mpd-random-on)
+;; (define-key my/music-map (kbd "C-r") 'my/mpd-random-off)
 
-(define-key my/music-map (kbd "=") 'my/mpd-raise-volume)
-(define-key my/music-map (kbd "-") 'my/mpd-lower-volume)
+;; (define-key my/music-map (kbd "=") 'my/mpd-raise-volume)
+;; (define-key my/music-map (kbd "-") 'my/mpd-lower-volume)
 
-(define-key my/music-map (kbd "n") 'my/mpd-next-song)
-(define-key my/music-map (kbd "p") 'my/mpd-previous-song)
+;; (define-key my/music-map (kbd "n") 'my/mpd-next-song)
+;; (define-key my/music-map (kbd "p") 'my/mpd-previous-song)
 
-(define-key my/music-map (kbd "l") 'my/mpd-wind-forward)
-(define-key my/music-map (kbd "h") 'my/mpd-wind-backward)
-(define-key my/music-map (kbd "L") 'my/mpd-wind-far-forward)
-(define-key my/music-map (kbd "H") 'my/mpd-wind-far-backward)
+;; (define-key my/music-map (kbd "l") 'my/mpd-wind-forward)
+;; (define-key my/music-map (kbd "h") 'my/mpd-wind-backward)
+;; (define-key my/music-map (kbd "L") 'my/mpd-wind-far-forward)
+;; (define-key my/music-map (kbd "H") 'my/mpd-wind-far-backward)
 
-(global-set-key (kbd "<XF86AudioNext>") 'my/mpd-next-song)
-(global-set-key (kbd "<XF86AudioPrev>") 'my/mpd-previous-song)
+;; (global-set-key (kbd "<XF86AudioNext>") 'my/mpd-next-song)
+;; (global-set-key (kbd "<XF86AudioPrev>") 'my/mpd-previous-song)
 
 ;; * Screenshots
 ;; ** Functions
@@ -8095,6 +8197,7 @@ do the
 
 ;; *** Keys
 (my/evil-universal-define-key "C-S-s" 'my/loccur-isearch)
+(my/evil-universal-define-key "C-M-s" 'my/loccur-isearch)
 
 ;; * Spelling
 (define-prefix-command 'my/spell-map)
@@ -8195,7 +8298,7 @@ do the
 (define-key my/spell-map (kbd "L") 'langtool-check-done)
 
 ;; * Calc
-(define-key my/leader-map (kbd "m") 'calc)
+(define-key my/leader-map (kbd "M") 'calc)
 
 (defun my/calc-kill-current-line ()
   (interactive)
@@ -9578,8 +9681,10 @@ do the
       `((".*" ,my/auto-saves-directory t)))
 
 ;; ** git-backup
-(straight-use-package '(git-backup :type git :host github :repo "antham/git-backup"))
-(straight-use-package '(git-backup-ivy :type git :host github :repo "walseb/git-backup-ivy"))
+(straight-use-package 'git-backup)
+(straight-use-package 'git-backup-ivy)
+
+(setq git-backup-ivy-preview-remove-header nil)
 
 (add-hook 'after-save-hook (lambda () (require 'git-backup-ivy) (git-backup-version-file git-backup-ivy-git-path git-backup-ivy-backup-path nil (buffer-file-name))))
 
@@ -9640,7 +9745,9 @@ do the
 			     (my/org-agenda-show-agenda-and-todo)
 			     (split-window-below)
 			     (other-window 1)
-			     (my/open-if-exists  "~/Notes/Report.org")
+			     (my/open-if-exists "~/Notes/Planning/Report Weekly.org")
+			     (olivetti-mode -1)
+			     (toggle-truncate-lines)
 			     (split-window-horizontally)
 			     (find-file
 			      (my/get-random-element (directory-files-recursively "~/Notes/Wallpapers" ".")))))
