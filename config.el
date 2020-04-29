@@ -1,5 +1,15 @@
 ;; -*- lexical-binding:t -*-
 ;; * Startup processes
+;; ** Device config
+(defun my/load-if-exists (f)
+  "load the elisp file only if it exists and is readable"
+  (if (file-readable-p f)
+      (load-file f)))
+
+;; If a device config is not made, load the default one
+(if (not (my/load-if-exists (concat user-emacs-directory "device.el")))
+    (load-file (concat user-emacs-directory "device-template.el")))
+
 ;; ** Theme
 (unless custom-enabled-themes
   (load-theme 'myTheme t))
@@ -8,6 +18,71 @@
 ;; Buffers that I don't want popping up by default
 (add-to-list 'display-buffer-alist
 	     '("\\*Async Shell Command\\*.*" display-buffer-no-window))
+
+;; ** Fonts
+;; *** Is font installed
+(defvar my/font-family-list nil)
+
+(defun my/font-installed (font)
+  (unless my/font-family-list
+    (setq my/font-family-list (font-family-list)))
+  (if (member font my/font-family-list)
+      t
+    nil))
+
+;; *** Find fonts
+(defun my/get-best-font ()
+  (if (my/font-installed "Liga Inconsolata LGC")
+      "Liga Inconsolata LGC"
+    (if (my/font-installed "Inconsolata LGC")
+	"Inconsolata LGC"
+      (if (my/font-installed "Inconsolata")
+	  "Inconsolata"
+	(if (my/font-installed "DejaVu Sans Mono")
+	    "DejaVu Sans Mono"
+	  (if (my/font-installed "Fira Mono")
+	      "Fira Mono"
+	    (if (my/font-installed "dejavu sans mono")
+		"DejaVuSansMono"
+	      (if (my/font-installed "Noto Sans Mono")
+		  "NotoSansMono"
+		(if (my/font-installed "Perfect DOS VGA 437")
+		    "Perfect DOS VGA 437")))))))))
+
+(defun my/get-best-symbol-font ()
+  (if (my/font-installed "Liga Inconsolata LGC")
+      "Liga Inconsolata LGC"
+    (if (my/font-installed "DejaVu Sans Mono")
+	"DejaVu Sans Mono"
+      (if (my/font-installed "dejavu sans mono")
+	  "DejaVuSansMono"
+	(if (my/font-installed "Noto Sans Mono")
+	    "NotoSansMono")))))
+
+;; *** Set fonts
+(defun my/update-fonts ()
+  (interactive)
+  (window-system
+   (let* ((font (my/get-best-font))
+	  (symbol-font (my/get-best-symbol-font)))
+     (if font
+	 (set-face-attribute 'default nil
+			     :family font
+			     :height my/default-face-height
+			     ;; :weight 'normal
+			     ;; :width 'normal
+			     )
+       (message "Main font not found"))
+
+     ;; Set symbol font
+     (if symbol-font
+	 (set-fontset-font t 'symbol symbol-font)
+       (message "Symbol font not found")))))
+
+;; ;; Run this after init because (font-family-list) returns nil if run in early-init
+;; (add-hook 'after-init-hook 'my/update-fonts)
+(when window-system
+  (my/update-fonts))
 
 ;; * Security
 (setq network-security-level 'medium)
@@ -104,12 +179,20 @@
   (let ((default-directory "/sudo::"))
     (shell-command command output-buffer error-buffer)))
 
+(defun my/sudo-shell-command-to-string (command)
+  (let ((default-directory "/sudo::"))
+    (shell-command-to-string command )))
+
 ;; ** List
 ;; *** Get random element from list
 (defun my/get-random-element (list)
   (let* ((size (length list))
 	 (index (random size)))
     (nth index list)))
+
+;; ** Print / Message at point
+(defun my/message-at-point (str)
+  (eros--eval-overlay str (point)))
 
 ;; ** Process
 ;; *** Run async process shell command
@@ -947,12 +1030,14 @@ Borrowed from mozc.el."
   "")
 
 ;; ** Process completed alert
-(defun my/process-completed-alert ()
+(defun my/alert-process-completed ()
   (let* ((buf-name (buffer-name))
 	 (alert-str (concat "Completed: " buf-name)))
-    (my/alert alert-str 'low)
-    (run-with-timer 5 nil (lambda () (my/alert-remove alert-str)))
-    (message (concat "Process complete. Buffer: " buf-name))))
+    (my/alert-statusline-message-temporary alert-str)))
+
+(defun my/alert-statusline-message-temporary (message &optional severity duration)
+  (my/alert message (or severity 'low))
+  (run-with-timer 5 nil (lambda () (my/alert-remove message))))
 
 ;; * Package management
 ;; ** Guix
@@ -1169,8 +1254,9 @@ documentation: True")
 ;; (setq visual-line-fringe-indicators '(top-left-angle nil))
 ;; (setq visual-line-fringe-indicators '(empty-line nil))
 
-;; ** Disable useless functionallity
+;; ** Disable tooltips
 (tooltip-mode -1)
+(setq show-help-function nil)
 
 ;; ** 1 letter prompts
 ;; Convert yes or no prompt to y or n prompt
@@ -1197,11 +1283,11 @@ documentation: True")
 ;; ** Increase and decrease brightness
 (defun my/increase-brightness ()
   (interactive)
-  (my/sudo-shell-command "brightnessctl s +5%"))
+  (my/message-at-point (my/sudo-shell-command-to-string "brightnessctl s +5%")))
 
 (defun my/decrease-brightness ()
   (interactive)
-  (my/sudo-shell-command "brightnessctl s 5%-"))
+  (my/message-at-point (my/sudo-shell-command-to-string "brightnessctl s 5%-")))
 
 (global-set-key (kbd "<XF86MonBrightnessUp>") 'my/increase-brightness)
 (global-set-key (kbd "<XF86MonBrightnessDown>") 'my/decrease-brightness)
@@ -1238,14 +1324,58 @@ documentation: True")
 (setq async-shell-command-buffer 'new-buffer)
 
 ;; ** Zoom
-(define-key my/leader-map (kbd "-") (lambda () (interactive) (text-scale-decrease 1)))
-(define-key my/leader-map (kbd "=") (lambda () (interactive) (text-scale-increase 1)))
+(defvar my/current-default-face-height my/default-face-height)
+(defvar my/resize-timer-not-running t)
 
-(define-key my/leader-map (kbd "C--") (lambda () (interactive) (text-scale-decrease 4)))
-(define-key my/leader-map (kbd "C-=") (lambda () (interactive) (text-scale-increase 4)))
+(defun my/set-default-face-modeline-resize ()
+  (if my/resize-timer-not-running
+      (progn
+	(setq my/resize-timer-not-running nil)
+	(run-with-idle-timer 1 nil (lambda ()
+				     (my/exwm-resize-minibuffer)
+				     (setq my/resize-timer-not-running t))))))
 
-(define-key my/leader-map (kbd "+") (lambda () (interactive) (text-scale-mode 0)))
-(define-key my/leader-map (kbd "_") (lambda () (interactive) (text-scale-mode 0)))
+(defun my/exwm-resize-minibuffer ()
+  (exwm-workspace-detach-minibuffer)
+  (exwm-workspace-attach-minibuffer))
+
+(defun my/set-default-face-height (height)
+  (set-face-attribute 'default nil :height height)
+  (setq my/current-default-face-height height)
+  (my/set-default-face-modeline-resize))
+
+(defun my/increment-default-face-height ()
+  (interactive)
+  (let ((new-face-height (+ my/current-default-face-height 5)))
+    (my/set-default-face-height new-face-height)))
+
+(defun my/decrement-default-face-height ()
+  (interactive)
+  (let ((new-face-height (- my/current-default-face-height 5)))
+    (my/set-default-face-height new-face-height)))
+
+(defun my/reset-default-face-height ()
+  (interactive)
+  (my/set-default-face-height my/default-face-height))
+
+(define-key my/leader-map (kbd "-") 'my/text-size-hydra/body)
+(define-key my/leader-map (kbd "=") 'my/text-size-hydra/body)
+
+(define-key my/leader-map (kbd "+") 'my/reset-default-face-height)
+(define-key my/leader-map (kbd "_") 'my/reset-default-face-height)
+
+;; *** Hydra
+(with-eval-after-load 'hydra
+  (defhydra my/text-size-hydra (:hint nil
+				      :color red
+				      :pre
+				      (progn
+					(setq hydra-hint-display-type 'message)
+					(setq my/text-size-hydra/hint (concat "Text height: " (number-to-string my/current-default-face-height)))))
+    ("p" my/increment-default-face-height nil)
+    ("n" my/decrement-default-face-height nil)
+    ("N" my/reset-default-face-height nil)
+    ("P" my/reset-default-face-height nil)))
 
 ;; ** Exit emacs
 (define-key my/leader-map (kbd "C-z") 'save-buffers-kill-emacs)
@@ -1264,16 +1394,17 @@ documentation: True")
   (setq compilation-shell-minor-mode-map (make-sparse-keymap))
   (setq compilation-mode-tool-bar-map (make-sparse-keymap))
 
-  (define-derived-mode my/compilation-mode compilation-mode "my/compilation-mode")
+  (setq my/compilation-mode-map (make-sparse-keymap))
+  (define-minor-mode my/compilation-mode nil nil nil my/compilation-mode-map)
   (define-key my/compilation-mode-map (kbd "j") 'my/compilation-change-command)
   (define-key my/compilation-mode-map (kbd "g") 'recompile)
   (define-key my/compilation-mode-map (kbd "C-c") 'kill-compilation)
-  (evil-define-key '(normal insert visual replace) my/compilation-mode-map (kbd "C-c") 'kill-compilation))
-
+  (evil-define-key '(normal insert visual replace) my/compilation-mode-map (kbd "C-c") 'kill-compilation)
+  (add-hook 'compilation-mode-hook 'my/compilation-mode))
 
 ;; *** Show alert after compilation completed
 (add-to-list 'compilation-finish-functions (lambda (_a _b)
-					     (my/process-completed-alert)))
+					     (my/alert-process-completed)))
 
 ;; ** Prefer loading newest lisp source file
 (setq load-prefer-newer t)
@@ -1431,29 +1562,40 @@ or go back to just one window (by deleting all but the selected window)."
 ;; ** Break timer
 ;; In seconds
 (defvar my/break-time (* 21 60))
+(defvar my/not-clocked-in-break-time (* 1 60))
 (defvar my/enable-breaks t)
 
 (defun my/break-screen ()
   (when my/enable-breaks
     ;; Restart timer
-    (my/break-timer-run)
+    (let* (
+	   (is-clocked-in (org-clocking-p))
+	   (time (if is-clocked-in
+		     my/break-time
+		   my/not-clocked-in-break-time)))
 
-    ;; Clock
-    (run-with-timer 0.5 nil (lambda () (sleep-for 3)))
-    (org-mru-clock-in)
+      (wher is-clocked-in
+	    (my/message-at-point "Clock in!")
+	    (my/alert-statusline-message-temporary "Clock in!" 'med))
 
-    ;; Show break buffer
-    ;; (switch-to-buffer "Break")
-    ;; (insert "Break")
-    ;; (message (concat "Break at " (format-time-string "%H:%M")))
-    ))
+      (my/break-timer-run time)
 
-(defun my/break-timer-run ()
+      ;; Clock
+      (run-with-timer 0.2 nil (lambda () (sleep-for 5)))
+      (org-mru-clock-in)
+
+      ;; Show break buffer
+      ;; (switch-to-buffer "Break")
+      ;; (insert "Break")
+      ;; (message (concat "Break at " (format-time-string "%H:%M")))
+      )))
+
+(defun my/break-timer-run (time)
   (interactive)
-  (run-with-timer my/break-time nil #'my/break-screen))
+  (run-with-timer time nil #'my/break-screen))
 
 (when my/enable-breaks
-  (my/break-timer-run))
+  (my/break-timer-run my/not-clocked-in-break-time))
 
 ;; * File options
 (define-prefix-command 'my/file-options-map)
@@ -1805,7 +1947,21 @@ or go back to just one window (by deleting all but the selected window)."
 ;; *** org-time-budgets
 ;; (straight-use-package 'org-time-budgets)
 
+;; *** Quicly clock offline time
+;; https://emacs.stackexchange.com/questions/34905/how-to-clock-offline-hours-quickly
+(defun my/org-insert-clock-range (&optional n)
+  (interactive "NTime Offset (in min): ")
+  (let* ((ctime (cdr (decode-time (current-time))))
+	 (min (car ctime))
+	 (start (apply 'encode-time 0 (- min n) (cdr ctime))))
+    (org-insert-time-stamp start t t "CLOCK: ")
+    (insert "--")
+    (org-insert-time-stamp (current-time) t t)))
+
 ;; *** Keys
+
+(define-key my/org-mode-map (kbd "c") 'my/org-insert-clock-range)
+
 ;; (define-prefix-command 'my/clock-map)
 ;; (define-key my/leader-map (kbd "c") 'my/clock-map)
 
@@ -3368,6 +3524,12 @@ If the input is empty, select the previous history element instead."
 
   ("R" rename-buffer nil)
 
+  ("-" (lambda () (interactive) (text-scale-decrease 1)))
+  ("=" (lambda () (interactive) (text-scale-increase 1)))
+
+  ("+" (lambda () (interactive) (text-scale-mode 0)))
+  ("_" (lambda () (interactive) (text-scale-mode 0)))
+
   ;; Add this to not auto exit insert mode after closing the hydra
   ("<escape>" nil)
   ("C-e" nil)
@@ -3771,6 +3933,7 @@ If the input is empty, select the previous history element instead."
 (add-to-list 'aggressive-indent-excluded-modes 'java-mode)
 (add-to-list 'aggressive-indent-excluded-modes 'c-mode)
 (add-to-list 'aggressive-indent-excluded-modes 'fsharp-mode)
+(add-to-list 'aggressive-indent-excluded-modes 'haskell-cabal-mode)
 
 ;; *** Whitespace cleanup
 (straight-use-package 'whitespace-cleanup-mode)
@@ -3976,17 +4139,6 @@ If the input is empty, select the previous history element instead."
 ;; (define-key my/leader-map (kbd "D") 'my/auto-debug-buffer)
 ;; (define-key my/leader-map (kbd "M-D") 'my/auto-start-debugger)
 
-;; *** Auto compile
-(defun my/auto-local-compile ()
-  (interactive)
-  (pcase major-mode
-    ('emacs-lisp-mode (emacs-lisp-byte-compile))
-    ('clojure-mode (cider-eval-last-sexp))
-    ('plantuml-mode (plantuml-preview-buffer 0))
-    (_ (recompile))))
-
-(define-key my/leader-map (kbd "C") 'my/auto-local-compile)
-
 ;; *** Auto docs
 (defun my/auto-docs ()
   (interactive)
@@ -4144,6 +4296,7 @@ If the input is empty, select the previous history element instead."
 ;; **** Eros
 (straight-use-package 'eros)
 
+(setq eros-eval-result-duration 'command)
 (eros-mode 1)
 
 ;; ***** Make it work inside run with timer and such
@@ -4665,11 +4818,7 @@ do the
   '("cabal build"
     "cabal run"
     "profiling"
-    "cabal build -O2"
-
-    ;; Reflex
-    "nix-shell -A shells.ghc --run \"cabal new-build all\""
-    "nix-shell -A shells.ghcjs --run \"cabal --project-file=cabal-ghcjs.project --builddir=dist-ghcjs new-build all\""))
+    "cabal build -O2"))
 
 (defun my/cabal-compile ()
   (let ((default-directory (projectile-compilation-dir)))
@@ -4710,6 +4859,20 @@ do the
     "-hbbio,... = Restrict the profile to closures with one of the specified biographies, where bio is one of lag, drag, void, or use."
     "-isecs: = Set the profiling (sampling) interval to secs seconds (the default is 0.1 second). Fractions are allowed: for example -i0.2 will get 5 samples per second. This only affects heap profiling; time profiles are always sampled with the frequency of the RTS clock. See Section 5.3, “Time and allocation profiling” for changing that."
     "-xt = Include the memory occupied by threads in a heap profile. Each thread takes up a small area for its thread state in addition to the space allocated for its stack (stacks normally start small and then grow as necessary). This includes the main thread, so using -xt is a good way to see how much stack space the program is using."))
+
+;; ****** Reflex
+(setq my/haskell-reflex-compile-commands
+      '(
+	;; Reflex
+	"ob run"
+	))
+
+(defun my/haskell-reflex-compile ()
+  (let ((default-directory (projectile-compilation-dir)))
+    (compile
+     (car my/haskell-reflex-compile-commands)
+     ;; (completing-read "Compile: " my/haskell-reflex-compile-commands)
+     )))
 
 ;; **** Nix cabal
 ;; Use nix-haskell-mode for automatic project management
@@ -5647,8 +5810,8 @@ do the
 (setq eshell-prefer-lisp-variables nil)
 
 ;; ** Use tramp for sudo
-(require 'em-tramp)
-(defalias 'sudo 'eshell/sudo)
+;; (require 'em-tramp)
+;; (defalias 'sudo 'eshell/sudo)
 
 ;; ** Completion
 ;; *** Bash-completion
@@ -5820,7 +5983,7 @@ do the
 (add-hook 'eshell-post-command-hook (lambda ()
 				      ;; Fix for eshell-mode boot-up triggering hook
 				      (when (or (not eshell-mode) (not (= 2 (line-number-at-pos (point)))))
-					(my/process-completed-alert))))
+					(my/alert-process-completed))))
 
 ;; ** Custom Goto beg of line
 (defun my/eshell-goto-beg-of-line ()
@@ -6904,23 +7067,29 @@ do the
 ;; *** Auto compile project
 (defun my/auto-compile-project ()
   (interactive)
-  (pcase (projectile-project-type)
-    ('haskell-cabal (my/cabal-compile))
-    ('generic
-     (pcase major-mode
-       ('nix-mode
-	(if (file-in-directory-p (buffer-file-name) "/etc/nixos/")
-	    (progn
-	      ;; Not sure why but this is required
-	      (require 'ivy)
+  (pcase major-mode
+    ('plantuml-mode (plantuml-preview-buffer 0))
+    (_
+     (pcase (projectile-project-type)
+       ('haskell-cabal (my/cabal-compile))
+       ('nix
+	;; Reflex obelisk
+	(if (seq-contains (directory-files (projectile-project-root)) "frontend" 'string=)
+	    (my/haskell-reflex-compile)))
+       ('generic
+	;; If reflex project
+	(pcase major-mode
+	  ('nix-mode
+	   (if (file-in-directory-p (buffer-file-name) "/etc/nixos/")
+	       (progn
+		 ;; Not sure why but this is required
+		 (require 'ivy)
 
-	      ;; Run rebuild as sudo
-	      (let ((default-directory (concat "/sudo::" default-directory)))
-		(compile "nixos-rebuild switch"))
-
-	      )
-	  (if (string= (file-name-nondirectory (buffer-file-name)) "home.nix" )
-	      (compile "home-manager switch"))))))))
+		 ;; Run rebuild as sudo
+		 (let ((default-directory (concat "/sudo::" default-directory)))
+		   (compile "nixos-rebuild switch")))
+	     (if (string= (file-name-nondirectory (buffer-file-name)) "home.nix" )
+		 (compile "home-manager switch"))))))))))
 
 ;; ** Counsel projectile
 ;; If enabled it auto enables projectile, which has high CPU usage
@@ -7030,15 +7199,15 @@ do the
 ;; ** Volume keys
 (defun my/pulse-mute-toggle ()
   (interactive)
-  (shell-command "amixer -M set Master toggle"))
+  (my/message-at-point (shell-command-to-string "amixer -M set Master toggle")))
 
 (defun my/pulse-raise-volume ()
   (interactive)
-  (shell-command "amixer -M set Master 2.5%+"))
+  (my/message-at-point (shell-command-to-string "amixer -M set Master 2.5%+")))
 
 (defun my/pulse-lower-volume ()
   (interactive)
-  (shell-command "amixer -M set Master 2.5%-"))
+  (my/message-at-point (shell-command-to-string "amixer -M set Master 2.5%-")))
 
 ;; *** Hydra
 (with-eval-after-load 'hydra
@@ -7099,7 +7268,7 @@ do the
 (define-key my/music-map (kbd "l") 'counsel-spotify-next)
 (define-key my/music-map (kbd "h") 'counsel-spotify-previous)
 
-(define-key my/music-map (kbd "o") '(lambda () (interactive) (switch-to-buffer "Spotify")))
+(define-key my/music-map (kbd "o") '(lambda () (interactive) (require 'counsel-spotify) (switch-to-buffer (get-buffer "Spotify"))))
 
 (global-set-key (kbd "<XF86AudioPlay>") 'counsel-spotify-play)
 (global-set-key (kbd "<XF86AudioStop>") 'counsel-spotify-toggle-play-pause)
@@ -9023,10 +9192,10 @@ do the
 
 ;; *** Remove unnecessary font-locks
 ;; **** Haskell
-(setq haskell-font-lock-keywords '())
+(setq haskell-font-lock-keywords '("do" "let" "proc" "where" "if" "then" "else"))
 
-(defun haskell-font-lock-keywords ()
-  '())
+;; (defun haskell-font-lock-keywords ()
+;;   '())
 
 ;; ***** Cabal
 (setq haskell-cabal-font-lock-keywords '())
@@ -9594,7 +9763,7 @@ do the
 		     ;; Org clock
 		     (:eval (if (org-clocking-p)
 				(concat "Org: " (propertize (string-trim-left (substring-no-properties org-mode-line-string)) 'face 'warning) " | ")
-			      (concat "Org: " (propertize "No clock" 'face 'error) " | ")))
+			      (concat "Org: " (propertize "No clock" 'face 'diff-removed) " | ")))
 
 		     (:eval (if my/mode-line-show-GC-stats
 				(concat
@@ -9662,8 +9831,10 @@ do the
 ;; This fixes a bug with ~counsel-describe-function~
 (setq mini-modeline-echo-duration 99999)
 
-(setq-default mini-modeline-r-format my/status-line-format)
+;; (setq-default mini-modeline-r-format my/status-line-format)
 (mini-modeline-mode 1)
+
+;; (setq mini-modeline-frame (window-frame (minibuffer-window)))
 
 (setq mode-line-format nil)
 (setq-default mode-line-format nil)
