@@ -1,0 +1,7 @@
+# name: instance applicative
+# key: Ia
+# --
+instance Applicative ${1:Event} where
+  pure = ${2:Event}
+  Event f <*> Event x = Event (f x)
+  _       <*> _       = NoEvent

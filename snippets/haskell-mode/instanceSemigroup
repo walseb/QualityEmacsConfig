@@ -1,4 +1,4 @@
-# name: semi
+# name: instance semi
 # key: Is
 # --
 instance Semigroup ${1:Integer} where

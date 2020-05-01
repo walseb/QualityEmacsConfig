@@ -14,11 +14,15 @@
   (defvar my/device/monitor-setup-command "")
   (defvar my/carpalx-enable t))
 
-(defvar my/enable-randr t)
-
 (defvar my/run-command-on-boot nil)
 
-(defvar my/run-mail-on-boot nil)
+(let ((my/run-mail-on-boot nil))
+  (when my/run-mail-on-boot
+    (add-hook 'after-init-hook '(lambda () (require 'mu4e)))))
+
+(defvar my/haskell-hie-enable nil)
+
+(defvar my/use-w3m nil)
 
 (setq ellocate-scan-dirs '(("~/" "~/ellocate-home-db")
 			   ("/run/" "~/ellocate-nix-run-db")
@@ -28,11 +32,6 @@
 			   ("/tmp/" nil)
 			   ("/mnt/" nil)))
 
-(defvar my/haskell-hie-enable nil)
-
-(defvar my/use-w3m nil)
-
-(defvar my/disable-touchpad nil)
 
 (setq my/spotify-client-id "")
 (setq my/spotify-client-secret "")

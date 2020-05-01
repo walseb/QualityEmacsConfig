@@ -66,3 +66,5 @@ bearriver
 backend
 frontend
 envrc
+async
+mbsync

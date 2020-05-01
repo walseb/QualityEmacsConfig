@@ -1,0 +1,7 @@
+# name: instance monad
+# key: Im
+# --
+instance Monad ${1:Maybe} where
+  Nothing  >>= f = Nothing
+  (Just x) >>= f = f x
+  return         = Just

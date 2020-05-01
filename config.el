@@ -87,6 +87,8 @@
 ;; * Security
 (setq network-security-level 'medium)
 
+(setq netrc-file "~/.authinfo.gpg")
+
 ;; ** Cert settings
 (setq gnutls-verify-error t)
 (setq tls-checktrust t)
@@ -197,13 +199,11 @@
 ;; ** Process
 ;; *** Run async process shell command
 ;; As opposed to `async-shell-command', this runs the shell command without a visual terminal, although it does have a buffer where it collects everything printed
-(defun my/async-start-process-shell-command (buffer-name package &rest args)
+(defun my/async-start-process-shell-command (buffer-name package finish-func &rest args)
   (message (concat "Starting async shell command process. Buffer name: " buffer-name " Package: " package))
   (async-start-process buffer-name
 		       (executable-find package)
-		       (lambda (a)
-			 (my/alert nil 'high)
-			 (message (concat "ERROR: async process: " package " has died!")))
+		       finish-func
 		       (mapconcat 'identity args " ")))
 
 ;; ** Is external package installed
@@ -1089,28 +1089,13 @@ Borrowed from mozc.el."
 (defun my/write-configs ()
   (interactive)
   (pcase (completing-read "Which config to write: "
-			  '("xinit" "xmodmap" "mpd" "cabal" "mbsync" "msmtp" "dovecot") nil t)
+			  '("xinit" "xmodmap" "mpd" "cabal") nil t)
     ("xinit" (my/write-xinitrc))
     ("xmodmap" (my/write-xmodmap))
     ("mpd" (my/write-mpd-config))
-    ("cabal" (my/write-cabal-config))
-    ("mbsync" (my/write-mbsync-config))
-    ("msmtp" (my/write-msmtp-config))
-    ("dovecot" (my/write-dovecot-config))))
+    ("cabal" (my/write-cabal-config))))
 
 (define-key my/leader-map (kbd "C-c") 'my/write-configs)
-
-;; ** Write .gnus.el
-;; I thinks this is no longer needed
-;; Create =.gnus.el=, which gnus reads from
-(defconst my/gnus-config-text "
-AddYourEmailHereThenDeleteThis
-(setq mail-host-address \"MyAdress\")
-")
-
-(defun my/write-gnus ()
-  (my/create-file-with-content-if-not-exist
-   "~/.gnus.el" my/gnus-config-text))
 
 ;; ** Write .xinitrc
 ;; =xset s= disables screen saver
@@ -1188,29 +1173,6 @@ documentation: True")
 	 (cabal-file (concat cabal-dir "config")))
     (my/create-dir-if-not-exist cabal-dir)
     (my/create-file-with-content-if-not-exist cabal-file my/nix-config-text)))
-
-;; ** Write mail configs
-(defun my/write-mail-configs ()
-  (interactive)
-  (my/write-mbsync-config)
-  (my/write-msmtp-config)
-  (my/write-dovecot-config))
-
-(defun my/write-mbsync-config ()
-  (let* ((source-dir (concat user-emacs-directory "configs/mail/mbsync/.mbsyncrc"))
-	 (target-dir "~/.mbsyncrc"))
-    (copy-file source-dir target-dir))
-  (make-directory "~/Maildir")
-  (make-directory "~/Maildir/main-gmail"))
-
-(defun my/write-msmtp-config ()
-  (let* ((source-dir (concat user-emacs-directory "configs/mail/msmtp/.msmtprc"))
-	 (target-dir "~/.msmtprc"))
-    (copy-file source-dir target-dir)))
-
-(defun my/write-dovecot-config ()
-  (let ((config-dir  "~/.dovecot-pass"))
-    (my/create-file-with-content-if-not-exist config-dir "admin:{PLAIN}")))
 
 ;; * Minor
 ;; ** Startup
@@ -1558,6 +1520,9 @@ or go back to just one window (by deleting all but the selected window)."
 (with-eval-after-load 'files
   (define-key ctl-x-map (kbd "C-c") 'my/quit-emacs))
 
+;; ** Set safe local variables
+(add-to-list 'safe-local-variable-values '(dante-repl-command-line "ob" "repl"))
+
 ;; * Productivity
 ;; ** Break timer
 ;; In seconds
@@ -1574,9 +1539,10 @@ or go back to just one window (by deleting all but the selected window)."
 		     my/break-time
 		   my/not-clocked-in-break-time)))
 
-      (wher is-clocked-in
-	    (my/message-at-point "Clock in!")
-	    (my/alert-statusline-message-temporary "Clock in!" 'med))
+      (my/message-at-point "Clock in!")
+
+      (when (not is-clocked-in)
+	(my/alert-statusline-message-temporary "Clock in!" 'med))
 
       (my/break-timer-run time)
 
@@ -1720,8 +1686,7 @@ or go back to just one window (by deleting all but the selected window)."
 (define-key my/open-map (kbd "r") 'my/open-home)
 
 ;; ** Open mail
-;; (define-key my/open-map (kbd "M") 'gnus)
-(define-key my/open-map (kbd "M") 'mu4e)
+(define-key my/open-map (kbd "M") '(lambda () (interactive) (require 'mu4e) (mu4e)))
 
 ;; ** Open password file
 (defun my/open-passwords ()
@@ -1775,14 +1740,6 @@ or go back to just one window (by deleting all but the selected window)."
 ;;     (start-process (concat my/gui-browser my/temp-firefox-title-name) nil my/gui-browser "--new-window" adress)))
 
 (define-key my/leader-map (kbd "C-b") 'my/launch-firefox)
-
-;; ** Open eww
-(defun my/launch-eww ()
-  (interactive)
-  (eww-browse-url (my/get-search-url) t))
-
-(when (not my/use-w3m)
-  (define-key my/leader-map (kbd "b") 'my/launch-eww))
 
 ;; ** Suggest
 (define-key my/leader-map (kbd "s") 'suggest)
@@ -1956,7 +1913,8 @@ or go back to just one window (by deleting all but the selected window)."
 	 (start (apply 'encode-time 0 (- min n) (cdr ctime))))
     (org-insert-time-stamp start t t "CLOCK: ")
     (insert "--")
-    (org-insert-time-stamp (current-time) t t)))
+    (org-insert-time-stamp (current-time) t t))
+  (org-clock-update-time-maybe))
 
 ;; *** Keys
 
@@ -6585,8 +6543,7 @@ do the
 (setq exwm-manage-force-tiling t)
 
 ;; ** Multi-screen
-(if my/enable-randr
-    (require 'exwm-randr))
+(require 'exwm-randr)
 
 ;; *** Get monitor setup
 (defun my/exwm-randr-auto-get-monitor ()
@@ -6598,17 +6555,16 @@ do the
     result))
 
 ;; Get monitor setup
-(if my/enable-randr
-    (if my/device/monitor-setup
-	(progn
-	  (setq exwm-workspace-number (/ (length my/device/monitor-setup) 2))
-	  (setq exwm-randr-workspace-monitor-plist my/device/monitor-setup))))
+(if my/device/monitor-setup
+    (progn
+      (setq exwm-workspace-number (/ (length my/device/monitor-setup) 2))
+      (setq exwm-randr-workspace-monitor-plist my/device/monitor-setup)))
 ;; (let ((monitor-setup (my/exwm-randr-auto-get-monitor)))
 ;; (setq exwm-workspace-number (/ (length monitor-setup) 2))
 ;; (setq exwm-randr-workspace-monitor-plist monitor-setup)))
 
 ;; *** Enable
-(if (and my/enable-randr (> exwm-workspace-number 1))
+(if (> exwm-workspace-number 1)
     (progn
       (exwm-randr-enable)))
 
@@ -6685,9 +6641,6 @@ do the
   (interactive)
   (my/xinput-disable-device (my/get-xinput-device-ID "Touchpad")))
 
-(if my/disable-touchpad
-    (my/xinput-disable-touchpad))
-
 ;; * Shr
 ;; ** Fix background colors shr
 ;; Try fixing colors
@@ -6727,21 +6680,49 @@ do the
 ;;(require 'shrface)
 
 ;; * Browser
-(defun my/get-search-url ()
+;; ** Text browser stuff
+(defun my/launch-text-browser (&optional str)
   (interactive)
-  (let ((search (completing-read "search: " nil)))
+  (let ((url (my/get-search-url str)))
+    (if my/use-w3m
+	(w3m url t)
+      (eww-browse-url url t))))
+
+(define-key my/leader-map (kbd "b") 'my/launch-text-browser)
+
+(defun my/text-browser-define-at-point ()
+  (interactive)
+  (my/launch-text-browser
+   (concat "define " (substring-no-properties (thing-at-point 'word)) t)))
+
+(define-key my/leader-map (kbd "B") 'my/text-browser-define-at-point)
+
+;; *** Get addr
+(defun my/get-search-url (&optional str)
+  (interactive)
+  (let ((search (or str (completing-read "search: " nil))))
     ;; Don't do a google search for anything that has a dot then a letter
     ;; There are two (not whitespace) here because otherwise the * wildcard would accept strings without any char after a dot
     (if (or
+	 ;; All strings spaces are searches
 	 (string-match-p (rx whitespace) search)
-	 (not (string-match-p (rx (regexp "\\.") (not whitespace) (not whitespace) (regexp "*") eol) search)))
+
+	 ;; All strings without spaces and with dots aren't searches
+	 ;; The not whitespace here combined with the * and oel makes sure cases like "foo.bar." aren't interpreted as direct addresses
+	 (not (string-match-p (rx (char ".") (not whitespace) (not whitespace) (regexp "*") eol) search)))
+
 	(concat "https://www.google.com/search?q=" search)
       search)))
 
+;; *** Set default browser
+(if my/use-w3m
+    (setq-default browse-url-browser-function 'w3m-browse-url)
+  (setq-default browse-url-browser-function 'eww-browse-url))
+
 ;; ** w3m
 (straight-use-package 'w3m)
-(when (and (my/is-system-package-installed 'w3m) my/use-w3m)
-  (require 'w3m)
+
+(with-eval-after-load 'w3m
   (w3m-display-mode 'plain))
 
 (setq w3m-use-title-buffer-name t)
@@ -6754,26 +6735,6 @@ do the
 ;; Make images load instantly
 (setq w3m-default-display-inline-images t)
 (setq w3m-idle-images-show-interval 0)
-
-;; *** Launch w3m
-(defun my/w3m-get-search-url ()
-  "Custom w3m search function"
-  (interactive)
-  (let ((search (completing-read "search: " nil)))
-    ;; Don't do a google search for anything that has a dot then a letter
-    ;; There are two (not whitespace) here because otherwise the * wildcard would accept strings without any char after a dot
-    (if (or
-	 (string-match-p (rx whitespace) search)
-	 (not (string-match-p (rx (regexp "\\.") (not whitespace) (not whitespace) (regexp "*") eol) search)))
-	(w3m-search "google" "test")
-      (w3m search t))))
-
-(defun my/launch-w3m ()
-  (interactive)
-  (my/w3m-get-search-url))
-
-(when my/use-w3m
-  (define-key my/leader-map (kbd "b") 'my/launch-w3m))
 
 ;; *** Switch w3m buffer
 (defun my/switch-w3m-buffer ()
@@ -6954,11 +6915,6 @@ do the
 ;; (my/create-file-with-content-if-not-exist "~/.config/next/init.lisp")
 
 ;; )
-
-;; ** Set default browser
-(if my/use-w3m
-    (setq-default browse-url-browser-function 'w3m-browse-url)
-  (setq-default browse-url-browser-function 'eww-browse-url))
 
 ;; * Version control
 ;; ** Ediff
@@ -7258,7 +7214,10 @@ do the
 (straight-use-package 'counsel-spotify)
 
 (with-eval-after-load 'counsel-spotify
-  (my/async-start-process-shell-command "spotify" "spotify"))
+  (my/async-start-process-shell-command "spotify" "spotify"
+					(lambda (a)
+					  (my/alert nil 'high)
+					  (message (concat "ERROR: async process: " package " has died!")))))
 
 ;; ***** Keys
 (define-key my/music-map (kbd "e") 'counsel-spotify-search-track)
@@ -7495,6 +7454,13 @@ do the
 ;;  (define-key my/leader-map (kbd "p w") 'my/take-screenshot)
 
 ;; * Mail
+;; (setq sendmail-program "msmtp")
+;; (setq send-mail-function 'message-send-mail-with-sendmail)
+;; (setq read-mail-command 'gnus)
+;; (setq mail-user-agent 'gnus-user-agent)
+;; (setq message-signature nil)
+;; (setq message-send-mail-partially-limit nil)
+
 ;; ** mu4e
 ;; *** Find nixos install location
 ;; https://www.reddit.com/r/NixOS/comments/6duud4/adding_mu4e_to_emacs_loadpath/
@@ -7514,7 +7480,7 @@ do the
 ;; (when my/mu4epath
 ;;   (require 'mu4e))
 
-(setq mu4e-get-mail-command "mbsync -c ~/.mbsyncrc -a"
+(setq mu4e-get-mail-command "mbsync -a"
       ;; mu4e-html2text-command "w3m -T text/html" ;;using the default mu4e-shr2text
       mu4e-view-use-gnus t
       mu4e-view-prefer-html t
@@ -7534,6 +7500,8 @@ do the
 
 ;; don't save message to Sent Messages, IMAP takes care of this
 (setq mu4e-sent-messages-behavior 'delete)
+
+(setq mu4e-completing-read-function 'completing-read)
 
 ;; **** Modification
 ;; I want mu4e to display images in w3m and not switch to the mail buffer whenever you open a mail
@@ -7629,361 +7597,10 @@ do the
 		    (:thread-subject . ,(- (window-body-width) 70)) ;; alternatively, use :subject
 		    (:size . 7)))))
 
-;; ** Gnus
-;; .gnus.el is written in =write config map=
-;; https://github.com/gongzhitaao/GnusSolution
-;; https://www.gnu.org/software/emacs/manual/html_node/gnus/Comparing-Mail-Back-Ends.html
-;; Encrypt passwords
-(setq netrc-file "~/.authinfo.gpg")
-
-(setq gnus-use-full-window nil)
-
-;; *** Disable state
-;; Gnus normally stores random state inside =~/.newsrc-dribble=, this prevents that from happening
-(setq gnus-use-dribble-file nil)
-
-;; *** Sources
-(if (my/is-system-package-installed 'dovecot)
-    (setq gnus-select-method '(nnimap "Dovecot"
-				      (nnimap-stream network)
-				      (nnimap-address "localhost")
-				      (nnimap-authenticator login)
-				      (nnimap-user "admin"))))
-
-(setq gnus-secondary-select-methods
-      '((nntp "news.gmane.org")))
-
-(setq mail-user-agent 'gnus-user-agent)
-(setq read-mail-command 'gnus)
-(setq send-mail-function 'message-send-mail-with-sendmail)
-(setq sendmail-program "msmtp")
-
-;; (setq smtpmail-smtp-server "smtp.gmail.com"
-;; smtpmail-smtp-service 587
-;; ;; Make Gnus NOT ignore [Gmail] mailboxes
-;; gnus-ignored-newsgroups "^to\\.\\|^[0-9. ]+\\( \\|$\\)\\|^[\"]\"[#'()]")
-
-;; *** Minor settings
-;; Fix bug in gnus, Replace [ and ] with _ in ADAPT file names
-;; (setq nnheader-file-name-translation-alist '((?[ . ?_) (?] . ?_)) )
-
-;; Maybe disable later
-;; (setq gnus-save-killed-list nil)
-
-(setq gnus-user-date-format-alist '((t . "%Y-%m-%d %H:%M")))
-
-;; '(gnus-always-force-window-configuration t)
-
-;; Disable signatures
-(setq message-signature nil)
-
-;; never split messages
-(setq message-send-mail-partially-limit nil)
-
-;; Disable gnus expiration
-(setq gnus-agent-enable-expiration 'DISABLE)
-
-;; Create two connections to the server for faster fetching
-(setq gnus-asynchronous t)
-
-;; Disable .newsrc file (file can be read by other newsreaders)
-(setq gnus-read-newsrc-file nil)
-(setq gnus-save-newsrc-file nil)
-
-(setq gnus-completing-read-function 'gnus-emacs-completing-read)
-
-;; *** Group mode
-;; Mode for choosing server
-(defun my/gnus-group-mode ()
-  ;; Tree view for groups.
-  (gnus-topic-mode)
-  ;; List all groups over level 5
-  (gnus-group-list-all-groups 5))
-
-(with-eval-after-load 'gnus
-  (add-hook 'gnus-group-mode-hook 'my/gnus-group-mode))
-
-;; Always show inbox
-;; (setq gnus-permanently-visible-groups "INBOX")
-
-;; Apparently only some servers support using 'some
-;; (setq gnus-read-active-file 't)
-;; (setq gnus-read-active-file 'some)
-;; (setq gnus-check-new-newsgroups 'ask-server)
-
-;; **** Keys
-(with-eval-after-load 'gnus
-  (evil-define-key 'normal gnus-group-mode-map (kbd "i") 'nil)
-  (evil-define-key 'normal gnus-group-mode-map (kbd "o") (lambda () (interactive) (gnus-topic-select-group t)))
-  (evil-define-key 'normal gnus-group-mode-map (kbd "RET") 'gnus-topic-select-group)
-  (evil-define-key '(normal insert) gnus-group-mode-map (kbd "TAB") 'gnus-topic-select-group)
-
-  (define-prefix-command 'my/gnus-group-map)
-  (evil-define-key 'normal gnus-group-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-group-map)
-
-  (defun my/gnus-group-list-all-subscribed-groups ()
-    "List all subscribed groups with or without un-read messages"
-    (interactive)
-    (gnus-group-list-all-groups 5))
-
-  (define-key 'my/gnus-group-map (kbd "s") 'my/gnus-group-list-all-subscribed-groups))
-
-;; *** Topic mode
-;; Adds headers to each server, tree view
-(defun my/gnus-topic-mode ()
-  (my/gnus-topic-setup)
-  ;; This doesn't work
-  ;;(my/gnus-topic-add-gmane-groups)
-  )
-
-(with-eval-after-load 'gnus
-  (add-hook 'gnus-topic-mode-hook 'my/gnus-topic-mode))
-
-;; **** Subscribe to gmane groups
-(defvar my/gnus-topic-gmane-prefix "nntp+news.gmane.org:")
-
-(setq my/gnus-gmane-subscribed-emacs `(
-				       ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.help")
-				       ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.general")
-				       ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.announce")
-				       ,(concat my/gnus-topic-gmane-prefix "gmane.emacs.gnus.user")))
-
-(setq my/gnus-gmane-subscribed-emacs-blogs `(
-					     ,(concat my/gnus-topic-gmane-prefix "gwene.com.oremacs")
-					     ,(concat my/gnus-topic-gmane-prefix "gwene.me.emacsair")))
-
-(setq my/gnus-gmane-subscribed-fsharp `(
-					,(concat my/gnus-topic-gmane-prefix "gwene.com.reddit.pay.r.fsharp")))
-
-(setq my/gnus-gmane-subscribed-guile `(
-				       ,(concat my/gnus-topic-gmane-prefix "gmane.lisp.guile.user")))
-
-(defun my/gnus-gmane-subscribed-get ()
-  (append
-   my/gnus-gmane-subscribed-guile
-   my/gnus-gmane-subscribed-fsharp
-   my/gnus-gmane-subscribed-emacs-blogs
-   my/gnus-gmane-subscribed-emacs))
-
-(defun my/gnus-topic-add-gmane-groups ()
-  (let ((list (my/gnus-gmane-subscribed-get)))
-    (dotimes (i (+ 1 (length list)))
-      (add-to-list 'gnus-newsrc-alist `(,(nth i list) 3 nil nil "nntp:news.gmane.org"))))
-
-  ;; Move the dummy entry to the top
-  (setq gnus-newsrc-alist (delete '("dummy.group" 0 nil) gnus-newsrc-alist))
-  ;; We don't need the dummy group?
-  ;;(add-to-list 'gnus-newsrc-alist '("dummy.group" 0 nil))
-  )
-
-;; **** Topic setup
-(defun my/gnus-topic-setup ()
-  "Hides non-relevant servers and puts them into categories. To show all servers, disable my/gnus-topic-mode"
-
-  ;; "Gnus" is the root folder, and there are three mail accounts, "misc", "hotmail", "gmail"
-  (setq gnus-topic-topology '
-	(("Gnus" visible)
-
-	 ;; Mail
-	 (("Mail" visible)
-	  (("gmail" visible))
-	  (("gmail-main" visible)))
-
-	 ;; News
-	 (("News" visible)
-	  (("Emacs" visible)
-	   (("Emacs blogs" visible)))
-	  (("Fsharp" visible))
-	  (("Guile" visible))
-	  )))
-
-  (setq gnus-topic-alist `((("Gnus"))
-			   ;; Mail
-			   ("gmail-main"
-			    "main-gmail/All"
-			    "main-gmail/Sent"
-			    "main-gmail/Starred"
-			    "main-gmail/Trash")
-
-			   ;; News
-			   ,(append '("Emacs") my/gnus-gmane-subscribed-emacs)
-			   ,(append '("Emacs blogs") my/gnus-gmane-subscribed-emacs-blogs)
-			   ,(append '("Fsharp") my/gnus-gmane-subscribed-fsharp)
-			   ,(append '("Guile") my/gnus-gmane-subscribed-guile)
-			   )))
-
-;; **** Keys
-(define-prefix-command 'my/gnus-topic-map)
-(evil-define-key 'normal gnus-topic-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-topic-map)
-
-;; *** Summary mode
-;; Mode for choosing which mail to open
-(defun my/gnus-summary-mode ()
-  (visual-line-mode -1)
-  (setq truncate-lines t))
-
-(with-eval-after-load 'gnus
-  (add-hook 'gnus-summary-mode-hook 'my/gnus-summary-mode))
-
-;; '(gnus-summary-mode-line-format "U%U %S" )
-;; https://www.gnu.org/software/emacs/manual/html_node/gnus/Summary-Buffer-Lines.html
-(setq-default gnus-summary-line-format
-	      (concat
-	       ;; Is unread
-	       "%U"
-	       ">"
-	       ;; Total thread score
-	       "%V"
-	       ;; Has been replied to/cached/saved
-	       "%R"
-	       ;; Tab
-	       "\t"
-	       ;; Date as specified by `gnus-user-date-format-alist`
-	       "%&user-date; \t"
-    ;; Linecount, leave -5,5 spacing
-    "%-5,5L"
-    ;; Sender taken from header, leave -20,20 spacing
-    "%-20,20n"
-
-    "\t"
-    ;; Reply tree
-    "%B"
-    ;; Article subject string
-    "%-80,80S"
-    ;; End
-    "\n"))
-
-(setq gnus-user-date-format-alist '((t . "%Y-%m-%d %H:%M")))
-(setq gnus-thread-sort-functions '(gnus-thread-sort-by-date))
-
-;; Supposed to be better
-(setq-default gnus-summary-thread-gathering-function 'gnus-gather-threads-by-references)
-
-(setq gnus-sum-thread-tree-false-root ""
-      gnus-sum-thread-tree-single-indent ""
-      gnus-sum-thread-tree-root ""
-      gnus-sum-thread-tree-vertical"|"
-      gnus-sum-thread-tree-leaf-with-other "+-> "
-      gnus-sum-thread-tree-single-leaf"\\-> "
-      gnus-sum-thread-tree-indent " ")
-
-;; '(gnus-thread-hide-subtree t)
-;; '(gnus-thread-sort-functions (quote gnus-thread-sort-by-most-recent-date))
-;; '(gnus-treat-hide-citation t)
-;; '(gnus-unread-mark 42)
-;; '(gnus-ancient-mark 32)
-
-;; **** Visuals
-;; '(gnus-summary-high-unread ((t (:foreground "green"))))
-;; '(gnus-summary-low-read ((t (:foreground "magenta"))))
-;; '(gnus-summary-normal-read ((t (:foreground "red"))))
-;; '(gnus-summary-selected ((t (:background "yellow"))))
-;; '(gnus-summary-normal-unread ((t (:foreground "white"))))
-
-;; **** Scoring
-(setq gnus-parameters
-      '(("nnimap.*"
-	 (gnus-use-scoring nil)) ;; Enable later
-	))
-
-;; **** Keys
-(define-prefix-command 'my/gnus-summary-map)
-(evil-define-key 'normal gnus-summary-mode-map (kbd (concat my/leader-map-key "a")) 'my/gnus-summary-map)
-
-(evil-define-key 'normal gnus-summary-mode-map (kbd "i") 'nil)
-(evil-define-key 'normal gnus-summary-mode-map (kbd "RET") 'gnus-summary-scroll-up)
-
-(evil-define-key 'insert gnus-summary-mode-map (kbd "n") 'gnus-summary-next-article)
-(evil-define-key 'insert gnus-summary-mode-map (kbd "p") 'gnus-summary-prev-article)
-
-(evil-define-key 'insert gnus-summary-mode-map (kbd "N") 'gnus-summary-next-unread-article)
-(evil-define-key 'insert gnus-summary-mode-map (kbd "P") 'gnus-summary-prev-unread-article)
-
-(defun my/gnus-summary-show-all-mail ()
-  "Show all mail"
-  (interactive)
-  (gnus-summary-rescan-group 1))
-
-(define-key 'my/gnus-summary-map (kbd "s") 'my/gnus-summary-show-all-mail)
-
-;; *** Article mode
-;; Mode for reading contents of mail
-;; (defun my/gnus-article-mode ()
-;; Font lock mode disables colors in html mail for whatever reason
-;; (font-lock-mode -1))
-;; )
-
-;; (add-hook 'gnus-article-mode-hook 'my/gnus-article-mode)
-
-;; (defun my/gnus-article-display-mode ()
-;;  (gnus-article-de-quoted-unreadable)
-;;  (gnus-article-emphasize)
-;;  (gnus-article-hide-boring-headers)
-;;  (gnus-article-hide-headers-if-wanted)
-;;  (gnus-article-hide-pgp)
-;;  (gnus-article-highlight)
-;;  (gnus-article-highlight-citation)
-;;  (gnus-article-date-local)
-;; )
-
-(with-eval-after-load 'gnus
-  (add-hook 'gnus-article-display-hook 'my/gnus-article-display-mode))
-
-;; '(gnus-article-mode-line-format "U%U %S" )
-
-;; **** Date headers
-;; Make date headers better with timezone calculation and time passed
-(setq gnus-article-date-headers '(user-defined)
-      gnus-article-time-format
-      (lambda (time)
-	(let* ((date (format-time-string "%a, %d %b %Y %T %z" time))
-	       (local (article-make-date-line date 'local))
-	       (combined-lapsed (article-make-date-line date
-							'combined-lapsed))
-	       (lapsed (progn
-			 (string-match " (.+" combined-lapsed)
-			 (match-string 0 combined-lapsed))))
-	  (concat local lapsed))))
-
-;; **** Mail renderers, etc
-;; html renderer
-;; (setq mm-text-html-renderer 'shr)
-(setq mm-text-html-renderer 'w3m)
-;; Inline images?
-(setq mm-attachment-override-types '("image/.*"))
-;; No HTML mail
-(setq mm-discouraged-alternatives '("text/html" "text/richtext"))
-
-;; **** Keys
-(define-prefix-command 'my/gnus-article-map)
-(evil-define-key 'normal gnus-article-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-article-map)
-
-;; *** Browse server mode
-;; **** Keys
-(define-prefix-command 'my/gnus-browse-mode-map)
-(evil-define-key 'normal gnus-browse-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-browse-mode-map)
-
-(evil-define-key 'normal gnus-browse-mode-map (kbd "RET") 'gnus-browse-select-group)
-
-;; *** Server mode
-;; **** Keys
-(define-prefix-command 'my/gnus-server-mode-map)
-(evil-define-key 'normal gnus-server-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-server-mode-map)
-
-(evil-define-key 'normal gnus-server-mode-map (kbd "RET") 'gnus-server-read-server)
-
-;; *** Message mode
-;; Mode for writing mail
-
-;; **** Keys
-(define-prefix-command 'my/gnus-message-map)
-(evil-define-key 'normal gnus-group-mode-map (kbd (concat my/leader-map-key " a")) 'my/gnus-message-map)
-
-;; *** Misc
-;; **** Random color gnus logo
+;; ** Random color gnus logo colors
+;; Show with (gnus-group-startup-message)
 (with-eval-after-load 'gnus
   (random t)) ; Randomize sequence of random numbers
-
 
 (defun my/random-hex (&optional num)
   (interactive "P")
@@ -7993,57 +7610,23 @@ do the
 (setq gnus-logo-colors (list (concat "#" (my/random-hex 6)) (concat "#" (my/random-hex 6))))
 
 ;; ** mbsync
-(defvar my/sync-gnus-hook nil)
-(defvar my/sync-gnus-has-begun nil)
-(defconst my/mbsync-config "~/.mbsyncrc")
+(defvar my/mbsync-run-delay (* 60 5))
 
-(defun my/sync-gnus ()
+(defun my/mbsync-run ()
   (interactive)
   (message (concat "Syncing mail at: " (current-time-string)))
-  (if (file-exists-p my/mbsync-config)
-      (let ((mbsync-config my/mbsync-config))
-	(async-start
-	 (lambda ()
-	   (shell-command (concat
-			   "mbsync -a "
-			   "--config "
-			   mbsync-config)))
-	 (lambda (result)
-	   (run-hooks 'my/sync-gnus-hook))))
-    (message "mbsync config not created")))
+  (async-shell-command "mbsync -a" "*mbsync*"))
 
-(defvar my/is-syncing nil)
+;; Don't show the async mbsync buffer when created
+(add-to-list 'display-buffer-alist
+	     '("\\*mbsync\\*.*" display-buffer-no-window))
 
-(defun my/sync-gnus-begin ()
-  (when (and (my/is-system-package-installed 'mbsync) (file-exists-p my/mbsync-config) (not my/is-syncing))
-    (setq my/is-syncing t)
-    (run-with-timer 0 300 'my/sync-gnus)))
+(defun my/sync-mbsync-begin ()
+  (when (my/is-system-package-installed 'mbsync)
+    (run-with-timer 0 my/mbsync-run-delay 'my/mbsync-run)))
 
-(if my/run-mail-on-boot
-    (add-hook 'exwm-init-hook 'my/sync-gnus-begin)
-  ;;(my/sync-gnus-begin)
-  (add-hook 'gnus-topic-mode-hook 'my/sync-gnus-begin))
-
-;; ** Display unread mail count
-(defun my/gnus-scan-unread ()
-  (if (get-buffer "*Group*")
-      (gnus-group-get-new-news)
-    (gnus)))
-
-(defun my/gnus-get-unread-mail-count ()
-  (my/gnus-get-unread "Mail"))
-
-(defun my/gnus-get-unread-news-count ()
-  (my/gnus-get-unread "News"))
-
-(defun my/gnus-get-unread (inbox)
-  (let ((result ""))
-    (dotimes (i (length gnus-topic-unreads))
-      (if (string= inbox (car (nth i gnus-topic-unreads)))
-	  (progn
-	    (setq result (number-to-string (cdr (nth i gnus-topic-unreads))))
-	    (setq i (length gnus-topic-unreads)))))
-    result))
+(with-eval-after-load 'mu4e
+  (my/sync-mbsync-begin))
 
 ;; * System
 (define-prefix-command 'my/system-commands-map)
@@ -9055,22 +8638,32 @@ do the
 
 ;; ** Symbol overlay
 ;; Supposed to be faster than highlight-thing
-(straight-use-package '(symbol-overlay :type git :host github :repo "walseb/symbol-overlay"))
+(straight-use-package 'symbol-overlay)
 
 (setq symbol-overlay-idle-time nil)
 
+;; *** Enable instant highlighting
+(define-minor-mode symbol-overlay-mode
+  "Minor mode for auto-highlighting symbol at point."
+  nil " SO" (make-sparse-keymap)
+  (require 'symbol-overlay)
+  (if symbol-overlay-mode
+      (add-hook 'post-command-hook 'symbol-overlay-post-command nil t)
+    (remove-hook 'post-command-hook 'symbol-overlay-post-command t)
+    (symbol-overlay-remove-temp)))
+
+(with-eval-after-load 'symbol-overlay
+  (defun symbol-overlay-post-command ()
+    "Installed on `post-command-hook'."
+    (symbol-overlay-remove-temp)
+    (when (eq evil-state 'normal)
+      (symbol-overlay-maybe-put-temp))))
+
+;; *** Make it global
 (define-globalized-minor-mode global-symbol-overlay
   symbol-overlay-mode symbol-overlay-mode)
 (symbol-overlay-mode)
 (global-symbol-overlay)
-
-;; *** Disable in insert mode
-(defun symbol-overlay-post-command ()
-  "Installed on `post-command-hook'."
-  (unless (or (not (eq evil-state 'normal)) (string= (symbol-overlay-get-symbol nil t) symbol-overlay-temp-symbol))
-    (symbol-overlay-remove-temp)
-    (when (not symbol-overlay-idle-time)
-      (symbol-overlay-maybe-put-temp))))
 
 ;; ** Put lv at top
 (with-eval-after-load 'lv
@@ -9480,7 +9073,7 @@ do the
      ;; If it returns "no sensors found"
      (not (string-match-p "No sensors found"
 			(shell-command-to-string "sensors | grep \"Core 0:\""))))
-    (setq my/mode-line-enable-cpu-temp t))
+(setq my/mode-line-enable-cpu-temp t))
 
 (defvar my/cpu-temp "")
 
@@ -9572,24 +9165,6 @@ do the
 (my/linux-update-network-tx-delta)
 
 ;; *** Mail
-;; **** Gnus mail counter
-(defvar my/gnus-unread-string nil)
-
-(defvar my/gnus-mail-counter-update-hook nil)
-
-(defun my/gnus-update-unread()
-  (my/gnus-scan-unread)
-  (setq my/gnus-unread-string
-	(concat
-	 "M:"
-	 (my/gnus-get-unread-mail-count)
-	 " > N:"
-	 (my/gnus-get-unread-news-count)))
-  (run-hooks 'my/gnus-mail-counter-update-hook))
-
-(add-hook 'my/sync-gnus-hook 'my/gnus-update-unread)
-(add-hook 'gnus-summary-exit-hook 'my/gnus-update-unread)
-
 ;; **** mu4e mail counter
 (straight-use-package 'mu4e-alert)
 

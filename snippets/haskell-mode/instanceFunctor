@@ -1,0 +1,6 @@
+# name: instance functor
+# key: If
+# --
+instance Functor ${1:Event} where
+  fmap f NoEvent = NoEvent
+  fmap f (Event c) = Event (f c)

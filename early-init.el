@@ -17,8 +17,8 @@
 ;; * Disable frame resize on font change
 (setq frame-inhibit-implied-resize t)
 
-;; * Stop custom from writing to init
-;; Stop custom from editing init.el
+;; * Stop custom from writing to init.el
+;; Also stop it from being loaded at all
 (setq custom-file (concat user-emacs-directory ".emacs-custom.el"))
 
 ;; * Disable mode-line
