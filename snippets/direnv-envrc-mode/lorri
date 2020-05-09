@@ -1,0 +1,4 @@
+# name: lorri
+# key: l
+# --
+eval "$(lorri direnv)"

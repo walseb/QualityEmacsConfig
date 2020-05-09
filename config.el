@@ -354,6 +354,12 @@
   (let ((file-name (and file (file-name-nondirectory file))))
     (and file-name (string-match-p "\.gpg" file-name))))
 
+;; ** Time
+;; *** Is it weekend
+(defun my/is-it-weekend ()
+  ;; If more than friday
+  (> (string-to-number (format-time-string "%u" (seconds-to-time (current-time)))) 5))
+
 ;; * Evil
 (setq evil-search-module 'evil-search)
 (setq evil-vsplit-window-right t)
@@ -495,7 +501,12 @@
 				 (magit-popup-mode . insert)
 				 (proced-mode . insert)
 				 (org-agenda-mode . insert)
-				 (emms-playlist-mode . insert))
+				 (emms-playlist-mode . insert)
+
+				 (mu4e-headers-mode . insert)
+				 (mu4e-view-mode . insert)
+				 (mu4e-loading-mode . insert)
+				 )
 	 do (evil-set-initial-state mode state))
 
 ;; *** Disable motion state
@@ -632,49 +643,49 @@
 (add-hook 'after-init-hook (lambda () (global-evil-surround-mode 1)))
 
 ;; **** Setup pair binds
-(setq-default evil-surround-pairs-alist
-	      '(
-		;; Default
-		(?\( . ("(" . ")"))
-		(?\[ . ("[ " . "]"))
-		(?\{ . ("{" . "}"))
+(setq evil-surround-pairs-alist
+      '(
+	;; Default
+	(?\( . ("(" . ")"))
+	(?\[ . ("[ " . "]"))
+	(?\{ . ("{" . "}"))
 
-		;; Default reversed
-		(?\) . ("(" . ")"))
-		(?\] . ("[" . "]"))
-		(?\} . ("{" . "}"))
+	;; Default reversed
+	(?\) . ("(" . ")"))
+	(?\] . ("[" . "]"))
+	(?\} . ("{" . "}"))
 
-		;; My meta keys
-		(134217841 . ("!" . "!"))
-		(134217831 . ("@" . "@"))
-		(134217837 . ("#" . "#"))
-		(134217836 . ("$" . "$"))
-		(134217847 . ("%" . "%"))
-		(134217849 . ("*" . "*"))
-		(134217830 . ("(" . ")"))
-		(134217845 . ("(" . ")"))
-		(134217826 . ("&" . "&"))
-		(134217787 . ("^" . "^"))
+	;; My meta keys
+	(134217841 . ("!" . "!"))
+	(134217831 . ("@" . "@"))
+	(134217837 . ("#" . "#"))
+	(134217836 . ("$" . "$"))
+	(134217847 . ("%" . "%"))
+	(134217849 . ("*" . "*"))
+	(134217830 . ("(" . ")"))
+	(134217845 . ("(" . ")"))
+	(134217826 . ("&" . "&"))
+	(134217787 . ("^" . "^"))
 
-		(134217828 . ("1" . "1"))
-		(134217843 . ("2" . "2"))
-		(134217844 . ("3" . "3"))
-		(134217838 . ("4" . "4"))
-		(134217842 . ("5" . "5"))
-		(134217833 . ("6" . "6"))
-		(134217825 . ("7" . "7"))
-		(134217829 . ("8" . "8"))
-		(134217839 . ("9" . "9"))
-		(134217832 . ("0" . "0"))
+	(134217828 . ("1" . "1"))
+	(134217843 . ("2" . "2"))
+	(134217844 . ("3" . "3"))
+	(134217838 . ("4" . "4"))
+	(134217842 . ("5" . "5"))
+	(134217833 . ("6" . "6"))
+	(134217825 . ("7" . "7"))
+	(134217829 . ("8" . "8"))
+	(134217839 . ("9" . "9"))
+	(134217832 . ("0" . "0"))
 
-		;; Blocks, etc
-		(?# . ("#{" . "}"))
-		(?b . ("(" . ")"))
-		(?B . ("{" . "}"))
-		(?> . ("<" . ">"))
-		(?t . evil-surround-read-tag)
-		(?< . evil-surround-read-tag)
-		(?f . evil-surround-function)))
+	;; Blocks, etc
+	(?# . ("#{" . "}"))
+	(?b . ("(" . ")"))
+	(?B . ("{" . "}"))
+	(?> . ("<" . ">"))
+	(?t . evil-surround-read-tag)
+	(?< . evil-surround-read-tag)
+	(?f . evil-surround-function)))
 
 ;; **** Keys
 (with-eval-after-load 'evil-surround
@@ -716,103 +727,6 @@
     (forward-line (1- count)))
   (end-of-line))
 
-;; ** Fix evil scroll
-;; https://github.com/emacs-evil/evil/pull/1154/files
-(evil-define-command evil-scroll-up (count)
-  "Scrolls the window and the cursor COUNT lines upwards.
-If COUNT is not specified the function scrolls down
-`evil-scroll-count', which is the last used count.
-If the scroll count is zero the command scrolls half the screen."
-  :repeat nil
-  :keep-visual t
-  (interactive "<c>")
-  (evil-save-column
-    (setq count (or count (max 0 evil-scroll-count)))
-    (setq evil-scroll-count count)
-    (when (= (point-min) (line-beginning-position))
-      (signal 'beginning-of-buffer nil))
-    (when (zerop count)
-      (setq count (/ (window-body-height) 2)))
-    (let ((xy (evil-posn-x-y (posn-at-point))))
-      (condition-case nil
-	  (progn
-	    (scroll-down count)
-	    (goto-char (posn-point (posn-at-x-y (car xy) (cdr xy)))))
-	(beginning-of-buffer
-	 (condition-case nil
-	     (with-no-warnings (previous-line count))
-	   (beginning-of-buffer)))))))
-
-(evil-define-command evil-scroll-down (count)
-  "Scrolls the window and the cursor COUNT lines downwards.
-If COUNT is not specified the function scrolls down
-`evil-scroll-count', which is the last used count.
-If the scroll count is zero the command scrolls half the screen."
-  :repeat nil
-  :keep-visual t
-  (interactive "<c>")
-  (evil-save-column
-    (setq count (or count (max 0 evil-scroll-count)))
-    (setq evil-scroll-count count)
-    (when (eobp) (signal 'end-of-buffer nil))
-    (when (zerop count)
-      (setq count (/ (window-body-height) 2)))
-    ;; BUG #660: First check whether the eob is visible.
-    ;; In that case we do not scroll but merely move point.
-    (if (<= (point-max) (window-end))
-	(with-no-warnings (next-line count nil))
-      (let ((xy (evil-posn-x-y (posn-at-point))))
-	(condition-case nil
-	    (progn
-	      (scroll-up count)
-	      (let* ((wend (window-end nil t))
-		     (p (posn-at-x-y (car xy) (cdr xy)))
-		     (margin (max 0 (- scroll-margin
-				       (cdr (posn-col-row p))))))
-		(goto-char (posn-point p))
-		;; ensure point is not within the scroll-margin
-		(when (> margin 0)
-		  (with-no-warnings (next-line margin))
-		  (recenter scroll-margin))
-		(when (<= (point-max) wend)
-		  (save-excursion
-		    (goto-char (point-max))
-		    (recenter (- (max 1 scroll-margin)))))))
-	  (end-of-buffer
-	   (goto-char (point-max))
-	   (recenter (- (max 1 scroll-margin)))))))))
-
-(defvar evil-cached-header-line-height nil
-  "Cached height of the header line.")
-
-(defun evil-header-line-height ()
-  "Return the height of the header line.
-If there is no header line, return nil."
-  (let ((posn (posn-at-x-y 0 0)))
-    (when (eq (posn-area posn) 'header-line)
-      (cdr (posn-object-width-height posn)))))
-
-(defun evil-posn-x-y (position)
-  "Return the x and y coordinates in POSITION.
-This function returns y offset from the top of the buffer area including
-the header line.  This definition could be changed in future.
-Note: On Emacs 22 and 23, y offset, returned by `posn-at-point' and taken
-by `posn-at-x-y', is relative to the top of the buffer area including
-the header line.
-However, on Emacs 24, y offset returned by `posn-at-point' is relative to
-the text area excluding the header line, while y offset taken by
-`posn-at-x-y' is relative to the buffer area including the header line.
-This asymmetry is by design according to GNU Emacs team.
-This function fixes the asymmetry between them on Emacs 24 and later versions.
-Borrowed from mozc.el."
-  (let ((xy (posn-x-y position)))
-    (when (and (> emacs-major-version 24) header-line-format)
-      (setcdr xy (+ (cdr xy)
-		    (or evil-cached-header-line-height
-			(setq evil-cached-header-line-height (evil-header-line-height))
-			0))))
-    xy))
-
 ;; ** Fix evil open line
 (setq evil-auto-indent nil)
 
@@ -844,6 +758,13 @@ Borrowed from mozc.el."
 
 (my/evil-normal-define-key "DEL" 'backward-delete-char-untabify)
 
+;; *** Replace return
+;; This moves the cursor to the beginning of the next line instead of creating a newline
+(my/evil-replace-define-key "RET" (lambda ()
+				    (interactive)
+				    (evil-next-line)
+				    (evil-beginning-of-line)))
+
 ;; *** Rebind evil case change
 (my/evil-normal-define-key "g u" 'evil-downcase)
 (my/evil-normal-define-key "g U" 'evil-upcase)
@@ -872,8 +793,13 @@ Borrowed from mozc.el."
   (let ((regex-forward "[[:graph:]].*\n[[:blank:]]*\n")
 	(regex-backward "^[[:blank:]]*\n.*[[:graph:]]"))
     (if forward
-	(if (ignore-errors (re-search-forward regex-forward)) (previous-line) (end-of-buffer))
-      (unless (ignore-errors (forward-line 1) (re-search-backward regex-backward)) (beginning-of-buffer)))
+	(if (ignore-errors (re-search-forward regex-forward))
+	    (previous-line)
+	  (end-of-buffer)
+	  ;; Since last line of buffers is blank, go back one line
+	  (previous-line))
+      (unless (ignore-errors (forward-line 1) (re-search-backward regex-backward))
+	(beginning-of-buffer)))
     (beginning-of-line)))
 
 (evil-define-motion my/backward-paragraph (count)
@@ -915,6 +841,13 @@ Borrowed from mozc.el."
 (eval-and-compile
   (straight-use-package 'hydra))
 (setq hydra-hint-display-type 'message)
+
+;; ** Fix message
+(with-eval-after-load 'hydra
+  (setq hydra-hint-display-alist
+	(list (list 'lv #'lv-message #'lv-delete-window)
+	      (list 'message (lambda (str) (message "%s" str)) (lambda () (message "")))
+	      (list 'posframe #'hydra-posframe-show #'hydra-posframe-hide))))
 
 ;; * Leader
 ;; When changing leader, change =my/leader-map-key=
@@ -1332,7 +1265,6 @@ documentation: True")
 				      :color red
 				      :pre
 				      (progn
-					(setq hydra-hint-display-type 'message)
 					(setq my/text-size-hydra/hint (concat "Text height: " (number-to-string my/current-default-face-height)))))
     ("p" my/increment-default-face-height nil)
     ("n" my/decrement-default-face-height nil)
@@ -1451,13 +1383,13 @@ or go back to just one window (by deleting all but the selected window)."
 (setq mouse-wheel-progressive-speed nil)
 
 ;; ** Mouse-avoidance
-(mouse-avoidance-mode 'banish)
+;; (mouse-avoidance-mode 'none)
 
-(setq mouse-avoidance-banish-position '((frame-or-window . frame)
-					(side . right)
-					(side-pos . 0)
-					(top-or-bottom . bottom)
-					(top-or-bottom-pos . 0)))
+;; (setq mouse-avoidance-banish-position '((frame-or-window . frame)
+;;					(side . right)
+;;					(side-pos . 0)
+;;					(top-or-bottom . bottom)
+;;					(top-or-bottom-pos . 0)))
 
 ;; ** Minibuffer-depth
 ;; Enable and show minibuffer recursive depth
@@ -1510,15 +1442,6 @@ or go back to just one window (by deleting all but the selected window)."
 					(switch-to-buffer " *Minibuf-0*")
 					(copy-region-as-kill (point-min) (point-max))
 					(switch-to-buffer curr-buf))))
-
-;; ** Quit emacs
-(defun my/quit-emacs ()
-  (interactive)
-  (my/open-if-exists "~/Notes/Planning/Report Weekly.org")
-  (save-buffers-kill-terminal nil))
-
-(with-eval-after-load 'files
-  (define-key ctl-x-map (kbd "C-c") 'my/quit-emacs))
 
 ;; ** Set safe local variables
 (add-to-list 'safe-local-variable-values '(dante-repl-command-line "ob" "repl"))
@@ -1685,9 +1608,6 @@ or go back to just one window (by deleting all but the selected window)."
 
 (define-key my/open-map (kbd "r") 'my/open-home)
 
-;; ** Open mail
-(define-key my/open-map (kbd "M") '(lambda () (interactive) (require 'mu4e) (mu4e)))
-
 ;; ** Open password file
 (defun my/open-passwords ()
   (interactive)
@@ -1698,7 +1618,7 @@ or go back to just one window (by deleting all but the selected window)."
 ;; ** Visit agenda file
 (defun my/agenda-file-visit ()
   (interactive)
-  (org-brain-visualize "Agenda"))
+  (find-file (car org-agenda-files)))
 
 (define-key my/open-map (kbd "A") 'my/agenda-file-visit)
 
@@ -1719,15 +1639,21 @@ or go back to just one window (by deleting all but the selected window)."
 	  "iceweasel"
 	"firefox"))))
 
-(defvar my/browser-bookmarks '(
-			       "youtube.com"
-			       "discordapp.com/channels/@me"
-			       "github.com"
-			       "steamcommunity.com/chat"
-			       ))
-(defun my/launch-firefox ()
+(defun my/open-in-browser (&optional url)
+  (unless url
+    (setq url ""))
+  (start-process my/gui-browser nil my/gui-browser "--new-window" url))
+
+(defun my/launch-gui-browser ()
   (interactive)
-  (start-process my/gui-browser nil my/gui-browser "--new-window"))
+  (my/open-in-browser))
+
+;; (defvar my/browser-bookmarks '(
+;;			       "youtube.com"
+;;			       "discordapp.com/channels/@me"
+;;			       "github.com"
+;;			       "steamcommunity.com/chat"
+;;			       ))
 
 ;; (defun my/launch-firefox ()
 ;;   (interactive)
@@ -1739,7 +1665,7 @@ or go back to just one window (by deleting all but the selected window)."
 ;;             (concat "https://www.google.com/search?q=" search))))
 ;;     (start-process (concat my/gui-browser my/temp-firefox-title-name) nil my/gui-browser "--new-window" adress)))
 
-(define-key my/leader-map (kbd "C-b") 'my/launch-firefox)
+(define-key my/leader-map (kbd "C-b") 'my/launch-gui-browser)
 
 ;; ** Suggest
 (define-key my/leader-map (kbd "s") 'suggest)
@@ -1817,10 +1743,16 @@ or go back to just one window (by deleting all but the selected window)."
       (org-edit-special)
     (org-edit-src-exit)))
 
+;; ** Capture
+(setq org-default-notes-file "~/Notes/Notes.org")
+
+;; *** Doct
+;; (straight-use-package 'doct)
+
 ;; ** Agenda
 ;; Give agenda file to use
-(if (file-exists-p "~/Notes/Agenda.org")
-    (setq org-agenda-files (directory-files-recursively "~/Notes/Agenda/" ".org$")))
+(setq org-agenda-files `(,org-default-notes-file))
+;; (directory-files-recursively "~/Notes/Agenda/" ".org$")
 
 (setq org-agenda-window-setup 'current-window)
 
@@ -1836,6 +1768,16 @@ or go back to just one window (by deleting all but the selected window)."
 				     ;; (agenda "" ((org-agenda-sorting-strategy '(habit-down time-up priority-down category-keep user-defined-up))))
 				     ;; (org-time-budgets-in-agenda)
 				     ))))
+
+;; *** Super agenda
+;; (straight-use-package 'org-super-agenda)
+;; (with-eval-after-load 'org-agenda
+;;   (org-super-agenda-mode 1))
+
+;; *** Idle-agenda
+(setq my/idle-agenda-delay (* 60 5))
+
+(run-with-idle-timer my/idle-agenda-delay t 'my/startup-view)
 
 ;; *** org-timeline
 ;; (straight-use-package 'org-timeline)
@@ -1861,8 +1803,10 @@ or go back to just one window (by deleting all but the selected window)."
   (define-key org-agenda-mode-map [remap newline] 'org-agenda-goto))
 
 ;; ** Clock
+(setq org-clock-into-drawer "CLOCK-LOGBOOK")
 (setq org-clock-mode-line-total 'today)
 (setq org-extend-today-until 6)
+(setq my/org-clocks-file org-default-notes-file)
 
 (add-hook 'after-init-hook (lambda ()
 			     (require 'org)
@@ -1871,11 +1815,11 @@ or go back to just one window (by deleting all but the selected window)."
 ;; *** org-mru-clock
 (straight-use-package 'org-mru-clock)
 
-(setq org-mru-clock-files (lambda () '("~/Notes/Planning/Report/Clocks.org")))
+(setq org-mru-clock-files (lambda () `(,my/org-clocks-file)))
 (setq org-mru-clock-how-many 999)
 
 (define-key my/leader-map (kbd "k") 'org-mru-clock-in)
-(define-key my/leader-map (kbd "M-k") '(lambda () (interactive) (find-file "~/Notes/Planning/Report/Clocks.org")))
+(define-key my/leader-map (kbd "M-k") '(lambda () (interactive) (find-file my/org-clocks-file)))
 (define-key my/leader-map (kbd "C-k") 'org-clock-out)
 
 ;; **** Custom prompt
@@ -1917,7 +1861,6 @@ or go back to just one window (by deleting all but the selected window)."
   (org-clock-update-time-maybe))
 
 ;; *** Keys
-
 (define-key my/org-mode-map (kbd "c") 'my/org-insert-clock-range)
 
 ;; (define-prefix-command 'my/clock-map)
@@ -1928,6 +1871,23 @@ or go back to just one window (by deleting all but the selected window)."
 ;; (define-key my/clock-map (kbd "C-s") 'org-clock-in-last)
 
 ;; (define-key my/clock-map (kbd "e") 'org-clock-modify-effort-estimate)
+
+;; ** Ivy-todo
+;; (straight-use-package 'ivy-todo)
+;; (setq ivy-todo-file my/org-clocks-file)
+
+;; ** Habit
+;; https://cpbotha.net/2019/11/02/forming-and-maintaining-habits-using-orgmode/
+;; (add-to-list 'org-modules 'org-habit t)
+(with-eval-after-load 'org
+  (require 'org-habit))
+
+(setq org-habit-show-all-today t)
+
+(setq org-habit-graph-column 100)
+
+;; log into LOGBOOK drawer
+(setq org-log-into-drawer t)
 
 ;; ** Present
 (defun my/org-present-next ()
@@ -2083,6 +2043,8 @@ or go back to just one window (by deleting all but the selected window)."
 
 (define-key my/org-mode-map (kbd "d") 'org-deadline)
 
+(define-key my/org-mode-map (kbd "r") 'org-refile)
+
 (define-key my/org-mode-map (kbd "E") (lambda () (interactive) (counsel-M-x "^org export-")))
 
 ;; * Outline
@@ -2142,7 +2104,7 @@ or go back to just one window (by deleting all but the selected window)."
 (setq counsel-outline-settings
       '((emacs-lisp-mode
 	 :outline-regexp ";; [*]\\{1,8\\} "
-    :outline-level counsel-outline-level-emacs-lisp)
+	 :outline-level counsel-outline-level-emacs-lisp)
 	(org-mode
 	 :outline-title counsel-outline-title-org
 	 :action counsel-org-goto-action
@@ -3346,18 +3308,16 @@ If the input is empty, select the previous history element instead."
 (defhydra my/window-hydra (:hint nil
 				 :color red
 				 :pre
-				 (progn
-				   (setq hydra-hint-display-type 'message)
-				   (setq my/window-hydra/hint
-					 (concat "next: "
-						 (let ((list (ivy--buffer-list "")))
-						   (if (and (string= (car list) (buffer-name))
-							    ;; If there is only 1 buffer in emacs
-							    (> (length list) 1))
-						       (substring-no-properties
-							(nth 1 list))
+				 (setq my/window-hydra/hint
+				       (concat "next: "
+					       (let ((list (ivy--buffer-list "")))
+						 (if (and (string= (car list) (buffer-name))
+							  ;; If there is only 1 buffer in emacs
+							  (> (length list) 1))
 						     (substring-no-properties
-						      (car list))))))))
+						      (nth 1 list))
+						   (substring-no-properties
+						    (car list)))))))
   "movement"
 
   ;; Move focus
@@ -3995,26 +3955,38 @@ If the input is empty, select the previous history element instead."
       ('haskell-mode (save-excursion (my/auto-eval-region (progn (beginning-of-line) (point)) (progn (end-of-line) (point)))))
       (_ (call-interactively 'eros-eval-last-sexp)))))
 
-(defun my/auto-eval-region (beg end)
+(defun my/auto-eval-region (_beg _end)
   (interactive)
-  (pcase major-mode
-    ('clojure-mode (cider-eval-region beg end))
-    ('plantuml-mode (plantuml-preview-region 0 beg end))
-    ('fsharp-mode (fsharp-eval-region beg end))
-    ('c-mode (cling-send-region beg end))
-    ('c++-mode (cling-send-region beg end))
-    ('csharp-mode (my/csharp-run-repl))
-    ('racket-mode (racket--send-region-to-repl beg end))
-    ;; ('haskell-mode (save-selected-window (my/haskell-interactive-copy-string-to-prompt (buffer-substring-no-properties beg end)) (haskell-interactive-bring) (goto-char (point-max)) (re-search-backward (haskell-interactive-prompt-regex)) (end-of-line) (recenter) ))
-    ('haskell-mode (save-excursion (my/haskell-interactive-mode-run-expr (buffer-substring-no-properties beg end))))
+  (let* ((beg (min _beg _end))
+	 (end (max _beg _end)))
+    (pcase major-mode
+      ('clojure-mode (cider-eval-region beg end))
+      ('plantuml-mode (plantuml-preview-region 0 beg end))
+      ('fsharp-mode (fsharp-eval-region beg end))
+      ('c-mode (cling-send-region beg end))
+      ('c++-mode (cling-send-region beg end))
+      ('csharp-mode (my/csharp-run-repl))
+      ('racket-mode (racket--send-region-to-repl beg end))
+      ;; ('haskell-mode (save-selected-window (my/haskell-interactive-copy-string-to-prompt (buffer-substring-no-properties beg end)) (haskell-interactive-bring) (goto-char (point-max)) (re-search-backward (haskell-interactive-prompt-regex)) (end-of-line) (recenter) ))
+      ('haskell-mode (save-excursion (my/haskell-interactive-mode-run-expr
+				      ;; Since indentation is syntax in haskell, make sure the selection begins at the beginning of the line, and doesn't exclude some white space
+				      (progn
+					(let ((beg-fixed nil))
+					  (when (/= (line-number-at-pos beg) (line-number-at-pos end))
+					    (save-excursion
+					      (goto-char beg)
 
-    ;; (haskell-interactive-mode-prompt-previous)
-    (_
-     ;; eval-region doesn't return anything, just prints to the minibuffer so eros can't be used here
-     (eros--eval-overlay
-      (eval-region beg end t)
-      end)
-     )))
+					      ;; If the search failed
+					      (unless (re-search-backward "[[:graph:]]" (line-beginning-position) t)
+						(setq beg-fixed (line-beginning-position)))))
+					  (buffer-substring-no-properties (or beg-fixed beg) end))))))
+
+      ;; (haskell-interactive-mode-prompt-previous)
+      (_
+       ;; eval-region doesn't return anything, just prints to the minibuffer so eros can't be used here
+       (eros--eval-overlay
+	(eval-region beg end t)
+	end)))))
 
 (defun my/auto-eval-buffer ()
   (interactive)
@@ -4106,7 +4078,7 @@ If the input is empty, select the previous history element instead."
      (my/ivy-hoogle))
     ('haskell-interactive-mode (my/ivy-hoogle))
     ('nix-mode
-     (if (string= (file-name-nondirectory (buffer-file-name)) "home.nix")
+     (if (file-in-directory-p (buffer-file-name) "~/.config/nixpkgs/")
 	 (man "home-configuration.nix")
        (my/nixos-options-ivy)))))
 
@@ -4506,7 +4478,10 @@ the overlay."
 (with-eval-after-load 'haskell-mode
   (define-prefix-command 'my/haskell-mode-map)
   (evil-define-key 'normal haskell-mode-map (kbd (concat my/leader-map-key " a")) 'my/haskell-mode-map)
-  (evil-define-key '(insert visual replace) haskell-mode-map (kbd (concat my/mod-leader-map-key " a")) 'my/haskell-mode-map))
+  (evil-define-key '(insert visual replace) haskell-mode-map (kbd (concat my/mod-leader-map-key " a")) 'my/haskell-mode-map)
+  ;; Also enable the mode map in ghci mode
+  (evil-define-key 'normal haskell-interactive-mode-map (kbd (concat my/leader-map-key " a")) 'my/haskell-mode-map)
+  (evil-define-key '(insert visual replace) haskell-interactive-mode-map (kbd (concat my/mod-leader-map-key " a")) 'my/haskell-mode-map))
 
 (defun my/haskell-mode ()
   (interactive)
@@ -4851,6 +4826,17 @@ do the
 
 (with-eval-after-load 'haskell-mode
   (define-key my/haskell-mode-map (kbd "e") 'my/haskell-add-language-extension))
+
+;; *** GHC options
+(defun my/haskell-add-ghc-option ()
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (let ((extension (completing-read "Option: " haskell-ghc-supported-options)))
+      (insert extension))))
+
+(with-eval-after-load 'haskell-mode
+  (define-key my/haskell-mode-map (kbd "o") 'my/haskell-add-ghc-option))
 
 ;; **** Hasky
 (straight-use-package 'hasky-extensions)
@@ -5251,17 +5237,6 @@ do the
 (define-key my/fsharp-mode-map (kbd "C-k") 'fsharp-ac/stop-process)
 (define-key my/fsharp-mode-map (kbd "C-s") 'fsharp-ac/start-process)
 
-;; *** Settings
-(defun my/fsharp-mode()
-  ;; Fsharp has built in intellisense highlight thing at point
-  (symbol-overlay-mode -1)
-  ;; Visual line mode in fsharp mode is broken, makes swiper take years to start, use truncate lines mode instead
-  ;;(visual-line-mode 0)
-  )
-
-;; Autostart
-(add-hook 'fsharp-mode-hook 'my/fsharp-mode)
-
 ;; ** Markdown
 (straight-use-package 'markdown-mode)
 
@@ -5292,8 +5267,7 @@ do the
 (straight-use-package 'lispy)
 
 (defhydra my/lispy-hydra (:hint nil
-				:color red
-				:pre (setq hydra-hint-display-type 'message))
+				:color red)
   "lisp"
 
   ("H" (call-interactively #'lispy-backward nil))
@@ -5424,8 +5398,7 @@ do the
 (straight-use-package 'shm)
 
 (defhydra my/structured-haskell-hydra (:hint nil
-					     :color red
-					     :pre (setq hydra-hint-display-type 'message))
+					     :color red)
   "haskell"
   ("U" (call-interactively (lambda () (interactive) (insert "undefined"))) nil)
 
@@ -6330,7 +6303,13 @@ do the
 	     ))
   (cl-pushnew k exwm-input-prefix-keys))
 
-(setq exwm-input-global-keys nil)
+;; Enable M-x menu in full-screen programs
+(setq exwm-input-global-keys
+      `(
+	;; Bind "s-r" to exit char-mode and fullscreen mode.
+	([?\M-x] . counsel-M-x)
+	([tab] . my/window-hydra/body)
+	))
 
 ;; ** Init
 (eval-and-compile
@@ -6541,6 +6520,10 @@ do the
 
 ;; ** Disable floating windows
 (setq exwm-manage-force-tiling t)
+
+;; ** Disable full screen
+;; (cl-defun exwm-layout-set-fullscreen (&optional id)
+;;   )
 
 ;; ** Multi-screen
 (require 'exwm-randr)
@@ -7044,7 +7027,7 @@ do the
 		 ;; Run rebuild as sudo
 		 (let ((default-directory (concat "/sudo::" default-directory)))
 		   (compile "nixos-rebuild switch")))
-	     (if (string= (file-name-nondirectory (buffer-file-name)) "home.nix" )
+	     (if (file-in-directory-p (buffer-file-name) "~/.config/nixpkgs/")
 		 (compile "home-manager switch"))))))))))
 
 ;; ** Counsel projectile
@@ -7170,9 +7153,7 @@ do the
   (defhydra my/pulse-hydra (:hint nil
 				  :color red
 				  :pre
-				  (progn
-				    (setq hydra-hint-display-type 'message)
-				    (setq my/pulse-hydra/hint "Pulse control")))
+				  (setq my/pulse-hydra/hint "Pulse control"))
     ("p" my/pulse-raise-volume)
     ("n" my/pulse-lower-volume)
     ("m" my/pulse-mute-toggle)))
@@ -7212,12 +7193,17 @@ do the
 
 ;; **** Counsel-spotify
 (straight-use-package 'counsel-spotify)
+(defvar my/is-spotify-loaded nil)
 
-(with-eval-after-load 'counsel-spotify
+(defun my/spotify-start ()
   (my/async-start-process-shell-command "spotify" "spotify"
 					(lambda (a)
 					  (my/alert nil 'high)
-					  (message (concat "ERROR: async process: " package " has died!")))))
+					  (message (concat "ERROR: async process: spotify has died!")))))
+
+(with-eval-after-load 'counsel-spotify
+  (my/spotify-start)
+  (setq my/is-spotify-loaded t))
 
 ;; ***** Keys
 (define-key my/music-map (kbd "e") 'counsel-spotify-search-track)
@@ -7227,7 +7213,13 @@ do the
 (define-key my/music-map (kbd "l") 'counsel-spotify-next)
 (define-key my/music-map (kbd "h") 'counsel-spotify-previous)
 
-(define-key my/music-map (kbd "o") '(lambda () (interactive) (require 'counsel-spotify) (switch-to-buffer (get-buffer "Spotify"))))
+(define-key my/music-map (kbd "o") '(lambda () (interactive)
+				      (if my/is-spotify-loaded
+					  (progn
+					    (unless (get-buffer "Spotify")
+					      (my/spotify-start))
+					    (switch-to-buffer (get-buffer "Spotify")))
+					(require 'counsel-spotify))))
 
 (global-set-key (kbd "<XF86AudioPlay>") 'counsel-spotify-play)
 (global-set-key (kbd "<XF86AudioStop>") 'counsel-spotify-toggle-play-pause)
@@ -7454,14 +7446,39 @@ do the
 ;;  (define-key my/leader-map (kbd "p w") 'my/take-screenshot)
 
 ;; * Mail
-;; (setq sendmail-program "msmtp")
-;; (setq send-mail-function 'message-send-mail-with-sendmail)
+(setq sendmail-program "msmtp")
+(setq send-mail-function 'message-send-mail-with-sendmail)
 ;; (setq read-mail-command 'gnus)
 ;; (setq mail-user-agent 'gnus-user-agent)
 ;; (setq message-signature nil)
 ;; (setq message-send-mail-partially-limit nil)
 
 ;; ** mu4e
+(setq mu4e-completing-read-function 'completing-read)
+
+(setq mu4e-html2text-command "w3m -T text/html")
+;; (setq mu4e-html2text-command 'mu4e-shr2text)
+;; (setq mu4e-html2text-command "iconv -c -t utf-8 | pandoc -f html -t plain")
+
+;; (setq mu4e-view-use-gnus t)
+;; (setq mu4e-view-prefer-html t)
+(setq mu4e-headers-auto-update t)
+(setq mu4e-compose-signature-auto-include nil)
+(setq mu4e-compose-format-flowed t)
+
+;; enable inline images
+(setq mu4e-view-show-images t)
+
+;; don't save message to Sent Messages, IMAP takes care of this
+(setq mu4e-sent-messages-behavior 'delete)
+
+;; *** Fetch mail at time interval
+(setq mu4e-get-mail-command "mbsync -a")
+(setq mu4e-update-interval (* 60 5))
+
+(with-eval-after-load 'mu4e
+  (mu4e-update-mail-and-index t))
+
 ;; *** Find nixos install location
 ;; https://www.reddit.com/r/NixOS/comments/6duud4/adding_mu4e_to_emacs_loadpath/
 (setq my/mu4epath
@@ -7472,112 +7489,36 @@ do the
 	   (executable-find "mu")))
 	 "/../share/emacs/site-lisp/mu4e")))
 
-(when (and my/mu4epath (string-prefix-p "/nix/store/" my/mu4epath) (file-directory-p my/mu4epath))
+(when my/mu4epath
   (add-to-list 'load-path my/mu4epath))
 
-;; *** Settings
-;; https://www.reddit.com/r/emacs/comments/bfsck6/mu4e_for_dummies/
-;; (when my/mu4epath
-;;   (require 'mu4e))
-
-(setq mu4e-get-mail-command "mbsync -a"
-      ;; mu4e-html2text-command "w3m -T text/html" ;;using the default mu4e-shr2text
-      mu4e-view-use-gnus t
-      mu4e-view-prefer-html t
-      mu4e-update-interval 300
-      mu4e-headers-auto-update t
-      mu4e-compose-signature-auto-include nil
-      mu4e-compose-format-flowed t)
-
-;; to view selected message in the browser, no signin, just html mail
-(when my/mu4epath
-  (with-eval-after-load 'mu4e-view
-    (add-to-list 'mu4e-view-actions
-		 '("ViewInBrowser" . mu4e-action-view-in-browser) t)))
-
-;; enable inline images
-(setq mu4e-view-show-images t)
-
-;; don't save message to Sent Messages, IMAP takes care of this
-(setq mu4e-sent-messages-behavior 'delete)
-
-(setq mu4e-completing-read-function 'completing-read)
-
-;; **** Modification
-;; I want mu4e to display images in w3m and not switch to the mail buffer whenever you open a mail
-
-;; ***** Display email in w3m duffer
+;; *** View in different browser
 (with-eval-after-load 'mu4e-view
-  (defun mu4e-view (msg)
-    (mu4e~view-define-mode)
-    (unless (mu4e~view-mark-as-read-maybe msg)
-      (my/mu4e-w3m-display msg))))
+  (add-to-list 'mu4e-view-actions '("Eww" . mu4e-action-view-in-browser) t)
 
-(defun my/mu4e-w3m-display (msg)
-  (when (get-buffer mu4e~view-buffer-name)
-    (progn
-      (switch-to-buffer mu4e~view-buffer-name)
-      (kill-buffer)))
-  (w3m-browse-url (concat "file://" (mu4e~write-body-to-html msg)))
-  ;; (mu4e~view-mode-body)
-  ;; (mu4e-view-mode)
+  (defun my/mu4e-view-in-w3m (msg)
+    (w3m (concat "file://" (mu4e~write-body-to-html msg))))
+  (add-to-list 'mu4e-view-actions '("W3m" . my/mu4e-view-in-w3m) t)
 
-  (rename-buffer mu4e~view-buffer-name)
-  (select-window (get-buffer-window (get-buffer "*mu4e-headers*"))))
+  (defun my/mu4e-view-in-firefox (msg)
+    (my/open-in-browser (concat "file://" (mu4e~write-body-to-html msg))))
+  (add-to-list 'mu4e-view-actions '("Firefox" . my/mu4e-view-in-firefox) t))
 
-;; ***** Don't autoselect new buffers
-(with-eval-after-load 'mu4e-headers
-  (defun mu4e-headers-view-message ()
-    (interactive)
-    (unless (eq major-mode 'mu4e-headers-mode)
-      (mu4e-error "Must be in mu4e-headers-mode (%S)" major-mode))
-    (let* ((msg (mu4e-message-at-point))
-	   (docid (or (mu4e-message-field msg :docid)
-		      (mu4e-warn "No message at point")))
-	   (decrypt (mu4e~decrypt-p msg))
-	   (viewwin (mu4e~headers-redraw-get-view-window)))
-      (unless (window-live-p viewwin)
-	(mu4e-error "Cannot get a message view"))
-      (let ((curr-window (selected-window)))
-	(select-window viewwin)
-	(switch-to-buffer (mu4e~headers-get-loading-buf))
-	(mu4e~proc-view docid mu4e-view-show-images decrypt)
-	;; (select-window curr-window)
-	))))
+;; *** Keys
+;; ** Open mail
+(define-key my/leader-map (kbd "M") '(lambda () (interactive)
+				       (require 'mu4e)
+				       (mu4e t)
+				       (call-interactively 'mu4e~headers-jump-to-maildir)))
 
-;; ***** Fix windows splitting
-(with-eval-after-load 'mu4e-headers
-  (defun mu4e~headers-redraw-get-view-window ()
-    (if (eq mu4e-split-view 'single-window)
-	(or (and (buffer-live-p (mu4e-get-view-buffer))
-		 (get-buffer-window (mu4e-get-view-buffer)))
-	    (selected-window))
-      ;; (mu4e-hide-other-mu4e-buffers)
-      (unless (buffer-live-p (mu4e-get-headers-buffer))
-	(mu4e-error "No headers buffer available"))
-      (switch-to-buffer (mu4e-get-headers-buffer))
-      ;; kill the existing view buffer
-      (when (buffer-live-p (mu4e-get-view-buffer))
-	(if (get-buffer-window (mu4e-get-view-buffer))
-	    (progn
-	      (select-window (get-buffer-window (mu4e-get-view-buffer)))
-	      (kill-buffer-and-window))
-	  (kill-buffer (mu4e-get-view-buffer))))
-      ;; get a new view window
-      (setq mu4e~headers-view-win
-	    (let* ((new-win-func
-		    (cond
-		     ((eq mu4e-split-view 'horizontal) ;; split horizontally
-		      '(split-window-vertically mu4e-headers-visible-lines))
-		     ((eq mu4e-split-view 'vertical) ;; split vertically
-		      '(split-window-horizontally mu4e-headers-visible-columns)))))
-	      (cond ((with-demoted-errors "Unable to split window: %S"
-		       (eval new-win-func)))
-		    (t ;; no splitting; just use the currently selected one
-		     (selected-window))))))))
+(with-eval-after-load 'mu4e-view
+  (define-key mu4e-view-mode-map (kbd "n") 'mu4e-view-headers-next)
+  (define-key mu4e-view-mode-map (kbd "p") 'mu4e-view-headers-prev)
 
-;; **** Send messages
-;; ***** org-mime
+  (define-key mu4e-view-mode-map (kbd "N") 'mu4e-view-headers-next-unread)
+  (define-key mu4e-view-mode-map (kbd "P") 'mu4e-view-headers-prev-unread))
+
+;; *** Send messages
 (straight-use-package 'org-mime)
 
 (with-eval-after-load 'org
@@ -7608,25 +7549,6 @@ do the
     (format  (concat "%0" (number-to-string $n) "x" ) (random (1- (expt 16 $n))))))
 
 (setq gnus-logo-colors (list (concat "#" (my/random-hex 6)) (concat "#" (my/random-hex 6))))
-
-;; ** mbsync
-(defvar my/mbsync-run-delay (* 60 5))
-
-(defun my/mbsync-run ()
-  (interactive)
-  (message (concat "Syncing mail at: " (current-time-string)))
-  (async-shell-command "mbsync -a" "*mbsync*"))
-
-;; Don't show the async mbsync buffer when created
-(add-to-list 'display-buffer-alist
-	     '("\\*mbsync\\*.*" display-buffer-no-window))
-
-(defun my/sync-mbsync-begin ()
-  (when (my/is-system-package-installed 'mbsync)
-    (run-with-timer 0 my/mbsync-run-delay 'my/mbsync-run)))
-
-(with-eval-after-load 'mu4e
-  (my/sync-mbsync-begin))
 
 ;; * System
 (define-prefix-command 'my/system-commands-map)
@@ -7963,7 +7885,7 @@ do the
 ;; Run-together makes it so words can be linked together without spaces
 ;; (setq ispell-extra-args (list "--sug-mode=bad-spellers" "--run-together" "--run-together-limit=5"))
 
-(setq ispell-extra-args (list "--sug-mode=bad-spellers"))
+(setq ispell-extra-args '("--sug-mode=bad-spellers" "--ignore-case"))
 
 ;; ** Flyspell
 (define-key my/spell-map (kbd "d") 'ispell-change-dictionary)
@@ -8050,7 +7972,7 @@ do the
 (define-key my/spell-map (kbd "L") 'langtool-check-done)
 
 ;; * Calc
-(define-key my/leader-map (kbd "M") 'calc)
+(define-key my/leader-map (kbd "c") 'calc)
 
 (defun my/calc-kill-current-line ()
   (interactive)
@@ -8130,20 +8052,20 @@ do the
 ;; ** Keys
 (define-key my/leader-map (kbd "A") 'artist-mode)
 
-(with-eval-after-load 'artist-mode
+(with-eval-after-load 'artist
   (setq artist-mode-map (make-sparse-keymap))
 
-  (evil-define-key 'normal artist-mode-map (kbd "p") 'artist-previous-line)
-  (evil-define-key 'normal artist-mode-map (kbd "n") 'artist-next-line)
+  ;; (evil-define-key 'normal artist-mode-map (kbd "p") 'artist-previous-line)
+  ;; (evil-define-key 'normal artist-mode-map (kbd "n") 'artist-next-line)
 
-  (evil-define-key 'insert artist-mode-map [down-mouse-1] 'artist-down-mouse-1)
-  (evil-define-key 'insert artist-mode-map [S-down-mouse-1] 'artist-down-mouse-1)
-  (evil-define-key 'insert artist-mode-map [down-mouse-2] 'artist-mouse-choose-operation)
-  (evil-define-key 'insert artist-mode-map [S-down-mouse-2] 'artist-mouse-choose-operation)
-  (evil-define-key 'insert artist-mode-map [down-mouse-3] 'artist-down-mouse-3)
-  (evil-define-key 'insert artist-mode-map [S-down-mouse-3] 'artist-down-mouse-3)
-  (evil-define-key 'insert artist-mode-map [C-mouse-4] 'artist-select-prev-op-in-list)
-  (evil-define-key 'insert artist-mode-map [C-mouse-5] 'artist-select-next-op-in-list))
+  (define-key artist-mode-map [down-mouse-1] 'artist-down-mouse-1)
+  ;; (define-key artist-mode-map [S-down-mouse-1] 'artist-down-mouse-1)
+  (define-key artist-mode-map [down-mouse-2] 'artist-mouse-choose-operation)
+  ;; (define-key artist-mode-map [S-down-mouse-2] 'artist-mouse-choose-operation)
+  (define-key artist-mode-map [down-mouse-3] 'artist-down-mouse-3)
+  ;; (define-key artist-mode-map [S-down-mouse-3] 'artist-down-mouse-3)
+  (define-key artist-mode-map [C-mouse-4] 'artist-select-prev-op-in-list)
+  (define-key artist-mode-map [C-mouse-5] 'artist-select-next-op-in-list))
 
 ;; * Image modes
 ;; ** PDF view
@@ -8326,7 +8248,7 @@ do the
 (defconst my/generic-equality-symbols
   '(
     ("==" . ?≡)
-    ("/=" . ?≢)
+    ("/=" . ?≠)
     ("!=" . ?≠)
     (">=" . ?≥)
     ("<=" . ?≤)
@@ -8460,6 +8382,7 @@ do the
 ;; http://haskell.github.io/haskell-mode/manual/latest/Unicode-support.html#Unicode-support
 ;; https://github.com/roelvandijk/emacs-haskell-unicode-input-method/blob/master/haskell-unicode-input-method.el
 ;; https://emacs.nasy.moe/#orgf407c8c
+
 (defconst my/haskell-symbols
   '(("\\" . ?λ)
     ("()" . ?∅)
@@ -8492,12 +8415,21 @@ do the
     ("isProperSubsetOf" . ?⊂)
 
     ("theta" . ?θ)
+    ("delta" . ?Δ)
+    ("deltaV" . (?Δ (Br . Bl) ?V))
+    ("deltaV'" . (?Δ (Br . Bl) ?V (Br . Bl) ?'))
+    ("iDeltaV" . (?i (Br . Bl) ?Δ (Br . Bl) ?V ))
+
 
     ;; ("\\" . ?∖)
 
     ;; Monoid
     ("mempty" . ?∅)
     ("mappend" . ?⊕)
+
+    ("integral" . ?∫)
+    ("integralFrom" . ?∫)
+    ("imIntegral" . ?∫)
 
     ;; Arrows
     ;; ("***" . ?⁂)
@@ -8594,6 +8526,11 @@ do the
 (setq-default prettify-symbols-compose-predicate #'my/prettify-symbols-default-compose-p)
 
 ;; * Visuals
+;; ** Define inverted default
+(defface my/default-inverted
+  '((t :inherit default))
+  "Inverted default face")
+
 ;; ** Indicate empty lines
 (setq-default indicate-empty-lines t)
 
@@ -8636,34 +8573,29 @@ do the
 ;; ** Highlight current line
 (global-hl-line-mode t)
 
-;; ** Symbol overlay
+;; ** Symbol overlay - highlight thing
 ;; Supposed to be faster than highlight-thing
 (straight-use-package 'symbol-overlay)
 
 (setq symbol-overlay-idle-time nil)
 
 ;; *** Enable instant highlighting
-(define-minor-mode symbol-overlay-mode
-  "Minor mode for auto-highlighting symbol at point."
-  nil " SO" (make-sparse-keymap)
-  (require 'symbol-overlay)
-  (if symbol-overlay-mode
-      (add-hook 'post-command-hook 'symbol-overlay-post-command nil t)
-    (remove-hook 'post-command-hook 'symbol-overlay-post-command t)
-    (symbol-overlay-remove-temp)))
-
-(with-eval-after-load 'symbol-overlay
-  (defun symbol-overlay-post-command ()
-    "Installed on `post-command-hook'."
-    (symbol-overlay-remove-temp)
-    (when (eq evil-state 'normal)
-      (symbol-overlay-maybe-put-temp))))
+(defun my/symbol-overlay-post-command ()
+  ;; It's required for this mode to be on, but since I use my own mode, just fake it being on
+  (setq-local symbol-overlay-mode t)
+  (symbol-overlay-remove-temp)
+  (when (eq evil-state 'normal)
+    (symbol-overlay-maybe-put-temp)))
 
 ;; *** Make it global
-(define-globalized-minor-mode global-symbol-overlay
-  symbol-overlay-mode symbol-overlay-mode)
-(symbol-overlay-mode)
-(global-symbol-overlay)
+(defun my/symbol-overlay-run ()
+  (interactive)
+  (require 'symbol-overlay)
+  (add-hook 'post-command-hook 'my/symbol-overlay-post-command nil t))
+
+(define-minor-mode my/symbol-overlay-mode "")
+(define-globalized-minor-mode my/global-symbol-overlay my/symbol-overlay-mode my/symbol-overlay-run)
+(my/global-symbol-overlay 1)
 
 ;; ** Put lv at top
 (with-eval-after-load 'lv
@@ -8776,7 +8708,12 @@ do the
 
 ;; ** Disable comments with toggle
 (straight-use-package 'hide-comnt)
-(define-key my/leader-map (kbd "c") 'hide/show-comments-toggle)
+(defun my/hide-show-comment-toggle ()
+  (interactive)
+  (require 'hide-comnt)
+  (call-interactively 'hide/show-comments-toggle))
+
+(define-key my/leader-map (kbd "C") 'my/hide-show-comment-toggle)
 
 ;; ** Font lock
 ;; *** Font lock profiler
@@ -9373,18 +9310,22 @@ do the
 		     "C: "
 		     (:eval (number-to-string my/cpu-load-average))
 
-		     " |"
-
-		     (:eval (concat " Up: " my/uptime-total-time-formated))
 
 		     ;; (:eval (if (and my/gnus-unread-string (not (string= my/gnus-unread-string "")))
 		     ;;	       (concat " | "
 		     ;;		       my/gnus-unread-string)))
 
-		     (:eval (if (and my/mu4e-unread-mail-count)
-				(concat " | Mail: "
-					my/mu4e-unread-mail-count)))
+		     (:eval (when my/mu4e-unread-mail-count
+			      (concat " | "
+				      (let ((str (concat "Mail: " my/mu4e-unread-mail-count)))
+					(if (> (string-to-number my/mu4e-unread-mail-count) 0)
+					    (propertize str 'face `(:inherit my/default-inverted))
+					  str)))))
 
+		     " | "
+
+
+		     (:eval (concat "Up: " my/uptime-total-time-formated))
 
 		     " | "
 
@@ -9487,16 +9428,23 @@ do the
   (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "d") #'undo-tree-visualizer-toggle-diff))
 
 ;; * Startup view
+;; ** Startup view
+(defun my/startup-view ()
+  (delete-other-windows)
+
+  ;; Wall
+  (find-file
+   (my/get-random-element (directory-files-recursively "~/Notes/Wallpapers" ".")))
+
+  (split-window-below)
+  (other-window 1)
+
+  ;; Agenda
+  (my/org-agenda-show-agenda-and-todo))
+
+;; ** Run it on startup
 (add-hook 'exwm-init-hook '(lambda ()
-			     (my/org-agenda-show-agenda-and-todo)
-			     (split-window-below)
-			     (other-window 1)
-			     (my/open-if-exists "~/Notes/Planning/Report Weekly.org")
-			     (olivetti-mode -1)
-			     (toggle-truncate-lines)
-			     (split-window-horizontally)
-			     (find-file
-			      (my/get-random-element (directory-files-recursively "~/Notes/Wallpapers" ".")))))
+			     (my/startup-view)))
 
 ;; * Run command on boot
 (if my/run-command-on-boot

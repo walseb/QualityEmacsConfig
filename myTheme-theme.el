@@ -1,13 +1,14 @@
 (require 'color)
 (require 'cl-macs)
 
-(defun my/theme-remove-color ()
-  (cl-loop for face in (face-list) do
-	   ;; Don't change magit faces
-	   (if (and (not (string-match "magit" (symbol-name face))) (not (string-match "w3m" (symbol-name face))))
-	       (set-face-attribute face nil :foreground nil :background nil))))
+;; (defun my/theme-remove-color ()
+;;   (cl-loop for face in (face-list) do
+;;	   ;; Don't change magit faces
+;;	   (if (and (not (string-match "magit" (symbol-name face))) (not (string-match "w3m" (symbol-name face))))
+;;	       (set-face-attribute face nil :foreground nil :background nil)))
+;;   )
 
-(my/theme-remove-color)
+;; (my/theme-remove-color)
 
 (deftheme myTheme "myTheme")
 
@@ -21,33 +22,33 @@
 (let* (
        (class '((class color) (min-colors 1)))
 
-       (my/foreground-color (my/ifc "#E6E1DC" "white"))
-       (my/foreground-color-1 (my/ifc (color-darken-name my/foreground-color 5) "white"))
-       (my/foreground-color-2 (my/ifc (color-darken-name my/foreground-color 10) "white"))
-       (my/foreground-color-3 (my/ifc (color-darken-name my/foreground-color 15) "white"))
-       (my/foreground-color-4 (my/ifc (color-darken-name my/foreground-color 20) "white"))
-       (my/foreground-color-5 (my/ifc (color-darken-name my/foreground-color 25) "white"))
-       (my/foreground-color-6 (my/ifc (color-darken-name my/foreground-color 30) "white"))
+       (my/fg-color (my/ifc "#E6E1DC" "white"))
+       (my/fg-color-1 (my/ifc (color-darken-name my/fg-color 5) "white"))
+       (my/fg-color-2 (my/ifc (color-darken-name my/fg-color 10) "white"))
+       (my/fg-color-3 (my/ifc (color-darken-name my/fg-color 15) "white"))
+       (my/fg-color-4 (my/ifc (color-darken-name my/fg-color 20) "white"))
+       (my/fg-color-5 (my/ifc (color-darken-name my/fg-color 25) "white"))
+       (my/fg-color-6 (my/ifc (color-darken-name my/fg-color 30) "white"))
 
        ;; "#121212"
        ;; "#212121"
        ;; "#232323"
-       (my/background-color (my/ifc (color-darken-name "#292b2e" 10) "black"))
-       (my/background-color-1 (my/ifc (color-lighten-name my/background-color 5) "black"))
-       (my/background-color-2 (my/ifc (color-lighten-name my/background-color 10) "black"))
-       (my/background-color-3 (my/ifc (color-lighten-name my/background-color 15) "black"))
-       (my/background-color-4 (my/ifc (color-lighten-name my/background-color 20) "black"))
+       (my/bg-color (my/ifc (color-darken-name "#292b2e" 10) "black"))
+       (my/bg-color-1 (my/ifc (color-lighten-name my/bg-color 5) "black"))
+       (my/bg-color-2 (my/ifc (color-lighten-name my/bg-color 10) "black"))
+       (my/bg-color-3 (my/ifc (color-lighten-name my/bg-color 15) "black"))
+       (my/bg-color-4 (my/ifc (color-lighten-name my/bg-color 20) "black"))
 
        (my/prompt-color (my/ifc "purple" "magenta"))
 
        (my/diff-added-color (my/ifc "#335533" "green"))
-       (my/diff-added-hl-color (my/ifc (color-lighten-name "#335533" 20) my/background-color))
+       (my/diff-added-hl-color (my/ifc (color-lighten-name "#335533" 20) my/bg-color))
        (my/diff-changed-color (my/ifc "#aaaa22" "yellow"))
-       (my/diff-changed-hl-color (my/ifc (color-lighten-name "#aaaa22" 20) my/background-color))
+       (my/diff-changed-hl-color (my/ifc (color-lighten-name "#aaaa22" 20) my/bg-color))
        (my/diff-removed-color (my/ifc "#553333" "red"))
-       (my/diff-removed-hl-color (my/ifc (color-lighten-name "#553333" 20) my/background-color))
+       (my/diff-removed-hl-color (my/ifc (color-lighten-name "#553333" 20) my/bg-color))
        (my/diff-ancestor-color (my/ifc "#5f06b26ccd93" "blue"))
-       (my/diff-ancestor-hl-color (my/ifc (color-lighten-name "#5f06b26ccd93" 20) my/background-color))
+       (my/diff-ancestor-hl-color (my/ifc (color-lighten-name "#5f06b26ccd93" 20) my/bg-color))
 
        (my/mark-color (my/ifc 'my/diff-changed-color "yellow"))
        (my/mark-color-1 (my/ifc (color-darken-name my/diff-changed-color 5) "yellow"))
@@ -67,29 +68,41 @@
 
        ;; :background "#052000"
        ;; #5d4d7a
-       (my/mode-line-color (color-darken-name "DeepSkyBlue4" 10))
+       ;; (my/mode-line-color (color-darken-name "DeepSkyBlue4" 10))
+       (my/mode-line-color my/bg-color)
 
        (my/hl-line-color "#212026")
 
-       (my/comment-face (my/ifc (color-lighten-name my/background-color 30)
+       (my/comment-face (my/ifc (color-lighten-name my/bg-color 30)
 				"white"))
-       (my/comment-delimiter-foreground-face (my/ifc my/background-color-4
+       (my/comment-delimiter-foreground-face (my/ifc my/bg-color-4
 						     "white"))
-       (my/comment-delimiter-background-face (my/ifc my/background-color-2
+       (my/comment-delimiter-background-face (my/ifc my/bg-color-2
 						     "black"))
-       (my/outline-foreground-face (my/ifc (color-lighten-name my/background-color 2)
+       (my/outline-foreground-face (my/ifc (color-lighten-name my/bg-color 2)
 					   "white"))
-       (my/outline-background-face (my/ifc (color-darken-name my/foreground-color 50)
+       (my/outline-background-face (my/ifc (color-darken-name my/fg-color 50)
 					   "black"))
 
-       (my/header-color (color-darken-name "DeepSkyBlue4" 10)))
+       ;; (my/header-color (color-darken-name "DeepSkyBlue4" 10))
+
+       (outline-1 "#4f97d7")
+       (outline-1-bg "#293239")
+       (outline-2 "#2d9574")
+       (outline-2-bg "#293235")
+       (outline-3 "#67b11d")
+       (outline-3-bg "#293235")
+       (outline-4 "#b1951d")
+       (outline-4-bg "#32322c")
+       )
 
   (custom-theme-set-faces
    'myTheme
-   `(default ((,class (:foreground ,my/foreground-color :background ,my/background-color))))
-   `(link ((,class (:foreground ,my/background-color :background ,my/mark-color-5))))
+   `(default ((,class (:foreground ,my/fg-color :background ,my/bg-color))))
+   `(my/default-inverted ((,class (:foreground ,my/bg-color :background ,my/fg-color))))
+   `(link ((,class (:foreground ,my/bg-color :background ,my/mark-color-5))))
    `(highlight ((,class (:background ,my/mark-color))))
-   `(region ((,class (:foreground ,my/foreground-color :background ,my/mark-color))))
+   `(region ((,class (:foreground ,my/fg-color :background ,my/mark-color))))
    `(error ((,class (:foreground ,my/error-color))))
    `(warning ((,class (:foreground ,my/warning-color))))
 
@@ -106,9 +119,9 @@
    `(font-lock-comment-face ((,class (:foreground ,my/comment-face))))
    `(font-lock-comment-delimiter-face ((,class (:foreground ,my/comment-delimiter-foreground-face :background ,my/comment-delimiter-background-face))))
    `(font-lock-string-face ((,class (:inherit default))))
-   `(font-lock-function-name-face ((,class (:foreground ,my/mark-color :background ,my/background-color))))
+   `(font-lock-function-name-face ((,class (:foreground ,my/mark-color :background ,my/bg-color))))
    ;; `(font-lock-function-name-face ((,class (:inherit default))))
-   `(font-lock-keyword-face ((,class (:foreground ,my/mark-color-1 :background ,my/background-color))))
+   `(font-lock-keyword-face ((,class (:foreground ,my/mark-color-1 :background ,my/bg-color))))
    `(font-lock-doc-face ((,class (:inherit font-lock-comment-face))))
    `(font-lock-builtin-face ((,class (:inherit default))))
    `(font-lock-constant-face ((,class (:inherit default))))
@@ -120,16 +133,18 @@
    `(font-lock-variable-name-face ((,class (:inherit default))))
    `(font-lock-warning-face ((,class (:inherit warning))))
 
-   `(hl-line ((,class (:foreground ,my/foreground-color :background ,my/hl-line-color :underline nil))))
+   `(hl-line ((,class (:foreground ,my/fg-color :background ,my/hl-line-color :underline nil))))
 
-   `(outline-1 ((,class (:foreground ,my/outline-foreground-face :background ,my/header-color))))
-   `(outline-2 ((,class (:inherit outline-1))))
-   `(outline-3 ((,class (:inherit outline-1))))
-   `(outline-4 ((,class (:inherit outline-1))))
+   ;; `(outline-1 ((,class (:foreground ,my/outline-foreground-face :background ,my/header-color))))
+   `(outline-1 ((,class (:foreground ,outline-1 :background ,outline-1-bg))))
+   `(outline-2 ((,class (:foreground ,outline-2 :background ,outline-2-bg))))
+   `(outline-3 ((,class (:foreground ,outline-3 :background ,outline-3-bg))))
+   `(outline-4 ((,class (:foreground ,outline-4 :background ,outline-4-bg))))
+
    `(outline-5 ((,class (:inherit outline-1))))
-   `(outline-6 ((,class (:inherit outline-1))))
-   `(outline-7 ((,class (:inherit outline-1))))
-   `(outline-8 ((,class (:inherit outline-1))))
+   `(outline-6 ((,class (:inherit outline-2))))
+   `(outline-7 ((,class (:inherit outline-3))))
+   `(outline-8 ((,class (:inherit outline-4))))
 
    `(org-level-1 ((,class (:inherit outline-1))))
    `(org-level-2 ((,class (:inherit outline-2))))
@@ -149,14 +164,14 @@
    `(outshine-level-7 ((,class (:inherit outline-7))))
    `(outshine-level-8 ((,class (:inherit outline-8))))
 
-   `(header-line ((,class (:foreground ,my/foreground-color :background ,my/mode-line-color))))
+   `(header-line ((,class (:foreground ,my/fg-color :background ,my/mode-line-color))))
 
-   `(my/mode-line-highlight ((,class (:foreground "#063000" :background ,my/foreground-color))))
+   `(my/mode-line-highlight ((,class (:foreground "#063000" :background ,my/fg-color))))
 
-   `(undo-tree-visualizer-current-face ((,class (:foreground ,my/foreground-color))))
+   `(undo-tree-visualizer-current-face ((,class (:foreground ,my/fg-color))))
    `(undo-tree-visualizer-register-face ((,class (:foreground ,my/error-color))))
    `(undo-tree-visualizer-unmodified-face ((,class (:foreground "blue"))))
-   `(undo-tree-visualizer-default-face ((,class (:foreground ,my/foreground-color-3))))
+   `(undo-tree-visualizer-default-face ((,class (:foreground ,my/fg-color-3))))
 
    `(diff-added ((,class (:background ,my/diff-added-color))))
    `(diff-changed ((,class (:background ,my/diff-changed-color))))
@@ -185,20 +200,20 @@
 
    `(org-verbatim ((,class (:weight bold))))
    `(org-quote ((,class (:slant italic))))
-   `(org-mode-line-clock ((,class (:foreground ,my/foreground-color :background ,my/foreground-color :height unspecified))))
-   `(org-mode-line-clock-overrun ((,class (:foreground ,my/foreground-color :background ,my/error-color :height unspecified))))
+   `(org-mode-line-clock ((,class (:foreground ,my/fg-color :background ,my/fg-color :height unspecified))))
+   `(org-mode-line-clock-overrun ((,class (:foreground ,my/fg-color :background ,my/error-color :height unspecified))))
 
-   `(org-code ((,class (:background ,my/background-color-3))))
-   `(org-block ((,class (:background ,my/background-color-1))))
-   `(org-block-begin-line ((,class (:background ,my/background-color-3))))
+   `(org-code ((,class (:background ,my/bg-color-3))))
+   `(org-block ((,class (:background ,my/bg-color-1))))
+   `(org-block-begin-line ((,class (:background ,my/bg-color-3))))
    `(org-block-end-line ((,class (:inherit org-block-begin-line))))
 
    `(org-meta-line ((,class (:background unspecified))))
    `(org-table ((,class (:foreground ,my/mark-color))))
 
-   `(org-brain-parent ((,class (:foreground ,my/background-color :background ,my/diff-ancestor-color))))
-   `(org-brain-child ((,class (:foreground ,my/background-color :background ,my/diff-added-color))))
-   `(org-brain-friend ((,class (:foreground ,my/background-color :background ,my/mark-color))))
+   `(org-brain-parent ((,class (:foreground ,my/bg-color :background ,my/diff-ancestor-color))))
+   `(org-brain-child ((,class (:foreground ,my/bg-color :background ,my/diff-added-color))))
+   `(org-brain-friend ((,class (:foreground ,my/bg-color :background ,my/mark-color))))
    `(org-brain-title ((,class (:inherit outline-1))))
 
    `(org-todo ((,class (:foreground ,my/mark-color))))
@@ -219,56 +234,56 @@
    `(org-agenda-filter-regexp ((,class (:inherit default))))
    `(org-agenda-filter-tags ((,class (:inherit default))))
    `(org-agenda-restriction-lock ((,class (:inherit default))))
-   `(org-agenda-structure ((,class (:foreground ,my/background-color :background ,my/mark-color))))
+   `(org-agenda-structure ((,class (:foreground ,my/bg-color :background ,my/mark-color))))
 
    ;; Used by org src-blocks when in use, might also be used for other things
-   `(secondary-selection ((,class (:background ,(color-darken-name my/background-color-1 5)))))
+   `(secondary-selection ((,class (:background ,(color-darken-name my/bg-color-1 5)))))
 
-   `(show-paren-match ((,class (:background ,my/foreground-color :foreground ,my/background-color))))
-   `(show-paren-match-expression ((,class (:background ,my/foreground-color :foreground ,my/background-color))))
+   `(show-paren-match ((,class (:background ,my/fg-color :foreground ,my/bg-color))))
+   `(show-paren-match-expression ((,class (:background ,my/fg-color :foreground ,my/bg-color))))
    `(my/show-paren-offscreen-face ((,class (:inherit highlight))))
 
-   `(wgrep-file-face ((,class (:background ,my/foreground-color-6 :foreground ,my/background-color))))
+   `(wgrep-file-face ((,class (:background ,my/fg-color-6 :foreground ,my/bg-color))))
 
-   `(ivy-grep-info ((,class (:background ,my/foreground-color-6 :foreground ,my/background-color))))
+   `(ivy-grep-info ((,class (:background ,my/fg-color-6 :foreground ,my/bg-color))))
 
-   `(symbol-overlay-default-face ((,class (:foreground ,my/foreground-color :background ,my/mark-color-5))))
+   `(symbol-overlay-default-face ((,class (:foreground ,my/fg-color :background ,my/mark-color-5))))
 
-   `(dired-directory ((,class (:foreground ,my/background-color :background ,my/foreground-color))))
+   `(dired-directory ((,class (:foreground ,my/bg-color :background ,my/fg-color))))
    `(dired-perm-write ((,class (:inherit default))))
    `(dired-symlink ((,class (:inherit font-lock-comment-face))))
    `(dired-header ((,class (:foreground ,my/mark-color))))
 
-   `(spray-accent-face ((,class (:foreground ,my/foreground-color :background ,my/background-color :underline t))))
+   `(spray-accent-face ((,class (:foreground ,my/fg-color :background ,my/bg-color :underline t))))
 
-   `(isearch ((,class (:foreground ,my/background-color :background ,my/foreground-color))))
-   `(lazy-highlight ((,class (:foreground ,my/background-color :background ,my/foreground-color))))
+   `(isearch ((,class (:foreground ,my/bg-color :background ,my/fg-color))))
+   `(lazy-highlight ((,class (:foreground ,my/bg-color :background ,my/fg-color))))
 
    `(haskell-literate-comment-face ((,class (:foreground unspecified :background unspecified :inherit font-lock-comment-face))))
 
-   `(company-scrollbar-bg ((,class (:background ,my/background-color))))
-   `(company-scrollbar-fg ((,class (:background ,my/foreground-color))))
+   `(company-scrollbar-bg ((,class (:background ,my/bg-color))))
+   `(company-scrollbar-fg ((,class (:background ,my/fg-color))))
 
-   `(company-tooltip-selection ((,class (:background ,my/foreground-color :foreground ,my/background-color))))
-   `(company-tooltip ((,class (:foreground ,my/foreground-color :background ,my/background-color-1))))
-   `(company-tooltip-common ((,class (:foreground ,my/background-color :background ,my/foreground-color))))
+   `(company-tooltip-selection ((,class (:background ,my/fg-color :foreground ,my/bg-color))))
+   `(company-tooltip ((,class (:foreground ,my/fg-color :background ,my/bg-color-1))))
+   `(company-tooltip-common ((,class (:foreground ,my/bg-color :background ,my/fg-color))))
 
-   `(popup-menu-selection-face ((,class (:foreground ,my/background-color :background ,my/foreground-color))))
-   `(popup-menu-face ((,class (:foreground ,my/foreground-color :background ,my/background-color-1))))
+   `(popup-menu-selection-face ((,class (:foreground ,my/bg-color :background ,my/fg-color))))
+   `(popup-menu-face ((,class (:foreground ,my/fg-color :background ,my/bg-color-1))))
 
 
    `(minibuffer-prompt ((,class (:foreground ,my/mark-color))))
 
-   `(ivy-current-match ((,class (:foreground ,my/background-color :background ,my/mark-color-3))))
-   `(ivy-cursor ((,class (:foreground ,my/background-color :background ,my/foreground-color))))
-   `(ivy-minibuffer-match-highlight ((,class (:foreground ,my/background-color :background ,my/foreground-color))))
+   `(ivy-current-match ((,class (:foreground ,my/bg-color :background ,my/mark-color-3))))
+   `(ivy-cursor ((,class (:foreground ,my/bg-color :background ,my/fg-color))))
+   `(ivy-minibuffer-match-highlight ((,class (:foreground ,my/bg-color :background ,my/fg-color))))
 
-   `(ivy-minibuffer-match-face-1 ((,class (:foreground ,my/background-color :background ,my/foreground-color))))
-   `(ivy-minibuffer-match-face-2 ((,class (:foreground ,my/background-color :background ,my/foreground-color-2))))
-   `(ivy-minibuffer-match-face-3 ((,class (:foreground ,my/background-color :background ,my/foreground-color-4))))
-   `(ivy-minibuffer-match-face-4 ((,class (:foreground ,my/background-color :background ,my/foreground-color-6))))
+   `(ivy-minibuffer-match-face-1 ((,class (:foreground ,my/bg-color :background ,my/fg-color))))
+   `(ivy-minibuffer-match-face-2 ((,class (:foreground ,my/bg-color :background ,my/fg-color-2))))
+   `(ivy-minibuffer-match-face-3 ((,class (:foreground ,my/bg-color :background ,my/fg-color-4))))
+   `(ivy-minibuffer-match-face-4 ((,class (:foreground ,my/bg-color :background ,my/fg-color-6))))
 
-   `(ivy-minibuffer-match-face-4 ((,class (:foreground ,my/background-color :background ,my/foreground-color-6))))
+   `(ivy-minibuffer-match-face-4 ((,class (:foreground ,my/bg-color :background ,my/fg-color-6))))
 
    `(ivy-yasnippet-key ((,class (nil :foreground :foreground unspecified :background unspecified :inherit font-lock-comment-face))))
 
@@ -280,15 +295,15 @@
    `(my/ivy-rich-switch-buffer-project-face ((,class (:foreground unspecified :background unspecified :inherit font-lock-comment-face))))
    `(my/ivy-rich-find-file-symlink-face ((,class (:foreground unspecified :background unspecified :inherit font-lock-comment-face))))
 
-   `(swiper-match-face-1 ((,class (:foreground ,my/background-color :background ,my/foreground-color))))
-   `(swiper-match-face-2 ((,class (:foreground ,my/background-color :background ,my/foreground-color-2))))
-   `(swiper-match-face-3 ((,class (:foreground ,my/background-color :background ,my/foreground-color-4))))
-   `(swiper-match-face-4 ((,class (:foreground ,my/background-color :background ,my/foreground-color-6))))
+   `(swiper-match-face-1 ((,class (:foreground ,my/bg-color :background ,my/fg-color))))
+   `(swiper-match-face-2 ((,class (:foreground ,my/bg-color :background ,my/fg-color-2))))
+   `(swiper-match-face-3 ((,class (:foreground ,my/bg-color :background ,my/fg-color-4))))
+   `(swiper-match-face-4 ((,class (:foreground ,my/bg-color :background ,my/fg-color-6))))
 
-   `(avy-lead-face ((,class (:foreground ,my/background-color :background ,my/foreground-color-6))))
-   `(avy-lead-face-0 ((,class (:foreground ,my/background-color :background ,my/foreground-color-2))))
-   `(avy-lead-face-1 ((,class (:foreground ,my/background-color :background ,my/foreground-color-4))))
-   `(avy-lead-face-2 ((,class (:foreground ,my/background-color :background ,my/foreground-color-6))))
+   `(avy-lead-face ((,class (:foreground ,my/bg-color :background ,my/fg-color-6))))
+   `(avy-lead-face-0 ((,class (:foreground ,my/bg-color :background ,my/fg-color-2))))
+   `(avy-lead-face-1 ((,class (:foreground ,my/bg-color :background ,my/fg-color-4))))
+   `(avy-lead-face-2 ((,class (:foreground ,my/bg-color :background ,my/fg-color-6))))
 
    `(eshell-prompt ((,class (:foreground ,my/prompt-color))))
 
@@ -309,20 +324,20 @@
    `(flyspell-incorrect ((,class (:underline (:style wave :color ,my/spell-error-color)))))
    `(flyspell-duplicate ((,class (:underline (:style wave :color ,my/spell-warning-color)))))
 
-   `(litable-result-face ((,class (:foreground ,my/foreground-color :background ,my/background-color :weight 'bold))))
-   `(litable-substitution-face ((,class (:foreground ,my/foreground-color :background ,my/background-color :weight 'bold))))
+   `(litable-result-face ((,class (:foreground ,my/fg-color :background ,my/bg-color :weight 'bold))))
+   `(litable-substitution-face ((,class (:foreground ,my/fg-color :background ,my/bg-color :weight 'bold))))
 
    `(diff-hl-change ((,class (:background ,my/diff-changed-color))))
 
-   `(show-paren-match ((,class (:foreground ,my/background-color :background ,my/foreground-color))))
+   `(show-paren-match ((,class (:foreground ,my/bg-color :background ,my/fg-color))))
    `(show-paren-mismatch ((,class (:background ,my/error-color))))
 
-   `(flycheck-posframe-background-face ((,class (:foreground ,my/foreground-color :background "#000000"))))
+   `(flycheck-posframe-background-face ((,class (:foreground ,my/fg-color :background "#000000"))))
 
    `(lsp-ui-doc-background ((,class (:inherit default))))
 
-   `(lsp-ui-doc-header ((,class (:foreground ,my/foreground-color :background ,my/background-color-4))))
-   `(lsp-ui-doc-url ((,class (:foreground ,my/background-color :background ,my/foreground-color))))
+   `(lsp-ui-doc-header ((,class (:foreground ,my/fg-color :background ,my/bg-color-4))))
+   `(lsp-ui-doc-url ((,class (:foreground ,my/bg-color :background ,my/fg-color))))
 
    `(lsp-ui-peek-filename ((,class (:inherit default))))
    `(lsp-ui-peek-footer ((,class (:inherit default))))
@@ -337,14 +352,14 @@
    `(lsp-ui-sideline-global ((,class (:inherit default))))
 
    `(lsp-ui-sideline-symbol ((,class (:foreground nil :background nil))))
-   `(lsp-ui-sideline-symbol-info ((,class (:foreground ,my/mark-color :background ,my/background-color))))
+   `(lsp-ui-sideline-symbol-info ((,class (:foreground ,my/mark-color :background ,my/bg-color))))
 
-   `(lsp-lens-face ((,class (:foreground unspecified :background ,my/background-color :inherit font-lock-comment-face))))
+   `(lsp-lens-face ((,class (:foreground unspecified :background ,my/bg-color :inherit font-lock-comment-face))))
 
-   `(my/alert-prio-high-face ((,class (:foreground ,my/background-color :background ,my/diff-removed-color))))
-   `(my/alert-prio-med-face ((,class (:foreground ,my/background-color :background ,my/diff-changed-color))))
-   `(my/alert-prio-low-face ((,class (:foreground ,my/background-color :background ,my/diff-ancestor-color))))
-   `(my/alert-prio-none-face ((,class (:foreground ,my/background-color :background ,my/diff-ancestor-hl-color))))
+   `(my/alert-prio-high-face ((,class (:foreground ,my/bg-color :background ,my/diff-removed-color))))
+   `(my/alert-prio-med-face ((,class (:foreground ,my/bg-color :background ,my/diff-changed-color))))
+   `(my/alert-prio-low-face ((,class (:foreground ,my/bg-color :background ,my/diff-ancestor-color))))
+   `(my/alert-prio-none-face ((,class (:foreground ,my/bg-color :background ,my/diff-ancestor-hl-color))))
    ))
 
 (provide-theme 'myTheme)
