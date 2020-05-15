@@ -1,0 +1,4 @@
+# key: fw
+# name: find-wallpaper
+# --
+[[elisp:(my/open-wall "`(file-name-nondirectory (my/find-wall-name nil))`")]]

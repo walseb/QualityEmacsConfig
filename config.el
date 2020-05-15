@@ -97,6 +97,11 @@
 (setq netrc-file "~/.authinfo.gpg")
 (setq auth-sources '("~/.authinfo.gpg"))
 
+;; * Folders
+;; Folder locations
+(setq my/notes-folder "~/Notes/")
+(setq my/wallpaper-folder (concat my/notes-folder "Wallpapers/"))
+
 ;; * Package management
 ;; Bootstrap straight.el
 (eval-and-compile
@@ -137,7 +142,7 @@
 
 (add-to-list 'emulation-mode-map-alists `((my/keys-mode . ,my/keys-mode-map)))
 
-;; * Generic functions and variables
+;; * General functions and variables
 ;; ** File management
 ;; *** Create directory if directory doesn't exist
 (defun my/create-dir-if-not-exist (dir)
@@ -354,6 +359,13 @@
   (let ((file-name (and file (file-name-nondirectory file))))
     (and file-name (string-match-p "\.gpg" file-name))))
 
+;; ** Recursive file get
+;; Try this in a large directory
+;; (benchmark 10 (split-string (shell-command-to-string "find .") "\n" t))
+;; (benchmark 10 '(directory-files-recursively default-directory ""))
+(defun my/rec-find-files ()
+  (split-string (shell-command-to-string "find .") "\n" t))
+
 ;; ** Time
 ;; *** Is it weekend
 (defun my/is-it-weekend ()
@@ -506,6 +518,8 @@
 				 (mu4e-headers-mode . insert)
 				 (mu4e-view-mode . insert)
 				 (mu4e-loading-mode . insert)
+
+				 (image-mode . insert)
 				 )
 	 do (evil-set-initial-state mode state))
 
@@ -1028,8 +1042,6 @@
     ("mpd" (my/write-mpd-config))
     ("cabal" (my/write-cabal-config))))
 
-(define-key my/leader-map (kbd "C-c") 'my/write-configs)
-
 ;; ** Write .xinitrc
 ;; =xset s= disables screen saver
 ;; setxkbmap to select keyboard layout
@@ -1278,16 +1290,15 @@ documentation: True")
 (setq help-mode-map (make-sparse-keymap))
 
 ;; ** Ibuffer
-(with-eval-after-load 'ibuffer
-  (setq ibuffer-mode-map (make-sparse-keymap)))
+(setq ibuffer-mode-map (make-sparse-keymap))
 
 ;; ** Compilation mode
-(with-eval-after-load 'compile
-  (setq compilation-mode-map (make-sparse-keymap))
-  (setq compilation-minor-mode-map (make-sparse-keymap))
-  (setq compilation-shell-minor-mode-map (make-sparse-keymap))
-  (setq compilation-mode-tool-bar-map (make-sparse-keymap))
+(setq compilation-mode-map (make-sparse-keymap))
+(setq compilation-minor-mode-map (make-sparse-keymap))
+(setq compilation-shell-minor-mode-map (make-sparse-keymap))
+(setq compilation-mode-tool-bar-map (make-sparse-keymap))
 
+(with-eval-after-load 'compile
   (setq my/compilation-mode-map (make-sparse-keymap))
   (define-minor-mode my/compilation-mode nil nil nil my/compilation-mode-map)
   (define-key my/compilation-mode-map (kbd "j") 'my/compilation-change-command)
@@ -1446,6 +1457,13 @@ or go back to just one window (by deleting all but the selected window)."
 ;; ** Set safe local variables
 (add-to-list 'safe-local-variable-values '(dante-repl-command-line "ob" "repl"))
 
+;; ** Calendar
+(setq calendar-mode-map (make-sparse-keymap))
+
+(with-eval-after-load 'calendar
+  (define-key calendar-mode-map (kbd "l") 'calendar-forward-month)
+  (define-key calendar-mode-map (kbd "h") 'calendar-backward-month))
+
 ;; * Productivity
 ;; ** Break timer
 ;; In seconds
@@ -1456,8 +1474,7 @@ or go back to just one window (by deleting all but the selected window)."
 (defun my/break-screen ()
   (when my/enable-breaks
     ;; Restart timer
-    (let* (
-	   (is-clocked-in (org-clocking-p))
+    (let* ((is-clocked-in (org-clocking-p))
 	   (time (if is-clocked-in
 		     my/break-time
 		   my/not-clocked-in-break-time)))
@@ -1583,7 +1600,10 @@ or go back to just one window (by deleting all but the selected window)."
 ;; ** Open agenda
 (defun my/org-agenda-show-agenda-and-todo (&optional arg)
   (interactive "P")
-  (org-agenda arg "n"))
+  (let ((buf (get-buffer org-agenda-buffer-name)))
+    (if buf
+	(switch-to-buffer buf)
+      (org-agenda arg "n"))))
 
 (define-key my/open-map (kbd "a") 'my/org-agenda-show-agenda-and-todo)
 
@@ -1680,6 +1700,10 @@ or go back to just one window (by deleting all but the selected window)."
 (with-eval-after-load 'org
   (evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a")) #'my/org-mode-map))
 
+;; ** Inline images
+;; Set max image width to be third of display
+(setq org-image-actual-width (/ (display-pixel-width) 3))
+
 ;; ** Babel
 ;; *** Supported runnable languages
 (with-eval-after-load 'org
@@ -1744,10 +1768,20 @@ or go back to just one window (by deleting all but the selected window)."
     (org-edit-src-exit)))
 
 ;; ** Capture
-(setq org-default-notes-file "~/Notes/Notes.org")
+(setq org-default-notes-file (concat my/notes-folder "Agenda.org"))
 
 ;; *** Doct
 ;; (straight-use-package 'doct)
+
+;; *** Auto capture
+(defun my/auto-org-capture ()
+  (interactive)
+  (pcase major-mode
+    ;; ('mu4e-headers-mode (mu4e-org-store-and-capture))
+    ;; ('mu4e-view-mode (mu4e-org-store-and-capture))
+    (_ (call-interactively 'org-capture))))
+
+(define-key my/leader-map (kbd "C") 'my/auto-org-capture)
 
 ;; ** Agenda
 ;; Give agenda file to use
@@ -1759,6 +1793,8 @@ or go back to just one window (by deleting all but the selected window)."
 (setq org-agenda-start-day "-1d")
 (setq org-agenda-start-on-weekday nil)
 (setq org-agenda-span 50)
+
+(setq org-agenda-todo-ignore-scheduled 'all)
 
 ;; Put todos on top
 (setq org-agenda-custom-commands
@@ -1788,9 +1824,8 @@ or go back to just one window (by deleting all but the selected window)."
 ;; (add-hook 'org-agenda-finalize-hook 'org-timeline-insert-timeline :append)
 
 ;; *** Keys
+(setq org-agenda-mode-map (make-sparse-keymap))
 (with-eval-after-load 'org-agenda
-  (setq org-agenda-mode-map (make-sparse-keymap))
-
   (define-key org-agenda-mode-map (kbd "n") 'org-agenda-next-line)
 
   (define-key org-agenda-mode-map (kbd "p") 'org-agenda-previous-line)
@@ -1799,6 +1834,8 @@ or go back to just one window (by deleting all but the selected window)."
   (define-key org-agenda-mode-map (kbd "h") 'org-agenda-earlier)
 
   (define-key org-agenda-mode-map (kbd "g") 'org-agenda-redo-all)
+
+  (define-key org-agenda-mode-map (kbd "t") 'org-agenda-todo)
 
   (define-key org-agenda-mode-map [remap newline] 'org-agenda-goto))
 
@@ -1815,12 +1852,14 @@ or go back to just one window (by deleting all but the selected window)."
 ;; *** org-mru-clock
 (straight-use-package 'org-mru-clock)
 
+(setq org-mru-clock-keep-formatting t)
+
 (setq org-mru-clock-files (lambda () `(,my/org-clocks-file)))
 (setq org-mru-clock-how-many 999)
 
 (define-key my/leader-map (kbd "k") 'org-mru-clock-in)
-(define-key my/leader-map (kbd "M-k") '(lambda () (interactive) (find-file my/org-clocks-file)))
 (define-key my/leader-map (kbd "C-k") 'org-clock-out)
+(define-key my/leader-map (kbd "M-k") '(lambda () (interactive) (find-file my/org-clocks-file)))
 
 ;; **** Custom prompt
 (with-eval-after-load 'org-mru-clock
@@ -1876,6 +1915,18 @@ or go back to just one window (by deleting all but the selected window)."
 ;; (straight-use-package 'ivy-todo)
 ;; (setq ivy-todo-file my/org-clocks-file)
 
+;; ** Custom links
+;; ***  Find wallpaper
+;; Functions used in the find wallpaper snippet
+(defun my/open-wall (file-name)
+  (let* ((default-directory my/wallpaper-folder)
+	 (files (my/rec-find-files)))
+    (unless (ignore-errors (progn (find-file (seq-find (lambda (a) (string-match-p (rx-to-string file-name) a)) files)) t))
+      (error "Error: file not found"))))
+
+(defun my/find-wall-name (initial-input)
+  (my/counsel-file-jump-get-name initial-input my/wallpaper-folder))
+
 ;; ** Habit
 ;; https://cpbotha.net/2019/11/02/forming-and-maintaining-habits-using-orgmode/
 ;; (add-to-list 'org-modules 'org-habit t)
@@ -1927,7 +1978,7 @@ or go back to just one window (by deleting all but the selected window)."
 
 ;; ** Brain
 (straight-use-package 'org-brain)
-(setq org-brain-path "~/Notes")
+(setq org-brain-path my/notes-folder)
 (setq org-brain-show-history nil)
 (setq org-brain-show-resources nil)
 (setq org-brain-open-same-window t)
@@ -1954,9 +2005,9 @@ or go back to just one window (by deleting all but the selected window)."
   (org-brain--revert-if-visualizing))
 
 ;; *** Keys
-(with-eval-after-load 'org-brain
-  (setq org-brain-visualize-mode-map (make-sparse-keymap))
+(setq org-brain-visualize-mode-map (make-sparse-keymap))
 
+(with-eval-after-load 'org-brain
   ;; Movement
   (define-key org-brain-visualize-mode-map "n" 'forward-button)
   (define-key org-brain-visualize-mode-map "p" 'backward-button)
@@ -4376,7 +4427,7 @@ the overlay."
 (define-key my/emacs-lisp-mode-map (kbd "d") 'find-function)
 (define-key my/emacs-lisp-mode-map (kbd "D") 'find-variable)
 
-(define-key my/emacs-lisp-mode-map (kbd "c") 'emacs-lisp-byte-compile)
+;; (define-key my/emacs-lisp-mode-map (kbd "c") 'emacs-lisp-byte-compile)
 
 (define-key my/emacs-lisp-mode-map (kbd "s") 'suggest)
 
@@ -6300,6 +6351,9 @@ do the
 	     134217829
 	     134217839
 	     134217832
+
+	     ;; C-d for exwm-edit compose
+	     4
 	     ))
   (cl-pushnew k exwm-input-prefix-keys))
 
@@ -6519,7 +6573,7 @@ do the
 				     (kill-local-variable 'header-line-format)))
 
 ;; ** Disable floating windows
-(setq exwm-manage-force-tiling t)
+(setq exwm-manage-force-tiling nil)
 
 ;; ** Disable full screen
 ;; (cl-defun exwm-layout-set-fullscreen (&optional id)
@@ -6940,8 +6994,8 @@ do the
 ;; *** Hydra
 (defhydra hydra-ediff (:color blue
 			      :hint nil
-			      :pre (progn
-				     (setq hydra-hint-display-type 'posframe)))
+			      :pre (setq hydra-hint-display-type 'posframe)
+			      :post (setq hydra-hint-display-type 'message))
   "
     ^Buffers           Files           VC                     Ediff regions
     ----------------------------------------------------------------------
@@ -7062,6 +7116,15 @@ do the
 
 ;; *** Forge
 (straight-use-package '(forge :type git :host github :repo "magit/forge"))
+
+;; *** Todos
+(straight-use-package 'magit-todos)
+(with-eval-after-load 'magit
+  (require 'magit-todos)
+  (magit-todos-mode 1))
+
+;; Same as default but removed the last colon
+(setq magit-todos-keyword-suffix (rx (optional "(" (1+ (not (any ")"))) ")")))
 
 ;; *** Keys
 (with-eval-after-load 'magit
@@ -7472,6 +7535,9 @@ do the
 ;; don't save message to Sent Messages, IMAP takes care of this
 (setq mu4e-sent-messages-behavior 'delete)
 
+;; Show addresses instead of just name of sender
+(setq mu4e-view-show-addresses t)
+
 ;; *** Fetch mail at time interval
 (setq mu4e-get-mail-command "mbsync -a")
 (setq mu4e-update-interval (* 60 5))
@@ -7505,7 +7571,6 @@ do the
   (add-to-list 'mu4e-view-actions '("Firefox" . my/mu4e-view-in-firefox) t))
 
 ;; *** Keys
-;; ** Open mail
 (define-key my/leader-map (kbd "M") '(lambda () (interactive)
 				       (require 'mu4e)
 				       (mu4e t)
@@ -7779,6 +7844,25 @@ do the
 ;; ** Ellocate
 (straight-use-package '(ellocate :type git :host github :repo "walseb/ellocate"))
 
+;; ** Find get file name
+;; Only difference to this and counsel-file-jump is that this returns the string of the file name
+(defun my/counsel-file-jump-get-name (&optional initial-input initial-directory)
+  (interactive
+   (list nil
+	 (when current-prefix-arg
+	   (counsel-read-directory-name "From directory: "))))
+  (counsel-require-program find-program)
+  (let ((default-directory (or initial-directory default-directory)))
+    (ivy-read "Find file: "
+	      (counsel--find-return-list counsel-file-jump-args)
+	      :matcher #'counsel--find-file-matcher
+	      :initial-input initial-input
+	      :preselect (counsel--preselect-file)
+	      :require-match 'confirm-after-completion
+	      :history 'file-name-history
+	      :caller 'counsel-file-jump)))
+
+
 ;; ** Auto grep
 (defun my/auto-grep ()
   (interactive)
@@ -7795,8 +7879,7 @@ do the
     (ellocate)))
 
 ;; ** grep
-(with-eval-after-load 'grep
-  (setq grep-mode-map (make-sparse-keymap)))
+(setq grep-mode-map (make-sparse-keymap))
 
 ;; ** wgrep
 ;; Disable confirmation when saving edits
@@ -7804,9 +7887,9 @@ do the
 
 ;; *** Keys
 ;; Used in ivy occur
-(with-eval-after-load 'wgrep
-  (setq wgrep-mode-map (make-sparse-keymap))
+(setq wgrep-mode-map (make-sparse-keymap))
 
+(with-eval-after-load 'wgrep
   (define-key wgrep-mode-map [remap save-buffer] 'wgrep-finish-edit)
 
   (define-prefix-command 'my/wgrep-map)
@@ -7816,32 +7899,30 @@ do the
   (define-key my/wgrep-map (kbd "k") 'wgrep-abort-changes))
 
 ;; ** Occur
-(with-eval-after-load 'occur
-  (setq occur-mode-map (make-sparse-keymap))
-  (setq occur-edit-mode-map (make-sparse-keymap)))
+(setq occur-mode-map (make-sparse-keymap))
+(setq occur-edit-mode-map (make-sparse-keymap))
 
 ;; ** Ivy occur
 ;; *** Keys
 ;; Also ivy-occur-grep
-(dont-compile
-  (with-eval-after-load 'ivy
-    (setq ivy-occur-mode-map (make-sparse-keymap))
-    (setq-default ivy-occur-mode-map (make-sparse-keymap))
+(setq ivy-occur-mode-map (make-sparse-keymap))
+(setq-default ivy-occur-mode-map (make-sparse-keymap))
 
-    (define-prefix-command 'my/ivy-occur-map)
-    (evil-define-key 'normal ivy-occur-mode-map (kbd (concat my/leader-map-key " a")) 'my/ivy-occur-map)
-    (evil-define-key 'normal ivy-occur-grep-mode-map (kbd (concat my/leader-map-key " a")) 'my/ivy-occur-map)
+(with-eval-after-load 'ivy
+  (define-prefix-command 'my/ivy-occur-map)
+  (evil-define-key 'normal ivy-occur-mode-map (kbd (concat my/leader-map-key " a")) 'my/ivy-occur-map)
+  (evil-define-key 'normal ivy-occur-grep-mode-map (kbd (concat my/leader-map-key " a")) 'my/ivy-occur-map)
 
-    (define-key my/ivy-occur-map (kbd "w") 'ivy-wgrep-change-to-wgrep-mode)
-    (define-key ivy-occur-grep-mode-map (kbd "w") 'ivy-wgrep-change-to-wgrep-mode)
+  (define-key my/ivy-occur-map (kbd "w") 'ivy-wgrep-change-to-wgrep-mode)
+  (define-key ivy-occur-grep-mode-map (kbd "w") 'ivy-wgrep-change-to-wgrep-mode)
 
-    (evil-define-key '(normal visual insert) ivy-occur-mode-map (kbd "RET") 'ivy-occur-press)
-    (evil-define-key '(normal visual) ivy-occur-mode-map (kbd "C-y") 'ivy-occur-read-action)
+  (evil-define-key '(normal visual insert) ivy-occur-mode-map (kbd "RET") 'ivy-occur-press)
+  (evil-define-key '(normal visual) ivy-occur-mode-map (kbd "C-y") 'ivy-occur-read-action)
 
-    (define-key ivy-occur-mode-map "g" 'ivy-occur-revert-buffer)
+  (define-key ivy-occur-mode-map "g" 'ivy-occur-revert-buffer)
 
-    (setq ivy-occur-grep-mode-map (copy-keymap ivy-occur-mode-map))
-    (setq-default ivy-occur-grep-mode-map (copy-keymap ivy-occur-mode-map))))
+  (setq ivy-occur-grep-mode-map (copy-keymap ivy-occur-mode-map))
+  (setq-default ivy-occur-grep-mode-map (copy-keymap ivy-occur-mode-map)))
 
 ;; ** Loccur
 (straight-use-package 'loccur)
@@ -7888,6 +7969,8 @@ do the
 (setq ispell-extra-args '("--sug-mode=bad-spellers" "--ignore-case"))
 
 ;; ** Flyspell
+(setq flyspell-mode-map (make-sparse-keymap))
+
 (define-key my/spell-map (kbd "d") 'ispell-change-dictionary)
 (define-key my/spell-map (kbd "s") 'flyspell-mode)
 
@@ -7918,12 +8001,6 @@ do the
 
 ;; *** Personal directory
 (setq ispell-personal-dictionary (concat user-emacs-directory ".aspell.en.pws"))
-
-;; *** Clean mode map
-(add-hook 'flyspell-mode-hook
-	  (lambda ()
-	    ;; This should remove binds like ~C-c $~ but doesn't. No idea why
-	    (setq flyspell-mode-map (make-sparse-keymap))))
 
 ;; *** Flyspell-prog enable only for certain faces
 ;; Don't auto correct strings
@@ -8052,9 +8129,9 @@ do the
 ;; ** Keys
 (define-key my/leader-map (kbd "A") 'artist-mode)
 
-(with-eval-after-load 'artist
-  (setq artist-mode-map (make-sparse-keymap))
+(setq artist-mode-map (make-sparse-keymap))
 
+(with-eval-after-load 'artist
   ;; (evil-define-key 'normal artist-mode-map (kbd "p") 'artist-previous-line)
   ;; (evil-define-key 'normal artist-mode-map (kbd "n") 'artist-next-line)
 
@@ -8062,7 +8139,7 @@ do the
   ;; (define-key artist-mode-map [S-down-mouse-1] 'artist-down-mouse-1)
   (define-key artist-mode-map [down-mouse-2] 'artist-mouse-choose-operation)
   ;; (define-key artist-mode-map [S-down-mouse-2] 'artist-mouse-choose-operation)
-  (define-key artist-mode-map [down-mouse-3] 'artist-down-mouse-3)
+  (define-key artist-mode-map [down-mouse-3] 'artist-mouse-choose-operation)
   ;; (define-key artist-mode-map [S-down-mouse-3] 'artist-down-mouse-3)
   (define-key artist-mode-map [C-mouse-4] 'artist-select-prev-op-in-list)
   (define-key artist-mode-map [C-mouse-5] 'artist-select-next-op-in-list))
@@ -8160,16 +8237,18 @@ do the
 ;; Make animated images loop
 (setq image-animate-loop t)
 
+;; *** Instant auto resize
+(setq image-auto-resize-on-window-resize 0)
+
 ;; *** Open otf fonts with image mode
 (add-to-list 'auto-mode-alist '("\\.otf\\'" . image-mode))
 
 ;; *** Blimp
 (straight-use-package 'blimp)
 
-(setq eimp-enable-undo t)
+(setq eimp-minor-mode-map (make-sparse-keymap))
 
-(with-eval-after-load 'eimp
-  (setq eimp-minor-mode-map (make-sparse-keymap)))
+(setq eimp-enable-undo t)
 
 (add-hook 'image-mode-hook 'blimp-mode)
 
@@ -8181,35 +8260,49 @@ do the
   (sleep-for 0.2))
 
 ;; *** Keys
-(evil-define-key 'normal image-mode-map (kbd "-") 'image-decrease-size)
-(evil-define-key 'normal image-mode-map (kbd "=") 'image-increase-size)
+(define-key my/pdf-view-mode-map (kbd "g") 'pdf-view-goto-label)
 
-(evil-define-key 'normal image-mode-map (kbd "C-u") 'image-scroll-down)
-(evil-define-key 'normal image-mode-map (kbd "C-w") 'image-scroll-up)
+(setq image-mode-map (make-sparse-keymap))
 
-(evil-define-key 'normal image-mode-map (kbd "n") (lambda () (interactive) (image-next-line 8)))
-(evil-define-key 'normal image-mode-map (kbd "p") (lambda () (interactive) (image-previous-line 8)))
-(evil-define-key 'normal image-mode-map (kbd "h") (lambda () (interactive) (image-backward-hscroll 8)))
-(evil-define-key 'normal image-mode-map (kbd "l") (lambda () (interactive) (image-forward-hscroll 8)))
+(with-eval-after-load 'image-mode
+  (define-key image-mode-map (kbd "-") 'image-decrease-size)
+  (define-key image-mode-map (kbd "_") 'image-decrease-size)
+  (define-key image-mode-map (kbd "=") 'image-increase-size)
+  (define-key image-mode-map (kbd "+") 'image-increase-size)
 
-(evil-define-key 'normal image-mode-map (kbd "G") (lambda () (interactive) (image-next-line 1000)))
-(evil-define-key 'normal image-mode-map (kbd "g g") (lambda () (interactive) (image-previous-line 1000)))
+  (define-key image-mode-map (kbd "C-u") 'image-scroll-down)
+  (define-key image-mode-map (kbd "C-w") 'image-scroll-up)
 
-(evil-define-key 'normal image-mode-map (kbd "$") (lambda () (interactive) (image-forward-hscroll 1000)))
-(evil-define-key 'normal image-mode-map (kbd "0") (lambda () (interactive) (image-backward-hscroll 1000)))
+  (define-key image-mode-map (kbd "n") (lambda () (interactive) (image-next-line 8)))
+  (define-key image-mode-map (kbd "p") (lambda () (interactive) (image-previous-line 8)))
+  (define-key image-mode-map (kbd "h") (lambda () (interactive) (image-backward-hscroll 8)))
+  (define-key image-mode-map (kbd "l") (lambda () (interactive) (image-forward-hscroll 8)))
 
-(define-prefix-command 'my/image-mode-map)
-(evil-define-key 'normal image-mode-map (kbd (concat my/leader-map-key " a")) 'my/image-mode-map)
+  (define-key image-mode-map (kbd "N") 'image-next-file)
+  (define-key image-mode-map (kbd "P") 'image-previous-file)
 
-(define-key my/image-mode-map (kbd "i") 'blimp-interface)
-(define-key my/image-mode-map (kbd "I") 'blimp-interface-execute)
+  (define-key image-mode-map (kbd "L") 'image-transform-fit-to-width)
+  (define-key image-mode-map (kbd "H") 'image-transform-fit-to-height)
 
-(define-key my/image-mode-map (kbd "r") 'blimp-clear-command-stack)
-(define-key my/image-mode-map (kbd "e") 'blimp-execute-command-stack)
-(define-key my/image-mode-map (kbd "p") 'blimp-toggle-prefix)
-(define-key my/image-mode-map (kbd "p") 'blimp-toggle-prefix)
+  (define-key image-mode-map (kbd "G") (lambda () (interactive) (image-next-line 1000)))
+  (define-key image-mode-map (kbd "g g") (lambda () (interactive) (image-previous-line 1000)))
 
-(define-key my/image-mode-map (kbd "a") 'my/blimp-annotate-middle)
+  (define-key image-mode-map (kbd "$") (lambda () (interactive) (image-forward-hscroll 1000)))
+  (define-key image-mode-map (kbd "0") (lambda () (interactive) (image-backward-hscroll 1000))))
+
+(with-eval-after-load 'blimp-mode
+  (define-prefix-command 'my/image-mode-map)
+  (evil-define-key 'normal image-mode-map (kbd (concat my/leader-map-key " a")) 'my/image-mode-map)
+
+  (define-key my/image-mode-map (kbd "i") 'blimp-interface)
+  (define-key my/image-mode-map (kbd "I") 'blimp-interface-execute)
+
+  (define-key my/image-mode-map (kbd "r") 'blimp-clear-command-stack)
+  (define-key my/image-mode-map (kbd "e") 'blimp-execute-command-stack)
+  (define-key my/image-mode-map (kbd "p") 'blimp-toggle-prefix)
+  (define-key my/image-mode-map (kbd "p") 'blimp-toggle-prefix)
+
+  (define-key my/image-mode-map (kbd "a") 'my/blimp-annotate-middle))
 
 ;; * Spray
 (straight-use-package 'spray)
@@ -8541,6 +8634,7 @@ do the
 
 (define-globalized-minor-mode global-olivetti-mode
   nil (lambda ()
+	(setq-local olivetti-mode 1)
 	(unless (string= " *diff-hl* " (buffer-name (current-buffer)))
 	  (pcase major-mode
 	    ('minibuffer-inactive-mode)
@@ -8548,6 +8642,7 @@ do the
 	    ('mu4e-headers-mode)
 	    ('pdf-view-mode)
 	    ('image-mode)
+	    ('org-agenda-mode)
 	    (_ (olivetti-mode 1))))))
 
 (global-olivetti-mode 1)
@@ -8575,7 +8670,7 @@ do the
 
 ;; ** Symbol overlay - highlight thing
 ;; Supposed to be faster than highlight-thing
-(straight-use-package 'symbol-overlay)
+(straight-use-package '(symbol-overlay :type git :host github :repo "walseb/symbol-overlay" :branch "working-commit"))
 
 (setq symbol-overlay-idle-time nil)
 
@@ -8713,7 +8808,7 @@ do the
   (require 'hide-comnt)
   (call-interactively 'hide/show-comments-toggle))
 
-(define-key my/leader-map (kbd "C") 'my/hide-show-comment-toggle)
+(define-key my/leader-map (kbd "C-c") 'my/hide-show-comment-toggle)
 
 ;; ** Font lock
 ;; *** Font lock profiler
@@ -9274,7 +9369,7 @@ do the
 
 		     ;; Org clock
 		     (:eval (if (org-clocking-p)
-				(concat "Org: " (propertize (string-trim-left (substring-no-properties org-mode-line-string)) 'face 'warning) " | ")
+				(concat "Org: " (propertize (string-trim-left (substring-no-properties org-mode-line-string)) 'face 'default) " | ")
 			      (concat "Org: " (propertize "No clock" 'face 'diff-removed) " | ")))
 
 		     (:eval (if my/mode-line-show-GC-stats
@@ -9416,9 +9511,9 @@ do the
 				    (setq-local undo-tree-auto-save-history nil))))
 
 ;; *** Keys
-(with-eval-after-load 'undo-tree
-  (setq undo-tree-visualizer-mode-map (make-sparse-keymap))
+(setq undo-tree-visualizer-mode-map (make-sparse-keymap))
 
+(with-eval-after-load 'undo-tree
   (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "p") #'undo-tree-visualize-undo)
 
   (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "p") #'undo-tree-visualize-undo)
@@ -9432,19 +9527,19 @@ do the
 (defun my/startup-view ()
   (delete-other-windows)
 
-  ;; Wall
-  (find-file
-   (my/get-random-element (directory-files-recursively "~/Notes/Wallpapers" ".")))
+  (when my/show-wall
+    ;; Wall
+    (find-file
+     (my/get-random-element (directory-files-recursively (concat my/wallpaper-folder "Art High/") ".")))
 
-  (split-window-below)
-  (other-window 1)
+    (split-window-below)
+    (other-window 1))
 
   ;; Agenda
   (my/org-agenda-show-agenda-and-todo))
 
 ;; ** Run it on startup
-(add-hook 'exwm-init-hook '(lambda ()
-			     (my/startup-view)))
+(add-hook 'exwm-init-hook '(lambda () (my/startup-view)))
 
 ;; * Run command on boot
 (if my/run-command-on-boot

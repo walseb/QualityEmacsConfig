@@ -33,7 +33,10 @@
        ;; "#121212"
        ;; "#212121"
        ;; "#232323"
-       (my/bg-color (my/ifc (color-darken-name "#292b2e" 10) "black"))
+       ;; (my/bg-color (my/ifc (color-darken-name "#292b2e" 10) "black"))
+       ;; Gruvbox
+       ;; (my/bg-color "#32302f")
+       (my/bg-color (color-darken-name "#292b2e" 10))
        (my/bg-color-1 (my/ifc (color-lighten-name my/bg-color 5) "black"))
        (my/bg-color-2 (my/ifc (color-lighten-name my/bg-color 10) "black"))
        (my/bg-color-3 (my/ifc (color-lighten-name my/bg-color 15) "black"))
@@ -69,16 +72,18 @@
        ;; :background "#052000"
        ;; #5d4d7a
        ;; (my/mode-line-color (color-darken-name "DeepSkyBlue4" 10))
-       (my/mode-line-color my/bg-color)
+       ;; (my/mode-line-color my/bg-color-2)
+       (my/mode-line-color "midnightblue")
 
        (my/hl-line-color "#212026")
 
        (my/comment-face (my/ifc (color-lighten-name my/bg-color 30)
 				"white"))
-       (my/comment-delimiter-foreground-face (my/ifc my/bg-color-4
-						     "white"))
-       (my/comment-delimiter-background-face (my/ifc my/bg-color-2
-						     "black"))
+
+       (my/comment-delimiter-fg-color (my/ifc my/bg-color-4
+					      "white"))
+       (my/comment-delimiter-bg-color (my/ifc my/bg-color-2
+					      "black"))
        (my/outline-foreground-face (my/ifc (color-lighten-name my/bg-color 2)
 					   "white"))
        (my/outline-background-face (my/ifc (color-darken-name my/fg-color 50)
@@ -117,7 +122,7 @@
    `(flycheck-info ((,class (:underline (:style wave :color ,my/info-color)))))
 
    `(font-lock-comment-face ((,class (:foreground ,my/comment-face))))
-   `(font-lock-comment-delimiter-face ((,class (:foreground ,my/comment-delimiter-foreground-face :background ,my/comment-delimiter-background-face))))
+   `(font-lock-comment-delimiter-face ((,class (:foreground ,my/comment-delimiter-fg-color :background ,my/comment-delimiter-bg-color))))
    `(font-lock-string-face ((,class (:inherit default))))
    `(font-lock-function-name-face ((,class (:foreground ,my/mark-color :background ,my/bg-color))))
    ;; `(font-lock-function-name-face ((,class (:inherit default))))
@@ -136,10 +141,10 @@
    `(hl-line ((,class (:foreground ,my/fg-color :background ,my/hl-line-color :underline nil))))
 
    ;; `(outline-1 ((,class (:foreground ,my/outline-foreground-face :background ,my/header-color))))
-   `(outline-1 ((,class (:foreground ,outline-1 :background ,outline-1-bg))))
-   `(outline-2 ((,class (:foreground ,outline-2 :background ,outline-2-bg))))
-   `(outline-3 ((,class (:foreground ,outline-3 :background ,outline-3-bg))))
-   `(outline-4 ((,class (:foreground ,outline-4 :background ,outline-4-bg))))
+   `(outline-1 ((,class (:foreground ,outline-1 :background ,my/bg-color-1))))
+   `(outline-2 ((,class (:foreground ,outline-2 :background ,my/bg-color-2))))
+   `(outline-3 ((,class (:foreground ,outline-3 :background ,my/bg-color-3))))
+   `(outline-4 ((,class (:foreground ,outline-4 :background ,my/bg-color-4))))
 
    `(outline-5 ((,class (:inherit outline-1))))
    `(outline-6 ((,class (:inherit outline-2))))
@@ -332,7 +337,7 @@
    `(show-paren-match ((,class (:foreground ,my/bg-color :background ,my/fg-color))))
    `(show-paren-mismatch ((,class (:background ,my/error-color))))
 
-   `(flycheck-posframe-background-face ((,class (:foreground ,my/fg-color :background "#000000"))))
+   `(flycheck-posframe-background-face ((,class (:foreground ,my/fg-color :background ,my/mark-color-5))))
 
    `(lsp-ui-doc-background ((,class (:inherit default))))
 

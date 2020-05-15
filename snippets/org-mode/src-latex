@@ -1,6 +1,6 @@
 # key: la
-# name: la
+# name: src-latex
 # --
-#+begin_latex
+#+BEGIN_EXPORT latex
 
-#+end_latex
+#+END_EXPORT

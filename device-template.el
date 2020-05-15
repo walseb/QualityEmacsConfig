@@ -1,3 +1,5 @@
+(defvar my/show-wall nil)
+
 (defvar my/default-face-height 160)
 
 ;;(defvar my/device/monitor-setup '(1 "DVI-D-1" 0 "DP-1" 2 "DVI-I-1"))
