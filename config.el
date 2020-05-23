@@ -846,10 +846,14 @@
 
 ;; *** Don't save chars deleted with x to clipboard
 (my/evil-normal-define-key "x" 'delete-char)
-(my/evil-normal-define-key "X"
-			   (lambda () (interactive)
-			     (backward-char)
-			     (call-interactively #'delete-char)))
+(my/evil-normal-define-key "X" (lambda () (interactive)
+				 (backward-char)
+				 (call-interactively #'delete-char)))
+
+(my/evil-visual-define-key "x" '(lambda () (interactive)
+				  (let ((ring kill-ring))
+				    (call-interactively 'evil-delete)
+				    (setq kill-ring ring))))
 
 ;; * Hydra
 (eval-and-compile
@@ -1032,93 +1036,6 @@
 ;; ** Local packages
 ;; (add-to-list 'load-path (expand-file-name (concat user-emacs-directory "local-packages")))
 
-;; * Write configs
-(defun my/write-configs ()
-  (interactive)
-  (pcase (completing-read "Which config to write: "
-			  '("xinit" "xmodmap" "mpd" "cabal") nil t)
-    ("xinit" (my/write-xinitrc))
-    ("xmodmap" (my/write-xmodmap))
-    ("mpd" (my/write-mpd-config))
-    ("cabal" (my/write-cabal-config))))
-
-;; ** Write .xinitrc
-;; =xset s= disables screen saver
-;; setxkbmap to select keyboard layout
-
-(defconst my/xinit-config-text "
-xset s off
-xset s noblank
-xset s off
-xset s off -dpms
-
-setxkbmap -layout us -variant altgr-intl
-# setxkbmap -layout carpalx -variant qgmlwy
-
-# xmodmap ~./xmodmap
-
-# Fix java windows in exwm
-export _JAVA_AWT_WM_NONREPARENTING=1
-
-exec emacs")
-
-(defun my/write-xinitrc ()
-  (my/create-file-with-content-if-not-exist "~/.xinitrc" my/xinit-config-text))
-
-;; ** Write .xmodmap
-;; This swaps capslock and ctrl
-(defconst my/xmodmap-config-text "
-! Swap Caps_Lock and Control_L
-remove Lock = Caps_Lock
-remove Control = Control_L
-keysym Control_L = Caps_Lock
-keysym Caps_Lock = Control_L
-add Lock = Caps_Lock
-add Control = Control_L
-")
-
-(defun my/write-xmodmap ()
-  (my/create-file-with-content-if-not-exist "~/.xmodmap" my/xmodmap-config-text))
-
-;; ** Write mpd
-(defconst my/mpd-config-text "
-music_directory \"~/Music\"
-playlist_directory  \"~/.config/mpd/playlists\"
-db_file \"~/.config/mpd/mpd.db\"
-log_file \"~/.config/mpd/mpd.log\"
-bind_to_address \"127.0.0.1\"
-port \"6600\"
-
-# For pulse audio
-audio_output {
-type \"pulse\"
-name \"pulse audio\"
-}")
-
-(defun my/write-mpd-config ()
-  (let* ((config-dir "~/.config/")
-	 (mpd-dir (concat config-dir "mpd/"))
-	 (mpd-config (concat mpd-dir "mpd.conf")))
-    (my/create-dir-if-not-exist config-dir)
-
-    (my/create-dir-if-not-exist mpd-dir)
-
-    (my/create-file-with-content-if-not-exist mpd-config my/mpd-config-text)
-
-    (my/create-file-if-not-exist (concat mpd-dir "mpd.log"))
-    (my/create-file-if-not-exist (concat mpd-dir "mpd.db"))
-    (my/create-dir-if-not-exist (concat mpd-dir "playlists/"))))
-
-;; ** Write cabal config
-(defconst my/nix-config-text "nix: true
-documentation: True")
-
-(defun my/write-cabal-config ()
-  (let* ((cabal-dir "~/.cabal/")
-	 (cabal-file (concat cabal-dir "config")))
-    (my/create-dir-if-not-exist cabal-dir)
-    (my/create-file-with-content-if-not-exist cabal-file my/nix-config-text)))
-
 ;; * Minor
 ;; ** Startup
 ;; Disable startup message
@@ -1182,6 +1099,9 @@ documentation: True")
 
 ;; ** Change max killring size
 (setq kill-ring-max 500)
+
+;; ** Don't save duplicates to kill ring
+(setq kill-do-not-save-duplicates t)
 
 ;; ** Pixel scroll mode
 ;; In org mode when displaying images pixel scroll mode can be useful maybe
@@ -1298,14 +1218,10 @@ documentation: True")
 (setq compilation-shell-minor-mode-map (make-sparse-keymap))
 (setq compilation-mode-tool-bar-map (make-sparse-keymap))
 
-(with-eval-after-load 'compile
-  (setq my/compilation-mode-map (make-sparse-keymap))
-  (define-minor-mode my/compilation-mode nil nil nil my/compilation-mode-map)
-  (define-key my/compilation-mode-map (kbd "j") 'my/compilation-change-command)
-  (define-key my/compilation-mode-map (kbd "g") 'recompile)
-  (define-key my/compilation-mode-map (kbd "C-c") 'kill-compilation)
-  (evil-define-key '(normal insert visual replace) my/compilation-mode-map (kbd "C-c") 'kill-compilation)
-  (add-hook 'compilation-mode-hook 'my/compilation-mode))
+(define-key compilation-mode-map (kbd "j") 'my/compilation-change-command)
+(define-key compilation-mode-map (kbd "g") 'recompile)
+(define-key compilation-mode-map (kbd "C-c") 'kill-compilation)
+;; (evil-define-key '(normal insert visual replace) compilation-mode-map (kbd "C-c") 'kill-compilation)
 
 ;; *** Show alert after compilation completed
 (add-to-list 'compilation-finish-functions (lambda (_a _b)
@@ -1333,12 +1249,6 @@ documentation: True")
 
 ;; ** Redefine keyboard-escape-quit
 (defun keyboard-escape-quit ()
-  "Exit the current \"mode\" (in a generalized sense of the word).
-This command can exit an interactive command such as `query-replace',
-can clear out a prefix argument or a region,
-can get out of the minibuffer or other recursive edit,
-cancel the use of the current buffer (for special-purpose buffers),
-or go back to just one window (by deleting all but the selected window)."
   (interactive)
   (cond ((eq last-command 'mode-exited) nil)
 	((region-active-p)
@@ -1463,6 +1373,10 @@ or go back to just one window (by deleting all but the selected window)."
 (with-eval-after-load 'calendar
   (define-key calendar-mode-map (kbd "l") 'calendar-forward-month)
   (define-key calendar-mode-map (kbd "h") 'calendar-backward-month))
+
+;; ** Explain pause mode
+(straight-use-package '(explain-pause-mode :type git :host github :repo "lastquestion/explain-pause-mode"))
+;; (explain-pause-mode)
 
 ;; * Productivity
 ;; ** Break timer
@@ -1771,7 +1685,27 @@ or go back to just one window (by deleting all but the selected window)."
 (setq org-default-notes-file (concat my/notes-folder "Agenda.org"))
 
 ;; *** Doct
-;; (straight-use-package 'doct)
+(straight-use-package 'doct)
+
+(setq org-capture-templates
+      (doct '(
+	      ;; Default todo
+	      ;; '(("t" "Task" entry (file+headline "" "Tasks")
+	      ;;    "* TODO %?\n  %u\n  %a"))
+	      ("Task"
+	       :keys "t"
+	       :file org-default-notes-file
+	       :headline "Tasks"
+	       :prepend t
+	       :template ("* TODO %?\n  %u\n  %a"))
+
+	      ("Learning"
+	       :keys "l"
+	       :file org-default-notes-file
+	       :headline "Learning resources"
+	       :prepend t
+	       :template ("* %?\n  %u\n  %a"))
+	      )))
 
 ;; *** Auto capture
 (defun my/auto-org-capture ()
@@ -4882,7 +4816,6 @@ do the
 (defun my/haskell-add-ghc-option ()
   (interactive)
   (save-excursion
-    (goto-char (point-min))
     (let ((extension (completing-read "Option: " haskell-ghc-supported-options)))
       (insert extension))))
 
@@ -5076,6 +5009,7 @@ do the
 			       (add-to-list 'flycheck-disabled-checkers 'haskell-stack-ghc)))
 
 ;; *** Snippet utils
+;; Used in yasnippets
 (defun my/get-data-name ()
   "Finds the variable name of the data declaration above cursor"
   (save-excursion
@@ -5083,6 +5017,19 @@ do the
     (search-forward-regexp "[:word:]")
     (search-forward-regexp "[:word:]")
     (thing-at-point 'symbol t)))
+
+;; ** Syntax highlight functions correctly
+;; (add-hook 'haskell-mode-hook
+;;	  (lambda ()
+;;	    (font-lock-add-keywords nil
+;;				    '(((rx bol (not blank) space "::" space ) 1
+;;				       font-lock-warning-face t)))))
+;; (font-lock-add-keywords nil
+;;			`(("\\_< :: \\_>"
+;;			   (,(rx bol word)
+;;			    nil   ;; Pre-match form
+;;			    nil   ;; Post-match form
+;;			    (1 font-lock-type-face)))))
 
 ;; ** C/CPP
 ;; *** LSP CCLS
@@ -6144,13 +6091,13 @@ do the
 ;; *** Rebind save key
 (general-simulate-key "C-x C-s")
 
-(defun my/save-and-backup-buffer ()
+(defun my/save-buffer ()
   (interactive)
   ;; (my/backup-buffer-per-session)
   ;; (my/backup-original-buffer)
   (general-simulate-C-x_C-s))
 
-(define-key my/leader-map (kbd "s") 'my/save-and-backup-buffer)
+(define-key my/leader-map (kbd "s") 'my/save-buffer)
 (define-key my/leader-map (kbd "C-s") 'write-file)
 
 ;; *** Rebind C-d
@@ -6945,14 +6892,6 @@ do the
 ;; (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-l") (lambda () (interactive) (exwm-input--fake-key 'delete)))
 ;; (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "DEL") (lambda () (interactive) (exwm-input--fake-key 'backspace)))))
 
-;; ** Next browser
-;; (defun my/write-next-config ()
-;; (my/create-dir-if-not-exist "~/.config")
-;; (my/create-dir-if-not-exist "~/.config/next")
-;; (my/create-file-with-content-if-not-exist "~/.config/next/init.lisp")
-
-;; )
-
 ;; * Version control
 ;; ** Ediff
 (setq-default ediff-forward-word-function 'forward-char)
@@ -7080,9 +7019,9 @@ do the
 
 		 ;; Run rebuild as sudo
 		 (let ((default-directory (concat "/sudo::" default-directory)))
-		   (compile "nixos-rebuild switch")))
+		   (compile "nix-channel --update; nixos-rebuild switch")))
 	     (if (file-in-directory-p (buffer-file-name) "~/.config/nixpkgs/")
-		 (compile "home-manager switch"))))))))))
+		 (compile "nix-channel --update; home-manager switch"))))))))))
 
 ;; ** Counsel projectile
 ;; If enabled it auto enables projectile, which has high CPU usage
@@ -7522,6 +7461,8 @@ do the
 (setq mu4e-html2text-command "w3m -T text/html")
 ;; (setq mu4e-html2text-command 'mu4e-shr2text)
 ;; (setq mu4e-html2text-command "iconv -c -t utf-8 | pandoc -f html -t plain")
+;; Doesn't work very well
+;; (setq mu4e-html2text-command "iconv -c -t utf-8 | pandoc -f html -t org")
 
 ;; (setq mu4e-view-use-gnus t)
 ;; (setq mu4e-view-prefer-html t)
@@ -7537,6 +7478,12 @@ do the
 
 ;; Show addresses instead of just name of sender
 (setq mu4e-view-show-addresses t)
+
+;; *** org-mime
+;; (straight-use-package 'org-mime)
+;; (with-eval-after-load 'mu4e
+;;   (require 'org-mime)
+;;   (setq org-mime-library 'mu4e))
 
 ;; *** Fetch mail at time interval
 (setq mu4e-get-mail-command "mbsync -a")
@@ -7621,20 +7568,22 @@ do the
 
 ;; ** Suspend
 (define-prefix-command 'my/system-suspend-map)
-(define-key my/system-commands-map (kbd "s") 'my/system-suspend-map)
+;; (define-key my/system-commands-map (kbd "s") 'my/system-suspend-map)
 
 (defun my/systemd-suspend-PC ()
   (interactive)
   (ignore-errors
     (org-clock-out))
   (shell-command "systemctl suspend"))
-(define-key my/system-suspend-map (kbd "C-s") 'my/systemd-suspend-PC)
+;; (define-key my/system-suspend-map (kbd "C-s") 'my/systemd-suspend-PC)
 (defalias 'my/systemd-sleep #'my/systemd-suspend-PC)
 
-;; (defun my/systemd-hibernate-PC()
-;;  (interactive)
-;;  (shell-command "systemctl hibernate"))
-;; Never used
+(defun my/systemd-hibernate-PC()
+  (interactive)
+  (ignore-errors
+    (org-clock-out))
+  (shell-command "systemctl hibernate"))
+
 ;; (define-key my/system-suspend-map (kbd "C-h") 'my/systemd-hibernate-PC)
 
 ;; ** Multi-monitor
@@ -7971,6 +7920,9 @@ do the
 ;; ** Flyspell
 (setq flyspell-mode-map (make-sparse-keymap))
 
+;; This binds a key if t
+(setq flyspell-use-meta-tab nil)
+
 (define-key my/spell-map (kbd "d") 'ispell-change-dictionary)
 (define-key my/spell-map (kbd "s") 'flyspell-mode)
 
@@ -8014,9 +7966,7 @@ do the
 (straight-use-package 'flyspell-correct)
 
 ;; **** Key
-(my/evil-insert-define-key (kbd "C-d") 'flyspell-correct-at-point)
-(my/evil-normal-define-key (kbd "C-d") 'flyspell-correct-at-point)
-(my/evil-visual-define-key (kbd "C-d") 'flyspell-correct-at-point)
+(my/evil-universal-define-key "C-d" 'flyspell-correct-at-point)
 
 ;; *** Company
 (defun my/toggle-company-ispell ()
@@ -8628,7 +8578,10 @@ do the
 (setq-default indicate-empty-lines t)
 
 ;; ** Center text
-(straight-use-package 'olivetti)
+(straight-use-package '(olivetti :type git :host github :repo "walseb/olivetti"))
+;; (straight-use-package 'olivetti)
+
+(setq olivetti-mode-map (make-sparse-keymap))
 
 (setq-default olivetti-body-width 150)
 
@@ -8646,8 +8599,6 @@ do the
 	    (_ (olivetti-mode 1))))))
 
 (global-olivetti-mode 1)
-
-(setq olivetti-mode-map (make-sparse-keymap))
 
 (define-key my/leader-map (kbd "V") 'olivetti-mode)
 
@@ -9446,6 +9397,7 @@ do the
 (mini-modeline-mode 1)
 
 ;; (setq mini-modeline-frame (window-frame (minibuffer-window)))
+;; (setq mini-modeline-frame nil)
 
 (setq mode-line-format nil)
 (setq-default mode-line-format nil)

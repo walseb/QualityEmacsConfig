@@ -314,8 +314,11 @@
 
    `(eshell-prompt ((,class (:foreground ,my/prompt-color))))
 
-   `(yascroll:thumb-fringe ((,class (:background "slateblue" :foreground "slateblue"))))
-   `(yascroll:thumb-text-area ((,class (:background "slateblue"))))
+   ;; `(yascroll:thumb-fringe ((,class (:background "slateblue" :foreground "slateblue"))))
+   ;; `(yascroll:thumb-text-area ((,class (:background "slateblue"))))
+
+   `(yascroll:thumb-fringe ((,class (:background "light sea green" :foreground "light sea green"))))
+   `(yascroll:thumb-text-area ((,class (:background "light sea green"))))
 
    `(term-color-black ((,class (:foreground "black" :background "black"))))
    `(term-color-blue ((,class (:foreground "blue" :background "blue"))))

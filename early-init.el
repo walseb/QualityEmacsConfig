@@ -9,10 +9,14 @@
 
 ;; * Disable gui
 ;; Prevent the glimpse of un-styled Emacs by disabling these UI elements early.
-(push '(menu-bar-lines . 1) default-frame-alist)
-(push '(tool-bar-lines . 0) default-frame-alist)
-(push '(vertical-scroll-bars . 0) default-frame-alist)
-(push '(horizontal-scroll-bar . 0) default-frame-alist)
+(push '(menu-bar-lines . nil) default-frame-alist)
+(push '(tool-bar-lines . nil) default-frame-alist)
+(push '(vertical-scroll-bars . nil) default-frame-alist)
+(push '(horizontal-scroll-bar . nil) default-frame-alist)
+
+;; (menu-bar-mode -1)
+;; (tool-bar-mode -1)
+;; (scroll-bar-mode -1)
 
 ;; * Disable frame resize on font change
 (setq frame-inhibit-implied-resize t)
