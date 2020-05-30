@@ -79,3 +79,6 @@ Covariant
 Endofunctor
 Profunctor
 yasnippet
+applicative
+functors
+fmap

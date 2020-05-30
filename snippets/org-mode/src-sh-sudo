@@ -1,0 +1,6 @@
+# key: shsudo
+# name: src-sudo
+# --
+#+BEGIN_SRC sh :dir "/sudo::~/" :cache no
+
+#+END_SRC
