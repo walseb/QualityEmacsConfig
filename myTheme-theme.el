@@ -368,6 +368,8 @@
    `(my/alert-prio-med-face ((,class (:foreground ,my/bg-color :background ,my/diff-changed-color))))
    `(my/alert-prio-low-face ((,class (:foreground ,my/bg-color :background ,my/diff-ancestor-color))))
    `(my/alert-prio-none-face ((,class (:foreground ,my/bg-color :background ,my/diff-ancestor-hl-color))))
+
+   `(mu4e-header-highlight-face ((,class (:inherit hl-line))))
    ))
 
 (provide-theme 'myTheme)

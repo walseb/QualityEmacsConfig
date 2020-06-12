@@ -32,32 +32,38 @@
 
 ;; *** Find fonts
 (defun my/get-best-font ()
-  (if (my/font-installed "Liga Inconsolata LGC")
-      "Liga Inconsolata LGC"
-    (if (my/font-installed "Inconsolata LGC")
-	"Inconsolata LGC"
-      (if (my/font-installed "Inconsolata")
-	  "Inconsolata"
-	(if (my/font-installed "DejaVu Sans Mono")
-	    "DejaVu Sans Mono"
-	  (if (my/font-installed "Fira Mono")
-	      "Fira Mono"
-	    (if (my/font-installed "dejavu sans mono")
-		"DejaVuSansMono"
-	      (if (my/font-installed "Noto Sans Mono")
-		  "NotoSansMono"
-		(if (my/font-installed "Perfect DOS VGA 437")
-		    "Perfect DOS VGA 437")))))))))
+  (if (my/font-installed "Iosevka")
+      "Iosevka"
+    (if (my/font-installed "Liga Inconsolata LGC")
+	"Liga Inconsolata LGC"
+      (if (my/font-installed "Inconsolata LGC")
+	  "Inconsolata LGC"
+	(if (my/font-installed "Inconsolata")
+	    "Inconsolata"
+	  (if (my/font-installed "DejaVu Sans Mono")
+	      "DejaVu Sans Mono"
+	    (if (my/font-installed "Fira Mono")
+		"Fira Mono"
+	      (if (my/font-installed "dejavu sans mono")
+		  "DejaVuSansMono"
+		(if (my/font-installed "Noto Sans Mono")
+		    "NotoSansMono"
+		  (if (my/font-installed "Perfect DOS VGA 437")
+		      "Perfect DOS VGA 437"))))))))))
 
 (defun my/get-best-symbol-font ()
-  (if (my/font-installed "Liga Inconsolata LGC")
-      "Liga Inconsolata LGC"
-    (if (my/font-installed "DejaVu Sans Mono")
-	"DejaVu Sans Mono"
-      (if (my/font-installed "dejavu sans mono")
-	  "DejaVuSansMono"
-	(if (my/font-installed "Noto Sans Mono")
-	    "NotoSansMono")))))
+  (if (my/font-installed "Iosevka")
+      nil
+    (if (my/font-installed "Liga Inconsolata LGC")
+	nil
+      (if (my/font-installed "Inconsolata")
+	  nil
+	(if (my/font-installed "DejaVu Sans Mono")
+	    "DejaVu Sans Mono"
+	  (if (my/font-installed "dejavu sans mono")
+	      "DejaVuSansMono"
+	    (if (my/font-installed "Noto Sans Mono")
+		"NotoSansMono")))))))
 
 ;; *** Set fonts
 (defun my/update-fonts ()
@@ -75,9 +81,8 @@
        (message "Main font not found"))
 
      ;; Set symbol font
-     (if symbol-font
-	 (set-fontset-font t 'symbol symbol-font)
-       (message "Symbol font not found")))))
+     (when symbol-font
+       (set-fontset-font t 'symbol symbol-font)))))
 
 ;; ;; Run this after init because (font-family-list) returns nil if run in early-init
 ;; (add-hook 'after-init-hook 'my/update-fonts)
@@ -261,15 +266,15 @@
 (defun my/file-size-human-readable (file-size &optional flavor decimal)
   "Produce a string showing FILE-SIZE in human-readable form.
 
-   Optional second argument FLAVOR controls the units and the display format:
+  Optional second argument FLAVOR controls the units and the display format:
 
-    If FLAVOR is nil or omitted, each kilobyte is 1024 bytes and the produced
-       suffixes are \"k\", \"M\", \"G\", \"T\", etc.
-    If FLAVOR is `si', each kilobyte is 1000 bytes and the produced suffixes
-       are \"k\", \"M\", \"G\", \"T\", etc.
-    If FLAVOR is `iec', each kilobyte is 1024 bytes and the produced suffixes
-       are \"KiB\", \"MiB\", \"GiB\", \"TiB\", etc.
-    If DECIMAL is true, a decimal number is returned"
+  If FLAVOR is nil or omitted, each kilobyte is 1024 bytes and the produced
+  suffixes are \"k\", \"M\", \"G\", \"T\", etc.
+  If FLAVOR is `si', each kilobyte is 1000 bytes and the produced suffixes
+  are \"k\", \"M\", \"G\", \"T\", etc.
+  If FLAVOR is `iec', each kilobyte is 1024 bytes and the produced suffixes
+  are \"KiB\", \"MiB\", \"GiB\", \"TiB\", etc.
+  If DECIMAL is true, a decimal number is returned"
   (require 'files)
 
   (setq 1024Decimal (if decimal 1024.0 1024))
@@ -369,6 +374,26 @@
 (defun my/is-it-weekend ()
   ;; If more than friday
   (> (string-to-number (format-time-string "%u" (seconds-to-time (current-time)))) 5))
+
+;; *** Timers
+;; **** Timer allocater
+;; Repeat timers are buggy and you don't want all timers to run at the same time
+
+(defvar my/status-line-update-time-max 8)
+(defvar my/status-line-update-time 0)
+
+(defun my/allocate-update-time (task &optional repeat offset)
+  "TASK is the function to be run.
+REPEAT is the time to between each run
+OFFSET is the offset to apply. This makes sure the timers spread out."
+  (unless offset
+    (setq my/status-line-update-time (+ my/status-line-update-time 1)))
+  (let ((update-time (or offset my/status-line-update-time)))
+    (run-with-timer (mod update-time my/status-line-update-time-max) ;; (or repeat 60)
+		    nil
+		    (lambda ()
+		      (funcall task)
+		      (run-with-timer (+ update-time (or repeat 60)) nil (lambda () (my/allocate-update-time task repeat (or update-time offset))))))))
 
 ;; * Evil
 (setq evil-search-module 'evil-search)
@@ -712,6 +737,10 @@
 ;; bind evil-args text objects
 (define-key evil-inner-text-objects-map "a" 'evil-inner-arg)
 (define-key evil-outer-text-objects-map "a" 'evil-outer-arg)
+
+;; ** Jump
+;; Make evil-jump buffer-local
+(setq evil-jumps-cross-buffers nil)
 
 ;; ** Evil-lion
 (straight-use-package 'evil-lion)
@@ -1108,11 +1137,11 @@
 ;; ** Increase and decrease brightness
 (defun my/increase-brightness ()
   (interactive)
-  (my/message-at-point (my/sudo-shell-command-to-string "brightnessctl s +5%")))
+  (my/message-at-point (my/sudo-shell-command-to-string "brightnessctl s +1%")))
 
 (defun my/decrease-brightness ()
   (interactive)
-  (my/message-at-point (my/sudo-shell-command-to-string "brightnessctl s 5%-")))
+  (my/message-at-point (my/sudo-shell-command-to-string "brightnessctl s 1%-")))
 
 (global-set-key (kbd "<XF86MonBrightnessUp>") 'my/increase-brightness)
 (global-set-key (kbd "<XF86MonBrightnessDown>") 'my/decrease-brightness)
@@ -1363,6 +1392,9 @@
 					(switch-to-buffer curr-buf))))
 
 ;; ** Set safe local variables
+(add-to-list 'safe-local-variable-values '(eval setq-local dante-project-root
+						(projectile-project-root)))
+
 (add-to-list 'safe-local-variable-values '(dante-repl-command-line "ob" "repl"))
 
 ;; ** Calendar
@@ -1602,6 +1634,10 @@
 ;; ** Suggest
 (define-key my/leader-map (kbd "s") 'suggest)
 
+;; * Polymode
+;; Used by org-brain
+;; (straight-use-package 'polymode)
+
 ;; * Org
 (straight-use-package 'org)
 
@@ -1745,7 +1781,7 @@
 ;; *** Idle-agenda
 (setq my/idle-agenda-delay (* 60 5))
 
-(run-with-idle-timer my/idle-agenda-delay t 'my/startup-view)
+;; (run-with-idle-timer my/idle-agenda-delay t 'my/startup-view)
 
 ;; *** org-timeline
 ;; (straight-use-package 'org-timeline)
@@ -1917,6 +1953,8 @@
 
 (add-hook 'org-brain-visualize-text-hook 'org-toggle-inline-images)
 
+(setq org-brain-completion-system 'ivy)
+
 ;; Speedups
 (setq org-brain-file-entries-use-title nil)
 (setq org-brain-scan-for-header-entries nil)
@@ -1935,6 +1973,9 @@
   (dolist (child-entry children)
     (org-brain-add-relationship entry child-entry))
   (org-brain--revert-if-visualizing))
+
+;; *** Polymode support
+;; (add-hook 'org-brain-visualize-mode-hook #'org-brain-polymode)
 
 ;; *** Keys
 (setq org-brain-visualize-mode-map (make-sparse-keymap))
@@ -2363,6 +2404,11 @@ If the input is empty, select the previous history element instead."
 	(buffer-local-value 'buffer-file-name buf)
 	(expand-file-name org-brain-path))))
 
+;; *** ivy-posframe
+;; (straight-use-package 'ivy-posframe)
+
+;; (ivy-posframe-mode -1)
+
 ;; *** Keys
 (defun my/ivy-top ()
   (interactive)
@@ -2789,7 +2835,22 @@ If the input is empty, select the previous history element instead."
 ;; *** Disable flycheck fringe
 (setq flycheck-indication-mode nil)
 
-;; *** Flycheck at cursor
+;; *** Flycheck display methods
+;; **** Custom display in window
+(defun my/flycheck-display-message (errors)
+  (let* ((buf (get-buffer-create "*flycheck-msg*"))
+	 (win (get-buffer-window buf)))
+    ;; Create window if none
+    (unless win
+      (let ((new-win (split-window-below)))
+	(with-selected-window new-win
+	  (switch-to-buffer buf)
+	  (shrink-window (/ (frame-height) 4)))))
+    ;; Insert error
+    (with-current-buffer buf
+      (erase-buffer)
+      (mapc (lambda (a) (insert (flycheck-error-format a))) errors))))
+
 ;; **** Flycheck-posframe
 (when window-system
   (straight-use-package 'flycheck-posframe)
@@ -2804,6 +2865,8 @@ If the input is empty, select the previous history element instead."
 (setq flycheck-posframe-info-prefix my/flycheck-posframe-symbol)
 (setq flycheck-posframe-prefix my/flycheck-posframe-symbol)
 (setq flycheck-posframe-warning-prefix my/flycheck-posframe-symbol)
+
+;; (setq flycheck-posframe-position 'frame-bottom-right-corner)
 
 ;; **** Flycheck inline
 ;; (straight-use-package 'flycheck-inline)
@@ -3020,7 +3083,7 @@ If the input is empty, select the previous history element instead."
 ;; *** Bind counsel-mark-ring
 (my/evil-universal-define-key "C-o" 'counsel-mark-ring)
 (my/evil-universal-define-key "C-b" 'evil-jump-backward)
-(my/evil-universal-define-key "M-b" 'evil-jump-forward)
+(my/evil-universal-define-key "C-;" 'evil-jump-forward)
 
 ;; ** Avy
 (straight-use-package 'avy)
@@ -3835,6 +3898,7 @@ If the input is empty, select the previous history element instead."
 (add-to-list 'aggressive-indent-excluded-modes 'c-mode)
 (add-to-list 'aggressive-indent-excluded-modes 'fsharp-mode)
 (add-to-list 'aggressive-indent-excluded-modes 'haskell-cabal-mode)
+(add-to-list 'aggressive-indent-excluded-modes 'haskell-mode)
 
 ;; *** Whitespace cleanup
 (straight-use-package 'whitespace-cleanup-mode)
@@ -4833,6 +4897,7 @@ do the
 
 ;; *** lsp-haskell
 (defun my/haskell-lsp-mode ()
+  (interactive)
   ;; haskll-doc-mode is buggy if eldoc is on
   ;; (setq-local lsp-eldoc-enable-hover nil)
 
@@ -4848,7 +4913,6 @@ do the
   ;; (setq-local flycheck-checker 'haskell-ghc)
 
   ;; (setq-local flycheck-checkers (remove 'lsp-ui flycheck-checkers))
-
 
   (setq-local lsp-ui-doc-enable t
 	      lsp-ui-peek-enable t
@@ -4870,6 +4934,7 @@ do the
   (setq-local lsp-eldoc-enable-hover t)
   ;; (setq-local eldoc-documentation-function 'ignore)
   (setq-local lsp-eldoc-render-all t)
+  (setq-local flycheck-display-errors-function 'my/flycheck-display-message)
 
   ;; (flycheck-mode -1)
   ;; (flycheck-posframe-mode -1)
@@ -5056,7 +5121,11 @@ do the
     (search-forward-regexp "[:word:]")
     (thing-at-point 'symbol t)))
 
-;; ** Syntax highlight functions correctly
+;; ** retrie
+;; Currently broken on nixos
+;; (straight-use-package 'retrie)
+
+;; *** Syntax highlight functions correctly
 ;; (add-hook 'haskell-mode-hook
 ;;	  (lambda ()
 ;;	    (font-lock-add-keywords nil
@@ -5525,9 +5594,9 @@ do the
     ('ediff-mode (call-interactively #'ediff-quit))
     (_
      (let ((clocking (org-clocking-buffer)))
-     (if (and clocking (eq (current-buffer) clocking))
-	 (read-string "Clock out before killing this buffer.")
-     (kill-current-buffer))))))
+       (if (and clocking (eq (current-buffer) clocking))
+	   (read-string "Clock out before killing this buffer.")
+	 (kill-current-buffer))))))
 
 ;; ** Autotab
 ;; By default modes like outshine and org-mode redefines TAB. This changes the meaning of tab depending on modes
@@ -7530,10 +7599,15 @@ do the
 
 ;; *** Fetch mail at time interval
 (setq mu4e-get-mail-command "mbsync -a")
-(setq mu4e-update-interval (* 60 5))
+(setq mu4e-update-interval nil)
 
-(with-eval-after-load 'mu4e
-  (mu4e-update-mail-and-index t))
+(my/allocate-update-time '(lambda ()
+			    (mu4e-update-mail-and-index t)
+			    (require 'mu4e-alert)
+			    (mu4e-alert-update-mail-count-modeline)) (* 60 5))
+
+;; (with-eval-after-load 'mu4e
+;;   (mu4e-update-mail-and-index t))
 
 ;; *** Find nixos install location
 ;; https://www.reddit.com/r/NixOS/comments/6duud4/adding_mu4e_to_emacs_loadpath/
@@ -8328,6 +8402,9 @@ do the
 (add-hook 'magit-mode-hook (lambda () (interactive) (prettify-symbols-mode -1)))
 
 ;; ** Symbols
+;; Add more symbols from here:
+;; https://github.com/pretty-mode/pretty-mode/blob/master/pretty-mode.el#L356
+
 ;; Read =reference-point-alist= to understand how to merge characters and add spaces to characters
 
 ;; *** Generic
@@ -8550,7 +8627,7 @@ do the
 		    my/haskell-type-symbols
 		    my/generic-greek-symbols
 		    my/generic-equality-symbols
-		    ;; my/generic-arrow-symbols
+		    my/generic-arrow-symbols
 		    my/generic-logic-symbols
 		    (my/prettify-outline-heading)))
     ('fsharp-mode (append
@@ -8665,7 +8742,6 @@ do the
 (global-hl-line-mode t)
 
 ;; ** Symbol overlay - highlight thing
-;; Supposed to be faster than highlight-thing
 (straight-use-package '(symbol-overlay :type git :host github :repo "walseb/symbol-overlay" :branch "working-commit"))
 
 (setq symbol-overlay-idle-time nil)
@@ -8673,17 +8749,25 @@ do the
 ;; *** Enable instant highlighting
 (defun my/symbol-overlay-post-command ()
   ;; It's required for this mode to be on, but since I use my own mode, just fake it being on
-  (setq-local symbol-overlay-mode t)
-  (symbol-overlay-remove-temp)
-  (when (eq evil-state 'normal)
-    (symbol-overlay-maybe-put-temp)))
+  ;; (setq-local symbol-overlay-mode t)
+  (setq symbol-overlay-mode t)
+  (ignore-errors
+    ;; (let ((symbol-overlay-mode t))
+    (symbol-overlay-remove-temp)
+    (when (eq evil-state 'normal)
+      (symbol-overlay-maybe-put-temp))))
+;; )
 
 ;; *** Make it global
 (defun my/symbol-overlay-run ()
   (interactive)
   (require 'symbol-overlay)
-  (add-hook 'post-command-hook 'my/symbol-overlay-post-command nil t))
+  ;; (add-hook 'post-command-hook 'my/symbol-overlay-post-command)
 
+  (add-hook 'post-command-hook 'my/symbol-overlay-post-command nil t)
+  )
+
+;; (my/symbol-overlay-run)
 (define-minor-mode my/symbol-overlay-mode "")
 (define-globalized-minor-mode my/global-symbol-overlay my/symbol-overlay-mode my/symbol-overlay-run)
 (my/global-symbol-overlay 1)
@@ -9075,14 +9159,6 @@ do the
 ;; ** Modules
 ;; http://www.holgerschurig.de/en/emacs-tayloring-the-built-in-mode-line/
 
-;; *** Allocate status line update timings
-(defvar my/status-line-update-time-max 8)
-(defvar my/status-line-update-time 0)
-
-(defun my/status-bar-allocate-update-time (task &optional delay)
-  (setq my/status-line-update-time (+ my/status-line-update-time 1))
-  (run-with-timer (mod my/status-line-update-time my/status-line-update-time-max) (or delay 60) task))
-
 ;; *** Garbage Collection
 (defvar my/mode-line-show-GC-stats nil)
 (defun my/mode-line-toggle-show-GC-stats ()
@@ -9124,7 +9200,7 @@ do the
     (setq my/cpu-temp (substring cpu-temp-str cpu-temp-pos-beg cpu-temp-pos-end))))
 
 (if my/mode-line-enable-cpu-temp
-    (my/status-bar-allocate-update-time 'my/update-cpu-temp))
+    (my/allocate-update-time 'my/update-cpu-temp))
 
 ;; *** Disk space
 (defvar my/disk-space nil)
@@ -9161,7 +9237,7 @@ do the
   (setq my/rx my/rx-new))
 
 (if my/mode-line-enable-network-traffic
-    (my/status-bar-allocate-update-time 'my/linux-update-network-rx-delta))
+    (my/allocate-update-time 'my/linux-update-network-rx-delta))
 
 (my/linux-update-network-rx-delta)
 
@@ -9188,7 +9264,7 @@ do the
   (setq my/tx my/tx-new))
 
 (if my/mode-line-enable-network-traffic
-    (my/status-bar-allocate-update-time 'my/linux-update-network-tx-delta))
+    (my/allocate-update-time 'my/linux-update-network-tx-delta))
 
 (my/linux-update-network-tx-delta)
 
@@ -9202,46 +9278,19 @@ do the
 				      (setq my/mu4e-unread-mail-count (number-to-string count))))
 
 ;; ***** Enable
-(when my/mu4epath
-  (with-eval-after-load 'mu4e
-    (mu4e-alert-enable-mode-line-display)))
+;; (when my/mu4epath
+;;   (with-eval-after-load 'mu4e
+;;     (mu4e-alert-enable-mode-line-display)))
 
 ;; *** Battery
 ;; If there is a battery, display it in the mode line
 (require 'battery)
 
-(display-battery-mode 1)
 (setq battery-mode-line-format "%th - %p")
 
-;; **** Reload battery display mode
-(defun my/battery-display-mode-reload ()
-  (interactive)
-  (display-battery-mode -1)
-  (setq battery-status-function
-	(cond ((and (eq system-type 'gnu/linux)
-		    (file-readable-p "/proc/apm"))
-	       #'battery-linux-proc-apm)
-	      ((and (eq system-type 'gnu/linux)
-		    (file-directory-p "/proc/acpi/battery"))
-	       #'battery-linux-proc-acpi)
-	      ((and (eq system-type 'gnu/linux)
-		    (file-directory-p "/sys/class/power_supply/")
-		    (directory-files "/sys/class/power_supply/" nil
-				     battery-linux-sysfs-regexp))
-	       #'battery-linux-sysfs)
-	      ((and (eq system-type 'berkeley-unix)
-		    (file-executable-p "/usr/sbin/apm"))
-	       #'battery-bsd-apm)
-	      ((and (eq system-type 'darwin)
-		    (condition-case nil
-			(with-temp-buffer
-			  (and (eq (call-process "pmset" nil t nil "-g" "ps") 0)
-			       (> (buffer-size) 0)))
-		      (error nil)))
-	       #'battery-pmset)
-	      ((fboundp 'w32-battery-status)
-	       #'w32-battery-status)))
-  (display-battery-mode 1))
+;; (display-battery-mode 1)
+
+(my/allocate-update-time 'battery-update)
 
 ;; *** Date and time
 ;; Display time and date in good format (also displays CPU load)
@@ -9256,8 +9305,8 @@ do the
   (interactive)
   (setq my/time (format-time-string "%H:%M")))
 
-(my/status-bar-allocate-update-time 'my/update-time)
-(run-with-timer 0 3600 'my/update-date)
+(my/allocate-update-time 'my/update-time)
+(my/allocate-update-time 'my/update-date (* 60 60))
 
 ;; Update date now
 (my/update-time)
@@ -9271,7 +9320,7 @@ do the
   (interactive)
   (setq my/cpu-load-average (/ (nth 0 (load-average)) 100.0)))
 
-(my/status-bar-allocate-update-time 'my/update-cpu-load-average)
+(my/allocate-update-time 'my/update-cpu-load-average)
 
 (my/update-cpu-load-average)
 
@@ -9309,7 +9358,7 @@ do the
       (setq my/available-mem-formatted (my/file-size-human-readable my/available-mem nil t)))))
 
 (if my/mode-line-enable-available-mem
-    (my/status-bar-allocate-update-time 'my/linux-update-available-mem))
+    (my/allocate-update-time 'my/linux-update-available-mem))
 
 ;; Update available mem on startup
 (my/linux-update-available-mem)
@@ -9328,12 +9377,12 @@ do the
   (interactive)
   (setq my/uptime-total-time-formated (my/get-uptime-formated-time)))
 
-(my/status-bar-allocate-update-time 'my/update-uptime-timer)
+(my/allocate-update-time 'my/update-uptime-timer)
 
 ;; *** Org-clock mode line
 (defun my/org-clock-mode-line-schedule ()
   (remove-hook 'org-clock-in-hook 'my/org-clock-mode-line-schedule)
-  (my/status-bar-allocate-update-time 'org-clock-update-mode-line))
+  (my/allocate-update-time 'org-clock-update-mode-line))
 
 (with-eval-after-load 'org-clock
   (add-hook 'org-clock-in-hook 'my/org-clock-mode-line-schedule))
@@ -9495,7 +9544,7 @@ do the
 (ignore-errors
   (make-directory my/undo-tree-history-dir))
 
-(setq-default undo-tree-auto-save-history t)
+;; (setq-default undo-tree-auto-save-history t)
 (setq undo-tree-history-directory-alist `(("." . ,my/undo-tree-history-dir)))
 
 ;; *** Disable modes in visualizer
@@ -9522,15 +9571,15 @@ do the
 ;; * Startup view
 ;; ** Startup view
 (defun my/startup-view ()
+  (interactive)
   (delete-other-windows)
-
+  ;; Wall
   (when my/show-wall
-    ;; Wall
     (find-file
-     (my/get-random-element (directory-files-recursively (concat my/wallpaper-folder "Great/") ".")))
+     (my/get-random-element (directory-files-recursively (concat my/wallpaper-folder "Great/") "."))))
 
-    (split-window-below)
-    (other-window 1))
+  (split-window-below)
+  (other-window 1)
 
   ;; Agenda
   (my/org-agenda-show-agenda-and-todo))
