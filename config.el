@@ -1425,7 +1425,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
       ;; Restart timer
       (my/break-timer-run time)
 
-      (my/message-at-point "Clock in!")
+      (my/message-at-point "Clock in! Also check agenda!")
 
       (when (not is-clocked-in)
 	(my/alert-statusline-message-temporary "Clock in!" 'med))
@@ -1593,6 +1593,14 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
 (define-key my/open-map (kbd "b") 'my/backups-visit)
 
+;; ** Open wallpaper
+(defun my/get-random-wallpaper ()
+  (interactive)
+  (find-file
+   (my/get-random-element (directory-files-recursively (concat my/wallpaper-folder "Great/") "."))))
+
+(define-key my/open-map (kbd "w") 'my/get-random-wallpaper)
+
 ;; ** Open firefox
 (defvar my/gui-browser
   (if (my/is-system-package-installed 'icecat)
@@ -1632,14 +1640,16 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (define-key my/leader-map (kbd "C-b") 'my/launch-gui-browser)
 
 ;; ** Suggest
-(define-key my/leader-map (kbd "s") 'suggest)
+;; (define-key my/open-map (kbd "s") 'suggest)
 
 ;; * Polymode
 ;; Used by org-brain
 ;; (straight-use-package 'polymode)
 
 ;; * Org
-(straight-use-package 'org)
+(eval-and-compile
+  (straight-use-package 'org)
+  (require 'org))
 
 ;; Set org src indent to be 0
 (setq org-edit-src-content-indentation 0)
@@ -1716,7 +1726,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
     (org-edit-src-exit)))
 
 ;; ** Capture
-(setq org-default-notes-file (concat my/notes-folder "Agenda.org"))
+(setq org-default-notes-file (concat my/notes-folder "Organize/Agenda.org"))
 
 ;; *** Doct
 (straight-use-package 'doct)
@@ -1768,10 +1778,54 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (setq org-agenda-custom-commands
       '(("n" "Agenda and all TODOs" ((alltodo "")
 				     (agenda "")
+
 				     ;; Add org-agenda time budgets integration
 				     ;; (agenda "" ((org-agenda-sorting-strategy '(habit-down time-up priority-down category-keep user-defined-up))))
 				     ;; (org-time-budgets-in-agenda)
 				     ))))
+
+;; *** log-mode
+;; Shows clocked time in timeline view
+;; Check: org-agenda-log-mode-items
+;; TODO: This stuff is pretty dangerous
+
+(add-hook 'org-agenda-finalize-hook 'my/org-agenda-log-mode)
+
+;; https://orgmode.org/worg/org-hacks.html
+(defun my/org-agenda-log-mode-colorize-block ()
+  "Set different line spacing based on clock time duration."
+  (save-excursion
+    (let* ((colors (cl-case (alist-get 'background-mode (frame-parameters))
+		     ('light
+		      (list "#F6B1C3" "#FFFF9D" "#BEEB9F" "#ADD5F7"))
+		     ('dark
+		      (list "#aa557f" "DarkGreen" "DarkSlateGray" "DarkSlateBlue"))))
+	   pos
+	   duration)
+      (nconc colors colors)
+      (goto-char (point-min))
+      (while (setq pos (next-single-property-change (point) 'duration))
+	(goto-char pos)
+	(when (and (not (equal pos (point-at-eol)))
+		   (setq duration (org-get-at-bol 'duration)))
+	  ;; larger duration bar height
+	  (let ((line-height (if (< duration 15) 1.0 (+ 0.5 (/ duration 30))))
+		(ov (make-overlay (point-at-bol) (1+ (point-at-eol)))))
+	    (overlay-put ov 'face `(:background ,(car colors) :foreground "black"))
+	    (setq colors (cdr colors))
+	    (overlay-put ov 'line-height line-height)
+	    (overlay-put ov 'line-spacing (1- line-height))))))))
+
+(defun my/org-agenda-log-mode (&optional a)
+  "Enables org-agenda-log-mode and colorizes it"
+  (interactive)
+  (unless org-agenda-show-log
+    (goto-char (point-max))
+    (org-agenda-update-agenda-type)
+    (org-agenda-log-mode)
+    (my/org-agenda-log-mode-colorize-block)
+    (point-max)
+    (org-agenda-update-agenda-type)))
 
 ;; *** Super agenda
 ;; (straight-use-package 'org-super-agenda)
@@ -1805,9 +1859,16 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
   (define-key org-agenda-mode-map (kbd "t") 'org-agenda-todo)
 
+  (define-key org-agenda-mode-map (kbd "l") 'org-agenda-todo)
+
+
   (define-key org-agenda-mode-map [remap newline] 'org-agenda-goto))
 
 ;; ** Clock
+(eval-and-compile
+  ;; This is required by the status line
+  (require 'org-clock))
+
 (setq org-clock-into-drawer "CLOCK-LOGBOOK")
 (setq org-clock-mode-line-total 'today)
 (setq org-extend-today-until 6)
@@ -1958,6 +2019,10 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; Speedups
 (setq org-brain-file-entries-use-title nil)
 (setq org-brain-scan-for-header-entries nil)
+
+;; org-insert-link doesn't pick up org-brain unless you require org-brain
+(with-eval-after-load 'org
+  (require 'org-brain))
 
 ;; (with-eval-after-load 'org-brain
 ;;   (add-hook 'org-brain-visualize-mode-hook '(lambda () (interactive) (org-brain-visualize-follow 1))))
@@ -2483,8 +2548,9 @@ If the input is empty, select the previous history element instead."
 
 ;; *** Counsel-yank-pop
 ;; Delete text under selection when pasing just like with normal evil paste
-(advice-add #'counsel-yank-pop :before (lambda (&optional arg) (if (string= evil-state 'visual)
-							      (delete-region (point) (mark)))))
+(advice-add #'counsel-yank-pop :before (lambda (&optional arg)
+					 (if (string= evil-state 'visual)
+					     (delete-region (point) (mark)))))
 
 ;; *** Always run counsel ag in default directory
 (defvar my/rg-available (executable-find "rg"))
@@ -3666,9 +3732,11 @@ If the input is empty, select the previous history element instead."
 
 (define-key my/dired-mode-map (kbd "t") 'my/toggle-delete-to-trash)
 (define-key my/dired-mode-map (kbd "w") 'dired-toggle-read-only)
+
 (defun my/image-dired ()
   (interactive)
   (image-dired default-directory))
+
 (define-key my/dired-mode-map (kbd "i") 'my/image-dired)
 (define-key my/dired-mode-map (kbd "h") 'dired-hide-details-mode)
 
@@ -3904,6 +3972,12 @@ If the input is empty, select the previous history element instead."
 (straight-use-package 'whitespace-cleanup-mode)
 
 (global-whitespace-cleanup-mode)
+
+(add-to-list 'whitespace-cleanup-mode-ignore-modes 'image-mode)
+(add-to-list 'whitespace-cleanup-mode-ignore-modes 'dired-mode)
+
+;; TODO: Keep here while image-mode bug exists
+(add-to-list 'whitespace-cleanup-mode-ignore-modes 'fundamental-mode)
 
 ;; *** indent guide
 ;; (straight-use-package 'highlight-indent-guides)
@@ -4412,7 +4486,6 @@ the overlay."
 
 ;; **** Suggest
 (straight-use-package 'suggest)
-
 
 ;; **** Formatting
 (straight-use-package 'elisp-format)
@@ -5056,8 +5129,7 @@ do the
 	(dante-idle-function)))
 
     (add-hook 'haskell-mode-hook
-	      (lambda () (add-hook 'post-command-hook
-			      #'my/dante-idle-function-checks nil t)))))
+	      (lambda () (add-hook 'post-command-hook #'my/dante-idle-function-checks nil t)))))
 
 ;; **** Add more warnings
 (unless my/haskell-hie-enable
@@ -5590,6 +5662,8 @@ do the
 (defun my/auto-kill-buffer ()
   (interactive)
   (pcase major-mode
+    ('mu4e-headers-mode (kill-current-buffer)
+			(run-with-timer 1 nil 'mu4e-alert-update-mail-count-modeline))
     ('gnus-summary-mode (gnus-summary-exit))
     ('ediff-mode (call-interactively #'ediff-quit))
     (_
@@ -6298,8 +6372,15 @@ do the
 
 ;; * nix
 ;; ** Direnv
-(straight-use-package 'direnv)
-(direnv-mode)
+(eval-and-compile
+  (straight-use-package 'envrc)
+  (require 'envrc))
+
+;; Needs to be enabled as late as possible
+(add-hook 'after-init-hook 'envrc-global-mode)
+
+;; (straight-use-package 'direnv)
+;; (direnv-mode)
 
 ;; ** Nix-mode
 (straight-use-package 'nix-mode)
@@ -7206,6 +7287,11 @@ do the
   (add-hook 'magit-post-refresh-hook 'diff-hl-magit-post-refresh))
 
 (setq diff-hl-draw-borders nil)
+
+;; *** Ignore major modes
+;; TODO: Keep here while image-mode bug exists
+(with-eval-after-load 'diff-hl
+  (add-to-list 'diff-hl-global-ignore-modes 'fundamental-mode))
 
 ;; ** Keys
 (with-eval-after-load 'magit
@@ -8345,6 +8431,14 @@ do the
   (define-key image-mode-map (kbd "h") (lambda () (interactive) (image-backward-hscroll 8)))
   (define-key image-mode-map (kbd "l") (lambda () (interactive) (image-forward-hscroll 8)))
 
+  (define-key image-mode-map (kbd "w") (lambda () (interactive) (image-forward-hscroll (* 8 5))))
+  (define-key image-mode-map (kbd "e") (lambda () (interactive) (image-forward-hscroll (* 8 5))))
+  (define-key image-mode-map (kbd "b") (lambda () (interactive) (image-backward-hscroll (* 8 5))))
+
+  (define-key image-mode-map (kbd "W") (lambda () (interactive) (image-forward-hscroll (* 8 10))))
+  (define-key image-mode-map (kbd "E") (lambda () (interactive) (image-forward-hscroll (* 8 10))))
+  (define-key image-mode-map (kbd "B") (lambda () (interactive) (image-backward-hscroll (* 8 10))))
+
   (define-key image-mode-map (kbd "N") 'image-next-file)
   (define-key image-mode-map (kbd "P") 'image-previous-file)
 
@@ -8709,16 +8803,19 @@ do the
 
 (define-globalized-minor-mode global-olivetti-mode
   nil (lambda ()
-	(setq-local olivetti-mode 1)
-	(unless (string= " *diff-hl* " (buffer-name (current-buffer)))
-	  (pcase major-mode
-	    ('minibuffer-inactive-mode)
-	    ('exwm-mode)
-	    ('mu4e-headers-mode)
-	    ('pdf-view-mode)
-	    ('image-mode)
-	    ('org-agenda-mode)
-	    (_ (olivetti-mode 1))))))
+	(pcase major-mode
+	  ;; TODO: Keep here while image-mode bug exists
+	  ('fundamental-mode)
+	  ('minibuffer-inactive-mode)
+	  ('exwm-mode)
+	  ('mu4e-headers-mode)
+	  ('pdf-view-mode)
+	  ('image-mode)
+	  ('org-agenda-mode)
+	  (_
+	   (unless (string= " *diff-hl* " (buffer-name (current-buffer)))
+	     ;; (setq-local olivetti-mode 1)
+	     (olivetti-mode 1))))))
 
 (global-olivetti-mode 1)
 
@@ -9095,7 +9192,11 @@ do the
 		;; (concat (int-to-string point-in-buffer-percentage) "% ~" (int-to-string line-number-count)))))
 
 		(:eval
-		 (int-to-string (count-lines (point-min) (point-max))))
+		 ;; Diff-hl mode should know when it's fine to measure buffer length
+		 (if (or diff-hl-mode diff-hl-dired-mode)
+		     (int-to-string (count-lines (point-min) (point-max)))
+		   "???"
+		   ))
 
 		;;"%I"
 
@@ -9123,13 +9224,16 @@ do the
 		"%b > "
 
 		;; Print mode
-		"%m"
+		;; "%m"
+		;; With this it also works properly in exwm-mode
+		(:eval (symbol-name major-mode))
+		" >"
 
 		;; Git
 		(:eval
 		 (if (and my/projectile-project-name my/buffer-git-branch (not (string= my/projectile-project-name "-")))
 		     (concat
-		      " > "
+		      " "
 		      my/buffer-git-branch
 		      "@"
 		      my/projectile-project-name
@@ -9138,7 +9242,11 @@ do the
 			 "["
 			 my/git-changes-string
 			 "]"
-			 )))))
+			 ))
+		      " >"
+		      )))
+
+		(:eval (envrc--lighter))
 
 		(" "
 		 (company-candidates
@@ -9147,13 +9255,13 @@ do the
 		       (my/company--group-lighter (nth company-selection
 						       company-candidates)
 						  company-lighter-base)
-		     (concat
-		      "| "
-		      (symbol-name company-backend)
-		      )))
+		     (when company-backend
+		       (concat
+			"| "
+			(symbol-name company-backend)
+			))))
 		  ;; Symbol when company is not in use
-		  ""))
-		)))
+		  "")))))
 
 ;; * Status line
 ;; ** Modules
@@ -9177,7 +9285,7 @@ do the
      ;; If it returns "no sensors found"
      (not (string-match-p "No sensors found"
 			(shell-command-to-string "sensors | grep \"Core 0:\""))))
-(setq my/mode-line-enable-cpu-temp t))
+    (setq my/mode-line-enable-cpu-temp t))
 
 (defvar my/cpu-temp "")
 
@@ -9575,14 +9683,20 @@ do the
   (delete-other-windows)
   ;; Wall
   (when my/show-wall
-    (find-file
-     (my/get-random-element (directory-files-recursively (concat my/wallpaper-folder "Great/") "."))))
+    (my/get-random-wallpaper))
 
   (split-window-below)
   (other-window 1)
 
   ;; Agenda
-  (my/org-agenda-show-agenda-and-todo))
+  (my/org-agenda-show-agenda-and-todo)
+
+  (split-window-right)
+  (other-window 1)
+
+  (find-file (concat my/notes-folder "Organize/Timeline/Achievements.png"))
+  (image-increase-size 50)
+  (image-forward-hscroll 10))
 
 ;; ** Run it on startup
 (add-hook 'exwm-init-hook '(lambda () (my/startup-view)))
@@ -9597,3 +9711,4 @@ do the
 
 ;; * Report start time
 (run-with-timer 4 nil (lambda () (interactive) (message (concat "Booted in " (emacs-init-time)))))
+(message "Config loaded!")
