@@ -21,49 +21,56 @@
 
 ;; ** Fonts
 ;; *** Is font installed
-(defvar my/font-family-list nil)
-
-(defun my/font-installed (font)
-  (unless my/font-family-list
-    (setq my/font-family-list (font-family-list)))
-  (if (member font my/font-family-list)
+(defun my/font-installed (font-family-list font)
+  (if (member font font-family-list)
       t
     nil))
 
+;; Car is real name
+;; Cdr is name to be run through `my/font-installed'
+(setq my/fonts '(
+		 ("Liga Inconsolata LGC" . nil)
+		 ("Inconsolata LGC" . nil)
+		 ("Inconsolata"  . nil)
+		 ("Px437 ATI 8x8" . nil)
+		 ("PxPlus VGA SquarePx". nil)
+		 ("PxPlus AmstradPC1512-2y" . nil)
+		 ;; ("PxPlus IBM VGA8". nil)
+		 ;; ("BlockZone" . nil)
+		 ("scientifica" . nil)
+		 ;; ("Unscii" . nil)
+		 ("Iosevka" . nil)
+		 ("DejaVu Sans Mono" . nil)
+		 ("Fira Mono" . nil)
+		 ("DejaVuSansMono" . "dejavu sans mono")
+		 ("NotoSansMono" . "Noto Sans Mono")))
+
+;; Works just like my/fonts, but returning nil means to not set a symbol font
+;; Thing to note here is that if the car is nil, then it means just use what you were using before. If car is a string, then use that.
+(setq my/symbol-fonts '(
+			("Liga Inconsolata LGC" . nil)
+			(nil . "Inconsolata LGC")
+			(nil . "Inconsolata")
+			("PxPlus IBM VGA8" . nil)
+			("scientifica" . "BlockZone" )
+			(nil . "scientifica" )
+			(nil . "Iosevka")
+			("DejaVuSansMono" .  "dejavu sans mono")
+			("NotoSansMono" . "Noto Sans Mono")))
+
 ;; *** Find fonts
+(defun my/find-font (fonts)
+  (let ((font-family-list (font-family-list)))
+    (car
+     (seq-find (lambda (a) (my/font-installed font-family-list (or (cdr a) (car a)))) fonts))))
+
 (defun my/get-best-font ()
-  (if (my/font-installed "Iosevka")
-      "Iosevka"
-    (if (my/font-installed "Liga Inconsolata LGC")
-	"Liga Inconsolata LGC"
-      (if (my/font-installed "Inconsolata LGC")
-	  "Inconsolata LGC"
-	(if (my/font-installed "Inconsolata")
-	    "Inconsolata"
-	  (if (my/font-installed "DejaVu Sans Mono")
-	      "DejaVu Sans Mono"
-	    (if (my/font-installed "Fira Mono")
-		"Fira Mono"
-	      (if (my/font-installed "dejavu sans mono")
-		  "DejaVuSansMono"
-		(if (my/font-installed "Noto Sans Mono")
-		    "NotoSansMono"
-		  (if (my/font-installed "Perfect DOS VGA 437")
-		      "Perfect DOS VGA 437"))))))))))
+  (my/find-font my/fonts))
 
 (defun my/get-best-symbol-font ()
-  (if (my/font-installed "Iosevka")
-      nil
-    (if (my/font-installed "Liga Inconsolata LGC")
-	nil
-      (if (my/font-installed "Inconsolata")
-	  nil
-	(if (my/font-installed "DejaVu Sans Mono")
-	    "DejaVu Sans Mono"
-	  (if (my/font-installed "dejavu sans mono")
-	      "DejaVuSansMono"
-	    (if (my/font-installed "Noto Sans Mono")
-		"NotoSansMono")))))))
+  (let ((curr-font (my/find-font my/fonts)))
+    (car
+     (seq-find (lambda (a) (string= curr-font (or (cdr a) (car a)))) my/symbol-fonts))))
 
 ;; *** Set fonts
 (defun my/update-fonts ()
@@ -73,7 +80,7 @@
 	  (symbol-font (my/get-best-symbol-font)))
      (if font
 	 (set-face-attribute 'default nil
-			     :family font
+			     :font font
 			     :height my/default-face-height
 			     ;; :weight 'normal
 			     ;; :width 'normal
@@ -86,6 +93,7 @@
 
 ;; ;; Run this after init because (font-family-list) returns nil if run in early-init
 ;; (add-hook 'after-init-hook 'my/update-fonts)
+
 (when window-system
   (my/update-fonts))
 
@@ -147,6 +155,11 @@
 
 ;; * General functions and variables
 ;; ** File management
+;; *** Spaced path to compact path
+(defun my/spaced-path-to-compact-path (path)
+  "Turns \"~/ABC/A B C/\" into \"~/ABC/A%20B%20C/\""
+  (replace-regexp-in-string " " "%20" path))
+
 ;; *** Create directory if directory doesn't exist
 (defun my/create-dir-if-not-exist (dir)
   (if (not (file-directory-p dir))
@@ -200,9 +213,19 @@
 	 (index (random size)))
     (nth index list)))
 
-;; ** Print / Message at point
+;; ** Notifications
+;; *** Print / Message at point
 (defun my/message-at-point (str)
   (eros--eval-overlay str (point)))
+
+;; *** Fire notification
+(defun my/fire-notification (msg path)
+  (notifications-notify :title msg
+			:timeout (* 1000 5)
+			:image-path (concat "file://" (my/spaced-path-to-compact-path (expand-file-name path)))
+			;; For example:
+			;; :image-path "file:///home/admin/Notes/Wallpapers/Great/Adolph%20von%20Menzel%20.%201875%20.%20Iron%20rolling%20mill.jpg"
+			))
 
 ;; ** Process
 ;; *** Run async process shell command
@@ -1107,7 +1130,8 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
 ;; ** Disable tooltips
 (tooltip-mode -1)
-(setq show-help-function nil)
+;; (setq show-help-function nil)
+(setq show-help-function 'message)
 
 ;; ** 1 letter prompts
 ;; Convert yes or no prompt to y or n prompt
@@ -1194,19 +1218,20 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
   (exwm-workspace-attach-minibuffer))
 
 (defun my/set-default-face-height (height)
-  (set-face-attribute 'default nil :height height)
   (setq my/current-default-face-height height)
-  (my/set-default-face-modeline-resize))
+  (set-face-attribute 'default nil :height height)
+  (my/set-default-face-modeline-resize)
+
+  ;; Update hydra text
+  (setq my/text-size-hydra/hint (concat "Text height: " (number-to-string height))))
 
 (defun my/increment-default-face-height ()
   (interactive)
-  (let ((new-face-height (+ my/current-default-face-height 5)))
-    (my/set-default-face-height new-face-height)))
+  (my/set-default-face-height (+ my/current-default-face-height 5)))
 
 (defun my/decrement-default-face-height ()
   (interactive)
-  (let ((new-face-height (- my/current-default-face-height 5)))
-    (my/set-default-face-height new-face-height)))
+  (my/set-default-face-height (- my/current-default-face-height 5)))
 
 (defun my/reset-default-face-height ()
   (interactive)
@@ -1221,10 +1246,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; *** Hydra
 (with-eval-after-load 'hydra
   (defhydra my/text-size-hydra (:hint nil
-				      :color red
-				      :pre
-				      (progn
-					(setq my/text-size-hydra/hint (concat "Text height: " (number-to-string my/current-default-face-height)))))
+				      :color red)
     ("p" my/increment-default-face-height nil)
     ("n" my/decrement-default-face-height nil)
     ("N" my/reset-default-face-height nil)
@@ -1431,8 +1453,10 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 	(my/alert-statusline-message-temporary "Clock in!" 'med))
 
       ;; Clock
-      (run-with-timer 0.2 nil (lambda () (sleep-for 5)))
-      (org-mru-clock-in)
+      ;; (run-with-timer 0.2 nil (lambda () (sleep-for 5)))
+      ;; (org-mru-clock-in)
+
+      (my/fire-notification "Clock in!"  (my/get-random-wallpaper))
 
       ;; Show break buffer
       ;; (switch-to-buffer "Break")
@@ -1596,10 +1620,15 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Open wallpaper
 (defun my/get-random-wallpaper ()
   (interactive)
-  (find-file
-   (my/get-random-element (directory-files-recursively (concat my/wallpaper-folder "Great/") "."))))
+  (my/get-random-element (directory-files-recursively (concat my/wallpaper-folder "Great/") ".")))
 
-(define-key my/open-map (kbd "w") 'my/get-random-wallpaper)
+(defun my/show-random-wallpaper ()
+  (interactive)
+  (find-file
+   (my/get-random-wallpaper)))
+
+(define-key my/open-map (kbd "w") 'my/show-random-wallpaper)
+(define-key my/open-map (kbd "W") '(lambda () (interactive) (find-file my/wallpaper-folder)))
 
 ;; ** Open firefox
 (defvar my/gui-browser
@@ -1786,11 +1815,9 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
 ;; *** log-mode
 ;; Shows clocked time in timeline view
-;; Check: org-agenda-log-mode-items
-;; TODO: This stuff is pretty dangerous
+(setq org-agenda-start-with-log-mode 'clock)
 
-(add-hook 'org-agenda-finalize-hook 'my/org-agenda-log-mode)
-
+;; **** Colorize and resize blocks
 ;; https://orgmode.org/worg/org-hacks.html
 (defun my/org-agenda-log-mode-colorize-block ()
   "Set different line spacing based on clock time duration."
@@ -1816,16 +1843,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 	    (overlay-put ov 'line-height line-height)
 	    (overlay-put ov 'line-spacing (1- line-height))))))))
 
-(defun my/org-agenda-log-mode (&optional a)
-  "Enables org-agenda-log-mode and colorizes it"
-  (interactive)
-  (unless org-agenda-show-log
-    (goto-char (point-max))
-    (org-agenda-update-agenda-type)
-    (org-agenda-log-mode)
-    (my/org-agenda-log-mode-colorize-block)
-    (point-max)
-    (org-agenda-update-agenda-type)))
+(add-hook 'org-agenda-finalize-hook 'my/org-agenda-log-mode-colorize-block)
 
 ;; *** Super agenda
 ;; (straight-use-package 'org-super-agenda)
@@ -2392,6 +2410,10 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (setq yafolding-show-fringe-marks nil)
 
 ;; * Completion
+;; ** Posframe
+;; Disable mouse banish
+(setq posframe-mouse-banish nil)
+
 ;; ** Ivy
 (eval-and-compile
   (straight-use-package 'ivy))
@@ -2703,8 +2725,8 @@ If the input is empty, select the previous history element instead."
 	 ((ivy-rich-candidate (:width 30))
 	  ;;(ivy-rich-switch-buffer-size (:width 7 :face my/ivy-rich-switch-buffer-size-face))
 	  (ivy-rich-switch-buffer-indicators (:width 4 :face my/ivy-rich-switch-buffer-indicator-face :align right))
-	  (ivy-rich-switch-buffer-major-mode (:width 12 :face my/ivy-rich-switch-buffer-major-mode-face))
-	  ;; (ivy-rich-switch-buffer-project (:width 15 :face my/ivy-rich-switch-buffer-project-face))
+	  (ivy-rich-switch-buffer-major-mode (:width 20 :face my/ivy-rich-switch-buffer-major-mode-face))
+	  (ivy-rich-switch-buffer-project (:width 20 :face my/ivy-rich-switch-buffer-project-face))
 	  ;; (my/ivy-rich-path)
 
 	  ;; These two takes a lot of memory and cpu
@@ -3334,6 +3356,44 @@ If the input is empty, select the previous history element instead."
 ;; (interactive)
 ;; (bookmark-load (ivy-read "load bookmark file " nil)))
 
+;; * Buffer management
+;; ** Bufler
+;; (straight-use-package 'bufler)
+
+;; (cl-defun bufler-buffer-alist-at (path)
+;;   (interactive "P")
+;;   (let* ((level-start (pcase path
+;;			('nil 0)
+;;			(_ (1+ (length (-take-while #'null path))))))
+;;	 (grouped-buffers (bufler-buffers :path path))
+;;	 (paths (bufler-group-tree-paths grouped-buffers)))
+;;     (cl-labels ((format-heading
+;;		 (heading level) (propertize heading
+;;					     'face (bufler-level-face level)))
+;;		;; All the changes are here!!
+;;		;; Nothing is changed beyond adding: (my/bufler-format
+;;		(format-path
+;;		 (path) (my/bufler-format (string-join (cl-loop for level from level-start
+;;								for element in path
+;;								collect (cl-typecase element
+;;									  (string (format-heading element level))
+;;									  (buffer (buffer-name element))))
+;;						       bufler-group-path-separator)))
+;;		(path-cons
+;;		 (path) (cons (format-path (-non-nil path)) (-last-item path))))
+;;       (mapcar #'path-cons paths))))
+
+;; ;; This is where all my edits are
+;; (defun my/bufler-format (str-prop)
+;;   (let* ((str (substring-no-properties str-prop))
+;;	 (split-str (split-string str bufler-group-path-separator))
+;;	 (str-new
+;;	  (pcase (length split-str)
+;;	    (1 str)
+;;	    (2 (format "%-70s %-60s" (nth 1 split-str) (nth 0 split-str)))
+;;	    (3 (format "%-70s %-60s %s" (nth 2 split-str) (nth 1 split-str) (nth 0 split-str))))))
+;;     str-new))
+
 ;; * Window management
 ;; ** Window split functions
 (defun my/window-split-up ()
@@ -3519,7 +3579,10 @@ If the input is empty, select the previous history element instead."
   ("B" my/browser-activate-tab nil)
 
   ;; Switch buffer
+  ;;
   ("a" ivy-switch-buffer nil)
+  ;; ("a" bufler-switch-buffer nil)
+  ("RET" projectile-switch-to-buffer nil)
   ("A" my/switch-to-last-buffer nil)
 
   ;; Same as M-e
@@ -5809,6 +5872,8 @@ do the
 (if window-system
     (add-hook 'exwm-init-hook 'pinentry-start)
   (pinentry-start))
+
+(setq epg-pinentry-mode 'loopback)
 
 ;; *** Reset GPG agent
 (defun my/reset-gpg-agent ()
@@ -9193,7 +9258,7 @@ do the
 
 		(:eval
 		 ;; Diff-hl mode should know when it's fine to measure buffer length
-		 (if (or diff-hl-mode diff-hl-dired-mode)
+		 (if (not (member major-mode '(pdf-view-mode minibuffer-inactive-mode image-mode fundamental-mode)))
 		     (int-to-string (count-lines (point-min) (point-max)))
 		   "???"
 		   ))
@@ -9407,7 +9472,9 @@ do the
 
 (defun my/update-date ()
   (interactive)
-  (setq my/date (format-time-string "%d-%m-%Y")))
+  ;; Day:Month:Year
+  ;; (setq my/date (format-time-string "%d-%m-%Y"))
+  (setq my/date (format-time-string "%Y-%m-%d")))
 
 (defun my/update-time ()
   (interactive)
@@ -9529,15 +9596,30 @@ do the
 				(concat
 				 " GC: " (number-to-string (truncate gc-elapsed))
 				 "(" (number-to-string gcs-done) ")"
-				 " |"
+				 " | "
 				 )))
 
-		     (:eval (if my/mode-line-enable-network-traffic
-				(concat
-				 my/tx-delta-formatted " ↑ "
-				 my/rx-delta-formatted " ↓ "
-				 "| "
-				 )))
+		     ;; (:eval (if (and my/gnus-unread-string (not (string= my/gnus-unread-string "")))
+		     ;;	       (concat " | "
+		     ;;		       my/gnus-unread-string)))
+
+		     (:eval (when my/mu4e-unread-mail-count
+			      (concat
+			       (let ((str (concat "Mail: " my/mu4e-unread-mail-count)))
+				 (if (> (string-to-number my/mu4e-unread-mail-count) 0)
+				     (propertize str 'face `(:inherit my/default-inverted))
+				   str))
+			       " | "
+			       )))
+
+
+
+		     ;; (:eval (if my/mode-line-enable-network-traffic
+		     ;;		(concat
+		     ;;		 my/tx-delta-formatted " ↑ "
+		     ;;		 my/rx-delta-formatted " ↓ "
+		     ;;		 "| "
+		     ;;		 )))
 
 		     (:eval
 		      (when my/mode-line-enable-available-mem
@@ -9555,33 +9637,21 @@ do the
 		     (:eval (if my/mode-line-enable-cpu-temp
 				(concat "HT: " my/cpu-temp " | ")))
 
-		     "C: "
-		     (:eval (number-to-string my/cpu-load-average))
+		     (:eval
+		      (concat
+		       "C: "
+		       (number-to-string my/cpu-load-average)
+		       " | "))
 
+		     ;; (:eval (concat "Up: " my/uptime-total-time-formated))
+		     ;; " | "
 
-		     ;; (:eval (if (and my/gnus-unread-string (not (string= my/gnus-unread-string "")))
-		     ;;	       (concat " | "
-		     ;;		       my/gnus-unread-string)))
+		     (:eval my/date)
 
-		     (:eval (when my/mu4e-unread-mail-count
-			      (concat " | "
-				      (let ((str (concat "Mail: " my/mu4e-unread-mail-count)))
-					(if (> (string-to-number my/mu4e-unread-mail-count) 0)
-					    (propertize str 'face `(:inherit my/default-inverted))
-					  str)))))
-
-		     " | "
-
-
-		     (:eval (concat "Up: " my/uptime-total-time-formated))
-
-		     " | "
+		     " "
 
 		     (:eval my/time)
 
-		     " - "
-
-		     (:eval my/date)
 		     )))))
   (setq-default mini-modeline-r-format my/status-line-format))
 
@@ -9683,7 +9753,7 @@ do the
   (delete-other-windows)
   ;; Wall
   (when my/show-wall
-    (my/get-random-wallpaper))
+    (my/show-random-wallpaper))
 
   (split-window-below)
   (other-window 1)
