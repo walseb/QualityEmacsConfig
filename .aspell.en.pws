@@ -85,3 +85,5 @@ fmap
 Shawshank
 transactional
 directionality
+typeclass
+getter

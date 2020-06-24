@@ -155,6 +155,22 @@
 
 ;; * General functions and variables
 ;; ** File management
+;; *** File path to top directory
+;; So for example turn /foo/bar/ -> bar
+(defun my/file-top-directory (path)
+  (let ((folder (file-relative-name path (concat path ".."))))
+    (substring folder 0 (- (length folder) 1))))
+
+;; *** Top file path
+;; So for example turn /foo/bar/ -> bar
+;; And turn /foo/bar/baz.tar -> baz.tar
+(defun my/file-top-path (path)
+  (let ((file (file-name-nondirectory path)))
+    (if (string= file "")
+	;; Folder
+	(my/file-top-directory path)
+      file)))
+
 ;; *** Spaced path to compact path
 (defun my/spaced-path-to-compact-path (path)
   "Turns \"~/ABC/A B C/\" into \"~/ABC/A%20B%20C/\""
@@ -2722,11 +2738,11 @@ If the input is empty, select the previous history element instead."
       ;; Switch buffer
       `(ivy-switch-buffer
 	(:columns
-	 ((ivy-rich-candidate (:width 30))
+	 ((ivy-rich-candidate (:width 80))
 	  ;;(ivy-rich-switch-buffer-size (:width 7 :face my/ivy-rich-switch-buffer-size-face))
 	  (ivy-rich-switch-buffer-indicators (:width 4 :face my/ivy-rich-switch-buffer-indicator-face :align right))
 	  (ivy-rich-switch-buffer-major-mode (:width 20 :face my/ivy-rich-switch-buffer-major-mode-face))
-	  (ivy-rich-switch-buffer-project (:width 20 :face my/ivy-rich-switch-buffer-project-face))
+	  ;; (ivy-rich-switch-buffer-project (:width 20 :face my/ivy-rich-switch-buffer-project-face))
 	  ;; (my/ivy-rich-path)
 
 	  ;; These two takes a lot of memory and cpu
@@ -3660,6 +3676,28 @@ If the input is empty, select the previous history element instead."
 ;; *** Unique names for identical buffer names
 (setq uniquify-buffer-name-style 'forward)
 ;; (setq uniquify-buffer-name-style 'post-forward-angle-brackets)
+
+;; *** Custom buffer names - Auto rename buffers
+;; Checkout the `relative-buffers' package
+(defun my/custom-buffer-name ()
+  ;; Make sure it runs after projectile is initialized
+  (let ((path (or (buffer-file-name) dired-directory)))
+    (when path
+      (rename-buffer
+       (my/custom-buffer-name-file path)
+       t))))
+
+(defun my/custom-buffer-name-file (path)
+  (let ((project-name (projectile-project-name)))
+    (unless (string= project-name "-")
+      (concat project-name " ⇒ " (my/file-top-path path)))))
+
+(define-minor-mode my/custom-buffer-name-mode "")
+
+(define-globalized-minor-mode global-my/custom-buffer-name-mode my/custom-buffer-name-mode my/custom-buffer-name)
+
+(with-eval-after-load 'projectile
+  (global-my/custom-buffer-name-mode))
 
 ;; * Dired
 ;; ** Disable cluttered major mode
@@ -7333,7 +7371,7 @@ do the
 ;; (my/evil-normal-define-key-in-mode magit-untracked-section-map  "s" 'isearch-forward)
 
 ;; ** diff-hl
-(straight-use-package 'diff-hl)
+(straight-use-package '(diff-hl :type git :host github :repo "walseb/diff-hl"))
 
 (setq diff-hl-side 'right)
 
@@ -8864,7 +8902,7 @@ do the
 
 (setq olivetti-mode-map (make-sparse-keymap))
 
-(setq-default olivetti-body-width 150)
+(setq-default olivetti-body-width 130)
 
 (define-globalized-minor-mode global-olivetti-mode
   nil (lambda ()
@@ -8921,17 +8959,12 @@ do the
 ;; )
 
 ;; *** Make it global
-(defun my/symbol-overlay-run ()
-  (interactive)
-  (require 'symbol-overlay)
-  ;; (add-hook 'post-command-hook 'my/symbol-overlay-post-command)
+(define-minor-mode my/symbol-overlay-mode "" nil "" nil
+  (when my/symbol-overlay-mode
+    (require 'symbol-overlay)
+    (add-hook 'post-command-hook 'my/symbol-overlay-post-command nil t)))
 
-  (add-hook 'post-command-hook 'my/symbol-overlay-post-command nil t)
-  )
-
-;; (my/symbol-overlay-run)
-(define-minor-mode my/symbol-overlay-mode "")
-(define-globalized-minor-mode my/global-symbol-overlay my/symbol-overlay-mode my/symbol-overlay-run)
+(define-globalized-minor-mode my/global-symbol-overlay my/symbol-overlay-mode my/symbol-overlay-mode)
 (my/global-symbol-overlay 1)
 
 ;; ** Put lv at top
