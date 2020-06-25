@@ -157,19 +157,15 @@
 ;; ** File management
 ;; *** File path to top directory
 ;; So for example turn /foo/bar/ -> bar
-(defun my/file-top-directory (path)
-  (let ((folder (file-relative-name path (concat path ".."))))
-    (substring folder 0 (- (length folder) 1))))
-
-;; *** Top file path
-;; So for example turn /foo/bar/ -> bar
 ;; And turn /foo/bar/baz.tar -> baz.tar
 (defun my/file-top-path (path)
-  (let ((file (file-name-nondirectory path)))
-    (if (string= file "")
-	;; Folder
-	(my/file-top-directory path)
-      file)))
+  ;; Ignore remote files, I'm not sure they work
+  (when (not (file-remote-p path))
+    (let ((name (file-name-nondirectory
+		 (directory-file-name (expand-file-name path)))))
+      (if (string= name "")
+	  nil
+	name))))
 
 ;; *** Spaced path to compact path
 (defun my/spaced-path-to-compact-path (path)
@@ -3683,13 +3679,16 @@ If the input is empty, select the previous history element instead."
   ;; Make sure it runs after projectile is initialized
   (let ((path (or (buffer-file-name) dired-directory)))
     (when path
-      (rename-buffer
-       (my/custom-buffer-name-file path)
-       t))))
+      (let ((name (my/custom-buffer-name-file path)))
+	(when name
+	  (rename-buffer
+	   name
+	   t))))))
 
 (defun my/custom-buffer-name-file (path)
   (let ((project-name (projectile-project-name)))
-    (unless (string= project-name "-")
+    (if (string= project-name "-")
+	(my/file-top-path path)
       (concat project-name " ⇒ " (my/file-top-path path)))))
 
 (define-minor-mode my/custom-buffer-name-mode "")
