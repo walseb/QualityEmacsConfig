@@ -2166,6 +2166,11 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
 (define-key my/org-mode-map (kbd "E") (lambda () (interactive) (counsel-M-x "^org export-")))
 
+;; * Time management - chronometrist
+;; (straight-use-package 'chronometrist)
+;;(straight-use-package '(chronometrist :type git :host github :repo "contrapunctus-1/chronometrist"))
+;;(require 'chronometrist)
+
 ;; * Outline
 ;; Must be set before outline is loaded
 ;; Required by outorg
@@ -3594,7 +3599,7 @@ If the input is empty, select the previous history element instead."
   ;;
   ("a" ivy-switch-buffer nil)
   ;; ("a" bufler-switch-buffer nil)
-  ("RET" projectile-switch-to-buffer nil)
+  ;; ("RET" projectile-switch-to-buffer nil)
   ("A" my/switch-to-last-buffer nil)
 
   ;; Same as M-e
@@ -6481,6 +6486,10 @@ do the
 ;; Needs to be enabled as late as possible
 (add-hook 'after-init-hook 'envrc-global-mode)
 
+(add-hook 'after-save-hook (lambda ()
+			     (when (string= major-mode "nix-mode")
+			       (run-with-timer 5 nil 'envrc-reload))))
+
 ;; (straight-use-package 'direnv)
 ;; (direnv-mode)
 
@@ -6765,7 +6774,8 @@ do the
 
 ;; ** Exwm-edit
 (setq exwm-edit-bind-default-keys nil)
-(straight-use-package '(exwm-edit :type git :host github :repo "walseb/exwm-edit" :branch "AllFixes"))
+(straight-use-package '(exwm-edit :type git :host github :repo "walseb/exwm-edit"))
+
 (with-eval-after-load 'exwm
   (require 'exwm-edit)
   (global-exwm-edit-mode 1))
@@ -7290,6 +7300,7 @@ do the
 (defun my/auto-compile-project ()
   (interactive)
   (pcase major-mode
+    ('org-mode (counsel-M-x "^org to "))
     ('plantuml-mode (plantuml-preview-buffer 0))
     (_
      (pcase (projectile-project-type)
@@ -7393,7 +7404,8 @@ do the
 ;; *** Ignore major modes
 ;; TODO: Keep here while image-mode bug exists
 (with-eval-after-load 'diff-hl
-  (add-to-list 'diff-hl-global-ignore-modes 'fundamental-mode))
+  ;; (add-to-list 'diff-hl-global-ignore-modes 'fundamental-mode t)
+  )
 
 ;; ** Keys
 (with-eval-after-load 'magit
@@ -7773,6 +7785,8 @@ do the
 
 ;; Show addresses instead of just name of sender
 (setq mu4e-view-show-addresses t)
+
+(setq mu4e-headers-time-format "%T")
 
 ;; *** org-mime
 ;; (straight-use-package 'org-mime)
@@ -9035,6 +9049,7 @@ do the
 (straight-use-package 'yascroll)
 (global-yascroll-bar-mode)
 (setq yascroll:scroll-bar '(left-fringe))
+(setq yascroll:disabled-modes '(image-mode))
 
 ;; *** Fix for emacs 27
 ;; The function ~window-fringes~ returns a list of 4 results on some versions of emacs because of some reason. This fixes that
