@@ -228,9 +228,11 @@
 ;; ** Notifications
 ;; *** Print / Message at point
 (defun my/message-at-point (str)
-  (eros--eval-overlay str (point)))
+  (eros--eval-overlay str (point-at-eol)))
 
 ;; *** Fire notification
+(require 'notifications)
+
 (defun my/fire-notification (msg path)
   (notifications-notify :title msg
 			:timeout (* 1000 5)
@@ -1442,6 +1444,9 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (straight-use-package '(explain-pause-mode :type git :host github :repo "lastquestion/explain-pause-mode"))
 ;; (explain-pause-mode)
 
+;; ** Compilation-mode
+(setq compilation-ask-about-save nil)
+
 ;; * Productivity
 ;; ** Break timer
 ;; In seconds
@@ -1632,12 +1637,14 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Open wallpaper
 (defun my/get-random-wallpaper ()
   (interactive)
-  (my/get-random-element (directory-files-recursively (concat my/wallpaper-folder "Great/") ".")))
+  (when my/show-wall
+    (my/get-random-element (directory-files-recursively (concat my/wallpaper-folder "Great/") "."))))
 
 (defun my/show-random-wallpaper ()
   (interactive)
-  (find-file
-   (my/get-random-wallpaper)))
+  (when my/show-wall
+    (find-file
+     (my/get-random-wallpaper))))
 
 (define-key my/open-map (kbd "w") 'my/show-random-wallpaper)
 (define-key my/open-map (kbd "W") '(lambda () (interactive) (find-file my/wallpaper-folder)))
@@ -2957,29 +2964,34 @@ If the input is empty, select the previous history element instead."
       (mapc (lambda (a) (insert (flycheck-error-format a))) errors))))
 
 ;; **** Flycheck-posframe
-(when window-system
-  (straight-use-package 'flycheck-posframe)
+;; (when window-system
+;;   (straight-use-package 'flycheck-posframe)
 
-  (with-eval-after-load 'flycheck
-    (add-hook 'flycheck-mode-hook #'flycheck-posframe-mode)))
+;;   (with-eval-after-load 'flycheck
+;;     (add-hook 'flycheck-mode-hook #'flycheck-posframe-mode)))
 
-(setq my/flycheck-posframe-symbol nil)
-;; (setq my/flycheck-posframe-symbol "→ ")
+;; (setq my/flycheck-posframe-symbol nil)
+;; ;; (setq my/flycheck-posframe-symbol "→ ")
 
-(setq flycheck-posframe-error-prefix my/flycheck-posframe-symbol)
-(setq flycheck-posframe-info-prefix my/flycheck-posframe-symbol)
-(setq flycheck-posframe-prefix my/flycheck-posframe-symbol)
-(setq flycheck-posframe-warning-prefix my/flycheck-posframe-symbol)
+;; (setq flycheck-posframe-error-prefix my/flycheck-posframe-symbol)
+;; (setq flycheck-posframe-info-prefix my/flycheck-posframe-symbol)
+;; (setq flycheck-posframe-prefix my/flycheck-posframe-symbol)
+;; (setq flycheck-posframe-warning-prefix my/flycheck-posframe-symbol)
 
-;; (setq flycheck-posframe-position 'frame-bottom-right-corner)
+;; ;; (setq flycheck-posframe-position 'frame-bottom-right-corner)
 
-;; **** Flycheck inline
-;; (straight-use-package 'flycheck-inline)
-
-;; (require 'flycheck-inline)
+;; **** Flycheck pos-tip
+;; (straight-use-package 'flycheck-pos-tip)
 
 ;; (with-eval-after-load 'flycheck
-;;   '(add-hook 'flycheck-mode-hook #'turn-on-flycheck-inline))
+;;   (flycheck-pos-tip-mode 1))
+
+;; **** Flycheck inline
+(straight-use-package 'flycheck-inline)
+
+(with-eval-after-load 'flycheck
+  (require 'flycheck-inline)
+  (add-hook 'flycheck-mode-hook #'turn-on-flycheck-inline))
 
 ;; *** Flycheck-package
 ;; Flycheck with extra correction for elisp packages
@@ -3506,7 +3518,11 @@ If the input is empty, select the previous history element instead."
 						     (substring-no-properties
 						      (nth 1 list))
 						   (substring-no-properties
-						    (car list)))))))
+						    (car list))))))
+				 :post
+				 (if exwm-firefox-evil-mode
+				     (call-interactively 'exwm-firefox-evil-normal)
+				   (call-interactively 'evil-force-normal-state)))
   "movement"
 
   ;; Move focus
@@ -3642,8 +3658,7 @@ If the input is empty, select the previous history element instead."
 
   ;; Add this to not auto exit insert mode after closing the hydra
   ("<escape>" nil)
-  ("C-e" nil)
-  )
+  ("C-e" nil))
 
 ;; *** Keys
 (my/evil-universal-define-key my/mod-window-leader-key 'my/window-hydra/body)
@@ -4659,7 +4674,7 @@ the overlay."
   (lsp-lens-mode)
   ;; (lsp-java-boot-lens-mode)
 
-  (lsp-ui-sideline-mode -1))
+  (lsp-ui-sideline-mode 1))
 
 ;; Enable java lens
 (setq lsp-java-references-code-lens-enabled t)
@@ -5784,6 +5799,7 @@ do the
   (interactive)
   (pcase major-mode
     ('org-mode (org-cycle))
+    ('org-msg-edit-mode (org-cycle))
     (_
      ;; Fixes a bug where if cursor is at heading, the one above gets narrowed
      (call-interactively 'yas-expand))))
@@ -5925,16 +5941,28 @@ do the
   (pinentry-start))
 
 ;; ** Passwords
+(define-prefix-command 'my/password-map)
+(define-key my/leader-map (kbd "p") 'my/password-map)
+
 ;; Enable org mode for .org.gpg files
 (add-to-list 'auto-mode-alist '("\\.org.gpg\\'" . org-mode))
+
+;; *** Generate password
+(defun my/generate-password ()
+  (interactive)
+  ;; TODO: Move this somewhere else
+  (random t) ; Randomize
+
+  (let* ((random-length-list '(14 15 16 17 18 19))
+	 (random-length (nth (random (length random-length-list)) random-length-list)))
+    (shell-command (concat "pwgen -C -s -y -n -c " (number-to-string random-length)))))
+
+(define-key my/password-map (kbd "g") 'my/generate-password)
 
 ;; *** Espy
 (straight-use-package 'espy)
 
 (setq espy-password-file "~/pass/pass.org.gpg")
-
-(define-prefix-command 'my/password-map)
-(define-key my/leader-map (kbd "p") 'my/password-map)
 
 (define-key my/password-map (kbd "r") 'my/reset-gpg-agent)
 (define-key my/password-map (kbd "u") 'espy-get-user)
@@ -6487,7 +6515,7 @@ do the
 (add-hook 'after-init-hook 'envrc-global-mode)
 
 (add-hook 'after-save-hook (lambda ()
-			     (when (string= major-mode "nix-mode")
+			     (when (and (string= major-mode "nix-mode") (string= envrc--status 'on))
 			       (run-with-timer 5 nil 'envrc-reload))))
 
 ;; (straight-use-package 'direnv)
@@ -7275,6 +7303,12 @@ do the
 ;; ** Projectile
 (straight-use-package 'projectile)
 
+;; *** Remove nix project detection
+;; It's pretty poorly implemented so just remove it
+(with-eval-after-load 'projectile
+  (delete '(nix marker-files ("default.nix") project-file "default.nix" compilation-dir nil configure-command nil compile-command #17="nix-build" test-command #17# run-command nil)
+	  projectile-project-types))
+
 ;; *** Set completion system
 (setq projectile-completion-system 'ivy)
 
@@ -7302,27 +7336,27 @@ do the
   (pcase major-mode
     ('org-mode (counsel-M-x "^org to "))
     ('plantuml-mode (plantuml-preview-buffer 0))
+    ('java-mode (call-interactively 'dap-java-debug))
+    ('nix-mode
+     (if (file-in-directory-p (buffer-file-name) "/etc/nixos/")
+	 (progn
+	   ;; Not sure why but this is required
+	   (require 'ivy)
+
+	   ;; Run rebuild as sudo
+	   (let ((default-directory (concat "/sudo::" default-directory)))
+	     (compile "nix-channel --update; nixos-rebuild switch")))
+       (if (file-in-directory-p (buffer-file-name) "~/.config/nixpkgs/")
+	   (compile "nix-channel --update; home-manager switch"))))
     (_
      (pcase (projectile-project-type)
        ('haskell-cabal (my/cabal-compile))
-       ('nix
+       ;; Placeholder
+       ('haskell-stack (my/cabal-compile))
+       (_
 	;; Reflex obelisk
 	(if (seq-contains (directory-files (projectile-project-root)) "frontend" 'string=)
-	    (my/haskell-reflex-compile)))
-       ('generic
-	;; If reflex project
-	(pcase major-mode
-	  ('nix-mode
-	   (if (file-in-directory-p (buffer-file-name) "/etc/nixos/")
-	       (progn
-		 ;; Not sure why but this is required
-		 (require 'ivy)
-
-		 ;; Run rebuild as sudo
-		 (let ((default-directory (concat "/sudo::" default-directory)))
-		   (compile "nix-channel --update; nixos-rebuild switch")))
-	     (if (file-in-directory-p (buffer-file-name) "~/.config/nixpkgs/")
-		 (compile "nix-channel --update; home-manager switch"))))))))))
+	    (my/haskell-reflex-compile)))))))
 
 ;; ** Counsel projectile
 ;; If enabled it auto enables projectile, which has high CPU usage
@@ -7404,8 +7438,7 @@ do the
 ;; *** Ignore major modes
 ;; TODO: Keep here while image-mode bug exists
 (with-eval-after-load 'diff-hl
-  ;; (add-to-list 'diff-hl-global-ignore-modes 'fundamental-mode t)
-  )
+  (add-to-list 'diff-hl-global-modes 'minibuffer-inactive-mode t))
 
 ;; ** Keys
 (with-eval-after-load 'magit
@@ -7850,14 +7883,27 @@ do the
   (define-key mu4e-view-mode-map (kbd "P") 'mu4e-view-headers-prev-unread))
 
 ;; *** Send messages
-(straight-use-package 'org-mime)
+(setq mail-user-agent 'mu4e-user-agent)
 
-(with-eval-after-load 'org
-  (require 'org-mime))
+;; **** org-mime
+;; (straight-use-package 'org-mime)
 
-(setq org-mime-library 'mml)
+;; (setq org-mime-library 'mml)
 
-;; **** Dynamically setting the width of the columns so it takes up the whole width
+;; (with-eval-after-load 'mu4e-message
+;;   (require 'org-mime))
+
+;; **** org-msg
+(straight-use-package 'org-msg)
+
+(org-msg-mode)
+
+(with-eval-after-load 'mu4e-message
+  (require 'org-msg))
+
+(setq org-msg-enforce-css nil)
+
+;; *** Dynamically setting the width of the columns so it takes up the whole width
 ;; from https://www.reddit.com/r/emacs/comments/bfsck6/mu4e_for_dummies/elgoumx
 (add-hook 'mu4e-headers-mode-hook
 	  (defun my/mu4e-change-headers ()
@@ -7876,7 +7922,7 @@ do the
 
 (defun my/random-hex (&optional num)
   (interactive "P")
-  (let (($n (if (numberp num) (abs num) 6 )))
+  (let (($n (if (numberp num) (abs num) 6)))
     (format  (concat "%0" (number-to-string $n) "x" ) (random (1- (expt 16 $n))))))
 
 (setq gnus-logo-colors (list (concat "#" (my/random-hex 6)) (concat "#" (my/random-hex 6))))
@@ -8519,7 +8565,7 @@ do the
 
 (setq eimp-enable-undo t)
 
-(add-hook 'image-mode-hook 'blimp-mode)
+;; (add-hook 'image-mode-hook 'blimp-mode)
 
 ;; **** Recolor
 (defun my/blimp-annotate-middle()
@@ -9305,7 +9351,7 @@ do the
 
 		(:eval
 		 ;; Diff-hl mode should know when it's fine to measure buffer length
-		 (if (not (member major-mode '(pdf-view-mode minibuffer-inactive-mode image-mode fundamental-mode)))
+		 (if (not (member major-mode '(pdf-view-mode minibuffer-inactive-mode image-mode)))
 		     (int-to-string (count-lines (point-min) (point-max)))
 		   "???"
 		   ))
@@ -9725,6 +9771,25 @@ do the
 ;; Stop emacs from creating backup files
 (setq make-backup-files nil)
 
+;; ** Inhibit backup
+(defvar my/enable-backup nil)
+
+(defun my/should-backup ()
+  (pcase my/enable-backup
+    ('true t)
+    ('false nil)
+    ('nil (setq-local my/enable-backup (my/calculate-should-backup))
+	  (my/should-backup))
+    (_ (error "my/calculate-should-backup had wrong return type"))))
+
+(defun my/calculate-should-backup ()
+  (if (or
+       (my/is-file-gpg-protected (buffer-file-name))
+       (memq major-mode '(image-mode))
+       )
+      'false
+    'true))
+
 ;; ** Auto-save
 ;; Saves so that no data is lost in the event of a crash
 (defvar my/auto-saves-directory (expand-file-name (concat user-emacs-directory "auto-saves/")))
@@ -9739,7 +9804,10 @@ do the
 
 (setq git-backup-ivy-preview-remove-header nil)
 
-(add-hook 'after-save-hook (lambda () (require 'git-backup-ivy) (git-backup-version-file git-backup-ivy-git-path git-backup-ivy-backup-path nil (buffer-file-name))))
+(add-hook 'after-save-hook (lambda ()
+			     (require 'git-backup-ivy)
+			     (when (my/should-backup)
+			       (git-backup-version-file git-backup-ivy-git-path git-backup-ivy-backup-path nil (buffer-file-name)))))
 
 (define-key my/leader-map (kbd "C-u") 'git-backup-ivy)
 
@@ -9752,8 +9820,6 @@ do the
 ;; ** Undo tree
 (straight-use-package 'undo-tree)
 
-(setq global-undo-tree-mode t)
-
 ;; Fixes errors
 (setq undo-tree-enable-undo-in-region nil)
 (setq-default undo-tree-enable-undo-in-region nil)
@@ -9762,6 +9828,19 @@ do the
 
 (setq undo-tree-visualizer-timestamps t)
 (setq undo-tree-visualizer-diff t)
+
+;; *** Global undo-tree mode
+(eval-and-compile
+  (require 'undo-tree))
+
+(defun my/turn-on-undo-tree-mode (&optional print-message)
+  (when (my/should-backup)
+    (turn-on-undo-tree-mode print-message)))
+
+(define-globalized-minor-mode my/global-undo-tree-mode
+  undo-tree-mode my/turn-on-undo-tree-mode)
+
+(my/global-undo-tree-mode t)
 
 ;; *** Persistent history
 (setq my/undo-tree-history-dir (concat user-emacs-directory "undo-tree"))
@@ -9774,12 +9853,6 @@ do the
 
 ;; *** Disable modes in visualizer
 (add-hook 'undo-tree-visualizer-mode-hook (lambda () (add-hook 'visual-line-mode-hook (lambda () (when visual-line-mode (visual-line-mode -1))) nil t)))
-
-;; *** Disable for gpg files
-(add-hook 'undo-tree-mode-hook '(lambda ()
-				  (interactive)
-				  (when (or (my/is-file-gpg-protected buffer-file-name) (string= major-mode 'image-mode))
-				    (setq-local undo-tree-auto-save-history nil))))
 
 ;; *** Keys
 (setq undo-tree-visualizer-mode-map (make-sparse-keymap))
@@ -9799,8 +9872,7 @@ do the
   (interactive)
   (delete-other-windows)
   ;; Wall
-  (when my/show-wall
-    (my/show-random-wallpaper))
+  (my/show-random-wallpaper)
 
   (split-window-below)
   (other-window 1)

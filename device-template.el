@@ -1,5 +1,5 @@
-(defvar my/show-wall nil)
-(defvar my/enable-breaks t)
+(setq my/show-wall nil)
+(setq my/enable-breaks t)
 
 (defvar my/default-face-height 160)
 
