@@ -7392,13 +7392,13 @@ do the
 (straight-use-package '(forge :type git :host github :repo "magit/forge"))
 
 ;; *** Todos
-(straight-use-package 'magit-todos)
-(with-eval-after-load 'magit
-  (require 'magit-todos)
-  (magit-todos-mode 1))
+;; (straight-use-package 'magit-todos)
+;; (with-eval-after-load 'magit
+;;   (require 'magit-todos)
+;;   (magit-todos-mode 1))
 
-;; Same as default but removed the last colon
-(setq magit-todos-keyword-suffix (rx (optional "(" (1+ (not (any ")"))) ")")))
+;; ;; Same as default but removed the last colon
+;; (setq magit-todos-keyword-suffix (rx (optional "(" (1+ (not (any ")"))) ")")))
 
 ;; *** Keys
 (with-eval-after-load 'magit
