@@ -1181,7 +1181,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
   (interactive)
   (my/message-at-point (my/sudo-shell-command-to-string "brightnessctl s 1%-")))
 
-(when my/enable-brightness-bind
+(when my/enable-brightness-binds
   (global-set-key (kbd "<XF86MonBrightnessUp>") 'my/increase-brightness)
   (global-set-key (kbd "<XF86MonBrightnessDown>") 'my/decrease-brightness))
 
