@@ -1181,8 +1181,9 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
   (interactive)
   (my/message-at-point (my/sudo-shell-command-to-string "brightnessctl s 1%-")))
 
-(global-set-key (kbd "<XF86MonBrightnessUp>") 'my/increase-brightness)
-(global-set-key (kbd "<XF86MonBrightnessDown>") 'my/decrease-brightness)
+(when my/enable-brightness-bind
+  (global-set-key (kbd "<XF86MonBrightnessUp>") 'my/increase-brightness)
+  (global-set-key (kbd "<XF86MonBrightnessDown>") 'my/decrease-brightness))
 
 ;; ** Sudo edit
 (straight-use-package 'sudo-edit)
@@ -7837,6 +7838,7 @@ do the
 (setq mu4e-update-interval nil)
 
 (my/allocate-update-time '(lambda ()
+			    (require 'mu4e)
 			    (mu4e-update-mail-and-index t)
 			    (require 'mu4e-alert)
 			    (mu4e-alert-update-mail-count-modeline)) (* 60 5))
@@ -9888,7 +9890,8 @@ do the
   (image-forward-hscroll 10))
 
 ;; ** Run it on startup
-(add-hook 'exwm-init-hook '(lambda () (my/startup-view)))
+;; Timer here fixes crash on slow PCs
+(add-hook 'exwm-init-hook '(lambda () (run-with-timer nil nil 'my/startup-view)))
 
 ;; * Run command on boot
 (if my/run-command-on-boot
