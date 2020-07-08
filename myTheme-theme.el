@@ -71,9 +71,9 @@
 
        ;; :background "#052000"
        ;; #5d4d7a
-       ;; (my/mode-line-color (color-darken-name "DeepSkyBlue4" 10))
+       (my/mode-line-color (color-darken-name "DeepSkyBlue4" 10))
        ;; (my/mode-line-color my/bg-color-2)
-       (my/mode-line-color "midnightblue")
+       ;; (my/mode-line-color "midnightblue")
 
        (my/hl-line-color "#212026")
 
@@ -99,6 +99,8 @@
        (outline-3-bg "#293235")
        (outline-4 "#b1951d")
        (outline-4-bg "#32322c")
+
+       (directory-color my/fg-color)
        )
 
   (custom-theme-set-faces
@@ -254,7 +256,7 @@
 
    `(symbol-overlay-default-face ((,class (:foreground ,my/fg-color :background ,my/mark-color-5))))
 
-   `(dired-directory ((,class (:foreground ,my/bg-color :background ,my/fg-color))))
+   `(dired-directory ((,class (:foreground ,my/bg-color :background ,directory-color))))
    `(dired-perm-write ((,class (:inherit default))))
    `(dired-symlink ((,class (:inherit font-lock-comment-face))))
    `(dired-header ((,class (:foreground ,my/mark-color))))
@@ -276,8 +278,15 @@
    `(popup-menu-selection-face ((,class (:foreground ,my/bg-color :background ,my/fg-color))))
    `(popup-menu-face ((,class (:foreground ,my/fg-color :background ,my/bg-color-1))))
 
-
    `(minibuffer-prompt ((,class (:foreground ,my/mark-color))))
+
+   ;; Modified outside of emacs
+   `(ivy-modified-outside-buffer ((,class (:foreground ,my/bg-color :background ,my/diff-removed-color))))
+   ;; Modified but not saved
+   `(ivy-modified-buffer ((,class (:foreground ,my/bg-color :background ,my/diff-changed-color))))
+   `(ivy-virtual ((,class (:foreground ,my/bg-color :background ,my/mark-color-3))))
+   `(ivy-org ((,class (:foreground ,my/bg-color :background ,my/mode-line-color))))
+   `(ivy-subdir ((,class (:foreground ,my/bg-color :background ,directory-color))))
 
    `(ivy-current-match ((,class (:foreground ,my/bg-color :background ,my/mark-color-3))))
    `(ivy-cursor ((,class (:foreground ,my/bg-color :background ,my/fg-color))))

@@ -432,6 +432,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 		      (funcall task)
 		      (run-with-timer (+ update-time (or repeat 60)) nil (lambda () (my/allocate-update-time task repeat (or update-time offset))))))))
 
+
 ;; * Evil
 (setq evil-search-module 'evil-search)
 (setq evil-vsplit-window-right t)
@@ -919,18 +920,6 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 				    (call-interactively 'evil-delete)
 				    (setq kill-ring ring))))
 
-;; * Hydra
-(eval-and-compile
-  (straight-use-package 'hydra))
-(setq hydra-hint-display-type 'message)
-
-;; ** Fix message
-(with-eval-after-load 'hydra
-  (setq hydra-hint-display-alist
-	(list (list 'lv #'lv-message #'lv-delete-window)
-	      (list 'message (lambda (str) (message "%s" str)) (lambda () (message "")))
-	      (list 'posframe #'hydra-posframe-show #'hydra-posframe-hide))))
-
 ;; * Leader
 ;; When changing leader, change =my/leader-map-key=
 (define-prefix-command 'my/leader-map)
@@ -947,6 +936,382 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (my/evil-visual-define-key my/leader-map-key my/leader-map)
 
 (my/evil-universal-define-key my/mod-leader-map-key my/leader-map)
+
+;; * exwm
+
+;; ** Keys before exwm init
+(setq exwm-input-prefix-keys nil)
+;; Exwm don't send back these keys
+(dolist (k '(
+	     XF86AudioLowerVolume
+	     XF86AudioRaiseVolume
+	     XF86PowerOff
+	     XF86AudioMute
+	     XF86AudioPlay
+	     XF86AudioStop
+	     XF86AudioPrev
+	     XF86AudioNext
+	     XF86ScreenSaver
+	     XF68Back
+	     XF86Forward
+	     Scroll_Lock
+	     print
+
+
+	     ;; (read-event)
+	     6 ;; C-f
+	     12 ;; C-l
+	     20 ;; C-t
+	     11 ;; C-k
+	     1 ;; C-a
+	     10 ;; C-j
+	     19 ;; C-s
+
+	     14 ;; C-n
+	     16 ;; C-p
+
+	     ;; Doesn't seem to work, I'm getting errors when running the insert functions
+	     ;; 134217835 ;; å
+	     ;; 134217772 ;; ä
+	     ;; 134217774 ;; ö
+	     ;; 134217808 ;; Å
+	     ;; 134217788 ;; Ä
+	     ;; 134217790 ;; Ö
+
+	     tab ;; Actual tab
+
+	     134217848 ;; M-x
+
+	     21 ;; C-u
+	     23 ;; C-w
+
+	     5 ;; C-e
+	     7 ;; C-g
+
+	     67108896 ;; C-space
+
+	     8388653 ;; Decrease volume: Win--
+	     8388669 ;; Increase volume: Win-=
+
+	     ;; M-top letter row
+	     134217841
+	     134217831
+	     134217837
+	     134217836
+	     134217847
+	     134217849
+	     134217830
+	     134217845
+	     134217826
+	     134217787
+
+	     ;; M-middle letter row
+	     134217828
+	     134217843
+	     134217844
+	     134217838
+	     134217842
+	     134217833
+	     134217825
+	     134217829
+	     134217839
+	     134217832
+
+	     ;; C-d for exwm-edit compose
+	     4
+	     ))
+  (cl-pushnew k exwm-input-prefix-keys))
+
+;; Enable M-x menu in full-screen programs
+(setq exwm-input-global-keys
+      `(
+	;; Bind "s-r" to exit char-mode and fullscreen mode.
+	([?\M-x] . counsel-M-x)
+	([tab] . my/window-hydra/body)
+	))
+
+;; ** Load package
+(eval-and-compile
+  (straight-use-package 'exwm)
+  (require 'exwm-core))
+
+;; ** keys
+;; *** Define mode
+(defvar my/exwm-mode-map (make-sparse-keymap))
+
+(define-minor-mode my/exwm-mode nil nil nil my/exwm-mode-map)
+(add-hook 'exwm-manage-finish-hook 'my/exwm-mode)
+
+;; *** Define functions
+(defun my/exwm-backspace () (interactive) (exwm-input--fake-key 'backspace))
+(defun my/exwm-delete () (interactive) (exwm-input--fake-key 'delete))
+(defun my/exwm-tab () (interactive) (exwm-input--fake-key 'tab))
+
+(defun my/exwm-å () (interactive) (exwm-input--fake-key "å"))
+(defun my/exwm-ä () (interactive) (exwm-input--fake-key "ä"))
+(defun my/exwm-ö () (interactive) (exwm-input--fake-key "ö"))
+
+(defun my/exwm-Å () (interactive) (exwm-input--fake-key "Å"))
+(defun my/exwm-Ä () (interactive) (exwm-input--fake-key "Ä"))
+(defun my/exwm-Ö () (interactive) (exwm-input--fake-key "Ö"))
+
+(defun my/exwm-paste () (interactive) (exwm-input--fake-key ?\C-v))
+
+(defun my/exwm-page-up () (interactive) (exwm-input--fake-key 'next))
+(defun my/exwm-page-down () (interactive) (exwm-input--fake-key 'prior))
+
+(defun my/exwm-return () (interactive) (exwm-input--fake-key 'return))
+(defun my/exwm-escape () (interactive) (exwm-input--fake-key 'escape))
+(defun my/exwm-find () (interactive) (exwm-input--fake-key ?\C-f))
+
+(defun my/exwm-up () (interactive) (exwm-input--fake-key 'up))
+(defun my/exwm-down () (interactive) (exwm-input--fake-key 'down))
+
+(defun my/exwm-m-q () (interactive) (exwm-input--fake-key ?\!))
+(defun my/exwm-m-g () (interactive) (exwm-input--fake-key ?\@))
+(defun my/exwm-m-m () (interactive) (exwm-input--fake-key ?\#))
+(defun my/exwm-m-l () (interactive) (exwm-input--fake-key ?\$))
+(defun my/exwm-m-w () (interactive) (exwm-input--fake-key ?\%))
+(defun my/exwm-m-y () (interactive) (exwm-input--fake-key ?\*))
+(defun my/exwm-m-f () (interactive) (exwm-input--fake-key ?\())
+(defun my/exwm-m-u () (interactive) (exwm-input--fake-key ?\)))
+(defun my/exwm-m-b () (interactive) (exwm-input--fake-key ?\&))
+(defun my/exwm-m-comma () (interactive) (exwm-input--fake-key ?^))
+
+(defun my/exwm-1 () (interactive) (exwm-input--fake-key ?1))
+(defun my/exwm-2 () (interactive) (exwm-input--fake-key ?2))
+(defun my/exwm-3 () (interactive) (exwm-input--fake-key ?3))
+(defun my/exwm-4 () (interactive) (exwm-input--fake-key ?4))
+(defun my/exwm-5 () (interactive) (exwm-input--fake-key ?5))
+(defun my/exwm-6 () (interactive) (exwm-input--fake-key ?6))
+(defun my/exwm-7 () (interactive) (exwm-input--fake-key ?7))
+(defun my/exwm-8 () (interactive) (exwm-input--fake-key ?8))
+(defun my/exwm-9 () (interactive) (exwm-input--fake-key ?9))
+(defun my/exwm-0 () (interactive) (exwm-input--fake-key ?0))
+
+;; *** Keys
+(setq exwm-mode-map (make-sparse-keymap))
+
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "DEL") 'my/exwm-backspace)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "<deletechar>") 'my/exwm-delete)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "TAB") 'my/exwm-tab)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "M-x") 'counsel-M-x)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-k") 'my/exwm-paste)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-u") 'my/exwm-page-up)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-w") 'my/exwm-page-down)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "RET") 'my/exwm-return)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-g") 'my/exwm-escape)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "å") 'my/exwm-å)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "ä") 'my/exwm-ä)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "ö") 'my/exwm-ö)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "Å") 'my/exwm-Å)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "Ä") 'my/exwm-Ä)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "Ö") 'my/exwm-Ö)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd my/mod-leader-map-key) 'my/leader-map)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-=") 'my/window-hydra/body)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "M-x") 'counsel-M-x)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-d") #'exwm-edit--compose)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-j") 'my/toggle-switch-to-minibuffer)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-s") 'my/exwm-find)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-n") 'my/exwm-down)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-p") 'my/exwm-up)
+
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "!") 'my/exwm-m-q)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "@") 'my/exwm-m-g)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "#") 'my/exwm-m-m)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "$") 'my/exwm-m-l)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "%") 'my/exwm-m-w)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "*") 'my/exwm-m-y)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "(") 'my/exwm-m-f)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd ")") 'my/exwm-m-u)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "&") 'my/exwm-m-b)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "^") 'my/exwm-m-comma)
+
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "1") 'my/exwm-1)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "2") 'my/exwm-2)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "3") 'my/exwm-3)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "4") 'my/exwm-4)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "5") 'my/exwm-5)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "6") 'my/exwm-6)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "7") 'my/exwm-7)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "8") 'my/exwm-8)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "9") 'my/exwm-9)
+(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "0") 'my/exwm-0)
+
+;; Needs to be kept same as above
+(define-key my/exwm-mode-map (kbd "DEL") 'my/exwm-backspace)
+(define-key my/exwm-mode-map (kbd "<deletechar>") 'my/exwm-delete)
+(define-key my/exwm-mode-map (kbd "TAB") 'my/exwm-tab)
+(define-key my/exwm-mode-map (kbd "M-x") 'counsel-M-x)
+(define-key my/exwm-mode-map (kbd "C-k") 'my/exwm-paste)
+(define-key my/exwm-mode-map (kbd "C-u") 'my/exwm-page-up)
+(define-key my/exwm-mode-map (kbd "C-w") 'my/exwm-page-down)
+(define-key my/exwm-mode-map (kbd "RET") 'my/exwm-return)
+(define-key my/exwm-mode-map (kbd "C-g") 'my/exwm-escape)
+(define-key my/exwm-mode-map (kbd "å") 'my/exwm-å)
+(define-key my/exwm-mode-map (kbd "ä") 'my/exwm-ä)
+(define-key my/exwm-mode-map (kbd "ö") 'my/exwm-ö)
+(define-key my/exwm-mode-map (kbd "Å") 'my/exwm-Å)
+(define-key my/exwm-mode-map (kbd "Ä") 'my/exwm-Ä)
+(define-key my/exwm-mode-map (kbd "Ö") 'my/exwm-Ö)
+(define-key my/exwm-mode-map (kbd my/mod-leader-map-key) 'my/leader-map)
+(define-key my/exwm-mode-map (kbd "C-=") 'my/window-hydra/body)
+(define-key my/exwm-mode-map (kbd "M-x") 'counsel-M-x)
+(define-key my/exwm-mode-map (kbd "C-d") #'exwm-edit--compose)
+(define-key my/exwm-mode-map (kbd "C-j") 'my/toggle-switch-to-minibuffer)
+(define-key my/exwm-mode-map (kbd "C-s") 'my/exwm-find)
+(define-key my/exwm-mode-map (kbd "C-n") 'my/exwm-down)
+(define-key my/exwm-mode-map (kbd "C-p") 'my/exwm-up)
+
+(define-key my/exwm-mode-map (kbd "!") 'my/exwm-m-q)
+(define-key my/exwm-mode-map (kbd "@") 'my/exwm-m-g)
+(define-key my/exwm-mode-map (kbd "#") 'my/exwm-m-m)
+(define-key my/exwm-mode-map (kbd "$") 'my/exwm-m-l)
+(define-key my/exwm-mode-map (kbd "%") 'my/exwm-m-w)
+(define-key my/exwm-mode-map (kbd "*") 'my/exwm-m-y)
+(define-key my/exwm-mode-map (kbd "(") 'my/exwm-m-f)
+(define-key my/exwm-mode-map (kbd ")") 'my/exwm-m-u)
+(define-key my/exwm-mode-map (kbd "&") 'my/exwm-m-b)
+(define-key my/exwm-mode-map (kbd "^") 'my/exwm-m-comma)
+
+(define-key my/exwm-mode-map (kbd "1") 'my/exwm-1)
+(define-key my/exwm-mode-map (kbd "2") 'my/exwm-2)
+(define-key my/exwm-mode-map (kbd "3") 'my/exwm-3)
+(define-key my/exwm-mode-map (kbd "4") 'my/exwm-4)
+(define-key my/exwm-mode-map (kbd "5") 'my/exwm-5)
+(define-key my/exwm-mode-map (kbd "6") 'my/exwm-6)
+(define-key my/exwm-mode-map (kbd "7") 'my/exwm-7)
+(define-key my/exwm-mode-map (kbd "8") 'my/exwm-8)
+(define-key my/exwm-mode-map (kbd "9") 'my/exwm-9)
+(define-key my/exwm-mode-map (kbd "0") 'my/exwm-0)
+
+;; ** Run exwm
+(exwm-enable)
+;; (add-hook 'after-init-hook 'exwm-enable)
+
+;; ** Don't remove header in exwm-buffers
+(add-hook 'exwm-manage-finish-hook (lambda () (kill-local-variable 'header-line-format)))
+
+;; ** Exwm-edit
+(setq exwm-edit-bind-default-keys nil)
+;; (straight-use-package '(exwm-edit :type git :host github :repo "walseb/exwm-edit"))
+(straight-use-package 'exwm-edit)
+
+(with-eval-after-load 'exwm
+  (require 'exwm-edit)
+  (global-exwm-edit-mode 1))
+
+;; *** Remove header
+(add-hook 'exwm-edit-mode-hook (lambda () (kill-local-variable 'header-line-format)))
+
+;; ** Set exwm buffer name
+;; *** Manually set buffer name
+;; (defun my/exwm-set-window-name ()
+;;   (interactive)
+;;   (exwm-workspace-rename-buffer (completing-read "set title " nil)))
+
+;; (define-key my/file-options-map (kbd "r") 'my/exwm-set-window-name)
+
+;; *** Auto set buffer name
+;; We use class names for all windows expect for Java applications and GIMP (because of problems with those).
+(defun my/exwm-should-use-title-for-buffer-name ()
+  (or
+   (not exwm-instance-name)
+   (string-prefix-p "sun-awt-X11-" exwm-instance-name)
+   (string= "gimp" exwm-instance-name)
+   ;; Firefox calls itself navigator?
+   (string-prefix-p "Navigator" exwm-instance-name t)
+   ;;(string-prefix-p "Firefox" exwm-instance-name t)
+   ))
+
+(add-hook 'exwm-update-class-hook 'my/exwm-buffer-give-name-class)
+
+(defun my/exwm-buffer-give-name-class ()
+  (when (not (my/exwm-should-use-title-for-buffer-name))
+    (exwm-workspace-rename-buffer exwm-class-name)))
+
+(add-hook 'exwm-update-title-hook 'my/exwm-buffer-give-name-title)
+
+(defun my/exwm-buffer-give-name-title ()
+  (when (my/exwm-should-use-title-for-buffer-name)
+    (exwm-workspace-rename-buffer exwm-title)))
+
+;; ** Fix modeline in exwm buffers
+(add-hook 'exwm-floating-exit-hook (lambda ()
+				     (kill-local-variable 'header-line-format)))
+
+;; ** Disable floating windows
+(setq exwm-manage-force-tiling nil)
+
+;; ** Disable full screen
+;; (cl-defun exwm-layout-set-fullscreen (&optional id)
+;;   )
+
+;; ** Multi-screen
+(require 'exwm-randr)
+
+;; *** Get monitor setup
+(defun my/exwm-randr-auto-get-monitor ()
+  (let* ((result)
+	 (monitors (nth 1 (exwm-randr--get-monitors))))
+    (dotimes (i (/ (length monitors) 2))
+      (push (nth (* i 2) monitors) result)
+      (push i result))
+    result))
+
+;; Get monitor setup
+(if my/device/monitor-setup
+    (progn
+      (setq exwm-workspace-number (/ (length my/device/monitor-setup) 2))
+      (setq exwm-randr-workspace-monitor-plist my/device/monitor-setup)))
+;; (let ((monitor-setup (my/exwm-randr-auto-get-monitor)))
+;; (setq exwm-workspace-number (/ (length monitor-setup) 2))
+;; (setq exwm-randr-workspace-monitor-plist monitor-setup)))
+
+;; *** Enable
+(if (> exwm-workspace-number 1)
+    (progn
+      (exwm-randr-enable)))
+
+;; *** Switch monitor (workspace) functions
+;; `exwm-workspace-number' is equal to monitor count
+;; (add-hook 'focus-out-hook 'exwm-layout--refresh)
+(defun my/switch-monitor-left ()
+  (interactive)
+  (if (>= exwm-workspace-current-index (- exwm-workspace-number 1))
+      (exwm-workspace-switch-create 0)
+    (exwm-workspace-switch-create (+ exwm-workspace-current-index 1))))
+
+(defun my/switch-monitor-right ()
+  (interactive)
+  (if (= exwm-workspace-current-index 0)
+      (exwm-workspace-switch-create (- exwm-workspace-number 1))
+    (exwm-workspace-switch-create (- exwm-workspace-current-index 1))))
+
+;; (define-key my/keys-mode-map (kbd "M-l") 'my/switch-monitor-right)
+;; (define-key my/keys-mode-map (kbd "M-h") 'my/switch-monitor-left)
+
+;; ** Setting
+;; Garbage collect when entering x window (because x is not in sync with emacs)
+;; (add-hook 'exwm-mode-hook 'garbage-collect)
+
+(setq exwm-workspace-show-all-buffers t)
+
+(setq exwm-workspace-minibuffer-position 'top)
+
+(add-hook 'exwm-init-hook (lambda () (interactive) (exwm-workspace-attach-minibuffer)))
+
+;; * Hydra
+(eval-and-compile
+  (straight-use-package 'hydra))
+(setq hydra-hint-display-type 'message)
+
+;; ** Fix message
+(with-eval-after-load 'hydra
+  (setq hydra-hint-display-alist
+	(list (list 'lv #'lv-message #'lv-delete-window)
+	      (list 'message (lambda (str) (message "%s" str)) (lambda () (message "")))
+	      (list 'posframe #'hydra-posframe-show #'hydra-posframe-hide))))
 
 ;; * Compatibility
 ;; ** Windows host clipboard crash
@@ -1166,7 +1531,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (setq kill-ring-max 500)
 
 ;; ** Don't save duplicates to kill ring
-(setq kill-do-not-save-duplicates t)
+;; (setq kill-do-not-save-duplicates nil)
 
 ;; ** Pixel scroll mode
 ;; In org mode when displaying images pixel scroll mode can be useful maybe
@@ -1490,32 +1855,32 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
   (my/break-timer-run my/not-clocked-in-break-time))
 
 ;; * File options
-(define-prefix-command 'my/file-options-map)
-(define-key my/leader-map (kbd "`") 'my/file-options-map)
+;; (define-prefix-command 'my/file-options-map)
+;; (define-key my/leader-map (kbd "`") 'my/file-options-map)
 
-;; ** Revert
-(define-key my/file-options-map (kbd "r") 'revert-buffer)
+;; ;; ** Revert
+;; (define-key my/file-options-map (kbd "r") 'revert-buffer)
 
-;; ** Statistics
-(define-prefix-command 'my/statistics-map)
-(define-key my/file-options-map (kbd "s") 'my/statistics-map)
+;; ;; ** Statistics
+;; (define-prefix-command 'my/statistics-map)
+;; (define-key my/file-options-map (kbd "s") 'my/statistics-map)
 
-(define-key my/statistics-map (kbd "w") 'count-words)
-(define-key my/statistics-map (kbd "r") 'count-words-region)
+;; (define-key my/statistics-map (kbd "w") 'count-words)
+;; (define-key my/statistics-map (kbd "r") 'count-words-region)
 
-;; ** Indentation
-(define-prefix-command 'my/indentation-map)
-(define-key my/file-options-map (kbd "i") 'my/indentation-map)
+;; ;; ** Indentation
+;; (define-prefix-command 'my/indentation-map)
+;; (define-key my/file-options-map (kbd "i") 'my/indentation-map)
 
-(defun my/change-tab-width ()
-  (interactive)
-  (setq-default tab-width (string-to-number (completing-read "Enter tab width" nil))))
+;; (defun my/change-tab-width ()
+;;   (interactive)
+;;   (setq-default tab-width (string-to-number (completing-read "Enter tab width" nil))))
 
-;; Applies only to region
-(define-key my/indentation-map (kbd "t") 'tabify)
-(define-key my/indentation-map (kbd "SPC") 'untabify)
+;; ;; Applies only to region
+;; (define-key my/indentation-map (kbd "t") 'tabify)
+;; (define-key my/indentation-map (kbd "SPC") 'untabify)
 
-(define-key my/indentation-map (kbd "w") 'my/change-tab-width)
+;; (define-key my/indentation-map (kbd "w") 'my/change-tab-width)
 
 ;; * Open
 (define-prefix-command 'my/open-map)
@@ -2745,20 +3110,21 @@ If the input is empty, select the previous history element instead."
 
 (setq ivy-rich-display-transformers-list
       ;; Switch buffer
-      `(ivy-switch-buffer
-	(:columns
-	 ((ivy-rich-candidate (:width 80))
-	  ;;(ivy-rich-switch-buffer-size (:width 7 :face my/ivy-rich-switch-buffer-size-face))
-	  (ivy-rich-switch-buffer-indicators (:width 4 :face my/ivy-rich-switch-buffer-indicator-face :align right))
-	  (ivy-rich-switch-buffer-major-mode (:width 20 :face my/ivy-rich-switch-buffer-major-mode-face))
-	  ;; (ivy-rich-switch-buffer-project (:width 20 :face my/ivy-rich-switch-buffer-project-face))
-	  ;; (my/ivy-rich-path)
+      `(
+	;; ivy-switch-buffer
+	;; (:columns
+	;;  ((ivy-rich-candidate (:width 80))
+	;;   ;;(ivy-rich-switch-buffer-size (:width 7 :face my/ivy-rich-switch-buffer-size-face))
+	;;   (ivy-rich-switch-buffer-indicators (:width 4 :face my/ivy-rich-switch-buffer-indicator-face :align right))
+	;;   (ivy-rich-switch-buffer-major-mode (:width 20 :face my/ivy-rich-switch-buffer-major-mode-face))
+	;;   ;; (ivy-rich-switch-buffer-project (:width 20 :face my/ivy-rich-switch-buffer-project-face))
+	;;   ;; (my/ivy-rich-path)
 
-	  ;; These two takes a lot of memory and cpu
-	  ;;(ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))) :face my/ivy-rich-switch-buffer-path-face))
-	  )
-	 :predicate
-	 (lambda (cand) (get-buffer cand)))
+	;;   ;; These two takes a lot of memory and cpu
+	;;   ;;(ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))) :face my/ivy-rich-switch-buffer-path-face))
+	;;   )
+	;;  :predicate
+	;;  (lambda (cand) (get-buffer cand)))
 	;; Find file
 	counsel-find-file
 	(:columns
@@ -5825,8 +6191,8 @@ do the
   ;; Make the first report after the idle timer has been run
   (run-with-timer my/wakatime-report-time my/wakatime-report-time
 		  (lambda () (when my/wakatime-user-present
-			  (message (concat "Reporting to wakatime at: " (current-time-string)))
-			  (wakatime-save))))
+			       (message (concat "Reporting to wakatime at: " (current-time-string)))
+			       (wakatime-save))))
   (message "custom wakatime save mechanism loaded"))
 
 ;; * Macros
@@ -6548,367 +6914,6 @@ do the
 
 ;;  (add-hook 'eshell-mode-hook 'pretty-sha-path-mode)
 
-;; * exwm
-;; ** Keys before exwm init
-(setq exwm-input-prefix-keys nil)
-;; Exwm don't send back these keys
-(dolist (k '(
-	     XF86AudioLowerVolume
-	     XF86AudioRaiseVolume
-	     XF86PowerOff
-	     XF86AudioMute
-	     XF86AudioPlay
-	     XF86AudioStop
-	     XF86AudioPrev
-	     XF86AudioNext
-	     XF86ScreenSaver
-	     XF68Back
-	     XF86Forward
-	     Scroll_Lock
-	     print
-
-
-	     ;; (read-event)
-	     6 ;; C-f
-	     12 ;; C-l
-	     20 ;; C-t
-	     11 ;; C-k
-	     1 ;; C-a
-	     10 ;; C-j
-	     19 ;; C-s
-
-	     14 ;; C-n
-	     16 ;; C-p
-
-	     ;; Doesn't seem to work, I'm getting errors when running the insert functions
-	     ;; 134217835 ;; å
-	     ;; 134217772 ;; ä
-	     ;; 134217774 ;; ö
-	     ;; 134217808 ;; Å
-	     ;; 134217788 ;; Ä
-	     ;; 134217790 ;; Ö
-
-	     tab ;; Actual tab
-
-	     134217848 ;; M-x
-
-	     21 ;; C-u
-	     23 ;; C-w
-
-	     5 ;; C-e
-	     7 ;; C-g
-
-	     67108896 ;; C-space
-
-	     8388653 ;; Decrease volume: Win--
-	     8388669 ;; Increase volume: Win-=
-
-	     ;; M-top letter row
-	     134217841
-	     134217831
-	     134217837
-	     134217836
-	     134217847
-	     134217849
-	     134217830
-	     134217845
-	     134217826
-	     134217787
-
-	     ;; M-middle letter row
-	     134217828
-	     134217843
-	     134217844
-	     134217838
-	     134217842
-	     134217833
-	     134217825
-	     134217829
-	     134217839
-	     134217832
-
-	     ;; C-d for exwm-edit compose
-	     4
-	     ))
-  (cl-pushnew k exwm-input-prefix-keys))
-
-;; Enable M-x menu in full-screen programs
-(setq exwm-input-global-keys
-      `(
-	;; Bind "s-r" to exit char-mode and fullscreen mode.
-	([?\M-x] . counsel-M-x)
-	([tab] . my/window-hydra/body)
-	))
-
-;; ** Init
-(eval-and-compile
-  (straight-use-package 'exwm)
-  (require 'exwm-core))
-
-;; ** keys
-;; *** Define mode
-(defvar my/exwm-mode-map (make-sparse-keymap))
-
-(define-minor-mode my/exwm-mode nil nil nil my/exwm-mode-map)
-(add-hook 'exwm-manage-finish-hook 'my/exwm-mode)
-
-;; *** Define functions
-(defun my/exwm-backspace () (interactive) (exwm-input--fake-key 'backspace))
-(defun my/exwm-delete () (interactive) (exwm-input--fake-key 'delete))
-(defun my/exwm-tab () (interactive) (exwm-input--fake-key 'tab))
-
-(defun my/exwm-å () (interactive) (exwm-input--fake-key "å"))
-(defun my/exwm-ä () (interactive) (exwm-input--fake-key "ä"))
-(defun my/exwm-ö () (interactive) (exwm-input--fake-key "ö"))
-
-(defun my/exwm-Å () (interactive) (exwm-input--fake-key "Å"))
-(defun my/exwm-Ä () (interactive) (exwm-input--fake-key "Ä"))
-(defun my/exwm-Ö () (interactive) (exwm-input--fake-key "Ö"))
-
-(defun my/exwm-paste () (interactive) (exwm-input--fake-key ?\C-v))
-
-(defun my/exwm-page-up () (interactive) (exwm-input--fake-key 'next))
-(defun my/exwm-page-down () (interactive) (exwm-input--fake-key 'prior))
-
-(defun my/exwm-return () (interactive) (exwm-input--fake-key 'return))
-(defun my/exwm-escape () (interactive) (exwm-input--fake-key 'escape))
-(defun my/exwm-find () (interactive) (exwm-input--fake-key ?\C-f))
-
-(defun my/exwm-up () (interactive) (exwm-input--fake-key 'up))
-(defun my/exwm-down () (interactive) (exwm-input--fake-key 'down))
-
-(defun my/exwm-m-q () (interactive) (exwm-input--fake-key ?\!))
-(defun my/exwm-m-g () (interactive) (exwm-input--fake-key ?\@))
-(defun my/exwm-m-m () (interactive) (exwm-input--fake-key ?\#))
-(defun my/exwm-m-l () (interactive) (exwm-input--fake-key ?\$))
-(defun my/exwm-m-w () (interactive) (exwm-input--fake-key ?\%))
-(defun my/exwm-m-y () (interactive) (exwm-input--fake-key ?\*))
-(defun my/exwm-m-f () (interactive) (exwm-input--fake-key ?\())
-(defun my/exwm-m-u () (interactive) (exwm-input--fake-key ?\)))
-(defun my/exwm-m-b () (interactive) (exwm-input--fake-key ?\&))
-(defun my/exwm-m-comma () (interactive) (exwm-input--fake-key ?^))
-
-(defun my/exwm-1 () (interactive) (exwm-input--fake-key ?1))
-(defun my/exwm-2 () (interactive) (exwm-input--fake-key ?2))
-(defun my/exwm-3 () (interactive) (exwm-input--fake-key ?3))
-(defun my/exwm-4 () (interactive) (exwm-input--fake-key ?4))
-(defun my/exwm-5 () (interactive) (exwm-input--fake-key ?5))
-(defun my/exwm-6 () (interactive) (exwm-input--fake-key ?6))
-(defun my/exwm-7 () (interactive) (exwm-input--fake-key ?7))
-(defun my/exwm-8 () (interactive) (exwm-input--fake-key ?8))
-(defun my/exwm-9 () (interactive) (exwm-input--fake-key ?9))
-(defun my/exwm-0 () (interactive) (exwm-input--fake-key ?0))
-
-;; *** Keys
-(setq exwm-mode-map (make-sparse-keymap))
-
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "DEL") 'my/exwm-backspace)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "<deletechar>") 'my/exwm-delete)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "TAB") 'my/exwm-tab)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "M-x") 'counsel-M-x)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-k") 'my/exwm-paste)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-u") 'my/exwm-page-up)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-w") 'my/exwm-page-down)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "RET") 'my/exwm-return)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-g") 'my/exwm-escape)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "å") 'my/exwm-å)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "ä") 'my/exwm-ä)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "ö") 'my/exwm-ö)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "Å") 'my/exwm-Å)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "Ä") 'my/exwm-Ä)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "Ö") 'my/exwm-Ö)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd my/mod-leader-map-key) 'my/leader-map)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-=") 'my/window-hydra/body)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "M-x") 'counsel-M-x)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-d") #'exwm-edit--compose)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-j") 'my/toggle-switch-to-minibuffer)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-s") 'my/exwm-find)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-n") 'my/exwm-down)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "C-p") 'my/exwm-up)
-
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "!") 'my/exwm-m-q)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "@") 'my/exwm-m-g)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "#") 'my/exwm-m-m)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "$") 'my/exwm-m-l)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "%") 'my/exwm-m-w)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "*") 'my/exwm-m-y)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "(") 'my/exwm-m-f)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd ")") 'my/exwm-m-u)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "&") 'my/exwm-m-b)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "^") 'my/exwm-m-comma)
-
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "1") 'my/exwm-1)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "2") 'my/exwm-2)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "3") 'my/exwm-3)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "4") 'my/exwm-4)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "5") 'my/exwm-5)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "6") 'my/exwm-6)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "7") 'my/exwm-7)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "8") 'my/exwm-8)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "9") 'my/exwm-9)
-(evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "0") 'my/exwm-0)
-
-;; Needs to be kept same as above
-(define-key my/exwm-mode-map (kbd "DEL") 'my/exwm-backspace)
-(define-key my/exwm-mode-map (kbd "<deletechar>") 'my/exwm-delete)
-(define-key my/exwm-mode-map (kbd "TAB") 'my/exwm-tab)
-(define-key my/exwm-mode-map (kbd "M-x") 'counsel-M-x)
-(define-key my/exwm-mode-map (kbd "C-k") 'my/exwm-paste)
-(define-key my/exwm-mode-map (kbd "C-u") 'my/exwm-page-up)
-(define-key my/exwm-mode-map (kbd "C-w") 'my/exwm-page-down)
-(define-key my/exwm-mode-map (kbd "RET") 'my/exwm-return)
-(define-key my/exwm-mode-map (kbd "C-g") 'my/exwm-escape)
-(define-key my/exwm-mode-map (kbd "å") 'my/exwm-å)
-(define-key my/exwm-mode-map (kbd "ä") 'my/exwm-ä)
-(define-key my/exwm-mode-map (kbd "ö") 'my/exwm-ö)
-(define-key my/exwm-mode-map (kbd "Å") 'my/exwm-Å)
-(define-key my/exwm-mode-map (kbd "Ä") 'my/exwm-Ä)
-(define-key my/exwm-mode-map (kbd "Ö") 'my/exwm-Ö)
-(define-key my/exwm-mode-map (kbd my/mod-leader-map-key) 'my/leader-map)
-(define-key my/exwm-mode-map (kbd "C-=") 'my/window-hydra/body)
-(define-key my/exwm-mode-map (kbd "M-x") 'counsel-M-x)
-(define-key my/exwm-mode-map (kbd "C-d") #'exwm-edit--compose)
-(define-key my/exwm-mode-map (kbd "C-j") 'my/toggle-switch-to-minibuffer)
-(define-key my/exwm-mode-map (kbd "C-s") 'my/exwm-find)
-(define-key my/exwm-mode-map (kbd "C-n") 'my/exwm-down)
-(define-key my/exwm-mode-map (kbd "C-p") 'my/exwm-up)
-
-(define-key my/exwm-mode-map (kbd "!") 'my/exwm-m-q)
-(define-key my/exwm-mode-map (kbd "@") 'my/exwm-m-g)
-(define-key my/exwm-mode-map (kbd "#") 'my/exwm-m-m)
-(define-key my/exwm-mode-map (kbd "$") 'my/exwm-m-l)
-(define-key my/exwm-mode-map (kbd "%") 'my/exwm-m-w)
-(define-key my/exwm-mode-map (kbd "*") 'my/exwm-m-y)
-(define-key my/exwm-mode-map (kbd "(") 'my/exwm-m-f)
-(define-key my/exwm-mode-map (kbd ")") 'my/exwm-m-u)
-(define-key my/exwm-mode-map (kbd "&") 'my/exwm-m-b)
-(define-key my/exwm-mode-map (kbd "^") 'my/exwm-m-comma)
-
-(define-key my/exwm-mode-map (kbd "1") 'my/exwm-1)
-(define-key my/exwm-mode-map (kbd "2") 'my/exwm-2)
-(define-key my/exwm-mode-map (kbd "3") 'my/exwm-3)
-(define-key my/exwm-mode-map (kbd "4") 'my/exwm-4)
-(define-key my/exwm-mode-map (kbd "5") 'my/exwm-5)
-(define-key my/exwm-mode-map (kbd "6") 'my/exwm-6)
-(define-key my/exwm-mode-map (kbd "7") 'my/exwm-7)
-(define-key my/exwm-mode-map (kbd "8") 'my/exwm-8)
-(define-key my/exwm-mode-map (kbd "9") 'my/exwm-9)
-(define-key my/exwm-mode-map (kbd "0") 'my/exwm-0)
-
-;; ** Run exwm
-(add-hook 'after-init-hook 'exwm-enable)
-
-;; ** Don't remove header in exwm-buffers
-(add-hook 'exwm-manage-finish-hook (lambda () (kill-local-variable 'header-line-format)))
-
-;; ** Exwm-edit
-(setq exwm-edit-bind-default-keys nil)
-(straight-use-package '(exwm-edit :type git :host github :repo "walseb/exwm-edit"))
-
-(with-eval-after-load 'exwm
-  (require 'exwm-edit)
-  (global-exwm-edit-mode 1))
-
-;; *** Remove header
-(add-hook 'exwm-edit-mode-hook (lambda () (kill-local-variable 'header-line-format)))
-
-;; ** Set exwm buffer name
-;; *** Manually set buffer name
-(defun my/exwm-set-window-name ()
-  (interactive)
-  (exwm-workspace-rename-buffer (completing-read "set title " nil)))
-
-(define-key my/file-options-map (kbd "r") 'my/exwm-set-window-name)
-
-;; *** Auto set buffer name
-;; We use class names for all windows expect for Java applications and GIMP (because of problems with those).
-(defun my/exwm-should-use-title-for-buffer-name ()
-  (or
-   (not exwm-instance-name)
-   (string-prefix-p "sun-awt-X11-" exwm-instance-name)
-   (string= "gimp" exwm-instance-name)
-   ;; Firefox calls itself navigator?
-   (string-prefix-p "Navigator" exwm-instance-name t)
-   ;;(string-prefix-p "Firefox" exwm-instance-name t)
-   ))
-
-(add-hook 'exwm-update-class-hook 'my/exwm-buffer-give-name-class)
-
-(defun my/exwm-buffer-give-name-class ()
-  (when (not (my/exwm-should-use-title-for-buffer-name))
-    (exwm-workspace-rename-buffer exwm-class-name)))
-
-(add-hook 'exwm-update-title-hook 'my/exwm-buffer-give-name-title)
-
-(defun my/exwm-buffer-give-name-title ()
-  (when (my/exwm-should-use-title-for-buffer-name)
-    (exwm-workspace-rename-buffer exwm-title)))
-
-;; ** Fix modeline in exwm buffers
-(add-hook 'exwm-floating-exit-hook (lambda ()
-				     (kill-local-variable 'header-line-format)))
-
-;; ** Disable floating windows
-(setq exwm-manage-force-tiling nil)
-
-;; ** Disable full screen
-;; (cl-defun exwm-layout-set-fullscreen (&optional id)
-;;   )
-
-;; ** Multi-screen
-(require 'exwm-randr)
-
-;; *** Get monitor setup
-(defun my/exwm-randr-auto-get-monitor ()
-  (let* ((result)
-	 (monitors (nth 1 (exwm-randr--get-monitors))))
-    (dotimes (i (/ (length monitors) 2))
-      (push (nth (* i 2) monitors) result)
-      (push i result))
-    result))
-
-;; Get monitor setup
-(if my/device/monitor-setup
-    (progn
-      (setq exwm-workspace-number (/ (length my/device/monitor-setup) 2))
-      (setq exwm-randr-workspace-monitor-plist my/device/monitor-setup)))
-;; (let ((monitor-setup (my/exwm-randr-auto-get-monitor)))
-;; (setq exwm-workspace-number (/ (length monitor-setup) 2))
-;; (setq exwm-randr-workspace-monitor-plist monitor-setup)))
-
-;; *** Enable
-(if (> exwm-workspace-number 1)
-    (progn
-      (exwm-randr-enable)))
-
-;; *** Switch monitor (workspace) functions
-;; `exwm-workspace-number' is equal to monitor count
-;; (add-hook 'focus-out-hook 'exwm-layout--refresh)
-(defun my/switch-monitor-left ()
-  (interactive)
-  (if (>= exwm-workspace-current-index (- exwm-workspace-number 1))
-      (exwm-workspace-switch-create 0)
-    (exwm-workspace-switch-create (+ exwm-workspace-current-index 1))))
-
-(defun my/switch-monitor-right ()
-  (interactive)
-  (if (= exwm-workspace-current-index 0)
-      (exwm-workspace-switch-create (- exwm-workspace-number 1))
-    (exwm-workspace-switch-create (- exwm-workspace-current-index 1))))
-
-;; (define-key my/keys-mode-map (kbd "M-l") 'my/switch-monitor-right)
-;; (define-key my/keys-mode-map (kbd "M-h") 'my/switch-monitor-left)
-
-;; ** Setting
-;; Garbage collect when entering x window (because x is not in sync with emacs)
-;; (add-hook 'exwm-mode-hook 'garbage-collect)
-
-(setq exwm-workspace-show-all-buffers t)
-
-(setq exwm-workspace-minibuffer-position 'top)
-
-(add-hook 'exwm-init-hook (lambda () (interactive) (exwm-workspace-attach-minibuffer)))
-
 ;; * Xinput
 (defun my/get-xinput-device-ID (search-term)
   (let* ((xinput-list (shell-command-to-string "xinput --list"))
@@ -7020,9 +7025,15 @@ do the
 	 ;; All strings spaces are searches
 	 (string-match-p (rx whitespace) search)
 
-	 ;; All strings without spaces and with dots aren't searches
-	 ;; The not whitespace here combined with the * and oel makes sure cases like "foo.bar." aren't interpreted as direct addresses
-	 (not (string-match-p (rx (char ".") (not whitespace) (not whitespace) (regexp "*") eol) search)))
+	 (not
+	  (or
+	   ;; All strings without spaces and with dots aren't searches
+	   ;; The not whitespace here combined with the * and oel makes sure cases like "foo.bar." aren't interpreted as direct addresses
+	   (string-match-p (rx (char ".") (* (not whitespace)) eol) search)
+
+	   ;; All strings without spaces and with http aren't searches
+	   (string-match-p (rx bol "http" (* (not whitespace)) eol) search)
+	   )))
 
 	(concat "https://www.google.com/search?q=" search)
       search)))
@@ -9395,8 +9406,8 @@ do the
 		     (concat
 		      " "
 		      my/buffer-git-branch
-		      "@"
-		      my/projectile-project-name
+		      ;; "@"
+		      ;; my/projectile-project-name
 		      (when my/git-changes-string
 			(concat
 			 "["
@@ -9444,7 +9455,7 @@ do the
 			  (shell-command-to-string "sensors | grep \"Core 0:\"")))
      ;; If it returns "no sensors found"
      (not (string-match-p "No sensors found"
-			(shell-command-to-string "sensors | grep \"Core 0:\""))))
+			  (shell-command-to-string "sensors | grep \"Core 0:\""))))
     (setq my/mode-line-enable-cpu-temp t))
 
 (defvar my/cpu-temp "")
