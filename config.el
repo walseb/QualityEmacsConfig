@@ -1531,7 +1531,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (setq kill-ring-max 500)
 
 ;; ** Don't save duplicates to kill ring
-;; (setq kill-do-not-save-duplicates nil)
+(setq kill-do-not-save-duplicates t)
 
 ;; ** Pixel scroll mode
 ;; In org mode when displaying images pixel scroll mode can be useful maybe
