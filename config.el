@@ -428,11 +428,10 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
   (unless offset
     (setq my/status-line-update-time (+ my/status-line-update-time 1)))
   (let ((update-time (or offset my/status-line-update-time)))
-    (run-with-timer (mod update-time my/status-line-update-time-max) ;; (or repeat 60)
-		    nil
-		    (lambda ()
-		      (funcall task)
-		      (run-with-timer (+ update-time (or repeat 60)) nil (lambda () (my/allocate-update-time task repeat (or update-time offset))))))))
+    (run-with-timer
+     (mod update-time my/status-line-update-time-max)
+     (+ update-time (or repeat 60))
+     (lambda () (ignore-errors (funcall task))))))
 
 
 ;; * Evil
@@ -3580,25 +3579,31 @@ If the input is empty, select the previous history element instead."
 (my/evil-universal-define-key "C-;" 'counsel-mark-ring)
 
 ;; *** History
-(straight-use-package 'history)
+;; This is buggy
+;; (straight-use-package 'history)
 
-(setq history-window-local-history t)
-(setq history-history-max 100)
+;; (setq history-window-local-history t)
+;; (setq history-history-max 100)
+;; (setq history-delete-duplicates t)
 
-;; These needs to be run before `history-mode'
-(setq history-advised-before-functions '(imenu isearch-mode beginning-of-buffer end-of-buffer swiper))
-(setq history-advised-after-functions '(swiper))
+;; ;; These needs to be run before `history-mode'
+;; (setq history-advised-before-functions '(imenu isearch-mode beginning-of-buffer end-of-buffer swiper undo-tree-undo))
+;; (setq history-advised-after-functions '(swiper undo-tree-undo))
 
-(history-mode 1)
+;; (history-mode 1)
 
-;; **** Bind counsel-mark-ring
-;; (my/evil-universal-define-key "C-;" 'history-goto-history)
-(my/evil-universal-define-key "C-b" 'history-prev-history)
-(my/evil-universal-define-key "C-o" 'history-next-history)
+;; **** Keys
+;; (my/evil-universal-define-key "C-b" 'history-prev-history)
+;; (my/evil-universal-define-key "C-o" 'history-next-history)
 
-;; *** Keys
-;; (my/evil-universal-define-key "C-b" 'evil-jump-backward)
-;; (my/evil-universal-define-key "C-;" 'evil-jump-forward)
+;; *** back-button
+(straight-use-package 'back-button)
+
+(setq back-button-no-wrap nil)
+
+;; **** Keys
+(my/evil-universal-define-key "C-b" 'back-button-local-backward)
+(my/evil-universal-define-key "C-o" 'back-button-local-forward)
 
 ;; ** Avy
 (straight-use-package 'avy)

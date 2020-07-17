@@ -143,10 +143,10 @@
    `(hl-line ((,class (:foreground ,my/fg-color :background ,my/hl-line-color :underline nil))))
 
    ;; `(outline-1 ((,class (:foreground ,my/outline-foreground-face :background ,my/header-color))))
-   `(outline-1 ((,class (:foreground ,outline-1 :background ,my/bg-color-1))))
-   `(outline-2 ((,class (:foreground ,outline-2 :background ,my/bg-color-2))))
-   `(outline-3 ((,class (:foreground ,outline-3 :background ,my/bg-color-3))))
-   `(outline-4 ((,class (:foreground ,outline-4 :background ,my/bg-color-4))))
+   `(outline-1 ((,class (:overline t :foreground ,outline-1 :background ,my/bg-color-1))))
+   `(outline-2 ((,class (:overline t :foreground ,outline-2 :background ,my/bg-color-2))))
+   `(outline-3 ((,class (:overline t :foreground ,outline-3 :background ,my/bg-color-3))))
+   `(outline-4 ((,class (:overline t :foreground ,outline-4 :background ,my/bg-color-4))))
 
    `(outline-5 ((,class (:inherit outline-1))))
    `(outline-6 ((,class (:inherit outline-2))))
