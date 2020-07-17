@@ -1,5 +1,4 @@
-(setq my/show-wall nil)
-(setq my/enable-breaks t)
+(setq my/interruptions nil)
 
 (setq my/enable-brightness-binds t)
 

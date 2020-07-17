@@ -379,6 +379,13 @@
    `(my/alert-prio-none-face ((,class (:foreground ,my/bg-color :background ,my/diff-ancestor-hl-color))))
 
    `(mu4e-header-highlight-face ((,class (:inherit hl-line))))
+
+   `(history-temp-history ((,class (:inherit history-other-history :underline t))))
+   `(history-other-history ((,class (:foreground "dim gray" :background "#d1f5ea"))))
+   `(history-current-temp-history ((,class (:inherit history-current-history :underline t))))
+   `(history-current-history ((,class (:foreground "black" :background "gold1" :weight bold))))
+   `(history-prompt ((,class (:inherit minibuffer-prompt))))
+
    ))
 
 (provide-theme 'myTheme)

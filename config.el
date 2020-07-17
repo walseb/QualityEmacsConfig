@@ -233,10 +233,11 @@
 ;; *** Fire notification
 (require 'notifications)
 
-(defun my/fire-notification (msg path)
+(defun my/fire-notification (msg &optional path)
   (notifications-notify :title msg
 			:timeout (* 1000 5)
-			:image-path (concat "file://" (my/spaced-path-to-compact-path (expand-file-name path)))
+			:image-path (when path
+				      (concat "file://" (my/spaced-path-to-compact-path (expand-file-name path))))
 			;; For example:
 			;; :image-path "file:///home/admin/Notes/Wallpapers/Great/Adolph%20von%20Menzel%20.%201875%20.%20Iron%20rolling%20mill.jpg"
 			))
@@ -423,6 +424,7 @@
   "TASK is the function to be run.
 REPEAT is the time to between each run
 OFFSET is the offset to apply. This makes sure the timers spread out."
+  (funcall task)
   (unless offset
     (setq my/status-line-update-time (+ my/status-line-update-time 1)))
   (let ((update-time (or offset my/status-line-update-time)))
@@ -1195,11 +1197,11 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Exwm-edit
 (setq exwm-edit-bind-default-keys nil)
 ;; (straight-use-package '(exwm-edit :type git :host github :repo "walseb/exwm-edit"))
-(straight-use-package 'exwm-edit)
+;; (straight-use-package 'exwm-edit)
+(straight-use-package '(exwm-edit :type git :host github :repo "agzam/exwm-edit" :branch "remove-global-mode"))
 
 (with-eval-after-load 'exwm
-  (require 'exwm-edit)
-  (global-exwm-edit-mode 1))
+  (require 'exwm-edit))
 
 ;; *** Remove header
 (add-hook 'exwm-edit-mode-hook (lambda () (kill-local-variable 'header-line-format)))
@@ -1813,46 +1815,56 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Compilation-mode
 (setq compilation-ask-about-save nil)
 
+;; ** Store position in buffers
+(save-place-mode 1)
+
+(setq save-place-file (concat user-emacs-directory ".cache/save-place"))
+
 ;; * Productivity
 ;; ** Break timer
 ;; In seconds
 (defvar my/break-time (* 21 60))
 (defvar my/not-clocked-in-break-time (* 1 60))
-(defvar my/enable-breaks t)
 
 (defun my/break-screen ()
-  (when my/enable-breaks
-    (let* ((is-clocked-in (org-clocking-p))
-	   (time (if is-clocked-in
-		     my/break-time
-		   my/not-clocked-in-break-time)))
+  ;; Restart timer
+  (let* ((is-clocked-in (org-clocking-p))
+	 (time (if is-clocked-in
+		   my/break-time
+		 my/not-clocked-in-break-time)))
 
-      ;; Restart timer
-      (my/break-timer-run time)
+    (my/break-timer-run time)
 
+    (when my/interruptions
       (my/message-at-point "Clock in! Also check agenda!")
 
       (when (not is-clocked-in)
 	(my/alert-statusline-message-temporary "Clock in!" 'med))
-
       ;; Clock
       ;; (run-with-timer 0.2 nil (lambda () (sleep-for 5)))
       ;; (org-mru-clock-in)
 
-      (my/fire-notification "Clock in!"  (my/get-random-wallpaper))
-
-      ;; Show break buffer
-      ;; (switch-to-buffer "Break")
-      ;; (insert "Break")
-      ;; (message (concat "Break at " (format-time-string "%H:%M")))
-      )))
+      (my/fire-notification (my/get-random-txt) (my/get-random-wallpaper)))))
 
 (defun my/break-timer-run (time)
   (interactive)
   (run-with-timer time nil #'my/break-screen))
 
-(when my/enable-breaks
-  (my/break-timer-run my/not-clocked-in-break-time))
+(my/break-timer-run my/not-clocked-in-break-time)
+
+;; *** Random
+(defun my/get-random-txt ()
+  (seq-random-elt
+   (org-map-entries (lambda ()
+		      (when (> (org-current-level) 1)
+			(let ((old-kill-ring kill-ring))
+			  (org-copy-subtree)
+			  (message "")
+			  (let ((return (pop kill-ring)))
+			    (setq kill-ring old-kill-ring)
+			    return))))
+		    "Tech"
+		    (list (concat my/notes-folder "Organize/Agenda.org")))))
 
 ;; * File options
 ;; (define-prefix-command 'my/file-options-map)
@@ -2003,12 +2015,12 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Open wallpaper
 (defun my/get-random-wallpaper ()
   (interactive)
-  (when my/show-wall
+  (when my/interruptions
     (my/get-random-element (directory-files-recursively (concat my/wallpaper-folder "Great/") "."))))
 
 (defun my/show-random-wallpaper ()
   (interactive)
-  (when my/show-wall
+  (when my/interruptions
     (find-file
      (my/get-random-wallpaper))))
 
@@ -2504,6 +2516,9 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
   (define-key org-brain-visualize-mode-map "e" 'org-brain-annotate-edge)
   (define-key org-brain-visualize-mode-map "\C-c\C-w" 'org-brain-refile)
   (define-key org-brain-visualize-mode-map "\C-c\C-x\C-v" 'org-toggle-inline-images))
+
+;; ** org-ql
+;; (straight-use-package 'org-ql)
 
 ;; ** Disable syntax highlighting in source code blocks
 (setq org-src-fontify-natively nil)
@@ -3030,9 +3045,9 @@ If the input is empty, select the previous history element instead."
 ;; ** Swiper
 (straight-use-package 'swiper)
 
-(defun my/use-swiper-or-grep(&optional input case-sensative)
-  (interactive)
-  (swiper input))
+;; (defun my/use-swiper-or-grep (&optional input case-sensative)
+;;   (interactive)
+;;   (swiper input))
 ;; (if (and buffer-file-name (not (bound-and-true-p org-src-mode)) (not (string= "gz" (file-name-extension buffer-file-name))))
 ;; (counsel-grep input)
 ;; (swiper input)))
@@ -3042,11 +3057,8 @@ If the input is empty, select the previous history element instead."
 ;; (setq counsel-grep-base-command "grep -E -n -e %s %s")
 ;; (setq-default counsel-grep-base-command "grep -i -E -n -e %s %s"))
 
-(global-set-key (kbd "C-s") 'my/use-swiper-or-grep)
-(global-set-key (kbd "C-s") 'my/use-swiper-or-grep)
-;; (global-set-key (kbd "M-s") (lambda () (interactive) (my/use-swiper-or-grep nil t)))
+(global-set-key (kbd "C-s") 'swiper)
 (define-key swiper-map (kbd "M-j") 'swiper-query-replace)
-
 
 ;;  (setq swiper-use-visual-line t)
 
@@ -3565,9 +3577,28 @@ If the input is empty, select the previous history element instead."
 (setq mark-ring-max 100)
 
 ;; *** Bind counsel-mark-ring
-(my/evil-universal-define-key "C-o" 'counsel-mark-ring)
-(my/evil-universal-define-key "C-b" 'evil-jump-backward)
-(my/evil-universal-define-key "C-;" 'evil-jump-forward)
+(my/evil-universal-define-key "C-;" 'counsel-mark-ring)
+
+;; *** History
+(straight-use-package 'history)
+
+(setq history-window-local-history t)
+(setq history-history-max 100)
+
+;; These needs to be run before `history-mode'
+(setq history-advised-before-functions '(imenu isearch-mode beginning-of-buffer end-of-buffer swiper))
+(setq history-advised-after-functions '(swiper))
+
+(history-mode 1)
+
+;; **** Bind counsel-mark-ring
+;; (my/evil-universal-define-key "C-;" 'history-goto-history)
+(my/evil-universal-define-key "C-b" 'history-prev-history)
+(my/evil-universal-define-key "C-o" 'history-next-history)
+
+;; *** Keys
+;; (my/evil-universal-define-key "C-b" 'evil-jump-backward)
+;; (my/evil-universal-define-key "C-;" 'evil-jump-forward)
 
 ;; ** Avy
 (straight-use-package 'avy)
@@ -3866,7 +3897,9 @@ If the input is empty, select the previous history element instead."
   "Switch to minibuffer window."
   (interactive)
   (if (window-minibuffer-p)
-      (select-window (minibuffer-selected-window))
+      (if (minibuffer-selected-window)
+	  (select-window (minibuffer-selected-window))
+	(minibuffer-keyboard-quit))
     (select-window (active-minibuffer-window))))
 
 (define-key my/keys-mode-map (kbd "C-j") 'my/toggle-switch-to-minibuffer)
@@ -4076,7 +4109,7 @@ If the input is empty, select the previous history element instead."
   (let ((project-name (projectile-project-name)))
     (if (string= project-name "-")
 	(my/file-top-path path)
-      (concat project-name " ⇒ " (my/file-top-path path)))))
+      (concat project-name " => " (my/file-top-path path)))))
 
 (define-minor-mode my/custom-buffer-name-mode "")
 
@@ -5422,7 +5455,12 @@ do the
 ;; *** Formatting
 ;; (setq haskell-stylish-on-save t)
 ;; (setq haskell-mode-stylish-haskell-path "brittany")
-(setq haskell-mode-stylish-haskell-path "ormolu")
+;; (setq haskell-mode-stylish-haskell-args "")
+
+;; (setq haskell-mode-stylish-haskell-path "ormolu")
+(setq haskell-mode-stylish-haskell-path "stylish-haskell")
+
+;; (setq haskell-mode-stylish-haskell-path "hindent")
 
 ;; *** Extension management
 (defun my/haskell-add-language-extension ()
@@ -6997,6 +7035,28 @@ do the
 ;; (straight-use-package '(shrface :type git :host github :repo "chenyanming/shrface"))
 ;;(require 'shrface)
 
+;; * RSS reader
+(straight-use-package 'elfeed)
+
+(setq elfeed-search-filter "+blog")
+(setq elfeed-db-directory (concat user-emacs-directory ".cache/elfeed"))
+
+(setq elfeed-search-mode-hook nil)
+(add-hook 'elfeed-search-mode-hook '(lambda ()
+				      (run-with-timer nil nil (lambda ()
+								(toggle-truncate-lines 1)))))
+
+;; ** Elfeed org
+(straight-use-package 'elfeed-org)
+
+(with-eval-after-load 'elfeed
+  (elfeed-org))
+
+(setq rmh-elfeed-org-files '("~/Notes/Documentation/Emacs/Elfeed/Feeds.org"))
+
+;; ** Feed discovery
+(straight-use-package '(feed-discovery :type git :host github :repo "HKey/feed-discovery"))
+
 ;; * Browser
 ;; ** Text browser stuff
 (defun my/launch-text-browser (&optional str)
@@ -7844,19 +7904,6 @@ do the
 (with-eval-after-load 'mu4e
   (require 'org-mu4e))
 
-;; *** Fetch mail at time interval
-(setq mu4e-get-mail-command "mbsync -a")
-(setq mu4e-update-interval nil)
-
-(my/allocate-update-time '(lambda ()
-			    (require 'mu4e)
-			    (mu4e-update-mail-and-index t)
-			    (require 'mu4e-alert)
-			    (mu4e-alert-update-mail-count-modeline)) (* 60 5))
-
-;; (with-eval-after-load 'mu4e
-;;   (mu4e-update-mail-and-index t))
-
 ;; *** Find nixos install location
 ;; https://www.reddit.com/r/NixOS/comments/6duud4/adding_mu4e_to_emacs_loadpath/
 (setq my/mu4epath
@@ -7870,17 +7917,26 @@ do the
 (when my/mu4epath
   (add-to-list 'load-path my/mu4epath))
 
-;; *** View in different browser
-(with-eval-after-load 'mu4e-view
-  (add-to-list 'mu4e-view-actions '("Eww" . mu4e-action-view-in-browser) t)
+;; *** mu4e mail counter
+(straight-use-package 'mu4e-alert)
 
-  (defun my/mu4e-view-in-w3m (msg)
-    (w3m (concat "file://" (mu4e~write-body-to-html msg))))
-  (add-to-list 'mu4e-view-actions '("W3m" . my/mu4e-view-in-w3m) t)
+(defvar my/mu4e-unread-mail-count nil)
 
-  (defun my/mu4e-view-in-firefox (msg)
-    (my/open-in-browser (concat "file://" (mu4e~write-body-to-html msg))))
-  (add-to-list 'mu4e-view-actions '("Firefox" . my/mu4e-view-in-firefox) t))
+(setq mu4e-alert-modeline-formatter (lambda (count)
+				      (setq my/mu4e-unread-mail-count (number-to-string count))))
+
+;; *** Fetch mail at time interval
+(setq mu4e-get-mail-command "mbsync -a")
+(setq mu4e-update-interval nil)
+
+(my/allocate-update-time (lambda ()
+			   (require 'mu4e)
+			   (mu4e-update-mail-and-index t)
+			   (require 'mu4e-alert)
+			   (mu4e-alert-update-mail-count-modeline)) (* 60 5))
+
+;; (with-eval-after-load 'mu4e
+;;   (mu4e-update-mail-and-index t))
 
 ;; *** Keys
 (define-key my/leader-map (kbd "M") '(lambda () (interactive)
@@ -7894,6 +7950,18 @@ do the
 
   (define-key mu4e-view-mode-map (kbd "N") 'mu4e-view-headers-next-unread)
   (define-key mu4e-view-mode-map (kbd "P") 'mu4e-view-headers-prev-unread))
+
+;; **** View in different browser
+(with-eval-after-load 'mu4e-view
+  (add-to-list 'mu4e-view-actions '("Eww" . mu4e-action-view-in-browser) t)
+
+  (defun my/mu4e-view-in-w3m (msg)
+    (w3m (concat "file://" (mu4e~write-body-to-html msg))))
+  (add-to-list 'mu4e-view-actions '("W3m" . my/mu4e-view-in-w3m) t)
+
+  (defun my/mu4e-view-in-firefox (msg)
+    (my/open-in-browser (concat "file://" (mu4e~write-body-to-html msg))))
+  (add-to-list 'mu4e-view-actions '("Firefox" . my/mu4e-view-in-firefox) t))
 
 ;; *** Send messages
 (setq mail-user-agent 'mu4e-user-agent)
@@ -7982,7 +8050,7 @@ do the
     (async-shell-command my/device/monitor-setup-command "xrandr setup buffer"))
 
 ;; ** Proced
-(setq proced-tree-flag t)
+(setq-default proced-tree-flag nil)
 (define-key my/system-commands-map (kbd "e") 'proced)
 
 ;; *** Disable line wrapping
@@ -8525,7 +8593,6 @@ do the
 (define-key pdf-view-mode-map [remap evil-goto-line] 'pdf-view-last-page)
 ;; search
 (define-key pdf-view-mode-map [remap counsel-grep-or-swiper] 'isearch-forward)
-(define-key pdf-view-mode-map [remap my/use-swiper-or-grep] 'isearch-forward)
 (define-key pdf-view-mode-map [remap swiper] 'isearch-forward)
 (define-key pdf-view-mode-map [remap counsel-grep] 'isearch-forward)
 
@@ -8665,6 +8732,35 @@ do the
 ;; Replace comments with symbol
 ;; "^[\s\\|\t]*;+"
 ;; \\(^ *;; \\*\\)
+
+;; ** Redefine prettify-symbols--post-command-hook to not error
+(defun prettify-symbols--post-command-hook ()
+  ;; This line is the only change
+  (ignore-errors
+    (cl-labels ((get-prop-as-list
+		 (prop)
+		 (remove nil
+			 (list (get-text-property (point) prop)
+			       (when (and (eq prettify-symbols-unprettify-at-point 'right-edge)
+					  (not (bobp)))
+				 (get-text-property (1- (point)) prop))))))
+      ;; Re-apply prettification to the previous symbol.
+      (when (and prettify-symbols--current-symbol-bounds
+		 (or (< (point) (car prettify-symbols--current-symbol-bounds))
+		     (> (point) (cadr prettify-symbols--current-symbol-bounds))
+		     (and (not (eq prettify-symbols-unprettify-at-point 'right-edge))
+			  (= (point) (cadr prettify-symbols--current-symbol-bounds)))))
+	(apply #'font-lock-flush prettify-symbols--current-symbol-bounds)
+	(setq prettify-symbols--current-symbol-bounds nil))
+      ;; Unprettify the current symbol.
+      (when-let* ((c (get-prop-as-list 'composition))
+		  (s (get-prop-as-list 'prettify-symbols-start))
+		  (e (get-prop-as-list 'prettify-symbols-end))
+		  (s (apply #'min s))
+		  (e (apply #'max e)))
+	(with-silent-modifications
+	  (setq prettify-symbols--current-symbol-bounds (list s e))
+	  (remove-text-properties s e '(composition nil)))))))
 
 ;; ** Magit
 ;; Prettify symbols doesn't work with magit
@@ -8976,21 +9072,19 @@ do the
 
 (setq-default olivetti-body-width 130)
 
+(setq my/olivetti-disabled-modes '(minibuffer-inactive-mode
+				   exwm-mode
+				   mu4e-headers-mode
+				   pdf-view-mode
+				   image-mode
+				   org-agenda-mode
+				   elfeed-search-mode))
+
 (define-globalized-minor-mode global-olivetti-mode
   nil (lambda ()
-	(pcase major-mode
-	  ;; TODO: Keep here while image-mode bug exists
-	  ('fundamental-mode)
-	  ('minibuffer-inactive-mode)
-	  ('exwm-mode)
-	  ('mu4e-headers-mode)
-	  ('pdf-view-mode)
-	  ('image-mode)
-	  ('org-agenda-mode)
-	  (_
-	   (unless (string= " *diff-hl* " (buffer-name (current-buffer)))
-	     ;; (setq-local olivetti-mode 1)
-	     (olivetti-mode 1))))))
+	(unless (memq major-mode my/olivetti-disabled-modes)
+	  (unless (string= " *diff-hl* " (buffer-name (current-buffer)))
+	    (olivetti-mode 1)))))
 
 (global-olivetti-mode 1)
 
@@ -9518,8 +9612,6 @@ do the
 (if my/mode-line-enable-network-traffic
     (my/allocate-update-time 'my/linux-update-network-rx-delta))
 
-(my/linux-update-network-rx-delta)
-
 ;; ***** TX
 ;; Transmitted
 (setq my/tx 0)
@@ -9545,22 +9637,6 @@ do the
 (if my/mode-line-enable-network-traffic
     (my/allocate-update-time 'my/linux-update-network-tx-delta))
 
-(my/linux-update-network-tx-delta)
-
-;; *** Mail
-;; **** mu4e mail counter
-(straight-use-package 'mu4e-alert)
-
-(defvar my/mu4e-unread-mail-count nil)
-
-(setq mu4e-alert-modeline-formatter (lambda (count)
-				      (setq my/mu4e-unread-mail-count (number-to-string count))))
-
-;; ***** Enable
-;; (when my/mu4epath
-;;   (with-eval-after-load 'mu4e
-;;     (mu4e-alert-enable-mode-line-display)))
-
 ;; *** Battery
 ;; If there is a battery, display it in the mode line
 (require 'battery)
@@ -9569,7 +9645,38 @@ do the
 
 ;; (display-battery-mode 1)
 
-(my/allocate-update-time 'battery-update)
+(defun my/battery-update ()
+  (unless battery-status-function
+    (setq battery-status-function (my/get-battery-status-function)))
+  (ignore-errors (battery-update)))
+
+;; **** Get battery status function
+(defun my/get-battery-status-function ()
+  (cond ((member battery-upower-service (dbus-list-activatable-names))
+	 #'battery-upower)
+	((and (eq system-type 'gnu/linux)
+	      (battery--find-linux-sysfs-batteries))
+	 #'battery-linux-sysfs)
+	((and (eq system-type 'gnu/linux)
+	      (file-directory-p "/proc/acpi/battery"))
+	 #'battery-linux-proc-acpi)
+	((and (eq system-type 'gnu/linux)
+	      (file-readable-p "/proc/apm"))
+	 #'battery-linux-proc-apm)
+	((and (eq system-type 'berkeley-unix)
+	      (file-executable-p "/usr/sbin/apm"))
+	 #'battery-bsd-apm)
+	((and (eq system-type 'darwin)
+	      (ignore-errors
+		(with-temp-buffer
+		  (and (eq (call-process "pmset" nil t nil "-g" "ps") 0)
+		       (not (bobp))))))
+	 #'battery-pmset)
+	((fboundp 'w32-battery-status)
+	 #'w32-battery-status)))
+
+;; **** Timer
+(my/allocate-update-time 'my/battery-update)
 
 ;; *** Date and time
 ;; Display time and date in good format (also displays CPU load)
@@ -9589,10 +9696,6 @@ do the
 (my/allocate-update-time 'my/update-time)
 (my/allocate-update-time 'my/update-date (* 60 60))
 
-;; Update date now
-(my/update-time)
-(my/update-date)
-
 ;; *** CPU load average
 (defvar my/cpu-load-average 0)
 (defvar my/high-cpu-load-average 2)
@@ -9602,8 +9705,6 @@ do the
   (setq my/cpu-load-average (/ (nth 0 (load-average)) 100.0)))
 
 (my/allocate-update-time 'my/update-cpu-load-average)
-
-(my/update-cpu-load-average)
 
 ;; *** Ram usage
 (defvar my/mode-line-enable-available-mem nil)
@@ -9640,9 +9741,6 @@ do the
 
 (if my/mode-line-enable-available-mem
     (my/allocate-update-time 'my/linux-update-available-mem))
-
-;; Update available mem on startup
-(my/linux-update-available-mem)
 
 ;; *** Uptime
 (defvar my/uptime-start-time (float-time))
