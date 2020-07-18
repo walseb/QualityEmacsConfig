@@ -953,11 +953,11 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 	     XF86AudioPrev
 	     XF86AudioNext
 	     XF86ScreenSaver
-	     XF68Back
+	     XF86Back
 	     XF86Forward
+
 	     Scroll_Lock
 	     print
-
 
 	     ;; (read-event)
 	     6 ;; C-f
@@ -1818,6 +1818,10 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (save-place-mode 1)
 
 (setq save-place-file (concat user-emacs-directory ".cache/save-place"))
+
+;; ** Disable XF86Back and XF86Forward
+(global-unset-key (kbd "<XF86Back>"))
+(global-unset-key (kbd "<XF86Forward>"))
 
 ;; * Productivity
 ;; ** Break timer
