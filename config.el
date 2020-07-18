@@ -4483,7 +4483,7 @@ If the input is empty, select the previous history element instead."
 (setq quick-peek-spacer nil)
 
 ;; *** Aggressive indent
-(straight-use-package 'aggressive-indent)
+(straight-use-package '(aggressive-indent :type git :host github :repo "walseb/aggressive-indent"))
 
 (global-aggressive-indent-mode)
 (add-to-list 'aggressive-indent-excluded-modes 'plantuml-mode)
