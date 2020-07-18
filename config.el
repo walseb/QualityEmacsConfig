@@ -9336,6 +9336,17 @@ do the
 	(line-number-mode ("%l" (column-number-mode ":%c")))))
 
 ;; ** Modules
+;; *** Count buffer line numbers
+;; This is run on every key-press and is pretty fast:
+;; (benchmark 1 (my/count-line-numbers))
+;; (benchmark 1000000 (my/count-line-numbers))
+
+(defun my/count-line-numbers ()
+  ;; Diff-hl mode should know when it's fine to measure buffer length
+  (if (not (member major-mode '(pdf-view-mode minibuffer-inactive-mode image-mode)))
+      (int-to-string (count-lines (point-min) (point-max)))
+    "???"))
+
 ;; *** Git project and branch name
 (require 'vc-git)
 
@@ -9461,12 +9472,7 @@ do the
 		;; ((point-in-buffer-percentage (floor (* (/ (float point-pos) line-number-count) 100))))
 		;; (concat (int-to-string point-in-buffer-percentage) "% ~" (int-to-string line-number-count)))))
 
-		(:eval
-		 ;; Diff-hl mode should know when it's fine to measure buffer length
-		 (if (not (member major-mode '(pdf-view-mode minibuffer-inactive-mode image-mode)))
-		     (int-to-string (count-lines (point-min) (point-max)))
-		   "???"
-		   ))
+		(:eval (my/count-line-numbers))
 
 		;;"%I"
 
@@ -9657,28 +9663,53 @@ do the
 
 ;; **** Get battery status function
 (defun my/get-battery-status-function ()
-  (cond ((member battery-upower-service (dbus-list-activatable-names))
-	 #'battery-upower)
-	((and (eq system-type 'gnu/linux)
-	      (battery--find-linux-sysfs-batteries))
-	 #'battery-linux-sysfs)
-	((and (eq system-type 'gnu/linux)
-	      (file-directory-p "/proc/acpi/battery"))
-	 #'battery-linux-proc-acpi)
-	((and (eq system-type 'gnu/linux)
-	      (file-readable-p "/proc/apm"))
-	 #'battery-linux-proc-apm)
-	((and (eq system-type 'berkeley-unix)
-	      (file-executable-p "/usr/sbin/apm"))
-	 #'battery-bsd-apm)
-	((and (eq system-type 'darwin)
-	      (ignore-errors
-		(with-temp-buffer
-		  (and (eq (call-process "pmset" nil t nil "-g" "ps") 0)
-		       (not (bobp))))))
-	 #'battery-pmset)
-	((fboundp 'w32-battery-status)
-	 #'w32-battery-status)))
+  (if (>= emacs-major-version 28)
+      ;; Emacs 28 version
+      (cond ((member battery-upower-service (dbus-list-activatable-names))
+	     #'battery-upower)
+	    ((and (eq system-type 'gnu/linux)
+		  (battery--find-linux-sysfs-batteries))
+	     #'battery-linux-sysfs)
+	    ((and (eq system-type 'gnu/linux)
+		  (file-directory-p "/proc/acpi/battery"))
+	     #'battery-linux-proc-acpi)
+	    ((and (eq system-type 'gnu/linux)
+		  (file-readable-p "/proc/apm"))
+	     #'battery-linux-proc-apm)
+	    ((and (eq system-type 'berkeley-unix)
+		  (file-executable-p "/usr/sbin/apm"))
+	     #'battery-bsd-apm)
+	    ((and (eq system-type 'darwin)
+		  (ignore-errors
+		    (with-temp-buffer
+		      (and (eq (call-process "pmset" nil t nil "-g" "ps") 0)
+			   (not (bobp))))))
+	     #'battery-pmset)
+	    ((fboundp 'w32-battery-status)
+	     #'w32-battery-status))
+    ;; Emacs 27 version
+    (cond ((and (eq system-type 'gnu/linux)
+		(file-readable-p "/proc/apm"))
+	   #'battery-linux-proc-apm)
+	  ((and (eq system-type 'gnu/linux)
+		(file-directory-p "/proc/acpi/battery"))
+	   #'battery-linux-proc-acpi)
+	  ((and (eq system-type 'gnu/linux)
+		(file-directory-p "/sys/class/power_supply/")
+		(battery--find-linux-sysfs-batteries))
+	   #'battery-linux-sysfs)
+	  ((and (eq system-type 'berkeley-unix)
+		(file-executable-p "/usr/sbin/apm"))
+	   #'battery-bsd-apm)
+	  ((and (eq system-type 'darwin)
+		(condition-case nil
+		    (with-temp-buffer
+		      (and (eq (call-process "pmset" nil t nil "-g" "ps") 0)
+			   (> (buffer-size) 0)))
+		  (error nil)))
+	   #'battery-pmset)
+	  ((fboundp 'w32-battery-status)
+	   #'w32-battery-status))))
 
 ;; **** Timer
 (my/allocate-update-time 'my/battery-update)
@@ -9840,8 +9871,8 @@ do the
 			   my/available-mem-formatted)
 			 " | ")))
 
-		     (:eval (if (not (eq battery-mode-line-string ""))
-				(concat "BAT: " battery-mode-line-string "%%%   | ")))
+		     (:eval (when (and battery-mode-line-string (not (eq battery-mode-line-string "")))
+			      (concat "BAT: " battery-mode-line-string "%%%   | ")))
 
 		     (:eval (if my/mode-line-enable-cpu-temp
 				(concat "HT: " my/cpu-temp " | ")))
