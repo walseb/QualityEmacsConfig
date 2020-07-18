@@ -218,9 +218,9 @@
    `(org-meta-line ((,class (:background unspecified))))
    `(org-table ((,class (:foreground ,my/mark-color))))
 
-   `(org-brain-parent ((,class (:foreground ,my/bg-color :background ,my/diff-ancestor-color))))
-   `(org-brain-child ((,class (:foreground ,my/bg-color :background ,my/diff-added-color))))
-   `(org-brain-friend ((,class (:foreground ,my/bg-color :background ,my/mark-color))))
+   `(org-brain-parent ((,class (:overline t :foreground ,my/bg-color :background ,my/diff-ancestor-color))))
+   `(org-brain-child ((,class (:overline t :foreground ,my/bg-color :background ,my/diff-added-color))))
+   `(org-brain-friend ((,class (:overline t :foreground ,my/bg-color :background ,my/mark-color))))
    `(org-brain-title ((,class (:inherit outline-1))))
 
    `(org-todo ((,class (:foreground ,my/mark-color))))
