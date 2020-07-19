@@ -5189,7 +5189,7 @@ the overlay."
 (setq my/haskell-syntax-mode-keywords '("module" "import" "qualified"
 					;; These are already highlighted since they are treated as functions by the haskell font-lock
 					;; "type" "newtype" "data"
-					"do" "proc"
+					"do" "proc" "rec"
 					"let"  "where"
 					"if" "then" "else"))
 
@@ -5198,6 +5198,9 @@ the overlay."
       `(
 	;; Keywords
 	(,(regexp-opt my/haskell-syntax-mode-keywords 'words) . font-lock-keyword-face)
+
+	;; Can't do multi-line
+	;; (,"{-.*-}" . font-lock-comment-face)
 
 	;; Functions
 	(,(rx
@@ -5209,21 +5212,23 @@ the overlay."
 	   (group (* (regex ".")) space "=" (or space eol))) . (2 font-lock-function-name-face))
 
 	;; Type signatures
-	(,(rx (group (+ (not space)))
+	(,(rx (group (+ alnum))
 	      (group (+ space) "::" space)) . (1 font-lock-function-name-face))))
 
 ;; **** Syntax table
 (with-eval-after-load 'haskell-mode
   (setq haskell-mode-syntax-table
 	(let ((synTable (make-syntax-table)))
-	  ;; {- -} style comment
+	  ;; Region style comment
 	  (modify-syntax-entry ?\{ ". 1" synTable)
 	  (modify-syntax-entry ?\} ". 4" synTable)
-	  (modify-syntax-entry ?- ". 23" synTable)
 
-	  ;; -- style comment
-	  (modify-syntax-entry ?\- ". 12b" synTable)
+	  ;; Region and line style comment
+	  (modify-syntax-entry ?- ". 123b" synTable)
+
+	  ;; Return
 	  (modify-syntax-entry ?\n "> b" synTable)
+	  (modify-syntax-entry ?\^m "> b" synTable)
 	  synTable)))
 
 ;; *** org-mode (ob) support
