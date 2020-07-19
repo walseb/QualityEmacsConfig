@@ -5187,9 +5187,9 @@ the overlay."
 
 ;; **** Keywords
 (setq my/haskell-syntax-mode-keywords '("module" "import" "qualified"
-					"type" "newtype" "data"
+					;; "type" "newtype" "data"
 					"do" "proc"
-					"let"  "where"
+					;; "let"  "where"
 					"if" "then" "else"))
 
 ;; **** Font lock
@@ -5197,10 +5197,18 @@ the overlay."
       `(
 	;; Keywords
 	(,(regexp-opt my/haskell-syntax-mode-keywords 'words) . font-lock-keyword-face)
+
 	;; Functions
-	(,(rx (group bol (* space) (+ (not space)))
-	      (group (* (regex ".")) space "=" (or space eol))) . (1 font-lock-function-name-face))
-	(,(rx (group (+ (not space)))
+	(,(rx
+	   ;; Check for where statements
+	   (group bol (* space) (or "let" "where" "") (* space))
+	   ;; The actual function name
+	   (group (+ (not space)))
+	   ;; The equal sign
+	   (group (* (regex ".")) space "=" (or space eol))) . (2 font-lock-function-name-face))
+
+	;; Type signatures
+	(,(rx (group (+ alnum))
 	      (group (+ space) "::" space)) . (1 font-lock-function-name-face))))
 
 ;; **** Syntax table
@@ -7967,6 +7975,9 @@ do the
 (setq mu4e-view-show-addresses t)
 
 (setq mu4e-headers-time-format "%T")
+
+;; Don't move cursor forward after marking
+(setq mu4e-headers-advance-after-mark nil)
 
 ;; *** org-mime
 ;; (straight-use-package 'org-mime)
