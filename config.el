@@ -5187,9 +5187,10 @@ the overlay."
 
 ;; **** Keywords
 (setq my/haskell-syntax-mode-keywords '("module" "import" "qualified"
+					;; These are already highlighted since they are treated as functions by the haskell font-lock
 					;; "type" "newtype" "data"
 					"do" "proc"
-					;; "let"  "where"
+					"let"  "where"
 					"if" "then" "else"))
 
 ;; **** Font lock
