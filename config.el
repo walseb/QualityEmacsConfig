@@ -5209,7 +5209,7 @@ the overlay."
 	   (group (* (regex ".")) space "=" (or space eol))) . (2 font-lock-function-name-face))
 
 	;; Type signatures
-	(,(rx (group (+ alnum))
+	(,(rx (group (+ (not space)))
 	      (group (+ space) "::" space)) . (1 font-lock-function-name-face))))
 
 ;; **** Syntax table
