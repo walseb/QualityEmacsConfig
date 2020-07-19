@@ -919,7 +919,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 				 (backward-char)
 				 (call-interactively #'delete-char)))
 
-(my/evil-visual-define-key "x" '(lambda () (interactive)
+(my/evil-visual-define-key "x" (lambda () (interactive)
 				  (let ((ring kill-ring))
 				    (call-interactively 'evil-delete)
 				    (setq kill-ring ring))))
@@ -1938,7 +1938,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 				     (completing-read "Entry: "
 						      (org-brain--all-targets)))))
 
-(define-key my/open-map (kbd "C-n") '(lambda () (interactive) (find-file org-brain-path)))
+(define-key my/open-map (kbd "C-n") (lambda () (interactive) (find-file org-brain-path)))
 
 ;; ** Visit nixos config
 (defun my/nixos-config-visit ()
@@ -2035,7 +2035,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
      (my/get-random-wallpaper))))
 
 (define-key my/open-map (kbd "w") 'my/show-random-wallpaper)
-(define-key my/open-map (kbd "W") '(lambda () (interactive) (find-file my/wallpaper-folder)))
+(define-key my/open-map (kbd "W") (lambda () (interactive) (find-file my/wallpaper-folder)))
 
 ;; ** Open firefox
 (defvar my/gui-browser
@@ -2313,7 +2313,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
 (define-key my/leader-map (kbd "k") 'org-mru-clock-in)
 (define-key my/leader-map (kbd "C-k") 'org-clock-out)
-(define-key my/leader-map (kbd "M-k") '(lambda () (interactive) (find-file my/org-clocks-file)))
+(define-key my/leader-map (kbd "M-k") (lambda () (interactive) (find-file my/org-clocks-file)))
 
 ;; **** Custom prompt
 (with-eval-after-load 'org-mru-clock
@@ -2450,7 +2450,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
   (require 'org-brain))
 
 ;; (with-eval-after-load 'org-brain
-;;   (add-hook 'org-brain-visualize-mode-hook '(lambda () (interactive) (org-brain-visualize-follow 1))))
+;;   (add-hook 'org-brain-visualize-mode-hook (lambda () (interactive) (org-brain-visualize-follow 1))))
 
 ;; *** My add child
 (defun my/org-brain-add-child (entry children)
@@ -3377,6 +3377,9 @@ If the input is empty, select the previous history element instead."
 
 ;; **** Flycheck inline
 (straight-use-package 'flycheck-inline)
+
+;; Put flycheck-inline at BOL to make it always readable
+(setq flycheck-inline-display-function (lambda (msg _) (flycheck-inline-display-phantom msg (line-beginning-position))))
 
 (with-eval-after-load 'flycheck
   (require 'flycheck-inline)
@@ -5195,8 +5198,10 @@ the overlay."
 	;; Keywords
 	(,(regexp-opt my/haskell-syntax-mode-keywords 'words) . font-lock-keyword-face)
 	;; Functions
-	(,(rx (group bol (* space) (+ (not space))) (group (* (regex ".")) "=")) . (1 font-lock-function-name-face))
-	(,(rx (group bol (* space) (+ (not space))) (group space "::")) . (1 font-lock-function-name-face))))
+	(,(rx (group bol (* space) (+ (not space)))
+	      (group (* (regex ".")) space "=" (or space eol))) . (1 font-lock-function-name-face))
+	(,(rx (group (+ (not space)))
+	      (group (+ space) "::" space)) . (1 font-lock-function-name-face))))
 
 ;; **** Syntax table
 (with-eval-after-load 'haskell-mode
@@ -7112,7 +7117,7 @@ do the
 (setq elfeed-db-directory (concat user-emacs-directory ".cache/elfeed"))
 
 (setq elfeed-search-mode-hook nil)
-(add-hook 'elfeed-search-mode-hook '(lambda ()
+(add-hook 'elfeed-search-mode-hook (lambda ()
 				      (run-with-timer nil nil (lambda ()
 								(toggle-truncate-lines 1)))))
 
@@ -7254,9 +7259,9 @@ do the
     (add-hook 'exwm-firefox-evil-mode-hook 'exwm-firefox-evil-normal)))
 
 ;; Auto enable exwm-firefox-evil-mode on all firefox buffers
-(add-hook 'exwm-manage-finish-hook '(lambda ()
-				      (evil-emacs-state)
-				      (exwm-firefox-evil-activate-if-firefox)))
+(add-hook 'exwm-manage-finish-hook (lambda ()
+				     (evil-emacs-state)
+				     (exwm-firefox-evil-activate-if-firefox)))
 
 
 (setq exwm-firefox-core-search-bookmarks '(("google.com")
@@ -7656,17 +7661,17 @@ do the
 (define-prefix-command 'my/music-map)
 (define-key my/leader-map (kbd "m") 'my/music-map)
 
-(define-key my/music-map (kbd "p") '(lambda ()
-				      (interactive)
-				      (require 'hydra)
-				      (my/pulse-raise-volume)
-				      (my/pulse-hydra/body)))
+(define-key my/music-map (kbd "p") (lambda ()
+				     (interactive)
+				     (require 'hydra)
+				     (my/pulse-raise-volume)
+				     (my/pulse-hydra/body)))
 
-(define-key my/music-map (kbd "n") '(lambda ()
-				      (interactive)
-				      (require 'hydra)
-				      (my/pulse-lower-volume)
-				      (my/pulse-hydra/body)))
+(define-key my/music-map (kbd "n") (lambda ()
+				     (interactive)
+				     (require 'hydra)
+				     (my/pulse-lower-volume)
+				     (my/pulse-hydra/body)))
 
 ;; ***  Spotify
 (setq spotify-oauth2-client-id my/spotify-client-id)
@@ -7697,13 +7702,13 @@ do the
 (define-key my/music-map (kbd "l") 'counsel-spotify-next)
 (define-key my/music-map (kbd "h") 'counsel-spotify-previous)
 
-(define-key my/music-map (kbd "o") '(lambda () (interactive)
-				      (if my/is-spotify-loaded
-					  (progn
-					    (unless (get-buffer "Spotify")
-					      (my/spotify-start))
-					    (switch-to-buffer (get-buffer "Spotify")))
-					(require 'counsel-spotify))))
+(define-key my/music-map (kbd "o") (lambda () (interactive)
+				     (if my/is-spotify-loaded
+					 (progn
+					   (unless (get-buffer "Spotify")
+					     (my/spotify-start))
+					   (switch-to-buffer (get-buffer "Spotify")))
+				       (require 'counsel-spotify))))
 
 (global-set-key (kbd "<XF86AudioPlay>") 'counsel-spotify-play)
 (global-set-key (kbd "<XF86AudioStop>") 'counsel-spotify-toggle-play-pause)
@@ -8009,10 +8014,10 @@ do the
 ;;   (mu4e-update-mail-and-index t))
 
 ;; *** Keys
-(define-key my/leader-map (kbd "M") '(lambda () (interactive)
-				       (require 'mu4e)
-				       (mu4e t)
-				       (call-interactively 'mu4e~headers-jump-to-maildir)))
+(define-key my/leader-map (kbd "M") (lambda () (interactive)
+				      (require 'mu4e)
+				      (mu4e t)
+				      (call-interactively 'mu4e~headers-jump-to-maildir)))
 
 (with-eval-after-load 'mu4e-view
   (define-key mu4e-view-mode-map (kbd "n") 'mu4e-view-headers-next)
@@ -10101,7 +10106,7 @@ do the
 
 ;; ** Run it on startup
 ;; Timer here fixes crash on slow PCs
-(add-hook 'exwm-init-hook '(lambda () (run-with-timer nil nil 'my/startup-view)))
+(add-hook 'exwm-init-hook (lambda () (run-with-timer nil nil 'my/startup-view)))
 
 ;; * Run command on boot
 (if my/run-command-on-boot
