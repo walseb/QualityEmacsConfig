@@ -5176,7 +5176,7 @@ the overlay."
     (setq-local comment-end "")
 
     ;; Language extensions. Since these has to work inside comments, the `t' at the end is needed. I don't know if that's possible to do inside `my/haskell-syntax-mode-font-lock' though
-    (font-lock-add-keywords nil `((,(rx "LANGUAGE" space (+ (not space))) 0 font-lock-function-name-face t)))
+    (font-lock-add-keywords nil `((,(rx "LANGUAGE" space (+ graph)) 0 font-lock-function-name-face t)))
 
     (setq-local imenu-create-index-function 'haskell-ds-create-imenu-index)
 
@@ -5207,12 +5207,12 @@ the overlay."
 	   ;; Check for where statements
 	   (group bol (* space) (or "let" "where" "") (* space))
 	   ;; The actual function name
-	   (group (+ (not space)))
+	   (group (+ graph))
 	   ;; The equal sign
 	   (group (* (regex ".")) space "=" (or space eol))) . (2 font-lock-function-name-face))
 
 	;; Type signatures
-	(,(rx (group (+ alnum))
+	(,(rx (group (* graph))
 	      (group (+ space) "::" space)) . (1 font-lock-function-name-face))))
 
 ;; **** Syntax table
@@ -7178,10 +7178,10 @@ do the
 	  (or
 	   ;; All strings without spaces and with dots aren't searches
 	   ;; The not whitespace here combined with the * and oel makes sure cases like "foo.bar." aren't interpreted as direct addresses
-	   (string-match-p (rx (char ".") (* (not whitespace)) eol) search)
+	   (string-match-p (rx (char ".") (* graph) eol) search)
 
 	   ;; All strings without spaces and with http aren't searches
-	   (string-match-p (rx bol "http" (* (not whitespace)) eol) search)
+	   (string-match-p (rx bol "http" (* graph) eol) search)
 	   )))
 
 	(concat "https://www.google.com/search?q=" search)
