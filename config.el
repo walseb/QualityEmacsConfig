@@ -435,6 +435,9 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
 
 ;; * Evil
+;; Disable switch to emacs-state binding
+(setq evil-toggle-key "")
+
 (setq evil-search-module 'evil-search)
 (setq evil-vsplit-window-right t)
 (setq evil-split-window-below t)
@@ -1822,6 +1825,10 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Disable XF86Back and XF86Forward
 (global-unset-key (kbd "<XF86Back>"))
 (global-unset-key (kbd "<XF86Forward>"))
+
+;; ** Unbind C-z
+;; By default this runs suspend-frame
+(global-unset-key (kbd "C-z"))
 
 ;; * Productivity
 ;; ** Break timer
@@ -5150,6 +5157,60 @@ the overlay."
 (setq haskell-interactive-mode-read-only nil)
 (setq haskell-interactive-prompt-read-only nil)
 (setq haskell-interactive-popup-errors nil)
+
+;; *** Disable haskell syntax propertize
+;; This function causes emacs to hang at times because of some reason
+(with-eval-after-load 'haskell-mode
+  (defun haskell-syntax-propertize (a b) nil))
+
+;; *** Custom syntax highlighting
+(with-eval-after-load 'haskell-mode
+  (define-derived-mode haskell-mode prog-mode "my/haskell-syntax-mode"
+    "Syntax highlighting for haskell"
+    (setq font-lock-defaults '(my/haskell-syntax-mode-font-lock))
+    (setq-local comment-start "--")
+    (setq-local comment-padding 1)
+    (setq-local comment-end "")
+
+    ;; Language extensions. Since these has to work inside comments, the `t' at the end is needed. I don't know if that's possible to do inside `my/haskell-syntax-mode-font-lock' though
+    (font-lock-add-keywords nil `((,(rx "LANGUAGE" space (+ (not space))) 0 font-lock-function-name-face t)))
+
+    (setq-local imenu-create-index-function 'haskell-ds-create-imenu-index)
+
+    (setq-local indent-tabs-mode nil)
+    (setq-local tab-width 8)
+
+    (haskell-indentation-mode)))
+
+;; **** Keywords
+(setq my/haskell-syntax-mode-keywords '("module" "import" "qualified"
+					"type" "newtype" "data"
+					"do" "proc"
+					"let"  "where"
+					"if" "then" "else"))
+
+;; **** Font lock
+(setq my/haskell-syntax-mode-font-lock
+      `(
+	;; Keywords
+	(,(regexp-opt my/haskell-syntax-mode-keywords 'words) . font-lock-keyword-face)
+	;; Functions
+	(,(rx (group bol (* space) (+ (not space))) (group (* (regex ".")) "=")) . (1 font-lock-function-name-face))
+	(,(rx (group bol (* space) (+ (not space))) (group space "::")) . (1 font-lock-function-name-face))))
+
+;; **** Syntax table
+(with-eval-after-load 'haskell-mode
+  (setq haskell-mode-syntax-table
+	(let ((synTable (make-syntax-table)))
+	  ;; {- -} style comment
+	  (modify-syntax-entry ?\{ ". 1" synTable)
+	  (modify-syntax-entry ?\} ". 4" synTable)
+	  (modify-syntax-entry ?- ". 23" synTable)
+
+	  ;; -- style comment
+	  (modify-syntax-entry ?\- ". 12b" synTable)
+	  (modify-syntax-entry ?\n "> b" synTable)
+	  synTable)))
 
 ;; *** org-mode (ob) support
 (with-eval-after-load 'haskell-mode
@@ -9270,8 +9331,8 @@ do the
 ;; **** Haskell
 (setq haskell-font-lock-keywords '("do" "let" "proc" "where" "if" "then" "else"))
 
-;; (defun haskell-font-lock-keywords ()
-;;   '())
+(defun haskell-font-lock-keywords ()
+  '())
 
 ;; ***** Cabal
 (setq haskell-cabal-font-lock-keywords '())
