@@ -5199,9 +5199,6 @@ the overlay."
 	;; Keywords
 	(,(regexp-opt my/haskell-syntax-mode-keywords 'words) . font-lock-keyword-face)
 
-	;; Can't do multi-line
-	;; (,"{-.*-}" . font-lock-comment-face)
-
 	;; Functions
 	(,(rx
 	   ;; Check for where statements
@@ -5212,10 +5209,22 @@ the overlay."
 	   (group (* (regex ".")) space "=" (or space eol))) . (2 font-lock-function-name-face))
 
 	;; Type signatures
-	(,(rx (group (* graph))
-	      (group (+ space) "::" space)) . (1 font-lock-function-name-face))))
+	(,(rx (group bol (* space) (or "let" "where" "") (* space))
+	      (group (+ graph))
+	      (group (+ space) "::" space)) . (2 font-lock-function-name-face))))
 
 ;; ***** Issues
+;; ****** Multiline functions
+;; This doesn't work on multi-line functions:
+;; collisionAABBCheck
+;;   :: Foo
+;;   Bar =
+
+;; collisionAABBCheck
+;;   foo
+;;   bar =
+
+;; ****** Records
 ;; Doesn't work properly when setting records like this:
 ;; foo{ _bar =
 ;; , _baz    =
