@@ -5215,6 +5215,14 @@ the overlay."
 	(,(rx (group (* graph))
 	      (group (+ space) "::" space)) . (1 font-lock-function-name-face))))
 
+;; ***** Issues
+;; Doesn't work properly when setting records like this:
+;; foo{ _bar =
+;; , _baz    =
+;; , _qux   =
+;; }
+;; The comma and ~foo{~ gets highlighted instead of the functions
+
 ;; **** Syntax table
 (with-eval-after-load 'haskell-mode
   (setq haskell-mode-syntax-table
@@ -8545,6 +8553,9 @@ do the
 
 (evil-define-key 'normal calc-mode-map [remap evil-delete-whole-line] 'my/calc-kill-current-line)
 (evil-define-key 'visual calc-mode-map (kbd "d") 'calc-kill-region)
+
+;; Multiplication should have the same precedence as division
+(setq calc-multiplication-has-precedence nil)
 
 ;; ** calc-at-point
 (straight-use-package '(calc-at-point :type git :host github :repo "walseb/calc-at-point"))
