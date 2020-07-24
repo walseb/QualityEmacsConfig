@@ -1817,7 +1817,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Compilation-mode
 (setq compilation-ask-about-save nil)
 
-;; ** Store position in buffers
+;; ** Store point/position in buffers
 (save-place-mode 1)
 
 (setq save-place-file (concat user-emacs-directory ".cache/save-place"))
@@ -2610,7 +2610,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (define-key evil-inner-text-objects-map "h" 'evil-inside-heading)
 
 ;; ** Imenu
-(define-key my/leader-map (kbd "I") 'counsel-imenu)
+(define-key my/leader-map (kbd "i") 'counsel-imenu)
 
 ;; ** Counsel-outline
 (define-key my/leader-map (kbd "TAB") 'counsel-outline)
@@ -3425,7 +3425,7 @@ If the input is empty, select the previous history element instead."
 ;; *** Ivy integration
 (straight-use-package 'ivy-yasnippet)
 ;; Needed because its font isn't loaded on install, but is needed in theme
-(define-key my/leader-map (kbd "i") 'ivy-yasnippet)
+(define-key my/leader-map (kbd "I") 'ivy-yasnippet)
 
 ;; *** Keys
 (my/evil-normal-define-key "TAB" #'my/auto-tab)
@@ -5191,7 +5191,7 @@ the overlay."
 					;; "type" "newtype" "data"
 					"do" "proc" "rec"
 					"let"  "where"
-					"if" "then" "else"))
+					"if" "then" "else" "in"))
 
 ;; **** Font lock
 (setq my/haskell-syntax-mode-font-lock
@@ -5202,18 +5202,38 @@ the overlay."
 	;; Functions
 	(,(rx
 	   ;; Check for where statements
-	   (group bol (* space) (or "let" "where" "") (* space))
+	   (group bol (* space) (or "let" "where" "," "{" "") (* space))
 	   ;; The actual function name
 	   (group (+ graph))
 	   ;; The equal sign
 	   (group (* (regex ".")) space "=" (or space eol))) . (2 font-lock-function-name-face))
 
 	;; Type signatures
-	(,(rx (group bol (* space) (or "let" "where" "") (* space))
+	(,(rx (group bol (* space) (or "let" "where" "," "{" "") (* space))
 	      (group (+ graph))
 	      (group (+ space) "::" space)) . (2 font-lock-function-name-face))))
 
 ;; ***** Issues
+;; ****** Multiline region comment doesn't work
+;; ****** Doesn't work on tuple definitions
+;; In this code block:
+
+;; let (foo, bar) = (1, 2)
+
+;; Only (foo is highlighted
+
+;; ****** Dosen't highlight equal without space
+;; For example in enums you can do this:
+
+;; enum	DebugDrawModes
+;; {
+;; DBG_NoDebug=0,
+;; DBG_DrawWireframe=1,
+;; DBG_DrawAabb=2,
+;; DBG_DrawFeaturesText=4,
+
+;; But this isn't highlighted
+
 ;; ****** Multiline functions
 ;; This doesn't work on multi-line functions:
 ;; collisionAABBCheck
@@ -5474,6 +5494,21 @@ do the
 						(+ (string-match "-- .*$" str) 3)
 						(length str))))
 	    :caller 'my/ivy-hoogle))
+
+;; *** Ivy top level definitions
+;; This doesn't work with normal "M-x imenu", but it works fine with "M-x counsel-imenu"
+
+(setq my/haskell-imenu-generic-expression
+      `((""  ,(rx (group bol (+ graph) (+ space) "::" space
+			 ;; The rest of the expression after the "::". This is so that the type info is visible in the imenu
+			 (regex ".*") eol
+			 )) 1)))
+
+(add-hook 'haskell-mode-hook (lambda ()
+			       ;; This is needed because haskell-mode messes with it which causes imenu to use that instead
+			       (setq imenu-create-index-function 'imenu-default-create-index-function)
+			       (setq imenu-generic-expression my/haskell-imenu-generic-expression)
+			       ) t)
 
 ;; *** Disable haskell-doc
 ;; Haskell-doc is loaded in as the eldoc-documentation-function.
