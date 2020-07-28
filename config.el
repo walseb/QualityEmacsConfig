@@ -920,9 +920,9 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 				 (call-interactively #'delete-char)))
 
 (my/evil-visual-define-key "x" (lambda () (interactive)
-				  (let ((ring kill-ring))
-				    (call-interactively 'evil-delete)
-				    (setq kill-ring ring))))
+				 (let ((ring kill-ring))
+				   (call-interactively 'evil-delete)
+				   (setq kill-ring ring))))
 
 ;; * Leader
 ;; When changing leader, change =my/leader-map-key=
@@ -963,16 +963,18 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 	     print
 
 	     ;; (read-event)
-	     6 ;; C-f
-	     12 ;; C-l
+	     ;; 6 ;; C-f
+	     ;; 12 ;; C-l
 	     20 ;; C-t
-	     11 ;; C-k
-	     1 ;; C-a
-	     10 ;; C-j
-	     19 ;; C-s
 
-	     14 ;; C-n
-	     16 ;; C-p
+	     ;; 11 ;; C-k
+
+	     ;; 1 ;; C-a
+	     10 ;; C-j
+	     ;; 19 ;; C-s
+
+	     ;; 14 ;; C-n
+	     ;; 16 ;; C-p
 
 	     ;; Doesn't seem to work, I'm getting errors when running the insert functions
 	     ;; 134217835 ;; å
@@ -986,11 +988,11 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
 	     134217848 ;; M-x
 
-	     21 ;; C-u
-	     23 ;; C-w
+	     ;; 21 ;; C-u
+	     ;; 23 ;; C-w
 
-	     5 ;; C-e
-	     7 ;; C-g
+	     ;; 5 ;; C-e
+	     ;; 7 ;; C-g
 
 	     67108896 ;; C-space
 
@@ -1039,6 +1041,10 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
   (straight-use-package 'exwm)
   (require 'exwm-core))
 
+;; ** Fake key
+;; (defun my/fake-key-xdotool (key)
+;;   (async-start-process "xdotool" "xdotool" '(lambda (a) nil) "key" key))
+
 ;; ** keys
 ;; *** Define mode
 (defvar my/exwm-mode-map (make-sparse-keymap))
@@ -1064,7 +1070,9 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (defun my/exwm-page-up () (interactive) (exwm-input--fake-key 'next))
 (defun my/exwm-page-down () (interactive) (exwm-input--fake-key 'prior))
 
-(defun my/exwm-return () (interactive) (exwm-input--fake-key 'return))
+;; (defun my/exwm-return () (interactive) (exwm-input--fake-key 'return))
+;; (defun my/exwm-return () (interactive) (my/fake-key-xdotool "XK_cr"))
+;; (defun my/exwm-return () (interactive) (my/fake-key-xdotool "a"))
 (defun my/exwm-escape () (interactive) (exwm-input--fake-key 'escape))
 (defun my/exwm-find () (interactive) (exwm-input--fake-key ?\C-f))
 
@@ -1554,23 +1562,28 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
   (global-set-key (kbd "<XF86MonBrightnessUp>") 'my/increase-brightness)
   (global-set-key (kbd "<XF86MonBrightnessDown>") 'my/decrease-brightness))
 
-;; ** Sudo edit
-(straight-use-package 'sudo-edit)
+;; ** su
+(straight-use-package '(su :type git :host github :repo "PythonNut/su.el"))
 
-(define-key my/leader-map (kbd "C-S-s") 'sudo-edit)
+(su-mode 1)
+
+;; ** Sudo edit
+;; (straight-use-package 'sudo-edit)
+
+;; (define-key my/leader-map (kbd "C-S-s") 'sudo-edit)
 
 ;; *** Dired fix
-(defun my/sudo-edit-is-on ()
-  (string-equal
-   (file-remote-p (or buffer-file-name default-directory) 'user)
-   "root"))
+;; (defun my/sudo-edit-is-on ()
+;;   (string-equal
+;;    (file-remote-p (or buffer-file-name default-directory) 'user)
+;;    "root"))
 
-(defun my/dired-sudo-edit-setup ()
-  ;; If file is edited with sudo (in this case only works on dired due to hook)
-  (if (my/sudo-edit-is-on)
-      (dired-sort-other "-alh")))
+;; (defun my/dired-sudo-edit-setup ()
+;;   ;; If file is edited with sudo (in this case only works on dired due to hook)
+;;   (if (my/sudo-edit-is-on)
+;;       (dired-sort-other "-alh")))
 
-(add-hook 'dired-mode-hook 'my/dired-sudo-edit-setup)
+;; (add-hook 'dired-mode-hook 'my/dired-sudo-edit-setup)
 
 ;; ** Enable disabled commands
 (put 'narrow-to-region 'disabled nil)
@@ -1654,6 +1667,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (define-key compilation-mode-map (kbd "j") 'my/compilation-change-command)
 (define-key compilation-mode-map (kbd "g") 'recompile)
 (define-key compilation-mode-map (kbd "C-c") 'kill-compilation)
+
 ;; (evil-define-key '(normal insert visual replace) compilation-mode-map (kbd "C-c") 'kill-compilation)
 
 ;; *** Show alert after compilation completed
@@ -1829,6 +1843,11 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Unbind C-z
 ;; By default this runs suspend-frame
 (global-unset-key (kbd "C-z"))
+
+;; ** xclip integration
+;; (straight-use-package 'xclip)
+;; (setq xclip-method 'xclip)
+;; (xclip-mode -1)
 
 ;; * Productivity
 ;; ** Break timer
@@ -2038,23 +2057,24 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (define-key my/open-map (kbd "W") (lambda () (interactive) (find-file my/wallpaper-folder)))
 
 ;; ** Open firefox
-(defvar my/gui-browser
-  (if (my/is-system-package-installed 'icecat)
-      "icecat"
-    (if (my/is-system-package-installed 'firefox-nightly)
-	"firefox-nightly"
-      (if (my/is-system-package-installed 'iceweasel)
-	  "iceweasel"
-	"firefox"))))
+(defvar my/gui-browser "nyxt")
 
 (defun my/open-in-browser (&optional url)
   (unless url
     (setq url ""))
   (start-process my/gui-browser nil my/gui-browser "--new-window" url))
 
+(defun my/open-in-nyxt ()
+  (let ((nyxt (get-buffer "nyxt")))
+    (if nyxt
+	(switch-to-buffer nyxt)
+      (async-shell-command "cd ~/Sync/NyxtBuild; nix-shell --command \"cd nyxt; ./nyxt --init ~/.config/nixpkgs/loose-configs/nyxt/init.lisp\""))))
+
 (defun my/launch-gui-browser ()
   (interactive)
-  (my/open-in-browser))
+  (my/open-in-nyxt)
+  ;; (my/open-in-browser)
+  )
 
 ;; (defvar my/browser-bookmarks '(
 ;;			       "youtube.com"
@@ -2884,16 +2904,21 @@ If the input is empty, select the previous history element instead."
       (ivy-previous-history-element 1))))
 
 ;; *** Switch buffer
-;; **** Ignore buffers
+;; **** Filter / Ignore buffers
 (defun my/ivy-switch-buffer-ignore (str)
   (let ((buf (get-buffer str)))
     (and buf (or
 	      ;; (my/ignore-dired-buffers buf)
 	      ;; (my/ignore-org-brain-buffers buf)
+	      (my/ignore-nyxt buf)
 	      ))))
 
 (with-eval-after-load 'ivy
   (add-to-list 'ivy-ignore-buffers #'my/ivy-switch-buffer-ignore))
+
+;; ***** Ignore nyxt
+(defun my/ignore-nyxt (buf)
+  (string= "nyxt" (buffer-name buf)))
 
 ;; ***** Ignore dired buffers
 (defun my/ignore-dired-buffers (buf)
@@ -3939,9 +3964,10 @@ If the input is empty, select the previous history element instead."
 						   (substring-no-properties
 						    (car list))))))
 				 :post
-				 (if exwm-firefox-evil-mode
-				     (call-interactively 'exwm-firefox-evil-normal)
-				   (call-interactively 'evil-force-normal-state)))
+				 (when (boundp 'exwm-firefox-evil-mode)
+				   (if exwm-firefox-evil-mode
+				       (call-interactively 'exwm-firefox-evil-normal)
+				     (call-interactively 'evil-force-normal-state))))
   "movement"
 
   ;; Move focus
@@ -7184,8 +7210,7 @@ do the
 
 (setq elfeed-search-mode-hook nil)
 (add-hook 'elfeed-search-mode-hook (lambda ()
-				      (run-with-timer nil nil (lambda ()
-								(toggle-truncate-lines 1)))))
+				     (run-with-timer nil nil (lambda () (toggle-truncate-lines 1)))))
 
 ;; ** Elfeed org
 (straight-use-package 'elfeed-org)
@@ -7313,125 +7338,125 @@ do the
 ;; (define-key my/eww-mode-map (kbd "C-c") 'my/eww-toggle-code-highlighting)
 
 ;; ** Firefox exwm integration
-(with-eval-after-load 'exwm
-  (progn
-    (straight-use-package '(exwm-firefox-core :type git :host github :repo "walseb/exwm-firefox-core"))
-    (straight-use-package '(exwm-firefox-evil :type git :host github :repo "walseb/exwm-firefox-evil"))
-    ;;    (straight-use-package 'exwm-firefox-core)
-    ;;    (straight-use-package 'exwm-firefox-evil)
-    (require 'exwm-firefox-evil)
+;; (with-eval-after-load 'exwm
+;;   (progn
+;;     (straight-use-package '(exwm-firefox-core :type git :host github :repo "walseb/exwm-firefox-core"))
+;;     (straight-use-package '(exwm-firefox-evil :type git :host github :repo "walseb/exwm-firefox-evil"))
+;;     ;;    (straight-use-package 'exwm-firefox-core)
+;;     ;;    (straight-use-package 'exwm-firefox-evil)
+;;     (require 'exwm-firefox-evil)
 
-    ;; Run firefox buffers in normal mode
-    (add-hook 'exwm-firefox-evil-mode-hook 'exwm-firefox-evil-normal)))
+;;     ;; Run firefox buffers in normal mode
+;;     (add-hook 'exwm-firefox-evil-mode-hook 'exwm-firefox-evil-normal)))
 
 ;; Auto enable exwm-firefox-evil-mode on all firefox buffers
-(add-hook 'exwm-manage-finish-hook (lambda ()
-				     (evil-emacs-state)
-				     (exwm-firefox-evil-activate-if-firefox)))
+;; (add-hook 'exwm-manage-finish-hook (lambda ()
+;;				     (evil-emacs-state)
+;;				     (exwm-firefox-evil-activate-if-firefox)))
 
 
-(setq exwm-firefox-core-search-bookmarks '(("google.com")
-					   ("youtube.com")
-					   ("github.com")
-					   ("gmail.com")))
+;; (setq exwm-firefox-core-search-bookmarks '(("google.com")
+;;					   ("youtube.com")
+;;					   ("github.com")
+;;					   ("gmail.com")))
 
-(setq exwm-firefox-evil-link-hint-end-key nil)
+;; (setq exwm-firefox-evil-link-hint-end-key nil)
 
 ;; *** Tabs
 ;; http://doc.rix.si/cce/cce-browsers.html
-(defun my/browser-activate-tabs-cb (dbus ivy-hash choice)
-  (require 'dbus)
-  (funcall dbus "Activate" :int32 (truncate (string-to-number (gethash choice ivy-hash)))))
+;; (defun my/browser-activate-tabs-cb (dbus ivy-hash choice)
+;;   (require 'dbus)
+;;   (funcall dbus "Activate" :int32 (truncate (string-to-number (gethash choice ivy-hash)))))
 
-(defun my/browser-activate-tab ()
-  "Activate a browser tab using Ivy. Requires plasma-browser integration"
-  (interactive)
-  (require 'dbus)
-  (let ((ivy-hash (make-hash-table :test 'equal))
-	(dbus (apply-partially 'dbus-call-method :session
-			       "org.kde.plasma.browser_integration" "/TabsRunner"
-			       "org.kde.plasma.browser_integration.TabsRunner")))
-    (let ((cb (-partial #'my/browser-activate-tabs-cb dbus ivy-hash))
-	  (res (funcall dbus "GetTabs")))
-      (mapc
-       (lambda (obj)
-	 (let ((id (number-to-string (car (car (alist-get "id" (car obj) nil nil #'equal)))))
-	       (title (car (car (alist-get "title" (car obj) nil nil #'equal)))))
-	   (puthash title id ivy-hash)))
-       res)
-      (ivy-read "Activate tab: " ivy-hash :action cb))))
+;; (defun my/browser-activate-tab ()
+;;   "Activate a browser tab using Ivy. Requires plasma-browser integration"
+;;   (interactive)
+;;   (require 'dbus)
+;;   (let ((ivy-hash (make-hash-table :test 'equal))
+;;	(dbus (apply-partially 'dbus-call-method :session
+;;			       "org.kde.plasma.browser_integration" "/TabsRunner"
+;;			       "org.kde.plasma.browser_integration.TabsRunner")))
+;;     (let ((cb (-partial #'my/browser-activate-tabs-cb dbus ivy-hash))
+;;	  (res (funcall dbus "GetTabs")))
+;;       (mapc
+;;        (lambda (obj)
+;;	 (let ((id (number-to-string (car (car (alist-get "id" (car obj) nil nil #'equal)))))
+;;	       (title (car (car (alist-get "title" (car obj) nil nil #'equal)))))
+;;	   (puthash title id ivy-hash)))
+;;        res)
+;;       (ivy-read "Activate tab: " ivy-hash :action cb))))
 
-;; *** Keys
-(with-eval-after-load 'exwm
-  (progn
-       ;;; Normal
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down)
+;; ;; *** Keys
+;; (with-eval-after-load 'exwm
+;;   (progn
+;;        ;;; Normal
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-up)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-down)
 
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "l") 'exwm-firefox-core-right)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "h") 'exwm-firefox-core-left)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<deletechar>") 'exwm-firefox-core-right)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-h") 'exwm-firefox-core-left)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "l") 'exwm-firefox-core-right)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "h") 'exwm-firefox-core-left)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<deletechar>") 'exwm-firefox-core-right)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-h") 'exwm-firefox-core-left)
 
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "e") 'my/browser-activate-tab)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "N") 'exwm-firefox-core-tab-next)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "P") 'exwm-firefox-core-tab-previous)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "k") 'exwm-firefox-core-tab-close)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "K") 'exwm-firefox-core-tab-close)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "g n") 'exwm-firefox-core-find-next)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "g p") 'exwm-firefox-core-find-previous)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-s") 'exwm-firefox-core-quick-find)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "t") 'exwm-firefox-core-tab-new)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "O") 'exwm-firefox-core-tab-new)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "e") 'my/browser-activate-tab)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "N") 'exwm-firefox-core-tab-next)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "P") 'exwm-firefox-core-tab-previous)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "k") 'exwm-firefox-core-tab-close)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "K") 'exwm-firefox-core-tab-close)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "g n") 'exwm-firefox-core-find-next)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "g p") 'exwm-firefox-core-find-previous)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-s") 'exwm-firefox-core-quick-find)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "t") 'exwm-firefox-core-tab-new)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "O") 'exwm-firefox-core-tab-new)
 
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "s") 'exwm-firefox-core-find)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "S") 'exwm-firefox-core-find)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "s") 'exwm-firefox-core-find)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "S") 'exwm-firefox-core-find)
 
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<prior>") 'exwm-firefox-core-page-up)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<next>") 'exwm-firefox-core-page-down)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<prior>") 'exwm-firefox-core-page-up)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "<next>") 'exwm-firefox-core-page-down)
 
-    ;; (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-find-next)
-    ;; (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-find-previous)
+;;     ;; (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "C-n") 'exwm-firefox-core-find-next)
+;;     ;; (evil-define-key '(normal motion visual insert) exwm-firefox-evil-mode-map (kbd "C-p") 'exwm-firefox-core-find-previous)
 
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "f") 'exwm-firefox-evil-link-hint)
-    (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "F") 'exwm-firefox-evil-link-hint-new-tab)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "f") 'exwm-firefox-evil-link-hint)
+;;     (evil-define-key '(normal motion) exwm-firefox-evil-mode-map (kbd "F") 'exwm-firefox-evil-link-hint-new-tab)
 
-       ;;; Visual
-    (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up-select)
-    (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down-select)
+;;        ;;; Visual
+;;     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "p") 'exwm-firefox-core-up-select)
+;;     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "n") 'exwm-firefox-core-down-select)
 
-    (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down-select)
+;;     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-w") 'exwm-firefox-core-half-page-down-select)
 
-    (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "j") 'exwm-firefox-core-find-next)
-    (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "J") 'exwm-firefox-core-find-previous)
+;;     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "j") 'exwm-firefox-core-find-next)
+;;     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "J") 'exwm-firefox-core-find-previous)
 
-    (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
-    (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
+;;     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
+;;     (evil-define-key 'visual exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)
 
-       ;;; Insert
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-u") (lambda () (interactive) (exwm-firefox-evil-normal) (exwm-firefox-core-half-page-up)))
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-w") (lambda () (interactive) (exwm-firefox-evil-normal) (exwm-firefox-core-half-page-down)))
-    ;;
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-f") (lambda () (interactive) (exwm-input--fake-key "å")))
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-u") (lambda () (interactive) (exwm-input--fake-key "ä")))
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-b") (lambda () (interactive) (exwm-input--fake-key "ö")))
-    ;;
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-F") (lambda () (interactive) (exwm-input--fake-key "Å")))
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-U") (lambda () (interactive) (exwm-input--fake-key "Ä")))
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-B") (lambda () (interactive) (exwm-input--fake-key "Ö")))
+;;        ;;; Insert
+;;     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-u") (lambda () (interactive) (exwm-firefox-evil-normal) (exwm-firefox-core-half-page-up)))
+;;     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-w") (lambda () (interactive) (exwm-firefox-evil-normal) (exwm-firefox-core-half-page-down)))
+;;     ;;
+;;     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-f") (lambda () (interactive) (exwm-input--fake-key "å")))
+;;     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-u") (lambda () (interactive) (exwm-input--fake-key "ä")))
+;;     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-b") (lambda () (interactive) (exwm-input--fake-key "ö")))
+;;     ;;
+;;     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-F") (lambda () (interactive) (exwm-input--fake-key "Å")))
+;;     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-U") (lambda () (interactive) (exwm-input--fake-key "Ä")))
+;;     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-B") (lambda () (interactive) (exwm-input--fake-key "Ö")))
 
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-,") (lambda () (interactive) (exwm-input--fake-key ?ä)))
-    ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "ä") (lambda () (interactive) (exwm-input--fake-key ?ä)))
+;;     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "M-,") (lambda () (interactive) (exwm-input--fake-key ?ä)))
+;;     ;;    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "ä") (lambda () (interactive) (exwm-input--fake-key ?ä)))
 
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
-    (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)))
-;; (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-l") (lambda () (interactive) (exwm-input--fake-key 'delete)))
-;; (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "DEL") (lambda () (interactive) (exwm-input--fake-key 'backspace)))))
+;;     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-y") 'exwm-firefox-core-copy)
+;;     (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-k") 'exwm-firefox-core-paste)))
+;; ;; (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "C-l") (lambda () (interactive) (exwm-input--fake-key 'delete)))
+;; ;; (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "DEL") (lambda () (interactive) (exwm-input--fake-key 'backspace)))))
 
 ;; * Version control
 ;; ** Ediff
@@ -7759,6 +7784,9 @@ do the
 (with-eval-after-load 'counsel-spotify
   (my/spotify-start)
   (setq my/is-spotify-loaded t))
+
+;; ***** Spotifyd
+(setq counsel-spotify-service-name "spotifyd")
 
 ;; ***** Keys
 (define-key my/music-map (kbd "e") 'counsel-spotify-search-track)
