@@ -1211,7 +1211,8 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (straight-use-package '(exwm-edit :type git :host github :repo "agzam/exwm-edit" :branch "remove-global-mode"))
 
 (with-eval-after-load 'exwm
-  (require 'exwm-edit))
+  (require 'exwm-edit)
+  (global-exwm-edit-mode 1))
 
 ;; *** Remove header
 (add-hook 'exwm-edit-mode-hook (lambda () (kill-local-variable 'header-line-format)))
@@ -1424,8 +1425,9 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Process completed alert
 (defun my/alert-process-completed ()
   (let* ((buf-name (buffer-name))
-	 (alert-str (concat "Completed: " buf-name)))
-    (my/alert-statusline-message-temporary alert-str)))
+	 (alert-str (concat "buffer: " buf-name " completed!" )))
+    (my/alert-statusline-message-temporary alert-str)
+    (my/fire-notification alert-str)))
 
 (defun my/alert-statusline-message-temporary (message &optional severity duration)
   (my/alert message (or severity 'low))
@@ -4006,6 +4008,7 @@ If the input is empty, select the previous history element instead."
 
   ("<deletechar>" (evil-window-decrease-width 10) nil)
   ("DEL" (evil-window-decrease-width 10) nil)
+  ("C-l" (evil-window-decrease-width 10) nil)
   ;; Resize left
   ;;("\b" (evil-window-increase-width 10) nil)
   ("C-h" (evil-window-increase-width 10) nil)
@@ -4503,6 +4506,20 @@ If the input is empty, select the previous history element instead."
 
 ;; * Code
 ;; ** Generic
+;; *** Tree-sitter
+;; https://ubolonton.github.io/emacs-tree-sitter/installation/#installing-with-straight-dot-el
+;; (straight-use-package
+;;  '(tree-sitter :host github
+;;	       :repo "ubolonton/emacs-tree-sitter"
+;;	       :files ("lisp/*.el")))
+
+;; (straight-use-package
+;;  '(tree-sitter-langs :host github
+;;		     :repo "ubolonton/emacs-tree-sitter"
+;;		     :files ("langs/*.el" "langs/queries")))
+
+;; (require 'tree-sitter-langs)
+
 ;; *** Xref
 ;; By default xref always prompts with certain commands
 (setq xref-prompt-for-identifier nil)
@@ -6353,6 +6370,7 @@ do the
 ;; ** Auto kill buffer
 (defun my/auto-kill-buffer ()
   (interactive)
+  (my/proc-track-kill)
   (pcase major-mode
     ('mu4e-headers-mode (kill-current-buffer)
 			(run-with-timer 1 nil 'mu4e-alert-update-mail-count-modeline))
@@ -6796,11 +6814,19 @@ do the
 (setq eshell-prompt-regexp
       (concat "^[^#$\n]* [#" my/eshell-prompt-symbol "] "))
 
-;; ** Alert when task is done
+;; ** Running Task tracking
+;; *** Alert when task is done
 (add-hook 'eshell-post-command-hook (lambda ()
 				      ;; Fix for eshell-mode boot-up triggering hook
 				      (when (or (not eshell-mode) (not (= 2 (line-number-at-pos (point)))))
+					(my/proc-track-done)
 					(my/alert-process-completed))))
+
+;; *** Inform that task has begun
+(add-hook 'eshell-pre-command-hook (lambda ()
+				     ;; Fix for eshell-mode boot-up triggering hook
+				     (when (or (not eshell-mode) (not (= 2 (line-number-at-pos (point)))))
+				       (my/proc-track-start-new))))
 
 ;; ** Custom Goto beg of line
 (defun my/eshell-goto-beg-of-line ()
@@ -7248,7 +7274,7 @@ do the
     ;; Don't do a google search for anything that has a dot then a letter
     ;; There are two (not whitespace) here because otherwise the * wildcard would accept strings without any char after a dot
     (if (or
-	 ;; All strings spaces are searches
+	 ;; All strings with spaces are searches
 	 (string-match-p (rx whitespace) search)
 
 	 (not
@@ -7263,6 +7289,10 @@ do the
 
 	(concat "https://www.google.com/search?q=" search)
       search)))
+
+;; (my/get-search-url "192.168.0.1") => 192.168.0.1
+;; (my/get-search-url "google.com") => google.com
+;; (my/get-search-url "google.com ") => https://www.google.com/search?q=google.com
 
 ;; *** Set default browser
 (if my/use-w3m
@@ -7786,7 +7816,7 @@ do the
   (setq my/is-spotify-loaded t))
 
 ;; ***** Spotifyd
-(setq counsel-spotify-service-name "spotifyd")
+;; (setq counsel-spotify-service-name "spotify")
 
 ;; ***** Keys
 (define-key my/music-map (kbd "e") 'counsel-spotify-search-track)
@@ -9972,6 +10002,22 @@ do the
 (with-eval-after-load 'org-clock
   (add-hook 'org-clock-in-hook 'my/org-clock-mode-line-schedule))
 
+;; *** Process running tracker
+(defvar my/proc-track-running 0)
+(defvar my/proc-track-proc-running nil)
+
+(defun my/proc-track-start-new ()
+  (setq my/proc-track-running (+ my/proc-track-running 1))
+  (setq-local my/proc-track-proc-running t))
+
+(defun my/proc-track-done ()
+  (setq my/proc-track-running (- my/proc-track-running 1))
+  (setq-local my/proc-track-proc-running nil))
+
+(defun my/proc-track-kill ()
+  (when my/proc-track-proc-running
+    (my/proc-track-done)))
+
 ;; ** Format
 ;; Only applicable to X since terminal never stretches, etc
 (add-hook 'exwm-workspace-switch-hook 'my/frame-width-update)
@@ -9996,6 +10042,11 @@ do the
 			(concat
 			 (propertize (concat " ") 'face `(:background ,(my/get-current-evil-cursor-color)))
 			 " ")))
+
+		     ;; Processes running:
+		     (:eval (concat "proc: " (number-to-string my/proc-track-running)))
+
+		     " | "
 
 		     ;; Org clock
 		     (:eval (if (org-clocking-p)

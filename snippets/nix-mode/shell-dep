@@ -1,0 +1,9 @@
+# key: sd
+# name: shell-dep
+# --
+{ pkgs ? import <nixpkgs> { } }:
+pkgs.mkShell {
+  buildInputs = [
+    pkgs.$0
+  ];
+}
