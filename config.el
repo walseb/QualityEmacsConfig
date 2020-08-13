@@ -209,14 +209,21 @@
   (when (file-exists-p path)
     (find-file path)))
 
-;; ** Sudo shell-command
+;; ** Sudo
+(defun my/sudo-run (command)
+  (let ((default-directory (concat "/sudo::" default-directory)))
+    (funcall command)))
+
+;; *** Sudo shell-command
 (defun my/sudo-shell-command (command &optional output-buffer error-buffer)
-  (let ((default-directory "/sudo::"))
-    (shell-command command output-buffer error-buffer)))
+  (my/sudo-run (lambda () (shell-command command output-buffer error-buffer))))
 
 (defun my/sudo-shell-command-to-string (command)
-  (let ((default-directory "/sudo::"))
-    (shell-command-to-string command )))
+  (my/sudo-run (lambda () (shell-command-to-string command))))
+
+;; *** Sudo compile
+(defun my/sudo-compile (command)
+  (my/sudo-run (lambda () (compile command))))
 
 ;; ** List
 ;; *** Get random element from list
@@ -1435,46 +1442,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
 ;; * Package management
 ;; ** Guix
-(straight-use-package 'guix)
-
-;; *** Keys
-(define-prefix-command 'my/guix-map)
-(define-key my/leader-map (kbd "G") 'my/guix-map)
-
-(define-key my/guix-map (kbd "v") 'guix)
-(define-key my/guix-map (kbd "P") 'guix-profiles)
-(define-key my/guix-map (kbd "g") 'guix-generation)
-(define-key my/guix-map (kbd "G") 'guix-system-generations)
-(define-key my/guix-map (kbd "i") 'guix-installed-user-packages)
-(define-key my/guix-map (kbd "I") 'guix-installed-system-packages)
-
-(define-prefix-command 'my/guix-services-map)
-(define-key my/guix-map (kbd "s") 'my/guix-services-map)
-
-(define-key my/guix-services-map (kbd "a") 'guix-all-services)
-(define-key my/guix-services-map (kbd "n") 'guix-services-by-name)
-(define-key my/guix-services-map (kbd "l") 'guix-services-by-location)
-(define-key my/guix-services-map (kbd "d") 'guix-find-service-definition)
-
-(define-prefix-command 'my/guix-package-map)
-(define-key my/guix-map (kbd "p") 'my/guix-package-map)
-
-(define-key my/guix-package-map (kbd "a") 'guix-all-packages)
-(define-key my/guix-package-map (kbd "n") 'guix-packages-by-name)
-(define-key my/guix-package-map (kbd "l") 'guix-packages-by-location)
-(define-key my/guix-package-map (kbd "c") 'guix-packages-from-system-config-file)
-(define-key my/guix-package-map (kbd "d") 'guix-find-package-definition)
-
-(define-prefix-command 'my/guix-store-map)
-(define-key my/guix-map (kbd "S") 'my/guix-store-map)
-
-(define-key my/guix-store-map (kbd "l") 'guix-store-live-items)
-(define-key my/guix-store-map (kbd "d") 'guix-store-dead-items)
-(define-key my/guix-store-map (kbd "D") 'guix-store-item-derivers)
-(define-key my/guix-store-map (kbd "f") 'guix-store-failures)
-(define-key my/guix-store-map (kbd "r") 'guix-store-item-references)
-(define-key my/guix-store-map (kbd "R") 'guix-store-item-referrers)
-(define-key my/guix-store-map (kbd "C-r") 'guix-store-item-requisites)
+;; (straight-use-package 'guix)
 
 ;; ** Local packages
 ;; (add-to-list 'load-path (expand-file-name (concat user-emacs-directory "local-packages")))
@@ -1851,6 +1819,20 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; (setq xclip-method 'xclip)
 ;; (xclip-mode -1)
 
+;; ** Open compile buffer
+(defun my/open-compile ()
+  (interactive)
+  (switch-to-buffer "*compilation*"))
+
+(define-key my/leader-map (kbd "g") 'my/open-compile)
+
+(defun my/run-compile ()
+  (interactive)
+  (my/open-compile)
+  (recompile))
+
+(define-key my/leader-map (kbd "G") 'my/run-compile)
+
 ;; * Productivity
 ;; ** Break timer
 ;; In seconds
@@ -1971,7 +1953,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Visit nix home config
 (defun my/nix-home-config-visit ()
   (interactive)
-  (find-file "~/.config/nixpkgs/home.nix"))
+  (find-file "/etc/nixos/home.nix"))
 
 (define-key my/open-map (kbd "C-c") 'my/nix-home-config-visit)
 
@@ -2070,7 +2052,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
   (let ((nyxt (get-buffer "nyxt")))
     (if nyxt
 	(switch-to-buffer nyxt)
-      (async-shell-command "cd ~/Sync/NyxtBuild; nix-shell --command \"cd nyxt; ./nyxt --init ~/.config/nixpkgs/loose-configs/nyxt/init.lisp\""))))
+      (async-shell-command "cd ~/Sync/NyxtBuild; cached-nix-shell --command \"cd nyxt; ./nyxt --init ~/.config/nixpkgs/loose-configs/nyxt/init.lisp\""))))
 
 (defun my/launch-gui-browser ()
   (interactive)
@@ -2134,7 +2116,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
 ;; ** Export
 ;; *** Twitter bootstrap
-(straight-use-package 'ox-twbs)
+;; (straight-use-package 'ox-twbs)
 
 ;; ** org-superstar
 (straight-use-package 'org-superstar)
@@ -3757,7 +3739,7 @@ If the input is empty, select the previous history element instead."
 ;; (setq on-screen-highlight-method 'fringe)
 
 ;; ** Jammer
-(straight-use-package 'jammer)
+;; (straight-use-package 'jammer)
 (setq jammer-repeat-delay 0.5)
 (setq jammer-repeat-window 1)
 (setq jammer-type 'repeat)
@@ -3780,7 +3762,7 @@ If the input is empty, select the previous history element instead."
 
 ;; ** goto change
 ;; g-; and g-,
-(straight-use-package 'goto-chg)
+;; (straight-use-package 'goto-chg)
 
 ;; ** Change default directory
 (defun my/change-default-directory ()
@@ -4781,7 +4763,7 @@ If the input is empty, select the previous history element instead."
      (my/ivy-hoogle))
     ('haskell-interactive-mode (my/ivy-hoogle))
     ('nix-mode
-     (if (file-in-directory-p (buffer-file-name) "~/.config/nixpkgs/")
+     (if (string-match-p "home" (buffer-file-name))
 	 (man "home-configuration.nix")
        (my/nixos-options-ivy)))))
 
@@ -4893,7 +4875,7 @@ If the input is empty, select the previous history element instead."
 ;; (define-key my/scheme-mode-map (kbd "C-s") 'run-geiser)
 
 ;; *** Racket
-(straight-use-package 'racket-mode)
+;; (straight-use-package 'racket-mode)
 (add-hook 'racket-mode-hook (lambda () (setq-local flycheck-check-syntax-automatically '(save))))
 
 (defun my/racket-send-last-sexp ()
@@ -5109,10 +5091,10 @@ the overlay."
 (define-key my/emacs-lisp-mode-map "o" 'edebug-step-out)
 
 ;; *** Clojure
-(straight-use-package 'clojure-mode)
+;; (straight-use-package 'clojure-mode)
 
 ;; **** Cider
-(straight-use-package 'cider)
+;; (straight-use-package 'cider)
 
 ;; ***** Enlighten
 (add-hook 'clojure-mode-hook 'cider-enlighten-mode)
@@ -5169,11 +5151,6 @@ the overlay."
 (define-key my/java-refractor-map (kbd "i") 'lsp-java-add-import)
 
 ;; ** Python
-;; *** Jedi
-(straight-use-package 'company-jedi)
-
-(add-to-list 'company-backends 'company-jedi)
-
 ;; ** Haskell
 ;; (straight-use-package '(haskell-mode :type git :host github :repo "walseb/haskell-mode"))
 (straight-use-package 'haskell-mode)
@@ -5332,7 +5309,7 @@ the overlay."
 			      'rear-nonsticky t)))))))
 
 ;; **** Start using nix-shell
-;; (setq haskell-process-wrapper-function (lambda (argv) (append (list "nix-shell" "--pure" "-I" "." "--command" )
+;; (setq haskell-process-wrapper-function (lambda (argv) (append (list "cached-nix-shell" "--pure" "-I" "." "--command" )
 ;;							 (list (mapconcat ’identity argv " ")))))
 
 ;; *** Haskell process/prompt
@@ -5572,11 +5549,14 @@ do the
 					     (when (string-match-p my/profiler-graph-gen-program compile-command)
 					       (find-file (car (directory-files default-directory nil ".svg$"))))))
 
-(defvar my/haskell-compile-commands
-  '("cabal build"
-    "cabal run"
-    "profiling"
-    "cabal build -O2"))
+(setq my/haskell-compile-commands
+      '("cabal build"
+	;; Prints stack trace after a <<loop>> error
+	"cabal run --enable-profiling --ghc-options=\"-fprof-auto\" all -- +RTS -xc"
+	"cabal run -O2"
+	"cabal run -O2 --enable-profiling --ghc-options=\"-threaded\" all -- +RTS -ls -N"
+	"profiling"
+	"cabal build -O2"))
 
 (defun my/cabal-compile ()
   (let ((default-directory (projectile-compilation-dir)))
@@ -5590,7 +5570,7 @@ do the
       input)))
 
 (defun my/cabal-build-profiling-command ()
-  (concat "cabal run --enable-profiling exes -- +RTS -p "
+  (concat "cabal run -O2 --enable-profiling exes -- +RTS -p "
 	  (my/cabal-get-profiling-method)
 	  " -L100; " my/profiler-graph-gen-program " *.hp;"))
 ;; find-file FRPSimpleGame.svg
@@ -5876,12 +5856,12 @@ do the
 (setq dante-methods-alist
       `((styx "styx.yaml" ("styx" "repl" dante-target))
 	(snack ,(lambda (d) (directory-files d t "package\\.\\(yaml\\|nix\\)")) ("snack" "ghci" dante-target))
-	(new-impure-nix dante-cabal-new-nix ("nix-shell" "--run" (concat "cabal new-repl " (or dante-target (dante-package-name) "") " --builddir=dist-newstyle/dante")))
-	(new-nix dante-cabal-new-nix ("nix-shell" "--pure" "--run" (concat "cabal new-repl " (or dante-target (dante-package-name) "") " --builddir=dist-newstyle/dante")))
-	(nix dante-cabal-nix ("nix-shell" "--pure" "--run" (concat "cabal repl " (or dante-target "") " --builddir=dist-newstyle/dante")))
-	(impure-nix dante-cabal-nix ("nix-shell" "--run" (concat "cabal repl " (or dante-target "") " --builddir=dist-newstyle/dante")))
+	(new-impure-nix dante-cabal-new-nix ("cached-nix-shell" "--run" (concat "cabal new-repl " (or dante-target (dante-package-name) "") " --builddir=dist-newstyle/dante")))
+	(new-nix dante-cabal-new-nix ("cached-nix-shell" "--pure" "--run" (concat "cabal new-repl " (or dante-target (dante-package-name) "") " --builddir=dist-newstyle/dante")))
+	(nix dante-cabal-nix ("cached-nix-shell" "--pure" "--run" (concat "cabal repl " (or dante-target "") " --builddir=dist-newstyle/dante")))
+	(impure-nix dante-cabal-nix ("cached-nix-shell" "--run" (concat "cabal repl " (or dante-target "") " --builddir=dist-newstyle/dante")))
 	(new-build "cabal.project.local" ("cabal" "new-repl" (or dante-target (dante-package-name) nil) "--builddir=dist-newstyle/dante"))
-	(nix-ghci ,(lambda (d) (directory-files d t "shell.nix\\|default.nix")) ("nix-shell" "--pure" "--run" "ghci"))
+	(nix-ghci ,(lambda (d) (directory-files d t "shell.nix\\|default.nix")) ("cached-nix-shell" "--pure" "--run" "ghci"))
 	(stack "stack.yaml" ("stack" "repl" dante-target))
 	(mafia "mafia" ("mafia" "repl" dante-target))
 	(bare-cabal ,(lambda (d) (directory-files d t "..cabal$")) ("cabal" "repl" dante-target "--builddir=dist-newstyle/dante"))
@@ -6101,7 +6081,7 @@ do the
 (add-hook 'csharp-mode-hook 'my/csharp-mode)
 
 ;; ** F#
-(straight-use-package 'fsharp-mode)
+;; (straight-use-package 'fsharp-mode)
 
 ;; :mode ("\\.fs\\'" . fsharp-mode)
 (setq fsharp-doc-idle-delay 0)
@@ -6649,6 +6629,12 @@ do the
 ;; (defalias 'sudo 'eshell/sudo)
 
 ;; ** Completion
+;; *** Yasnippet compatibility
+(defun my/completion-at-point ()
+  (interactive)
+  (unless (ignore-errors (call-interactively 'yas-expand))
+    (completion-at-point)))
+
 ;; *** Bash-completion
 ;; https://github.com/szermatt/emacs-bash-completion/issues/24
 ;; (straight-use-package 'bash-completion)
@@ -6868,7 +6854,7 @@ do the
   (evil-define-key '(normal insert) eshell-mode-map (kbd "C-p") 'eshell-previous-matching-input-from-input)
   (evil-define-key '(normal insert) eshell-mode-map (kbd "C-n") 'eshell-next-matching-input-from-input)
 
-  (evil-define-key '(normal insert) eshell-mode-map (kbd "TAB") 'completion-at-point))
+  (evil-define-key '(normal insert) eshell-mode-map (kbd "TAB") 'my/completion-at-point))
 
 (add-hook 'eshell-mode-hook 'my/bind-eshell-keys)
 
@@ -7601,30 +7587,36 @@ do the
 ;; *** Auto compile project
 (defun my/auto-compile-project ()
   (interactive)
-  (pcase major-mode
-    ('org-mode (counsel-M-x "^org to "))
-    ('plantuml-mode (plantuml-preview-buffer 0))
-    ('java-mode (call-interactively 'dap-java-debug))
-    ('nix-mode
-     (if (file-in-directory-p (buffer-file-name) "/etc/nixos/")
-	 (progn
-	   ;; Not sure why but this is required
-	   (require 'ivy)
+  (let* (
+	 (nixos-collect-garbage (lambda () (my/sudo-compile "nix-collect-garbage -d")))
+	 (nixos-home (lambda () (compile "nix-channel --update; home-manager -f /etc/nixos/home.nix switch")))
+	 (nixos-system (lambda () (my/sudo-compile "nix-channel --update; nixos-rebuild switch")))
+	 (nixos (lambda ()
+		  ;; Not sure why but this is required
+		  (require 'ivy)
 
-	   ;; Run rebuild as sudo
-	   (let ((default-directory (concat "/sudo::" default-directory)))
-	     (compile "nix-channel --update; nixos-rebuild switch")))
-       (if (file-in-directory-p (buffer-file-name) "~/.config/nixpkgs/")
-	   (compile "nix-channel --update; home-manager switch"))))
-    (_
-     (pcase (projectile-project-type)
-       ('haskell-cabal (my/cabal-compile))
-       ;; Placeholder
-       ('haskell-stack (my/cabal-compile))
-       (_
-	;; Reflex obelisk
-	(if (seq-contains (directory-files (projectile-project-root)) "frontend" 'string=)
-	    (my/haskell-reflex-compile)))))))
+		  (pcase (completing-read "compile " '("home" "system" "collect-garbage"))
+		    ("home" (funcall nixos-home))
+		    ("system" (funcall nixos-system))
+		    ("collect-garbage" (funcall nixos-collect-garbage))))))
+    (pcase major-mode
+      ('org-mode (counsel-M-x "^org to "))
+      ('plantuml-mode (plantuml-preview-buffer 0))
+      ('java-mode (call-interactively 'dap-java-debug))
+      ('nix-mode
+       (when (file-in-directory-p (buffer-file-name) "/etc/nixos/")
+	 (funcall nixos)))
+      (_
+       (if (file-in-directory-p (buffer-file-name) "/etc/nixos/")
+	   (funcall nixos)
+	 (pcase (projectile-project-type)
+	   ('haskell-cabal (my/cabal-compile))
+	   ;; Placeholder
+	   ('haskell-stack (my/cabal-compile))
+	   (_
+	    ;; Reflex obelisk
+	    (if (seq-contains (directory-files (projectile-project-root)) "frontend" 'string=)
+		(my/haskell-reflex-compile)))))))))
 
 ;; ** Counsel projectile
 ;; If enabled it auto enables projectile, which has high CPU usage

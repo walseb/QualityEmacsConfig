@@ -1,0 +1,4 @@
+# name: cached-nix-shell
+# key: n
+# --
+cached-nix-shell -p $0
