@@ -2052,7 +2052,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
   (let ((nyxt (get-buffer "nyxt")))
     (if nyxt
 	(switch-to-buffer nyxt)
-      (async-shell-command "cd ~/Sync/NyxtBuild; cached-nix-shell --command \"cd nyxt; ./nyxt --init ~/.config/nixpkgs/loose-configs/nyxt/init.lisp\""))))
+      (async-shell-command "cd ~/Sync/NyxtBuild; cached-nix-shell --command \"cd nyxt; ./nyxt --init /etc/nixos/loose-configs/nyxt/init.lisp\""))))
 
 (defun my/launch-gui-browser ()
   (interactive)
@@ -3098,6 +3098,9 @@ If the input is empty, select the previous history element instead."
 ;; ** Ivy rich
 (straight-use-package 'ivy-rich)
 
+(straight-use-package 'all-the-icons)
+(straight-use-package 'all-the-icons-ivy-rich)
+
 (defvar my/ivy-rich-docstring-spacing 40)
 
 ;; *** Faces
@@ -3181,6 +3184,8 @@ If the input is empty, select the previous history element instead."
 	(:columns
 	 ((ivy-rich-candidate (:width 0.8))
 	  (ivy-rich-file-last-modified-time (:face font-lock-comment-face))))))
+
+(all-the-icons-ivy-rich-mode 1)
 
 (ivy-rich-mode 1)
 
@@ -4149,6 +4154,10 @@ If the input is empty, select the previous history element instead."
   (global-my/custom-buffer-name-mode))
 
 ;; * Dired
+;; ** All the icons
+;; (straight-use-package 'all-the-icons-dired)
+;; (add-hook 'dired-mode-hook 'all-the-icons-dired-mode)
+
 ;; ** Disable cluttered major mode
 ;; Dired normally puts the sorting string in the major mode name, this disables that
 (defun dired-sort-set-mode-line ())
