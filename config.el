@@ -1049,8 +1049,8 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
   (require 'exwm-core))
 
 ;; ** Fake key
-;; (defun my/fake-key-xdotool (key)
-;;   (async-start-process "xdotool" "xdotool" '(lambda (a) nil) "key" key))
+(defun my/fake-key-xdotool (key)
+  (async-start-process "xdotool" "xdotool" '(lambda (a) nil) "key" key))
 
 ;; ** keys
 ;; *** Define mode
@@ -1086,7 +1086,8 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (defun my/exwm-up () (interactive) (exwm-input--fake-key 'up))
 (defun my/exwm-down () (interactive) (exwm-input--fake-key 'down))
 
-(defun my/exwm-m-q () (interactive) (exwm-input--fake-key ?\!))
+;; (defun my/exwm-m-q () (interactive) (exwm-input--fake-key ?\!))
+(defun my/exwm-m-q () (interactive) (my/fake-key-xdotool "exclam"))
 (defun my/exwm-m-g () (interactive) (exwm-input--fake-key ?\@))
 (defun my/exwm-m-m () (interactive) (exwm-input--fake-key ?\#))
 (defun my/exwm-m-l () (interactive) (exwm-input--fake-key ?\$))
@@ -1214,8 +1215,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Exwm-edit
 (setq exwm-edit-bind-default-keys nil)
 ;; (straight-use-package '(exwm-edit :type git :host github :repo "walseb/exwm-edit"))
-;; (straight-use-package 'exwm-edit)
-(straight-use-package '(exwm-edit :type git :host github :repo "agzam/exwm-edit" :branch "remove-global-mode"))
+(straight-use-package 'exwm-edit)
 
 (with-eval-after-load 'exwm
   (require 'exwm-edit)
@@ -1522,11 +1522,11 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Increase and decrease brightness
 (defun my/increase-brightness ()
   (interactive)
-  (my/message-at-point (my/sudo-shell-command-to-string "brightnessctl s +1%")))
+  (my/message-at-point (shell-command-to-string "xbacklight -inc 1; xbacklight -get")))
 
 (defun my/decrease-brightness ()
   (interactive)
-  (my/message-at-point (my/sudo-shell-command-to-string "brightnessctl s 1%-")))
+  (my/message-at-point (shell-command-to-string "xbacklight -dec 1; xbacklight -get")))
 
 (when my/enable-brightness-binds
   (global-set-key (kbd "<XF86MonBrightnessUp>") 'my/increase-brightness)
@@ -1639,6 +1639,15 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (define-key compilation-mode-map (kbd "C-c") 'kill-compilation)
 
 ;; (evil-define-key '(normal insert visual replace) compilation-mode-map (kbd "C-c") 'kill-compilation)
+
+(setq compilation-ask-about-save nil)
+
+;; *** Project name
+(setq compilation-buffer-name-function #'my/compilation-name-function)
+
+;; name-of-mode is the major-mode in the compilation buffer. Which most likely is compilation-mode
+(defun my/compilation-name-function (name-of-mode)
+  (concat "*" (downcase name-of-mode) " " (projectile-project-name) "*"))
 
 ;; *** Show alert after compilation completed
 (add-to-list 'compilation-finish-functions (lambda (_a _b)
@@ -1797,9 +1806,6 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Explain pause mode
 (straight-use-package '(explain-pause-mode :type git :host github :repo "lastquestion/explain-pause-mode"))
 ;; (explain-pause-mode)
-
-;; ** Compilation-mode
-(setq compilation-ask-about-save nil)
 
 ;; ** Store point/position in buffers
 (save-place-mode 1)
@@ -3185,6 +3191,330 @@ If the input is empty, select the previous history element instead."
 	 ((ivy-rich-candidate (:width 0.8))
 	  (ivy-rich-file-last-modified-time (:face font-lock-comment-face))))))
 
+(setq all-the-icons-ivy-rich-display-transformers-list
+      '(ivy-switch-buffer-other-window
+	(:columns
+	 ((all-the-icons-ivy-rich-buffer-icon)
+	  (ivy-rich-candidate (:width 30))
+	  (ivy-rich-switch-buffer-size (:width 7))
+	  (ivy-rich-switch-buffer-indicators (:width 4 :face error :align right))
+	  (ivy-rich-switch-buffer-major-mode (:width 12 :face warning))
+	  (ivy-rich-switch-buffer-project (:width 15 :face success))
+	  (ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))))))
+	 :predicate
+	 (lambda (cand) (get-buffer cand))
+	 :delimiter "\t")
+
+	;; counsel
+	counsel-switch-buffer
+	(:columns
+	 ((all-the-icons-ivy-rich-buffer-icon)
+	  (ivy-rich-candidate (:width 30))
+	  (ivy-rich-switch-buffer-size (:width 7))
+	  (ivy-rich-switch-buffer-indicators (:width 4 :face error :align right))
+	  (ivy-rich-switch-buffer-major-mode (:width 12 :face warning))
+	  (ivy-rich-switch-buffer-project (:width 15 :face success))
+	  (ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))))))
+	 :predicate
+	 (lambda (cand) (get-buffer cand))
+	 :delimiter "\t")
+	counsel-switch-buffer-other-window
+	(:columns
+	 ((all-the-icons-ivy-rich-buffer-icon)
+	  (ivy-rich-candidate (:width 30))
+	  (ivy-rich-switch-buffer-size (:width 7))
+	  (ivy-rich-switch-buffer-indicators (:width 4 :face error :align right))
+	  (ivy-rich-switch-buffer-major-mode (:width 12 :face warning))
+	  (ivy-rich-switch-buffer-project (:width 15 :face success))
+	  (ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))))))
+	 :predicate
+	 (lambda (cand) (get-buffer cand))
+	 :delimiter "\t")
+	counsel-M-x
+	(:columns
+	 ((all-the-icons-ivy-rich-function-icon)
+	  (counsel-M-x-transformer (:width 40))
+	  (ivy-rich-counsel-function-docstring (:face font-lock-doc-face))))
+	counsel-describe-function
+	(:columns
+	 ((all-the-icons-ivy-rich-function-icon)
+	  (counsel-describe-function-transformer (:width 40))
+	  (ivy-rich-counsel-function-docstring (:face font-lock-doc-face))))
+	counsel-describe-variable
+	(:columns
+	 ((all-the-icons-ivy-rich-variable-icon)
+	  (counsel-describe-variable-transformer (:width 40))
+	  (ivy-rich-counsel-variable-docstring (:face font-lock-doc-face))))
+	counsel-describe-symbol
+	(:columns
+	 ((all-the-icons-ivy-rich-symbol-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-set-variable
+	(:columns
+	 ((all-the-icons-ivy-rich-variable-icon)
+	  (counsel-describe-variable-transformer (:width 40))
+	  (ivy-rich-counsel-variable-docstring (:face font-lock-doc-face))))
+	counsel-apropos
+	(:columns
+	 ((all-the-icons-ivy-rich-symbol-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-info-lookup-symbol
+	(:columns
+	 ((all-the-icons-ivy-rich-symbol-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-descbinds
+	(:columns
+	 ((all-the-icons-ivy-rich-keybinding-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-find-file
+	(:columns
+	 ((all-the-icons-ivy-rich-file-icon)
+	  (ivy-read-file-transformer))
+	 :delimiter "\t")
+	counsel-file-jump
+	(:columns
+	 ((all-the-icons-ivy-rich-file-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-dired
+	(:columns
+	 ((all-the-icons-ivy-rich-file-icon)
+	  (ivy-read-file-transformer))
+	 :delimiter "\t")
+	counsel-dired-jump
+	(:columns
+	 ((all-the-icons-ivy-rich-file-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-el
+	(:columns
+	 ((all-the-icons-ivy-rich-symbol-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-fzf
+	(:columns
+	 ((all-the-icons-ivy-rich-file-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-git
+	(:columns
+	 ((all-the-icons-ivy-rich-file-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-recentf
+	(:columns
+	 ((all-the-icons-ivy-rich-file-icon)
+	  (ivy-rich-candidate (:width 0.8))
+	  (ivy-rich-file-last-modified-time (:face font-lock-comment-face)))
+	 :delimiter "\t")
+	counsel-buffer-or-recentf
+	(:columns
+	 ((all-the-icons-ivy-rich-file-icon)
+	  (counsel-buffer-or-recentf-transformer (:width 0.8))
+	  (ivy-rich-file-last-modified-time (:face font-lock-comment-face)))
+	 :delimiter "\t")
+	counsel-bookmark
+	(:columns
+	 ((all-the-icons-ivy-rich-bookmark-type)
+	  (all-the-icons-ivy-rich-bookmark-name (:width 40))
+	  (all-the-icons-ivy-rich-bookmark-info))
+	 :delimiter "\t")
+	counsel-bookmarked-directory
+	(:columns
+	 ((all-the-icons-ivy-rich-file-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-package
+	(:columns
+	 ((all-the-icons-ivy-rich-package-icon)
+	  (ivy-rich-candidate (:width 30))
+	  (all-the-icons-ivy-rich-package-version (:width 16 :face font-lock-comment-face))
+	  (all-the-icons-ivy-rich-package-archive-summary (:width 7 :face font-lock-builtin-face))
+	  (all-the-icons-ivy-rich-package-install-summary (:face font-lock-doc-face)))
+	 :delimiter "\t")
+	counsel-fonts
+	(:columns
+	 ((all-the-icons-ivy-rich-font-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-major
+	(:columns
+	 ((all-the-icons-ivy-rich-function-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-find-library
+	(:columns
+	 ((all-the-icons-ivy-rich-library-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-load-library
+	(:columns
+	 ((all-the-icons-ivy-rich-library-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-load-theme
+	(:columns
+	 ((all-the-icons-ivy-rich-theme-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-world-clock
+	(:columns
+	 ((all-the-icons-ivy-rich-world-clock-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-tramp
+	(:columns
+	 ((all-the-icons-ivy-rich-tramp-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-git-checkout
+	(:columns
+	 ((all-the-icons-ivy-rich-git-branch-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-list-processes
+	(:columns
+	 ((all-the-icons-ivy-rich-process-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-projectile-switch-project
+	(:columns
+	 ((all-the-icons-ivy-rich-file-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-projectile-find-file
+	(:columns
+	 ((all-the-icons-ivy-rich-file-icon)
+	  (counsel-projectile-find-file-transformer))
+	 :delimiter "\t")
+	counsel-projectile-find-dir
+	(:columns
+	 ((all-the-icons-ivy-rich-project-icon)
+	  (counsel-projectile-find-dir-transformer))
+	 :delimiter "\t")
+	counsel-minor
+	(:columns
+	 ((all-the-icons-ivy-rich-mode-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-imenu
+	(:columns
+	 ((all-the-icons-ivy-rich-imenu-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-cd
+	(:columns
+	 ((all-the-icons-ivy-rich-file-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	counsel-company
+	(:columns
+	 ((all-the-icons-ivy-rich-company-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+
+	;; pkacage
+	package-install
+	(:columns
+	 ((all-the-icons-ivy-rich-package-icon)
+	  (ivy-rich-candidate (:width 30))
+	  (ivy-rich-package-version (:width 16 :face font-lock-comment-face))
+	  (ivy-rich-package-archive-summary (:width 7 :face font-lock-builtin-face))
+	  (ivy-rich-package-install-summary (:face font-lock-doc-face)))
+	 :delimiter "\t")
+	package-reinstall
+	(:columns
+	 ((all-the-icons-ivy-rich-package-icon)
+	  (ivy-rich-candidate (:width 30))
+	  (ivy-rich-package-version (:width 16 :face font-lock-comment-face))
+	  (ivy-rich-package-archive-summary (:width 7 :face font-lock-builtin-face))
+	  (ivy-rich-package-install-summary (:face font-lock-doc-face)))
+	 :delimiter "\t")
+	package-delete
+	(:columns
+	 ((all-the-icons-ivy-rich-package-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+
+	persp-switch-to-buffer
+	(:columns
+	 ((all-the-icons-ivy-rich-buffer-icon)
+	  (ivy-rich-candidate (:width 30))
+	  (ivy-rich-switch-buffer-size (:width 7))
+	  (ivy-rich-switch-buffer-indicators (:width 4 :face error :align right))
+	  (ivy-rich-switch-buffer-major-mode (:width 12 :face warning))
+	  (ivy-rich-switch-buffer-project (:width 15 :face success))
+	  (ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))))))
+	 :predicate
+	 (lambda (cand) (get-buffer cand))
+	 :delimiter "\t")
+	persp-switch
+	(:columns
+	 ((all-the-icons-ivy-rich-project-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	persp-frame-switch
+	(:columns
+	 ((all-the-icons-ivy-rich-project-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	persp-window-switch
+	(:columns
+	 ((all-the-icons-ivy-rich-project-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	persp-kill
+	(:columns
+	 ((all-the-icons-ivy-rich-project-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	persp-save-and-kill
+	(:columns
+	 ((all-the-icons-ivy-rich-project-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	persp-import-buffers
+	(:columns
+	 ((all-the-icons-ivy-rich-project-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	persp-import-win-conf
+	(:columns
+	 ((all-the-icons-ivy-rich-project-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	persp-kill-buffer
+	(:columns
+	 ((all-the-icons-ivy-rich-buffer-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	persp-remove-buffer
+	(:columns
+	 ((all-the-icons-ivy-rich-buffer-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+	persp-add-buffer
+	(:columns
+	 ((all-the-icons-ivy-rich-buffer-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+
+	all-the-icons-ivy-rich-kill-buffer
+	(:columns
+	 ((all-the-icons-ivy-rich-buffer-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")
+
+	treemacs-projectile
+	(:columns
+	 ((all-the-icons-ivy-rich-file-icon)
+	  (ivy-rich-candidate))
+	 :delimiter "\t")))
+
 (all-the-icons-ivy-rich-mode 1)
 
 (ivy-rich-mode 1)
@@ -3366,12 +3696,37 @@ If the input is empty, select the previous history element instead."
       (erase-buffer)
       (mapc (lambda (a) (insert (flycheck-error-format a))) errors))))
 
+;; **** Inline
+(defun my/flycheck-posframe-get-face-for-error (err)
+  "Return the face which should be used to display ERR."
+  (pcase (flycheck-error-level err)
+    ('info 'flycheck-posframe-info-face)
+    ('warning 'flycheck-posframe-warning-face)
+    ('error 'flycheck-posframe-error-face)
+    (_ 'flycheck-posframe-face)))
+
+(defun my/flycheck-posframe-format-error (err)
+  "Formats ERR for display."
+  (propertize (flycheck-error-format-message-and-id err)
+	      'face
+	      `(:inherit ,(my/flycheck-posframe-get-face-for-error err))))
+
+(defun my/flycheck-format-errors (errors)
+  (let ((messages (sort
+		   (mapcar #'my/flycheck-posframe-format-error
+			   (delete-dups errors))
+		   'string-lessp)))
+    (mapconcat 'identity messages "\n")))
+
+(setq-default flycheck-display-errors-function (lambda (errors) (my/inline-overlay-print (my/flycheck-format-errors errors))))
+
 ;; **** Flycheck-posframe
 ;; (when window-system
 ;;   (straight-use-package 'flycheck-posframe)
 
 ;;   (with-eval-after-load 'flycheck
-;;     (add-hook 'flycheck-mode-hook #'flycheck-posframe-mode)))
+;;     (remove-hook 'flycheck-mode-hook #'flycheck-posframe-mode)
+;;     (remove-hook 'post-command-hook #'flycheck-posframe-maybe-hide-posframe)))
 
 ;; (setq my/flycheck-posframe-symbol nil)
 ;; ;; (setq my/flycheck-posframe-symbol "→ ")
@@ -3381,7 +3736,7 @@ If the input is empty, select the previous history element instead."
 ;; (setq flycheck-posframe-prefix my/flycheck-posframe-symbol)
 ;; (setq flycheck-posframe-warning-prefix my/flycheck-posframe-symbol)
 
-;; ;; (setq flycheck-posframe-position 'frame-bottom-right-corner)
+;; (setq flycheck-posframe-position 'frame-bottom-right-corner)
 
 ;; **** Flycheck pos-tip
 ;; (straight-use-package 'flycheck-pos-tip)
@@ -3390,14 +3745,14 @@ If the input is empty, select the previous history element instead."
 ;;   (flycheck-pos-tip-mode 1))
 
 ;; **** Flycheck inline
-(straight-use-package 'flycheck-inline)
+;; (straight-use-package 'flycheck-inline)
 
-;; Put flycheck-inline at BOL to make it always readable
-(setq flycheck-inline-display-function (lambda (msg _) (flycheck-inline-display-phantom msg (line-beginning-position))))
+;; ;; Put flycheck-inline at BOL to make it always readable
+;; (setq flycheck-inline-display-function (lambda (msg _ _) (flycheck-inline-display-phantom msg (line-beginning-position))))
 
-(with-eval-after-load 'flycheck
-  (require 'flycheck-inline)
-  (add-hook 'flycheck-mode-hook #'turn-on-flycheck-inline))
+;; (with-eval-after-load 'flycheck
+;;   (require 'flycheck-inline)
+;;   (add-hook 'flycheck-mode-hook #'turn-on-flycheck-inline))
 
 ;; *** Flycheck-package
 ;; Flycheck with extra correction for elisp packages
@@ -5195,6 +5550,10 @@ the overlay."
 (with-eval-after-load 'haskell-mode
   (defun haskell-syntax-propertize (a b) nil))
 
+;; *** Custom syntax table / fix thing-at-point
+;; This adds prime to be included when running (thing-at-point 'symbol)
+(add-hook 'haskell-mode-hook (lambda () (modify-syntax-entry ?' "_")))
+
 ;; *** Custom syntax highlighting
 (with-eval-after-load 'haskell-mode
   (define-derived-mode haskell-mode prog-mode "my/haskell-syntax-mode"
@@ -5565,7 +5924,12 @@ do the
 	"cabal run -O2"
 	"cabal run -O2 --enable-profiling --ghc-options=\"-threaded\" all -- +RTS -ls -N"
 	"profiling"
-	"cabal build -O2"))
+	"cabal build -O2"
+	"cabal build --ghc-options=\"-ddump-simpl -dsuppress-module-prefixes -dsuppress-uniques\"" ;; print core
+	;; To get better core, build inside GHCI instead like this:
+	;; cabal repl --ghc-options="-ddump-simpl -dsuppress-module-prefixes -dsuppress-uniques" all
+	)
+      )
 
 (defun my/cabal-compile ()
   (let ((default-directory (projectile-compilation-dir)))
@@ -7616,7 +7980,7 @@ do the
        (when (file-in-directory-p (buffer-file-name) "/etc/nixos/")
 	 (funcall nixos)))
       (_
-       (if (file-in-directory-p (buffer-file-name) "/etc/nixos/")
+       (if (file-in-directory-p (or (buffer-file-name) default-directory) "/etc/nixos/")
 	   (funcall nixos)
 	 (pcase (projectile-project-type)
 	   ('haskell-cabal (my/cabal-compile))
@@ -8152,7 +8516,10 @@ do the
   (define-key mu4e-view-mode-map (kbd "p") 'mu4e-view-headers-prev)
 
   (define-key mu4e-view-mode-map (kbd "N") 'mu4e-view-headers-next-unread)
-  (define-key mu4e-view-mode-map (kbd "P") 'mu4e-view-headers-prev-unread))
+  (define-key mu4e-view-mode-map (kbd "P") 'mu4e-view-headers-prev-unread)
+
+  (define-key mu4e-view-mode-map (kbd "f") 'mu4e-view-mark-for-unread)
+  (define-key mu4e-headers-mode-map (kbd "f") 'mu4e-headers-mark-for-unread))
 
 ;; **** View in different browser
 (with-eval-after-load 'mu4e-view
@@ -9557,7 +9924,7 @@ do the
 ;; Make sure every buffer is only scanned once
 (defvar-local my/projectile-project-buffer-already-scanned nil)
 
-(defun my/update-projectile-project-name()
+(defun my/update-projectile-project-name ()
   (interactive)
   ;; Some virtual buffers don't work, but dired-mode does
   (when (or (string= major-mode 'dired-mode) (and buffer-file-name (file-exists-p buffer-file-name) (not my/projectile-project-buffer-already-scanned)))
