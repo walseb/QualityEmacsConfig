@@ -138,6 +138,10 @@
 ;; ** Private config
 (my/load-if-exists (concat user-emacs-directory "private.el"))
 
+;; * nix home-manager integration
+;; This just loads too much stuff into emacs
+;; (mapc 'load (file-expand-wildcards (expand-file-name "~/.nix-profile/share/emacs/site-lisp/*.el*")))
+
 ;; * Libraries
 (straight-use-package 's)
 (straight-use-package 'dash)
@@ -267,9 +271,15 @@
     (message (concat "Package: " (symbol-name package) " not installed"))
     nil))
 
-;; *** Set exec-path by system
-;; (if (string-match-p "guixsd" (system-name))
-;; (add-to-list 'exec-path "/bin/" ))
+;; ** Get nix package path
+;; This is pretty slow
+;; Repo is the channel you want to get your packages from. For example nixpkgs
+(defun my/nix-store-path (channel package)
+  (shell-command-to-string (concat "nix eval "
+				   channel
+				   "."
+				   package
+				   ".outPath")))
 
 ;; ** Give buffer unique name
 (defun my/give-buffer-unique-name (base-name)
@@ -293,6 +303,10 @@
   (setq unread-command-events
 	(mapcar (lambda (e) `(t . ,e))
 		(listify-key-sequence (kbd key)))))
+
+;; ** Get last key
+(defun my/get-last-key ()
+  (key-description (vector (event-basic-type last-input-event))))
 
 ;; ** Fold ellipsis
 (defvar my/fold-ellipsis)
@@ -6947,6 +6961,50 @@ do the
 ;; *** Keys
 ;; (my/evil-universal-define-key-in-mode 'term-raw-map "C-," 'term-char-mode)
 
+;; * vterm
+(setq load-path (append load-path (file-expand-wildcards (expand-file-name "~/.nix-profile/share/emacs/site-lisp/elpa/*"))))
+(load-library "vterm-autoloads")
+
+;; ** Enable full editing
+;; https://github.com/akermu/emacs-libvterm/issues/156
+(defun my/vterm-insert-string ()
+  (interactive)
+  (vterm-send-string (read-from-minibuffer "Send: "))
+  (vterm-send-return))
+
+;; ** Keys
+(define-key my/leader-map (kbd "]") 'vterm)
+
+(setq vterm-mode-map
+      (let ((map (make-sparse-keymap)))
+	(define-key map (kbd "C-c")                 #'vterm-send-C-c)
+	(define-key map [tab]                       #'vterm-send-tab)
+	(define-key map (kbd "TAB")                 #'vterm-send-tab)
+	(define-key map [backtab]                   #'vterm--self-insert)
+	(define-key map [backspace]                 #'vterm-send-backspace)
+	(define-key map (kbd "DEL")                 #'vterm-send-backspace)
+	(define-key map [delete]                    #'vterm-send-delete)
+	(define-key map [M-backspace]               #'vterm-send-meta-backspace)
+	(define-key map (kbd "M-DEL")               #'vterm-send-meta-backspace)
+	(define-key map [return]                    #'vterm-send-return)
+	(define-key map (kbd "RET")                 #'vterm-send-return)
+	(define-key map [left]                      #'vterm-send-left)
+	(define-key map [right]                     #'vterm-send-right)
+	(define-key map [up]                        #'vterm-send-up)
+	(define-key map [down]                      #'vterm-send-down)
+	(define-key map [prior]                     #'vterm-send-prior)
+	(define-key map [next]                      #'vterm-send-next)
+	(define-key map [home]                      #'vterm--self-insert)
+	(define-key map [end]                       #'vterm--self-insert)
+	(define-key map [escape]                    #'vterm--self-insert)
+	(define-key map [remap yank]                #'vterm-yank)
+	(define-key map [remap yank-pop]            #'vterm-yank-pop)
+	(define-key map [remap mouse-yank-primary]  #'vterm-yank-primary)
+	(define-key map (kbd "u")                   #'vterm-undo)
+	(define-key map (kbd "C-g")                 #'vterm-send-C-g)
+	(define-key map [remap self-insert-command] #'vterm--self-insert)
+	map))
+
 ;; * Eshell
 ;;  https://github.com/howardabrams/dot-files/blob/master/emacs-eshell.org
 ;; Change to temporary name before renaming. This has to be unique. If it isn't the buffer with the same name will get its major mode changed to eshell
@@ -8982,7 +9040,14 @@ do the
 (straight-use-package 'flyspell-correct)
 
 ;; **** Key
-(my/evil-universal-define-key "C-d" 'flyspell-correct-at-point)
+(defun my/auto-C-d ()
+  (interactive)
+  (pcase major-mode
+    ('vterm-mode (call-interactively 'my/vterm-insert-string))
+    ('exwm-mode (call-interactively 'exwm-edit--compose))
+    (_ (call-interactively 'flyspell-correct-at-point))))
+
+(my/evil-universal-define-key "C-d" 'my/auto-C-d)
 
 ;; *** Company
 (defun my/toggle-company-ispell ()
@@ -9697,11 +9762,16 @@ do the
       (symbol-overlay-maybe-put-temp))))
 ;; )
 
-;; *** Make it global
+;; *** Global mode
+;; **** Disable it on certain modes
+(setq my/symbol-overlay-ignore-modes '(image-mode pdf-view-mode))
+
+;; **** Definition
 (define-minor-mode my/symbol-overlay-mode "" nil "" nil
   (when my/symbol-overlay-mode
-    (require 'symbol-overlay)
-    (add-hook 'post-command-hook 'my/symbol-overlay-post-command nil t)))
+    (unless (member major-mode my/symbol-overlay-ignore-modes)
+      (require 'symbol-overlay)
+      (add-hook 'post-command-hook 'my/symbol-overlay-post-command nil t))))
 
 (define-globalized-minor-mode my/global-symbol-overlay my/symbol-overlay-mode my/symbol-overlay-mode)
 (my/global-symbol-overlay 1)
@@ -9776,6 +9846,8 @@ do the
 (global-yascroll-bar-mode)
 (setq yascroll:scroll-bar '(left-fringe))
 (setq yascroll:disabled-modes '(image-mode))
+
+(setq yascroll:disabled-modes (append yascroll:disabled-modes '(pdf-view-mode)))
 
 ;; *** Fix for emacs 27
 ;; The function ~window-fringes~ returns a list of 4 results on some versions of emacs because of some reason. This fixes that
