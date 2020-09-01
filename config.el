@@ -229,6 +229,18 @@
 (defun my/sudo-compile (command)
   (my/sudo-run (lambda () (compile command))))
 
+;; ** Run in environment
+;; *** Run in system environment
+(defun my/local-env-run (run)
+  (let ((default-directory (expand-file-name "~/")))
+    (funcall run)))
+
+(defun my/local-env-shell-command-to-string (command)
+  (my/local-env-run (lambda () (shell-command-to-string command))))
+
+(defun my/local-env-shell-command (run)
+  (my/local-env-run (lambda () (shell-command command))))
+
 ;; ** List
 ;; *** Get random element from list
 (defun my/get-random-element (list)
@@ -284,6 +296,12 @@
 ;; ** Give buffer unique name
 (defun my/give-buffer-unique-name (base-name)
   (rename-buffer base-name t))
+
+;; ** Get buffer regex
+;; https://www.reddit.com/r/emacs/comments/6i4xzf/need_help_regex_matching_a_buffer_name_and/dj47ulw/
+(defun my/get-buffer-regex (regex)
+  (car (remove-if-not (apply-partially #'string-match-p regex)
+		      (mapcar #'buffer-name (buffer-list)))))
 
 ;; ** Fake key
 ;; *** Normal emacs buffers
@@ -606,6 +624,8 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 				 (mu4e-loading-mode . insert)
 
 				 (image-mode . insert)
+				 (vterm-mode . insert)
+
 				 )
 	 do (evil-set-initial-state mode state))
 
@@ -1256,7 +1276,9 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
    ;; Firefox calls itself navigator?
    (string-prefix-p "Navigator" exwm-instance-name t)
    ;;(string-prefix-p "Firefox" exwm-instance-name t)
-   ))
+   (string-prefix-p "chromium-browser" exwm-instance-name t)
+   ;; Nyxt
+   (string-prefix-p "sbcl" exwm-instance-name t)))
 
 (add-hook 'exwm-update-class-hook 'my/exwm-buffer-give-name-class)
 
@@ -1275,7 +1297,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 				     (kill-local-variable 'header-line-format)))
 
 ;; ** Disable floating windows
-(setq exwm-manage-force-tiling nil)
+(setq exwm-manage-force-tiling t)
 
 ;; ** Disable full screen
 ;; (cl-defun exwm-layout-set-fullscreen (&optional id)
@@ -1536,18 +1558,18 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Increase and decrease brightness
 (defun my/increase-brightness ()
   (interactive)
-  (my/message-at-point (shell-command-to-string "xbacklight -inc 1; xbacklight -get")))
+  (my/message-at-point (my/local-env-shell-command-to-string "xbacklight -inc 1; xbacklight -get")))
 
 (defun my/decrease-brightness ()
   (interactive)
-  (my/message-at-point (shell-command-to-string "xbacklight -dec 1; xbacklight -get")))
+  (my/message-at-point (my/local-env-shell-command-to-string "xbacklight -dec 1; xbacklight -get")))
 
 (when my/enable-brightness-binds
   (global-set-key (kbd "<XF86MonBrightnessUp>") 'my/increase-brightness)
   (global-set-key (kbd "<XF86MonBrightnessDown>") 'my/decrease-brightness))
 
 ;; ** su
-(straight-use-package '(su :type git :host github :repo "PythonNut/su.el"))
+(straight-use-package 'su)
 
 (su-mode 1)
 
@@ -1842,7 +1864,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Open compile buffer
 (defun my/open-compile ()
   (interactive)
-  (switch-to-buffer "*compilation*"))
+  (switch-to-buffer (my/compilation-name-function "compilation")))
 
 (define-key my/leader-map (kbd "g") 'my/open-compile)
 
@@ -2060,7 +2082,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (define-key my/open-map (kbd "w") 'my/show-random-wallpaper)
 (define-key my/open-map (kbd "W") (lambda () (interactive) (find-file my/wallpaper-folder)))
 
-;; ** Open firefox
+;; ** Open gui browser
 (defvar my/gui-browser "nyxt")
 
 (defun my/open-in-browser (&optional url)
@@ -2069,7 +2091,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
   (start-process my/gui-browser nil my/gui-browser "--new-window" url))
 
 (defun my/open-in-nyxt ()
-  (let ((nyxt (get-buffer "nyxt")))
+  (let ((nyxt (my/get-buffer-regex "nyxt - ")))
     (if nyxt
 	(switch-to-buffer nyxt)
       (async-shell-command "cd ~/Sync/NyxtBuild; cached-nix-shell --command \"cd nyxt; ./nyxt --init /etc/nixos/loose-configs/nyxt/init.lisp\""))))
@@ -3118,8 +3140,8 @@ If the input is empty, select the previous history element instead."
 ;; ** Ivy rich
 (straight-use-package 'ivy-rich)
 
-(straight-use-package 'all-the-icons)
-(straight-use-package 'all-the-icons-ivy-rich)
+;; (straight-use-package 'all-the-icons)
+;; (straight-use-package 'all-the-icons-ivy-rich)
 
 (defvar my/ivy-rich-docstring-spacing 40)
 
@@ -3204,332 +3226,6 @@ If the input is empty, select the previous history element instead."
 	(:columns
 	 ((ivy-rich-candidate (:width 0.8))
 	  (ivy-rich-file-last-modified-time (:face font-lock-comment-face))))))
-
-(setq all-the-icons-ivy-rich-display-transformers-list
-      '(ivy-switch-buffer-other-window
-	(:columns
-	 ((all-the-icons-ivy-rich-buffer-icon)
-	  (ivy-rich-candidate (:width 30))
-	  (ivy-rich-switch-buffer-size (:width 7))
-	  (ivy-rich-switch-buffer-indicators (:width 4 :face error :align right))
-	  (ivy-rich-switch-buffer-major-mode (:width 12 :face warning))
-	  (ivy-rich-switch-buffer-project (:width 15 :face success))
-	  (ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))))))
-	 :predicate
-	 (lambda (cand) (get-buffer cand))
-	 :delimiter "\t")
-
-	;; counsel
-	counsel-switch-buffer
-	(:columns
-	 ((all-the-icons-ivy-rich-buffer-icon)
-	  (ivy-rich-candidate (:width 30))
-	  (ivy-rich-switch-buffer-size (:width 7))
-	  (ivy-rich-switch-buffer-indicators (:width 4 :face error :align right))
-	  (ivy-rich-switch-buffer-major-mode (:width 12 :face warning))
-	  (ivy-rich-switch-buffer-project (:width 15 :face success))
-	  (ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))))))
-	 :predicate
-	 (lambda (cand) (get-buffer cand))
-	 :delimiter "\t")
-	counsel-switch-buffer-other-window
-	(:columns
-	 ((all-the-icons-ivy-rich-buffer-icon)
-	  (ivy-rich-candidate (:width 30))
-	  (ivy-rich-switch-buffer-size (:width 7))
-	  (ivy-rich-switch-buffer-indicators (:width 4 :face error :align right))
-	  (ivy-rich-switch-buffer-major-mode (:width 12 :face warning))
-	  (ivy-rich-switch-buffer-project (:width 15 :face success))
-	  (ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))))))
-	 :predicate
-	 (lambda (cand) (get-buffer cand))
-	 :delimiter "\t")
-	counsel-M-x
-	(:columns
-	 ((all-the-icons-ivy-rich-function-icon)
-	  (counsel-M-x-transformer (:width 40))
-	  (ivy-rich-counsel-function-docstring (:face font-lock-doc-face))))
-	counsel-describe-function
-	(:columns
-	 ((all-the-icons-ivy-rich-function-icon)
-	  (counsel-describe-function-transformer (:width 40))
-	  (ivy-rich-counsel-function-docstring (:face font-lock-doc-face))))
-	counsel-describe-variable
-	(:columns
-	 ((all-the-icons-ivy-rich-variable-icon)
-	  (counsel-describe-variable-transformer (:width 40))
-	  (ivy-rich-counsel-variable-docstring (:face font-lock-doc-face))))
-	counsel-describe-symbol
-	(:columns
-	 ((all-the-icons-ivy-rich-symbol-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-set-variable
-	(:columns
-	 ((all-the-icons-ivy-rich-variable-icon)
-	  (counsel-describe-variable-transformer (:width 40))
-	  (ivy-rich-counsel-variable-docstring (:face font-lock-doc-face))))
-	counsel-apropos
-	(:columns
-	 ((all-the-icons-ivy-rich-symbol-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-info-lookup-symbol
-	(:columns
-	 ((all-the-icons-ivy-rich-symbol-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-descbinds
-	(:columns
-	 ((all-the-icons-ivy-rich-keybinding-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-find-file
-	(:columns
-	 ((all-the-icons-ivy-rich-file-icon)
-	  (ivy-read-file-transformer))
-	 :delimiter "\t")
-	counsel-file-jump
-	(:columns
-	 ((all-the-icons-ivy-rich-file-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-dired
-	(:columns
-	 ((all-the-icons-ivy-rich-file-icon)
-	  (ivy-read-file-transformer))
-	 :delimiter "\t")
-	counsel-dired-jump
-	(:columns
-	 ((all-the-icons-ivy-rich-file-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-el
-	(:columns
-	 ((all-the-icons-ivy-rich-symbol-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-fzf
-	(:columns
-	 ((all-the-icons-ivy-rich-file-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-git
-	(:columns
-	 ((all-the-icons-ivy-rich-file-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-recentf
-	(:columns
-	 ((all-the-icons-ivy-rich-file-icon)
-	  (ivy-rich-candidate (:width 0.8))
-	  (ivy-rich-file-last-modified-time (:face font-lock-comment-face)))
-	 :delimiter "\t")
-	counsel-buffer-or-recentf
-	(:columns
-	 ((all-the-icons-ivy-rich-file-icon)
-	  (counsel-buffer-or-recentf-transformer (:width 0.8))
-	  (ivy-rich-file-last-modified-time (:face font-lock-comment-face)))
-	 :delimiter "\t")
-	counsel-bookmark
-	(:columns
-	 ((all-the-icons-ivy-rich-bookmark-type)
-	  (all-the-icons-ivy-rich-bookmark-name (:width 40))
-	  (all-the-icons-ivy-rich-bookmark-info))
-	 :delimiter "\t")
-	counsel-bookmarked-directory
-	(:columns
-	 ((all-the-icons-ivy-rich-file-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-package
-	(:columns
-	 ((all-the-icons-ivy-rich-package-icon)
-	  (ivy-rich-candidate (:width 30))
-	  (all-the-icons-ivy-rich-package-version (:width 16 :face font-lock-comment-face))
-	  (all-the-icons-ivy-rich-package-archive-summary (:width 7 :face font-lock-builtin-face))
-	  (all-the-icons-ivy-rich-package-install-summary (:face font-lock-doc-face)))
-	 :delimiter "\t")
-	counsel-fonts
-	(:columns
-	 ((all-the-icons-ivy-rich-font-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-major
-	(:columns
-	 ((all-the-icons-ivy-rich-function-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-find-library
-	(:columns
-	 ((all-the-icons-ivy-rich-library-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-load-library
-	(:columns
-	 ((all-the-icons-ivy-rich-library-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-load-theme
-	(:columns
-	 ((all-the-icons-ivy-rich-theme-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-world-clock
-	(:columns
-	 ((all-the-icons-ivy-rich-world-clock-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-tramp
-	(:columns
-	 ((all-the-icons-ivy-rich-tramp-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-git-checkout
-	(:columns
-	 ((all-the-icons-ivy-rich-git-branch-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-list-processes
-	(:columns
-	 ((all-the-icons-ivy-rich-process-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-projectile-switch-project
-	(:columns
-	 ((all-the-icons-ivy-rich-file-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-projectile-find-file
-	(:columns
-	 ((all-the-icons-ivy-rich-file-icon)
-	  (counsel-projectile-find-file-transformer))
-	 :delimiter "\t")
-	counsel-projectile-find-dir
-	(:columns
-	 ((all-the-icons-ivy-rich-project-icon)
-	  (counsel-projectile-find-dir-transformer))
-	 :delimiter "\t")
-	counsel-minor
-	(:columns
-	 ((all-the-icons-ivy-rich-mode-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-imenu
-	(:columns
-	 ((all-the-icons-ivy-rich-imenu-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-cd
-	(:columns
-	 ((all-the-icons-ivy-rich-file-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	counsel-company
-	(:columns
-	 ((all-the-icons-ivy-rich-company-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-
-	;; pkacage
-	package-install
-	(:columns
-	 ((all-the-icons-ivy-rich-package-icon)
-	  (ivy-rich-candidate (:width 30))
-	  (ivy-rich-package-version (:width 16 :face font-lock-comment-face))
-	  (ivy-rich-package-archive-summary (:width 7 :face font-lock-builtin-face))
-	  (ivy-rich-package-install-summary (:face font-lock-doc-face)))
-	 :delimiter "\t")
-	package-reinstall
-	(:columns
-	 ((all-the-icons-ivy-rich-package-icon)
-	  (ivy-rich-candidate (:width 30))
-	  (ivy-rich-package-version (:width 16 :face font-lock-comment-face))
-	  (ivy-rich-package-archive-summary (:width 7 :face font-lock-builtin-face))
-	  (ivy-rich-package-install-summary (:face font-lock-doc-face)))
-	 :delimiter "\t")
-	package-delete
-	(:columns
-	 ((all-the-icons-ivy-rich-package-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-
-	persp-switch-to-buffer
-	(:columns
-	 ((all-the-icons-ivy-rich-buffer-icon)
-	  (ivy-rich-candidate (:width 30))
-	  (ivy-rich-switch-buffer-size (:width 7))
-	  (ivy-rich-switch-buffer-indicators (:width 4 :face error :align right))
-	  (ivy-rich-switch-buffer-major-mode (:width 12 :face warning))
-	  (ivy-rich-switch-buffer-project (:width 15 :face success))
-	  (ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))))))
-	 :predicate
-	 (lambda (cand) (get-buffer cand))
-	 :delimiter "\t")
-	persp-switch
-	(:columns
-	 ((all-the-icons-ivy-rich-project-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	persp-frame-switch
-	(:columns
-	 ((all-the-icons-ivy-rich-project-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	persp-window-switch
-	(:columns
-	 ((all-the-icons-ivy-rich-project-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	persp-kill
-	(:columns
-	 ((all-the-icons-ivy-rich-project-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	persp-save-and-kill
-	(:columns
-	 ((all-the-icons-ivy-rich-project-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	persp-import-buffers
-	(:columns
-	 ((all-the-icons-ivy-rich-project-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	persp-import-win-conf
-	(:columns
-	 ((all-the-icons-ivy-rich-project-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	persp-kill-buffer
-	(:columns
-	 ((all-the-icons-ivy-rich-buffer-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	persp-remove-buffer
-	(:columns
-	 ((all-the-icons-ivy-rich-buffer-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-	persp-add-buffer
-	(:columns
-	 ((all-the-icons-ivy-rich-buffer-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-
-	all-the-icons-ivy-rich-kill-buffer
-	(:columns
-	 ((all-the-icons-ivy-rich-buffer-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")
-
-	treemacs-projectile
-	(:columns
-	 ((all-the-icons-ivy-rich-file-icon)
-	  (ivy-rich-candidate))
-	 :delimiter "\t")))
-
-(all-the-icons-ivy-rich-mode 1)
 
 (ivy-rich-mode 1)
 
@@ -4500,14 +4196,16 @@ If the input is empty, select the previous history element instead."
 ;; *** Custom buffer names - Auto rename buffers
 ;; Checkout the `relative-buffers' package
 (defun my/custom-buffer-name ()
-  ;; Make sure it runs after projectile is initialized
-  (let ((path (or (buffer-file-name) dired-directory)))
-    (when path
-      (let ((name (my/custom-buffer-name-file path)))
-	(when name
-	  (rename-buffer
-	   name
-	   t))))))
+  ;; Don't run when using tramp
+  (when (not (file-remote-p default-directory))
+    ;; Make sure it runs after projectile is initialized
+    (let ((path (or (buffer-file-name) dired-directory)))
+      (when path
+	(let ((name (my/custom-buffer-name-file path)))
+	  (when name
+	    (rename-buffer
+	     name
+	     t)))))))
 
 (defun my/custom-buffer-name-file (path)
   (let ((project-name (projectile-project-name)))
@@ -6767,8 +6465,12 @@ do the
 				     (let ((yas-fallback-behavior 'return-nil))
 				       (yas-expand)))))
 
-;; * Wakatime
-;; ** Custom wakatime-save mechanism
+;; * Automatic time tracking
+;; ** activity-watch-mode
+;; (straight-use-package 'activity-watch-mode)
+
+;; ** Wakatime
+;; *** Custom wakatime-save mechanism
 (with-eval-after-load 'wakatime-mode
   ;; Undefine wakatime-bind-hooks
   (defun wakatime-bind-hooks ())
@@ -6781,8 +6483,8 @@ do the
   ;; Make the first report after the idle timer has been run
   (run-with-timer my/wakatime-report-time my/wakatime-report-time
 		  (lambda () (when my/wakatime-user-present
-			       (message (concat "Reporting to wakatime at: " (current-time-string)))
-			       (wakatime-save))))
+			  (message (concat "Reporting to wakatime at: " (current-time-string)))
+			  (wakatime-save))))
   (message "custom wakatime save mechanism loaded"))
 
 ;; * Macros
@@ -6973,8 +6675,6 @@ do the
   (vterm-send-return))
 
 ;; ** Keys
-(define-key my/leader-map (kbd "]") 'vterm)
-
 (setq vterm-mode-map
       (let ((map (make-sparse-keymap)))
 	(define-key map (kbd "C-c")                 #'vterm-send-C-c)
@@ -7030,7 +6730,7 @@ do the
 ;; This cryptic code removes all duplicate lines in the eshell history file without sorting
 ;; The two tac here are here so that if a new command is a duplicate, the new command is kept while the old duplicate is removed
 (with-eval-after-load 'em-hist
-  (let ((content (shell-command-to-string (concat "tac " eshell-history-file-name " | awk '!seen[$0]++' | tac"))))
+  (let ((content (my/local-env-shell-command-to-string (concat "tac " eshell-history-file-name " | awk '!seen[$0]++' | tac"))))
     (write-region content nil eshell-history-file-name)))
 
 ;; *** Append history
@@ -7211,6 +6911,22 @@ do the
 	("sudo" "wifi-menu")
 	("sudo" "htop")
 	("sudo" "vi" "visudo")))
+
+;; *** Use vterm instead of term
+;; https://git.jeremydormitzer.com/jdormit/dotfiles/commit/b7c4e383a2a3d8a0140376e9ebb76a3b7897848a
+(defun my/eshell-exec-in-vterm (&rest args)
+  (let* ((program (car args))
+	 (buf (generate-new-buffer
+	       (concat "*" (file-name-nondirectory program) "*"))))
+    (with-current-buffer buf
+      (require 'vterm)
+      (vterm-mode)
+      (vterm-send-string (concat (s-join " " args) "\n")))
+    (switch-to-buffer buf)))
+
+(with-eval-after-load 'eshell
+  (defun eshell-exec-visual (&rest args)
+    (apply #'my/eshell-exec-in-vterm args)))
 
 ;; ** Remove banner
 (setq eshell-banner-message "")
@@ -7564,7 +7280,7 @@ do the
 
 ;; * Xinput
 (defun my/get-xinput-device-ID (search-term)
-  (let* ((xinput-list (shell-command-to-string "xinput --list"))
+  (let* ((xinput-list (my/local-env-shell-command-to-string "xinput --list"))
 	 (correct-line-pos (string-match-p search-term xinput-list))
 	 (id-pos (string-match-p "id=" xinput-list correct-line-pos))
 	 (number-pos-beg (string-match-p "[[:digit:]]" xinput-list id-pos))
@@ -7573,7 +7289,7 @@ do the
     num))
 
 (defun my/xinput-is-device-enabled (device-id)
-  (let* ((xinput-list (shell-command-to-string (concat "xinput list-props " (number-to-string device-id))))
+  (let* ((xinput-list (my/local-env-shell-command-to-string (concat "xinput list-props " (number-to-string device-id))))
 	 (enabled-pos (string-match-p "Device Enabled" xinput-list))
 	 (colon-pos (string-match-p "\:[[:blank:]]*" xinput-list enabled-pos))
 	 (num-pos-beg (string-match-p "[[:digit:]]" xinput-list colon-pos))
@@ -7589,10 +7305,10 @@ do the
     (my/xinput-enable-device device-id)))
 
 (defun my/xinput-enable-device (device-id)
-  (shell-command (concat "xinput --enable " (number-to-string device-id))))
+  (my/local-env-shell-command (concat "xinput --enable " (number-to-string device-id))))
 
 (defun my/xinput-disable-device (device-id)
-  (shell-command (concat "xinput --disable " (number-to-string device-id))))
+  (my/local-env-shell-command (concat "xinput --disable " (number-to-string device-id))))
 
 ;; ** Touchpad
 (defun my/xinput-toggle-touchpad ()
@@ -7906,6 +7622,9 @@ do the
 ;; ;; (evil-define-key 'insert exwm-firefox-evil-mode-map (kbd "DEL") (lambda () (interactive) (exwm-input--fake-key 'backspace)))))
 
 ;; * Version control
+;; ** Tramp performance - git support only
+(setq vc-handled-backends '(Git))
+
 ;; ** Ediff
 (setq-default ediff-forward-word-function 'forward-char)
 
@@ -8074,6 +7793,10 @@ do the
 ;; Disable magit in commit view, makes it possible to do large commits
 (setq magit-commit-show-diff nil)
 
+;; **** Tramp
+;; Tramp is really slow by default
+;; (setq auto-revert-buffer-list-filter 'magit-auto-revert-repository-buffer-p)
+
 ;; *** Diff
 ;; (require 'magit-diff)
 (setq-default magit-diff-refine-hunk 'all)
@@ -8171,15 +7894,15 @@ do the
 ;; ** Volume keys
 (defun my/pulse-mute-toggle ()
   (interactive)
-  (my/message-at-point (shell-command-to-string "amixer -M set Master toggle")))
+  (my/message-at-point (my/local-env-shell-command-to-string "amixer -M set Master toggle")))
 
 (defun my/pulse-raise-volume ()
   (interactive)
-  (my/message-at-point (shell-command-to-string "amixer -M set Master 2.5%+")))
+  (my/message-at-point (my/local-env-shell-command-to-string "amixer -M set Master 2.5%+")))
 
 (defun my/pulse-lower-volume ()
   (interactive)
-  (my/message-at-point (shell-command-to-string "amixer -M set Master 2.5%-")))
+  (my/message-at-point (my/local-env-shell-command-to-string "amixer -M set Master 2.5%-")))
 
 ;; *** Hydra
 (with-eval-after-load 'hydra
@@ -8577,7 +8300,10 @@ do the
   (define-key mu4e-view-mode-map (kbd "P") 'mu4e-view-headers-prev-unread)
 
   (define-key mu4e-view-mode-map (kbd "f") 'mu4e-view-mark-for-unread)
-  (define-key mu4e-headers-mode-map (kbd "f") 'mu4e-headers-mark-for-unread))
+  (define-key mu4e-headers-mode-map (kbd "f") 'mu4e-headers-mark-for-unread)
+
+  (define-key mu4e-view-mode-map (kbd "f") 'mu4e-view-mark-for-read)
+  (define-key mu4e-headers-mode-map (kbd "f") 'mu4e-headers-mark-for-read))
 
 ;; **** View in different browser
 (with-eval-after-load 'mu4e-view
@@ -8753,6 +8479,11 @@ do the
 
 ;; ** Tramp
 ;; (setq tramp-default-method "scpx")
+
+;; *** Tramp nixos support
+(defvar tramp-remote-path)
+(eval-after-load 'tramp-sh
+  '(add-to-list 'tramp-remote-path "/run/current-system/sw/bin"))
 
 ;; *** Buffer naming
 ;; Tramp buffers aren't prefixed with server name by default
@@ -9716,7 +9447,9 @@ do the
 				   pdf-view-mode
 				   image-mode
 				   org-agenda-mode
-				   elfeed-search-mode))
+				   elfeed-search-mode
+				   vterm-mode
+				   ))
 
 (define-globalized-minor-mode global-olivetti-mode
   nil (lambda ()
@@ -9999,7 +9732,12 @@ do the
 (defun my/update-projectile-project-name ()
   (interactive)
   ;; Some virtual buffers don't work, but dired-mode does
-  (when (or (string= major-mode 'dired-mode) (and buffer-file-name (file-exists-p buffer-file-name) (not my/projectile-project-buffer-already-scanned)))
+  (when (and
+	 (not (file-remote-p default-directory))
+	 (or
+	  (string= major-mode 'dired-mode)
+	  (and buffer-file-name (file-exists-p buffer-file-name) (not my/projectile-project-buffer-already-scanned))
+	  ))
     (setq my/projectile-project-buffer-already-scanned t)
     (setq my/projectile-project-name (projectile-project-name))
     (setq my/buffer-git-branch (car (vc-git-branches)))))
@@ -10378,7 +10116,7 @@ do the
 
 (defun my/update-cpu-load-average ()
   (interactive)
-  (setq my/cpu-load-average (/ (nth 0 (load-average)) 100.0)))
+  (setq my/cpu-load-average (nth 0 (load-average t))))
 
 (my/allocate-update-time 'my/update-cpu-load-average)
 
