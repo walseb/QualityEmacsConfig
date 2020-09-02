@@ -4309,9 +4309,8 @@ If the input is empty, select the previous history element instead."
 ;; *** Tramp compatibility
 ;; When dired is used over tramp sorting doesn't work
 (defun my/dired-tramp-compatibility ()
-  (when (file-remote-p default-directory)
-    (dired-sort-other
-     (progn (my/dired-du-disable-quietly) "-alh"))))
+  (when (and (file-remote-p default-directory) (not (string= dired-actual-switches "-alh")))
+    (dired-sort-other "-alh")))
 
 (add-hook 'dired-mode-hook 'my/dired-tramp-compatibility)
 
@@ -7623,7 +7622,14 @@ do the
 
 ;; * Version control
 ;; ** Tramp performance - git support only
-(setq vc-handled-backends '(Git))
+(setq vc-handled-backends nil)
+;; (setq vc-handled-backends '(git))
+
+;; Doesn't work
+;; (setq vc-ignore-dir-regexp
+;;       (format "\\(%s\\)\\|\\(%s\\)"
+;;	      vc-ignore-dir-regexp
+;;	      tramp-file-name-regexp))
 
 ;; ** Ediff
 (setq-default ediff-forward-word-function 'forward-char)
@@ -7734,13 +7740,16 @@ do the
 			    (directory-files "~/Projects/" nil directory-files-no-dot-files-regexp))))
   (projectile-find-file))
 
+;; *** Disable mode line update
+(setq projectile-mode-line-function nil)
+
 ;; *** Auto compile project
 (defun my/auto-compile-project ()
   (interactive)
   (let* (
 	 (nixos-collect-garbage (lambda () (my/sudo-compile "nix-collect-garbage -d")))
 	 (nixos-home (lambda () (compile "nix-channel --update; home-manager -f /etc/nixos/home.nix switch")))
-	 (nixos-system (lambda () (my/sudo-compile "nix-channel --update; nixos-rebuild switch")))
+	 (nixos-system (lambda () (my/sudo-compile "nixos-rebuild switch --upgrade")))
 	 (nixos (lambda ()
 		  ;; Not sure why but this is required
 		  (require 'ivy)
@@ -8302,8 +8311,8 @@ do the
   (define-key mu4e-view-mode-map (kbd "f") 'mu4e-view-mark-for-unread)
   (define-key mu4e-headers-mode-map (kbd "f") 'mu4e-headers-mark-for-unread)
 
-  (define-key mu4e-view-mode-map (kbd "f") 'mu4e-view-mark-for-read)
-  (define-key mu4e-headers-mode-map (kbd "f") 'mu4e-headers-mark-for-read))
+  (define-key mu4e-view-mode-map (kbd "F") 'mu4e-view-mark-for-read)
+  (define-key mu4e-headers-mode-map (kbd "F") 'mu4e-headers-mark-for-read))
 
 ;; **** View in different browser
 (with-eval-after-load 'mu4e-view
@@ -8500,6 +8509,10 @@ do the
 
 ;; *** Performance
 ;; https://gist.github.com/ralt/a36288cd748ce185b26237e6b85b27bb
+
+;; **** Disable auto revert
+;; This should be nil by default
+;; (setq auto-revert-remote-files nil)
 
 ;; ** Netstat
 (defun my/net-utils-mode ()
@@ -9935,10 +9948,10 @@ do the
      (my/is-system-package-installed 'sensors)
      ;; If there aren't any cpu heat sensors (eg. virtual machine)
      (= 0 (string-match-p ""
-			  (shell-command-to-string "sensors | grep \"Core 0:\"")))
+			  (my/local-env-shell-command-to-string "sensors | grep \"Core 0:\"")))
      ;; If it returns "no sensors found"
      (not (string-match-p "No sensors found"
-			  (shell-command-to-string "sensors | grep \"Core 0:\""))))
+			(my/local-env-shell-command-to-string "sensors | grep \"Core 0:\""))))
     (setq my/mode-line-enable-cpu-temp t))
 
 (defvar my/cpu-temp "")
@@ -9954,8 +9967,8 @@ do the
   ;; "Tdie:         +40.2°C  (high = +70.0°C)\n"
   ;; Intel test string:
   ;; "Core 0:       +46.0°C  (high = +105.0°C, crit = +105.0°C)\n"
-  (let* ((intel-cpu-temp-str (my/validate-cpu-temp (shell-command-to-string "sensors | grep \"Core 0:\"")))
-	 (ryzen-cpu-temp-str (my/validate-cpu-temp (shell-command-to-string "sensors | grep \"Tdie\:\"")))
+  (let* ((intel-cpu-temp-str (my/validate-cpu-temp (my/local-env-shell-command-to-string "sensors | grep \"Core 0:\"")))
+	 (ryzen-cpu-temp-str (my/validate-cpu-temp (my/local-env-shell-command-to-string "sensors | grep \"Tdie\:\"")))
 	 (cpu-temp-str (or intel-cpu-temp-str ryzen-cpu-temp-str))
 	 (cpu-temp-pos-beg (string-match-p "\+.*C\s" cpu-temp-str))
 	 (cpu-temp-pos-end (string-match-p "  " cpu-temp-str cpu-temp-pos-beg)))
