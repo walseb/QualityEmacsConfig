@@ -10,6 +10,21 @@
 (if (not (my/load-if-exists (concat user-emacs-directory "device.el")))
     (load-file (concat user-emacs-directory "device-template.el")))
 
+;; * Bootstrap straight.el
+(eval-and-compile
+  (defvar bootstrap-version)
+  (let ((bootstrap-file
+	 (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
+	(bootstrap-version 5))
+    (unless (file-exists-p bootstrap-file)
+      (with-current-buffer
+	  (url-retrieve-synchronously
+	   "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
+	   'silent 'inhibit-cookies)
+	(goto-char (point-max))
+	(eval-print-last-sexp)))
+    (load bootstrap-file nil 'nomessage)))
+
 ;; ** xrandr setup
 (if (and (window-system) (bound-and-true-p my/device/monitor-setup-command) (not (string= my/device/monitor-setup-command "")))
     (async-shell-command my/device/monitor-setup-command " *xrandr setup buffer*"))
@@ -123,22 +138,6 @@
 ;; Folder locations
 (setq my/notes-folder "~/Notes/")
 (setq my/wallpaper-folder (concat my/notes-folder "Wallpapers/"))
-
-;; * Package management
-;; Bootstrap straight.el
-(eval-and-compile
-  (defvar bootstrap-version)
-  (let ((bootstrap-file
-	 (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
-	(bootstrap-version 5))
-    (unless (file-exists-p bootstrap-file)
-      (with-current-buffer
-	  (url-retrieve-synchronously
-	   "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
-	   'silent 'inhibit-cookies)
-	(goto-char (point-max))
-	(eval-print-last-sexp)))
-    (load bootstrap-file nil 'nomessage)))
 
 ;; * Private config
 (defun my/load-if-exists (f)
