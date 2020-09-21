@@ -10016,10 +10016,12 @@ do the
   ;; "Core 0:       +46.0°C  (high = +105.0°C, crit = +105.0°C)\n"
   (let* ((intel-cpu-temp-str (my/validate-cpu-temp (my/local-env-shell-command-to-string "sensors | grep \"Core 0:\"")))
 	 (ryzen-cpu-temp-str (my/validate-cpu-temp (my/local-env-shell-command-to-string "sensors | grep \"Tdie\:\"")))
-	 (cpu-temp-str (or intel-cpu-temp-str ryzen-cpu-temp-str))
-	 (cpu-temp-pos-beg (string-match-p "\+.*C\s" cpu-temp-str))
-	 (cpu-temp-pos-end (string-match-p "  " cpu-temp-str cpu-temp-pos-beg)))
-    (setq my/cpu-temp (substring cpu-temp-str cpu-temp-pos-beg cpu-temp-pos-end))))
+	 (cpu-temp-str (or intel-cpu-temp-str ryzen-cpu-temp-str)))
+    (when cpu-temp-str
+      (let*
+	  ((cpu-temp-pos-beg (string-match-p "\+.*C\s" cpu-temp-str))
+	   (cpu-temp-pos-end (string-match-p "  " cpu-temp-str cpu-temp-pos-beg)))
+	(setq my/cpu-temp (substring cpu-temp-str cpu-temp-pos-beg cpu-temp-pos-end))))))
 
 (if my/mode-line-enable-cpu-temp
     (my/allocate-update-time 'my/update-cpu-temp))
