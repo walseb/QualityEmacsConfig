@@ -1,6 +1,6 @@
-# key: shsudo
-# name: src-sudo
+# key: shs
+# name: src-sh-sudo
 # --
-#+BEGIN_SRC sh :dir "/sudo::~/" :cache no
+#+BEGIN_SRC sh :dir (concat "/sudo::" (expand-file-name default-directory)) :cache no
 
 #+END_SRC

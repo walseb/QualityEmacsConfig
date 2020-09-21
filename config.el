@@ -10,6 +10,10 @@
 (if (not (my/load-if-exists (concat user-emacs-directory "device.el")))
     (load-file (concat user-emacs-directory "device-template.el")))
 
+;; ** xrandr setup
+(if (and (window-system) (bound-and-true-p my/device/monitor-setup-command) (not (string= my/device/monitor-setup-command "")))
+    (async-shell-command my/device/monitor-setup-command " *xrandr setup buffer*"))
+
 ;; ** Theme
 (unless custom-enabled-themes
   (load-theme 'myTheme t))
@@ -29,6 +33,7 @@
 ;; Car is real name
 ;; Cdr is name to be run through `my/font-installed'
 (setq my/fonts '(
+		 ("Hasklig" . nil)
 		 ("Liga Inconsolata LGC" . nil)
 		 ("Inconsolata LGC" . nil)
 		 ("Inconsolata"  . nil)
@@ -48,6 +53,7 @@
 ;; Works just like my/fonts, but returning nil means to not set a symbol font
 ;; Thing to note here is that if the car is nil, then it means just use what you were using before. If car is a string, then use that.
 (setq my/symbol-fonts '(
+			("Hasklig" . nil)
 			("Liga Inconsolata LGC" . nil)
 			(nil . "Inconsolata LGC")
 			(nil . "Inconsolata")
@@ -95,7 +101,12 @@
 ;; (add-hook 'after-init-hook 'my/update-fonts)
 
 (when window-system
-  (my/update-fonts))
+  (my/update-fonts)
+
+  (when (string= (my/find-font my/fonts) "Hasklig")
+    (straight-use-package 'hasklig-mode)
+    (hasklig-mode)
+    (add-hook 'haskell-mode-hook 'hasklig-mode)))
 
 ;; * Security
 (setq network-security-level 'medium)
@@ -626,6 +637,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 				 (image-mode . insert)
 				 (vterm-mode . insert)
 
+				 (timer-list-mode . insert)
 				 )
 	 do (evil-set-initial-state mode state))
 
@@ -1837,7 +1849,8 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
 (with-eval-after-load 'calendar
   (define-key calendar-mode-map (kbd "l") 'calendar-forward-month)
-  (define-key calendar-mode-map (kbd "h") 'calendar-backward-month))
+  (define-key calendar-mode-map (kbd "h") 'calendar-backward-month)
+  (define-key calendar-mode-map (kbd "g") 'calendar-goto-today))
 
 ;; ** Explain pause mode
 (straight-use-package '(explain-pause-mode :type git :host github :repo "lastquestion/explain-pause-mode"))
@@ -1875,6 +1888,9 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
 (define-key my/leader-map (kbd "G") 'my/run-compile)
 
+;; ** Set trash directory
+(setq trash-directory (concat user-emacs-directory "trash"))
+
 ;; * Productivity
 ;; ** Break timer
 ;; In seconds
@@ -1909,17 +1925,19 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
 ;; *** Random
 (defun my/get-random-txt ()
-  (seq-random-elt
-   (org-map-entries (lambda ()
-		      (when (> (org-current-level) 1)
-			(let ((old-kill-ring kill-ring))
-			  (org-copy-subtree)
-			  (message "")
-			  (let ((return (pop kill-ring)))
-			    (setq kill-ring old-kill-ring)
-			    return))))
-		    "Tech"
-		    (list (concat my/notes-folder "Organize/Agenda.org")))))
+  (let ((result (seq-random-elt
+		 (org-map-entries (lambda ()
+				    (when (> (org-current-level) 1)
+				      (let ((old-kill-ring kill-ring))
+					(org-copy-subtree)
+					(message "")
+					(let ((return (pop kill-ring)))
+					  (setq kill-ring old-kill-ring)
+					  return))))
+				  "Tech"
+				  (list (concat my/notes-folder "Organize/Agenda.org"))))))
+    (kill-new (car kill-ring))
+    result))
 
 ;; * File options
 ;; (define-prefix-command 'my/file-options-map)
@@ -1963,6 +1981,13 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
   (find-file (concat user-emacs-directory "scratch.org")))
 
 (define-key my/open-map (kbd "s") 'my/switch-to-scratch)
+
+;; ** Open project planning
+(defun my/project-planning-visit ()
+  (interactive)
+  (find-file (concat my/notes-folder "Organize/Projects.org")))
+
+(define-key my/open-map (kbd "g") 'my/project-planning-visit)
 
 ;; ** Org-brain notes
 (define-key my/open-map (kbd "n") (lambda () (interactive)
@@ -2011,7 +2036,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Open trash
 (defun my/trash-visit ()
   (interactive)
-  (find-file "~/.local/share/Trash/files/"))
+  (find-file trash-directory))
 
 (define-key my/open-map (kbd "t") 'my/trash-visit)
 
@@ -2578,6 +2603,10 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
 ;; ** Disable syntax highlighting in source code blocks
 (setq org-src-fontify-natively nil)
+
+;; ** ob
+;; *** ob-async
+(straight-use-package 'ob-async)
 
 ;; ** Key
 (define-key my/org-mode-map (kbd "s") 'org-schedule)
@@ -4199,7 +4228,10 @@ If the input is empty, select the previous history element instead."
   ;; Don't run when using tramp
   (when (not (file-remote-p default-directory))
     ;; Make sure it runs after projectile is initialized
-    (let ((path (or (buffer-file-name) dired-directory)))
+    (let* (
+	   (eshell-path (when (string-match-p ".eshell*" (buffer-name))
+			  (buffer-name)))
+	   (path (or (buffer-file-name) dired-directory eshell-path)))
       (when path
 	(let ((name (my/custom-buffer-name-file path)))
 	  (when name
@@ -4209,9 +4241,10 @@ If the input is empty, select the previous history element instead."
 
 (defun my/custom-buffer-name-file (path)
   (let ((project-name (projectile-project-name)))
-    (if (string= project-name "-")
-	(my/file-top-path path)
-      (concat project-name " => " (my/file-top-path path)))))
+    (when (or (not (string-match-p "=>" (buffer-name))) (not (string-match-p project-name (buffer-name))))
+      (if (string= project-name "-")
+	  (my/file-top-path path)
+	(concat project-name " => " (my/file-top-path path))))))
 
 (define-minor-mode my/custom-buffer-name-mode "")
 
@@ -4219,6 +4252,9 @@ If the input is empty, select the previous history element instead."
 
 (with-eval-after-load 'projectile
   (global-my/custom-buffer-name-mode))
+
+;; **** Eshell support
+(add-hook 'eshell-mode-hook (lambda () (run-with-timer 0.1 nil #'my/custom-buffer-name)))
 
 ;; * Dired
 ;; ** All the icons
@@ -4701,6 +4737,8 @@ If the input is empty, select the previous history element instead."
       ;; ('org-mode (org-babel-execute-src-block nil nil '((:result-params . ("silent")))))
       ;; ('org-mode (org-babel-execute-src-block))
       ;; Without pretty print it formats results of "[[[ ... ]]]" as "| ... |"
+      ;; ('org-mode (org-babel-execute-src-block))
+      ;; ('org-mode (ob-async-org-babel-execute-src-block))
       ('org-mode (org-babel-execute-src-block nil nil '((:result-params . ("pp")))))
       ('scheme-mode (geiser-eval-definition nil))
       ('clojure-mode (cider-eval-last-sexp))
@@ -5275,7 +5313,7 @@ the overlay."
     (setq-local comment-end "")
 
     ;; Language extensions. Since these has to work inside comments, the `t' at the end is needed. I don't know if that's possible to do inside `my/haskell-syntax-mode-font-lock' though
-    (font-lock-add-keywords nil `((,(rx "LANGUAGE" space (+ graph)) 0 font-lock-function-name-face t)))
+    (font-lock-add-keywords nil `((,(rx (or "OPTIONS_GHC" "LANGUAGE") space (+ graph)) 0 font-lock-function-name-face t)))
 
     (setq-local imenu-create-index-function 'haskell-ds-create-imenu-index)
 
@@ -5285,7 +5323,7 @@ the overlay."
     (haskell-indentation-mode)))
 
 ;; **** Keywords
-(setq my/haskell-syntax-mode-keywords '("module" "import" "qualified"
+(setq my/haskell-syntax-mode-keywords '("module" "import" "qualified" "pattern" "hiding"
 					;; These are already highlighted since they are treated as functions by the haskell font-lock
 					;; "type" "newtype" "data"
 					"do" "proc" "rec"
@@ -6594,7 +6632,7 @@ do the
 ;; *** Reset GPG agent
 (defun my/reset-gpg-agent ()
   (interactive)
-  (shell-command "gpgconf --kill gpg-agent")
+  (shell-command "pkill -PWR gpg-agent")
   (pinentry-stop)
   (pinentry-start))
 
@@ -6674,6 +6712,8 @@ do the
   (vterm-send-return))
 
 ;; ** Keys
+(evil-define-key 'normal vterm-mode-map (kbd "u") 'vterm-undo)
+
 (setq vterm-mode-map
       (let ((map (make-sparse-keymap)))
 	(define-key map (kbd "C-c")                 #'vterm-send-C-c)
@@ -6699,7 +6739,6 @@ do the
 	(define-key map [remap yank]                #'vterm-yank)
 	(define-key map [remap yank-pop]            #'vterm-yank-pop)
 	(define-key map [remap mouse-yank-primary]  #'vterm-yank-primary)
-	(define-key map (kbd "u")                   #'vterm-undo)
 	(define-key map (kbd "C-g")                 #'vterm-send-C-g)
 	(define-key map [remap self-insert-command] #'vterm--self-insert)
 	map))
@@ -7008,7 +7047,7 @@ do the
 ;; ** Carpalx
 (defun my/carpalx-enable ()
   (interactive)
-  (async-shell-command (concat "setxkbmap -I ~/.emacs.d/configs/kbd-layouts/ carpalx.xkb -print | xkbcomp -I"(expand-file-name user-emacs-directory)"configs/kbd-layouts/ - $DISPLAY")))
+  (async-shell-command (concat "setxkbmap -I ~/.emacs.d/configs/kbd-layouts/ carpalx.xkb -print | xkbcomp -I"(expand-file-name user-emacs-directory)"configs/kbd-layouts/ - $DISPLAY") " *carpalx-enable*"))
 
 (when my/carpalx-enable
   (my/carpalx-enable))
@@ -7478,17 +7517,27 @@ do the
 (with-eval-after-load 'eww
   (add-hook 'eww-after-render-hook (lambda () (interactive) (my/give-buffer-unique-name (concat "eww - " (plist-get eww-data :title))))))
 
+;; *** Eww change address
+(defun my/eww-change-address (&optional str)
+  (interactive)
+  (let ((url (my/get-search-url str)))
+    (eww-browse-url url)))
+
 ;; *** Keys
-;; (define-key eww-mode-map [?\d] 'eww-back-url)
-;; (evil-define-key 'normal eww-mode-map [?\d] 'eww-back-url)
-;; (evil-define-key 'visual eww-mode-map [?\d] 'eww-back-url)
-
-(evil-define-key 'normal eww-mode-map (kbd "w") 'evil-forward-word-begin)
+;; **** Init
 (setq shr-map (make-sparse-keymap))
+(setq eww-mode-map (make-sparse-keymap))
 
+;; **** Binds
+(evil-define-key 'normal eww-mode-map (kbd "w") 'evil-forward-word-begin)
 (evil-define-key 'normal eww-mode-map (kbd "H") 'eww-back-url)
 (evil-define-key 'normal eww-mode-map (kbd "L") 'eww-forward-url)
 
+(define-key eww-mode-map (kbd "O") 'my/launch-text-browser)
+
+(define-key eww-mode-map (kbd "o") 'my/eww-change-address)
+
+;; **** leader map
 (define-prefix-command 'my/eww-mode-map)
 (evil-define-key 'normal eww-mode-map (kbd (concat my/leader-map-key " a")) 'my/eww-mode-map)
 
@@ -8409,9 +8458,6 @@ do the
   (shell-command "xrandr"))
 (define-key my/system-monitor-map (kbd "p") 'my/print-monitors)
 
-(if (and (window-system) my/device/monitor-setup-command)
-    (async-shell-command my/device/monitor-setup-command "xrandr setup buffer"))
-
 ;; ** Proced
 (setq-default proced-tree-flag nil)
 (define-key my/system-commands-map (kbd "e") 'proced)
@@ -8467,8 +8513,9 @@ do the
 			      (map 'list
 				   (lambda (net) (enwc-value-from-scan 'essid net))
 				   (enwc-get-networks))))
-	   " password "
-	   (read-passwd "Enter password: "))))
+	   (let ((pass (read-passwd "Enter password (RET for no password): ")))
+	     (when (not (string= pass ""))
+	       (concat " password " pass))))))
 
 (define-key my/network-map (kbd "c") 'my/nm-connect-to-wifi-network)
 
@@ -10124,14 +10171,29 @@ do the
 (my/allocate-update-time 'my/update-date (* 60 60))
 
 ;; *** CPU load average
-(defvar my/cpu-load-average 0)
-(defvar my/high-cpu-load-average 2)
+(setq my/vmstat-file (concat "/tmp/vmstat" (number-to-string (random))))
+(async-shell-command (concat
+		      "echo \"printing to: \"" my/vmstat-file "; "
+		      "vmstat 60 --one-header > " my/vmstat-file)
+		     (concat " *CPU-avg " my/vmstat-file  "*"))
 
-(defun my/update-cpu-load-average ()
-  (interactive)
-  (setq my/cpu-load-average (nth 0 (load-average t))))
+(defun my/get-cpu-load ()
+  (with-temp-buffer
+    (insert-file-contents my/vmstat-file)
+    (goto-char (point-max))
+    ;; (re-search-backward (rx (any num) (any space) (any num) (any space) (any num) eol))
+    (re-search-backward "[[:digit:]]+[[:space:]]+[[:digit:]]+[[:space:]]+[[:digit:]]$")
+    (thing-at-point 'number)))
 
-(my/allocate-update-time 'my/update-cpu-load-average)
+;; **** UNIX load
+;; (defvar my/cpu-load-average 0)
+;; (defvar my/high-cpu-load-average 2)
+
+;; (defun my/update-cpu-load-average ()
+;;   (interactive)
+;;   (setq my/cpu-load-average (nth 0 (load-average t))))
+
+;; (my/allocate-update-time 'my/update-cpu-load-average)
 
 ;; *** Ram usage
 (defvar my/mode-line-enable-available-mem nil)
@@ -10292,7 +10354,7 @@ do the
 		     (:eval
 		      (concat
 		       "C: "
-		       (number-to-string my/cpu-load-average)
+		       (number-to-string (my/get-cpu-load))
 		       " | "))
 
 		     ;; (:eval (concat "Up: " my/uptime-total-time-formated))

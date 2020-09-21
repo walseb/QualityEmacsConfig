@@ -215,7 +215,9 @@
    `(org-block-begin-line ((,class (:background ,my/bg-color-3))))
    `(org-block-end-line ((,class (:inherit org-block-begin-line))))
 
-   `(org-meta-line ((,class (:background unspecified))))
+   `(org-meta-line ((,class (:inherit font-lock-comment-face))))
+   ;; `(org-meta-line ((,class (:background unspecified))))
+
    `(org-table ((,class (:foreground ,my/mark-color))))
 
    `(org-brain-parent ((,class (:overline t :foreground ,my/bg-color :background ,my/diff-ancestor-color))))
