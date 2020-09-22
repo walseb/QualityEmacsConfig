@@ -11,7 +11,7 @@
 
 ;; Xrandr command to run
 ;; xrandr --auto && xrandr --output LVDS-1 --off to disable laptop screen
-(if (member "-my/docked" command-line-args)
+(if (member "--my/docked" command-line-args)
     (progn
       (defvar my/carpalx-enable nil)
       (defvar my/device/monitor-setup-command "xrandr --output HDMI-1 --primary --auto --output eDP-1 --off"))
