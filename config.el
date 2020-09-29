@@ -181,6 +181,11 @@
 	  nil
 	name))))
 
+;; *** Un-uniquify buffer
+;; So for example turn test<4> -> test
+(defun my/un-uniquify-buffer (name)
+  (substring name 0 (string-match-p (rx ?< digit ?>) name)))
+
 ;; *** Spaced path to compact path
 (defun my/spaced-path-to-compact-path (path)
   "Turns \"~/ABC/A B C/\" into \"~/ABC/A%20B%20C/\""
@@ -395,8 +400,7 @@
 		   " ;=>"
 		   string
 		   )
-		  'face '(:foreground "light blue")
-		  ))
+		  'face '(:foreground "light blue")))
     ;; Just sit for 100 seconds
     (sit-for 100)
     ;; Then delete overlay
@@ -1515,13 +1519,15 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; (prefer-coding-system 'utf-8)
 
 ;; ** Line wrapping
-;; *** Enable truncate lines mode
-(setq-default truncate-lines nil)
-(setq truncate-lines nil)
+(setq-default truncate-lines t)
 
-;; Always truncate lines
-(setq truncate-partial-width-windows nil)
-(setq-default truncate-partial-width-windows nil)
+;; *** Enable truncate lines mode
+;; (setq-default truncate-lines nil)
+;; (setq truncate-lines nil)
+
+;; ;; Always truncate lines
+;; (setq truncate-partial-width-windows nil)
+;; (setq-default truncate-partial-width-windows nil)
 
 ;; **** Toggle truncate lines
 (define-key my/leader-map (kbd "C-v")
@@ -1530,6 +1536,12 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
 ;; ** Visual line mode
 (global-visual-line-mode 1)
+
+(setq my/visual-line-mode-blacklist '(vterm-mode proced-mode net-utils-mode term-mode undo-tree-visualizer-mode))
+
+(defun turn-on-visual-line-mode ()
+  (if (not (member major-mode my/visual-line-mode-blacklist))
+      (visual-line-mode 1)))
 
 ;; *** Fringe indicators of wrapped line
 (setq visual-line-fringe-indicators '(left-bracket nil))
@@ -4227,10 +4239,9 @@ If the input is empty, select the previous history element instead."
   ;; Don't run when using tramp
   (when (not (file-remote-p default-directory))
     ;; Make sure it runs after projectile is initialized
-    (let* (
-	   (eshell-path (when (string-match-p ".eshell*" (buffer-name))
-			  (buffer-name)))
-	   (path (or (buffer-file-name) dired-directory eshell-path)))
+    (let* ((eshell-name (when (string-match-p ".eshell*" (buffer-name))
+			  (my/un-uniquify-buffer (buffer-name))))
+	   (path (or (buffer-file-name) dired-directory eshell-name)))
       (when path
 	(let ((name (my/custom-buffer-name-file path)))
 	  (when name
@@ -6692,10 +6703,6 @@ do the
 ;; ** Set max lines to a lot
 (setq term-buffer-maximum-size 10000)
 
-;; ** Disable line wrapping
-(add-hook 'term-mode-hook (lambda () (interactive) (visual-line-mode -1)
-			    (setq truncate-lines t)))
-
 ;; *** Keys
 ;; (my/evil-universal-define-key-in-mode 'term-raw-map "C-," 'term-char-mode)
 
@@ -6947,7 +6954,8 @@ do the
       '(("git" "log" "diff" "show")
 	("sudo" "wifi-menu")
 	("sudo" "htop")
-	("sudo" "vi" "visudo")))
+	("sudo" "vi" "visudo")
+	("emacs" "-nw")))
 
 ;; *** Use vterm instead of term
 ;; https://git.jeremydormitzer.com/jdormit/dotfiles/commit/b7c4e383a2a3d8a0140376e9ebb76a3b7897848a
@@ -8334,11 +8342,12 @@ do the
 (setq mu4e-get-mail-command "mbsync -a")
 (setq mu4e-update-interval nil)
 
-(my/allocate-update-time (lambda ()
-			   (require 'mu4e)
-			   (mu4e-update-mail-and-index t)
-			   (require 'mu4e-alert)
-			   (mu4e-alert-update-mail-count-modeline)) (* 60 5))
+(when (file-exists-p "~/Maildir")
+  (require 'mu4e)
+  (require 'mu4e-alert)
+  (my/allocate-update-time (lambda ()
+			     (mu4e-update-mail-and-index t)
+			     (mu4e-alert-update-mail-count-modeline)) (* 60 5)))
 
 ;; (with-eval-after-load 'mu4e
 ;;   (mu4e-update-mail-and-index t))
@@ -8464,7 +8473,6 @@ do the
 ;; *** Disable line wrapping
 (defun my/proced-mode ()
   (interactive)
-  (visual-line-mode -1)
   ;; I need to delay this because of some reason
   (run-with-timer 0.000001 nil (lambda ()
 				 (setq truncate-lines t))))
@@ -8559,14 +8567,6 @@ do the
 ;; **** Disable auto revert
 ;; This should be nil by default
 ;; (setq auto-revert-remote-files nil)
-
-;; ** Netstat
-(defun my/net-utils-mode ()
-  (interactive)
-  (toggle-truncate-lines 1)
-  (visual-line-mode -1))
-
-(add-hook 'net-utils-mode-hook 'my/net-utils-mode)
 
 ;; ** Keys
 (define-key my/network-map (kbd "s") 'netstat)
@@ -10019,7 +10019,10 @@ do the
     (when cpu-temp-str
       (let*
 	  ((cpu-temp-pos-beg (string-match-p "\+.*C\s" cpu-temp-str))
-	   (cpu-temp-pos-end (string-match-p "  " cpu-temp-str cpu-temp-pos-beg)))
+	   (cpu-temp-pos-end (string-match-p "  " cpu-temp-str cpu-temp-pos-beg))
+	   ;; Removes ".2°C"
+	   ;; (cpu-temp-pos-end-short (- cpu-temp-pos-end 4))
+	   )
 	(setq my/cpu-temp (substring cpu-temp-str cpu-temp-pos-beg cpu-temp-pos-end))))))
 
 (if my/mode-line-enable-cpu-temp
@@ -10173,10 +10176,16 @@ do the
 
 ;; *** CPU load average
 (setq my/vmstat-file (concat "/tmp/vmstat" (number-to-string (random))))
+
 (async-shell-command (concat
 		      "echo \"printing to: \"" my/vmstat-file "; "
 		      "vmstat 60 --one-header > " my/vmstat-file)
 		     (concat " *CPU-avg " my/vmstat-file  "*"))
+
+;; (defun my/run-vmstat ()
+;;   (f-write (shell-command-to-string "vmstat") 'utf-8 my/vmstat-file))
+
+;; (my/allocate-update-time 'my/run-vmstat)
 
 (defun my/get-cpu-load ()
   (with-temp-buffer
@@ -10184,7 +10193,7 @@ do the
     (goto-char (point-max))
     ;; (re-search-backward (rx (any num) (any space) (any num) (any space) (any num) eol))
     (re-search-backward "[[:digit:]]+[[:space:]]+[[:digit:]]+[[:space:]]+[[:digit:]]$")
-    (thing-at-point 'number)))
+    (- 100 (thing-at-point 'number))))
 
 ;; **** UNIX load
 ;; (defvar my/cpu-load-average 0)
@@ -10298,14 +10307,14 @@ do the
 			 " ")))
 
 		     ;; Processes running:
-		     (:eval (concat "proc: " (number-to-string my/proc-track-running)))
+		     (:eval (concat "proc " (number-to-string my/proc-track-running)))
 
 		     " | "
 
 		     ;; Org clock
 		     (:eval (if (org-clocking-p)
-				(concat "Org: " (propertize (string-trim-left (substring-no-properties org-mode-line-string)) 'face 'default) " | ")
-			      (concat "Org: " (propertize "No clock" 'face 'diff-removed) " | ")))
+				(concat "Org " (propertize (string-trim-left (substring-no-properties org-mode-line-string)) 'face 'default) " | ")
+			      (concat "Org " (propertize "No clock" 'face 'diff-removed) " | ")))
 
 		     (:eval (if my/mode-line-show-GC-stats
 				(concat
@@ -10320,7 +10329,7 @@ do the
 
 		     (:eval (when my/mu4e-unread-mail-count
 			      (concat
-			       (let ((str (concat "Mail: " my/mu4e-unread-mail-count)))
+			       (let ((str (concat "Mail " my/mu4e-unread-mail-count)))
 				 (if (> (string-to-number my/mu4e-unread-mail-count) 0)
 				     (propertize str 'face `(:inherit my/default-inverted))
 				   str))
@@ -10339,7 +10348,7 @@ do the
 		     (:eval
 		      (when my/mode-line-enable-available-mem
 			(concat
-			 "MEM: "
+			 "MEM "
 			 ;; If < 100 mb mem, make text red
 			 (if (< my/available-mem 1000000000)
 			     (propertize my/available-mem-formatted 'face `(:background "red"))
@@ -10347,15 +10356,17 @@ do the
 			 " | ")))
 
 		     (:eval (when (and battery-mode-line-string (not (eq battery-mode-line-string "")))
-			      (concat "BAT: " battery-mode-line-string "%%%   | ")))
-
-		     (:eval (if my/mode-line-enable-cpu-temp
-				(concat "HT: " my/cpu-temp " | ")))
+			      (concat "BAT " (substring-no-properties battery-mode-line-string) "%%%   | ")))
 
 		     (:eval
 		      (concat
-		       "C: "
+		       "C "
 		       (number-to-string (my/get-cpu-load))
+		       ;; "%%%% "
+		       " - "
+
+		       (if my/mode-line-enable-cpu-temp
+			   my/cpu-temp)
 		       " | "))
 
 		     ;; (:eval (concat "Up: " my/uptime-total-time-formated))
@@ -10472,9 +10483,6 @@ do the
 
 ;; (setq-default undo-tree-auto-save-history t)
 (setq undo-tree-history-directory-alist `(("." . ,my/undo-tree-history-dir)))
-
-;; *** Disable modes in visualizer
-(add-hook 'undo-tree-visualizer-mode-hook (lambda () (add-hook 'visual-line-mode-hook (lambda () (when visual-line-mode (visual-line-mode -1))) nil t)))
 
 ;; *** Keys
 (setq undo-tree-visualizer-mode-map (make-sparse-keymap))
