@@ -71,8 +71,8 @@
 
        ;; :background "#052000"
        ;; #5d4d7a
-       (my/mode-line-color (color-darken-name "DeepSkyBlue4" 10))
-       ;; (my/mode-line-color my/bg-color-2)
+       ;; (my/mode-line-color (color-darken-name "DeepSkyBlue4" 10))
+       (my/mode-line-color my/bg-color-2)
        ;; (my/mode-line-color "midnightblue")
 
        (my/hl-line-color "#212026")
@@ -285,9 +285,9 @@
    ;; Modified outside of emacs
    `(ivy-modified-outside-buffer ((,class (:foreground ,my/bg-color :background ,my/diff-removed-color))))
    ;; Modified but not saved
-   `(ivy-modified-buffer ((,class (:foreground ,my/bg-color :background ,my/diff-changed-color))))
-   `(ivy-virtual ((,class (:foreground ,my/bg-color :background ,my/mark-color-3))))
-   `(ivy-org ((,class (:foreground ,my/bg-color :background ,my/mode-line-color))))
+   `(ivy-modified-buffer ((,class (:foreground ,my/bg-color :background ,my/diff-added-hl-color))))
+   `(ivy-virtual ((,class (:foreground ,my/fg-color :background ,my/bg-color))))
+   `(ivy-org ((,class (:foreground ,my/fg-color :background ,my/bg-color-1))))
    `(ivy-subdir ((,class (:foreground ,my/bg-color :background ,directory-color))))
 
    `(ivy-current-match ((,class (:foreground ,my/bg-color :background ,my/mark-color-3))))

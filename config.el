@@ -25,21 +25,23 @@
 	(eval-print-last-sexp)))
     (load bootstrap-file nil 'nomessage)))
 
-;; ** xrandr setup
+;; * xrandr setup
 (if (and (window-system) (bound-and-true-p my/device/monitor-setup-command) (not (string= my/device/monitor-setup-command "")))
     (async-shell-command my/device/monitor-setup-command " *xrandr setup buffer*"))
 
-;; ** Theme
+;; * Theme
 (unless custom-enabled-themes
   (load-theme 'myTheme t))
 
-;; ** Prevent async command from opening new window
+;; * Prevent async command from opening new window
 ;; Buffers that I don't want popping up by default
 (add-to-list 'display-buffer-alist
 	     '("\\*Async Shell Command\\*.*" display-buffer-no-window))
 
-;; ** Fonts
-;; *** Is font installed
+;; * Fonts
+;; https://idiocy.org/emacs-fonts-and-fontsets.html
+
+;; ** Is font installed
 (defun my/font-installed (font-family-list font)
   (if (member font font-family-list)
       t
@@ -79,7 +81,7 @@
 			("DejaVuSansMono" .  "dejavu sans mono")
 			("NotoSansMono" . "Noto Sans Mono")))
 
-;; *** Find fonts
+;; ** Find fonts
 (defun my/find-font (fonts)
   (let ((font-family-list (font-family-list)))
     (car
@@ -93,7 +95,7 @@
     (car
      (seq-find (lambda (a) (string= curr-font (or (cdr a) (car a)))) my/symbol-fonts))))
 
-;; *** Set fonts
+;; ** Set fonts
 (defun my/update-fonts ()
   (interactive)
   (window-system
@@ -137,7 +139,19 @@
 ;; * Folders
 ;; Folder locations
 (setq my/notes-folder "~/Notes/")
-(setq my/wallpaper-folder (concat my/notes-folder "Wallpapers/"))
+(setq my/wallpaper-folder (concat my/notes-folder "Resources/Images/Wallpapers/"))
+(setq my/recoll-folder (concat my/notes-folder ".recoll/"))
+
+(setq my/organize-folder (concat my/notes-folder "Organize/"))
+(setq my/agenda-folder (concat my/organize-folder "Agenda/"))
+
+;; * Files
+(setq org-agenda-files `(,(concat my/agenda-folder "20201026232230-Agenda.org")
+			 ,(concat my/agenda-folder "20201026232230-Tasks.org")
+			 ,(concat my/agenda-folder "20201026232230-Recurring_Tasks.org")
+			 ,(concat my/agenda-folder "20201121040920-learning_focus.org")
+			 ,(concat my/agenda-folder "20201121040936-learning_backlog.org")
+			 ))
 
 ;; * Private config
 (defun my/load-if-exists (f)
@@ -242,7 +256,7 @@
 
 ;; *** Sudo compile
 (defun my/sudo-compile (command)
-  (my/sudo-run (lambda () (compile command))))
+  (eval `(my/sudo-run (lambda () (compile ,command)))))
 
 ;; ** Run in environment
 ;; *** Run in system environment
@@ -253,7 +267,7 @@
 (defun my/local-env-shell-command-to-string (command)
   (my/local-env-run (lambda () (shell-command-to-string command))))
 
-(defun my/local-env-shell-command (run)
+(defun my/local-env-shell-command (command)
   (my/local-env-run (lambda () (shell-command command))))
 
 ;; ** List
@@ -289,6 +303,15 @@
 		       (executable-find package)
 		       finish-func
 		       (mapconcat 'identity args " ")))
+
+;; **** With finish notification
+;; (defun my/async-start-process-shell-command (buffer-name package finish-func args)
+;;   "ARGS is just a normal string and is the arguments to append to the executable name"
+;;   (message (concat "Starting async shell command process. Buffer name: " buffer-name " Package: " package))
+;;   (async-start-process buffer-name
+;;		       (executable-find package)
+;;
+;;		       args))
 
 ;; ** Is external package installed
 ;; Checks variable =exec-path= for package
@@ -473,19 +496,22 @@
 (defvar my/status-line-update-time-max 8)
 (defvar my/status-line-update-time 0)
 
-(defun my/allocate-update-time (task &optional repeat offset)
+(defun my/allocate-update-time (task &optional repeat-time offset no-init)
   "TASK is the function to be run.
-REPEAT is the time to between each run
-OFFSET is the offset to apply. This makes sure the timers spread out."
-  (funcall task)
+REPEAT-TIME is the time to between each run in seconds. Default is 1 minute
+OFFSET is the offset to apply. This makes sure the timers spread out.
+If NO-INIT is true, don't call the task on init
+"
+  (unless no-init
+    (funcall task))
   (unless offset
     (setq my/status-line-update-time (+ my/status-line-update-time 1)))
   (let ((update-time (or offset my/status-line-update-time)))
-    (run-with-timer
-     (mod update-time my/status-line-update-time-max)
-     (+ update-time (or repeat 60))
-     (lambda () (ignore-errors (funcall task))))))
-
+    (eval
+     `(run-with-timer
+       (mod ,update-time my/status-line-update-time-max)
+       (+ ,update-time (or ,repeat-time 60))
+       (lambda () (ignore-errors (funcall ',task)))))))
 
 ;; * Evil
 ;; Disable switch to emacs-state binding
@@ -562,9 +588,6 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Evil-multiple cursors
 (straight-use-package 'evil-mc)
 
-;; *** Clear default keys
-(setq evil-mc-key-map (make-sparse-keymap))
-
 ;; *** Start mc-mode in this buffer
 (evil-mc-mode)
 
@@ -574,6 +597,10 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
 (add-to-list 'evil-mc-custom-known-commands
 	     '(org-delete-char . ((:default . evil-mc-execute-default-call-with-count))))
+
+;; Visual paste kind of works
+(add-to-list 'evil-mc-custom-known-commands
+	     '(evil-visual-paste . ((:default . evil-mc-execute-default-call-with-count))))
 
 (add-to-list 'evil-mc-custom-known-commands
 	     '(csharp-maybe-insert-codedoc . ((:default . evil-mc-execute-default-call-with-count))))
@@ -990,7 +1017,8 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (defvar my/window-leader-key "C-=")
 (defvar my/mod-window-leader-key "M-C-=")
 
-(my/evil-normal-define-key "U" 'undo-tree-visualize)
+(with-eval-after-load 'undo-tree
+  (my/evil-normal-define-key "U" 'undo-tree-visualize))
 
 (my/evil-normal-define-key my/leader-map-key my/leader-map)
 (my/evil-visual-define-key my/leader-map-key my/leader-map)
@@ -1159,8 +1187,6 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (defun my/exwm-0 () (interactive) (exwm-input--fake-key ?0))
 
 ;; *** Keys
-(setq exwm-mode-map (make-sparse-keymap))
-
 (evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "DEL") 'my/exwm-backspace)
 (evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "<deletechar>") 'my/exwm-delete)
 (evil-define-key '(normal insert visual emacs replace) my/exwm-mode-map (kbd "TAB") 'my/exwm-tab)
@@ -1283,29 +1309,30 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
 ;; *** Auto set buffer name
 ;; We use class names for all windows expect for Java applications and GIMP (because of problems with those).
-(defun my/exwm-should-use-title-for-buffer-name ()
+(defun my/exwm-dont-rename ()
   (or
    (not exwm-instance-name)
    (string-prefix-p "sun-awt-X11-" exwm-instance-name)
-   (string= "gimp" exwm-instance-name)
-   ;; Firefox calls itself navigator?
-   (string-prefix-p "Navigator" exwm-instance-name t)
-   ;;(string-prefix-p "Firefox" exwm-instance-name t)
-   (string-prefix-p "chromium-browser" exwm-instance-name t)
-   ;; Nyxt
-   (string-prefix-p "sbcl" exwm-instance-name t)))
+   (string= "gimp" exwm-instance-name)))
 
-(add-hook 'exwm-update-class-hook 'my/exwm-buffer-give-name-class)
-
-(defun my/exwm-buffer-give-name-class ()
-  (when (not (my/exwm-should-use-title-for-buffer-name))
-    (exwm-workspace-rename-buffer exwm-class-name)))
+(defun my/exwm-buffer-give-name-title ()
+  (unless (my/exwm-dont-rename)
+    (pcase exwm-instance-name
+      ("spotify" (exwm-workspace-rename-buffer (concat "EXWM - Spotify")))
+      (_
+       (if (string-match-p "- YouTube - Chromium" exwm-title)
+	   (exwm-workspace-rename-buffer (concat "EXWM - Chromium - Youtube" ))
+	 (exwm-workspace-rename-buffer (concat "EXWM - " exwm-title)))))))
 
 (add-hook 'exwm-update-title-hook 'my/exwm-buffer-give-name-title)
 
-(defun my/exwm-buffer-give-name-title ()
-  (when (my/exwm-should-use-title-for-buffer-name)
-    (exwm-workspace-rename-buffer exwm-title)))
+;; (add-hook 'exwm-update-class-hook 'my/exwm-buffer-give-name-class)
+
+;; (defun my/exwm-buffer-give-name-class ()
+;;   (when (not (my/exwm-dont-rename))
+;;     (exwm-workspace-rename-buffer (concat "EXWM - " exwm-class-name))))
+
+;; (add-hook 'exwm-mode-hook 'my/exwm-buffer-give-name-title)
 
 ;; ** Fix modeline in exwm buffers
 (add-hook 'exwm-floating-exit-hook (lambda ()
@@ -1368,9 +1395,12 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
 (setq exwm-workspace-show-all-buffers t)
 
-(setq exwm-workspace-minibuffer-position 'top)
+;; To change this to top again, check for:
+;; TODO: Exwm top minibuffer
+(setq exwm-workspace-minibuffer-position 'nil)
 
-(add-hook 'exwm-init-hook (lambda () (interactive) (exwm-workspace-attach-minibuffer)))
+(when exwm-workspace-minibuffer-position
+  (add-hook 'exwm-init-hook (lambda () (interactive) (exwm-workspace-attach-minibuffer))))
 
 ;; * Hydra
 (eval-and-compile
@@ -1481,15 +1511,15 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
   "")
 
 ;; ** Process completed alert
-(defun my/alert-process-completed ()
-  (let* ((buf-name (buffer-name))
+(defun my/alert-process-completed (&optional name)
+  (let* ((buf-name (or name (buffer-name)))
 	 (alert-str (concat "buffer: " buf-name " completed!" )))
     (my/alert-statusline-message-temporary alert-str)
     (my/fire-notification alert-str)))
 
 (defun my/alert-statusline-message-temporary (message &optional severity duration)
   (my/alert message (or severity 'low))
-  (run-with-timer 5 nil (lambda () (my/alert-remove message))))
+  (eval `(run-with-timer 5 nil (lambda () (my/alert-remove ,message)))))
 
 ;; * Package management
 ;; ** Guix
@@ -1537,7 +1567,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Visual line mode
 (global-visual-line-mode 1)
 
-(setq my/visual-line-mode-blacklist '(vterm-mode proced-mode net-utils-mode term-mode undo-tree-visualizer-mode))
+(setq my/visual-line-mode-blacklist '(vterm-mode proced-mode net-utils-mode term-mode undo-tree-visualizer-mode process-menu-mode))
 
 (defun turn-on-visual-line-mode ()
   (if (not (member major-mode my/visual-line-mode-blacklist))
@@ -1622,7 +1652,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Async
 (straight-use-package 'async)
 
-(dired-async-mode 1)
+(dired-async-mode -1)
 
 ;; ** Async-shell-command
 (setq async-shell-command-buffer 'new-buffer)
@@ -1681,18 +1711,8 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Exit emacs
 (define-key my/leader-map (kbd "C-z") 'save-buffers-kill-emacs)
 
-;; ** Help mode
-(setq help-mode-map (make-sparse-keymap))
-
-;; ** Ibuffer
-(setq ibuffer-mode-map (make-sparse-keymap))
-
 ;; ** Compilation mode
-(setq compilation-mode-map (make-sparse-keymap))
-(setq compilation-minor-mode-map (make-sparse-keymap))
-(setq compilation-shell-minor-mode-map (make-sparse-keymap))
-(setq compilation-mode-tool-bar-map (make-sparse-keymap))
-
+(define-key compilation-mode-map (kbd "g g") 'evil-goto-first-line)
 (define-key compilation-mode-map (kbd "j") 'my/compilation-change-command)
 (define-key compilation-mode-map (kbd "g") 'recompile)
 (define-key compilation-mode-map (kbd "C-c") 'kill-compilation)
@@ -1779,6 +1799,10 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Configure mouse
 (define-key minibuffer-inactive-mode-map [mouse-1] #'ignore)
 
+;; *** Disable resize minibuffer
+;; (defun mouse-drag-mode-line (a)
+;;   nil)
+
 ;; *** Disable middleclick and right click
 (define-key global-map [mouse-2] #'ignore)
 (my/evil-universal-define-key "<mouse-2>" #'ignore)
@@ -1787,6 +1811,10 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
 ;; *** Disable mouse wheel acceleration
 (setq mouse-wheel-progressive-speed nil)
+
+;; *** Disable mouse menu
+;; By default, holding CTRL and hitting mouse-1 opens up a menu
+(define-key global-map [C-down-mouse-1] #'ignore)
 
 ;; ** Mouse-avoidance
 ;; (mouse-avoidance-mode 'none)
@@ -1833,9 +1861,6 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
   (my/outorg-export-to-org-file "~/.emacs.d/readme.org"))
 
 ;; ** Man mode
-;; *** Disable keys
-(setq Man-mode-map (make-sparse-keymap))
-
 ;; ** Timer
 ;; Set timer to only run expired repeating hooks once after sleep
 (setq timer-max-repeats 1)
@@ -1856,8 +1881,6 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (add-to-list 'safe-local-variable-values '(dante-repl-command-line "ob" "repl"))
 
 ;; ** Calendar
-(setq calendar-mode-map (make-sparse-keymap))
-
 (with-eval-after-load 'calendar
   (define-key calendar-mode-map (kbd "l") 'calendar-forward-month)
   (define-key calendar-mode-map (kbd "h") 'calendar-backward-month)
@@ -1906,7 +1929,8 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Break timer
 ;; In seconds
 (defvar my/break-time (* 21 60))
-(defvar my/not-clocked-in-break-time (* 1 60))
+;; (defvar my/not-clocked-in-break-time (* 1 60))
+(defvar my/not-clocked-in-break-time (* 21 60))
 
 (defun my/break-screen ()
   ;; Restart timer
@@ -1918,7 +1942,9 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
     (my/break-timer-run time)
 
     (when my/interruptions
-      (my/message-at-point "Clock in! Also check agenda!")
+      ;; (my/message-at-point "Clock in! Also check agenda!")
+
+      (my/thyme-show)
 
       (when (not is-clocked-in)
 	(my/alert-statusline-message-temporary "Clock in!" 'med))
@@ -1946,7 +1972,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 					  (setq kill-ring old-kill-ring)
 					  return))))
 				  "Tech"
-				  (list (concat my/notes-folder "Organize/Agenda.org"))))))
+				  (list (concat my/agenda-folder "20201026232230-Agenda.org"))))))
     (kill-new (car kill-ring))
     result))
 
@@ -1996,30 +2022,48 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; ** Open project planning
 (defun my/project-planning-visit ()
   (interactive)
-  (find-file (concat my/notes-folder "Organize/Projects.org")))
+  (find-file (concat my/organize-folder "20201026232231-Projects.org")))
 
 (define-key my/open-map (kbd "g") 'my/project-planning-visit)
 
-;; ** Org-brain notes
-(define-key my/open-map (kbd "n") (lambda () (interactive)
-				    (require 'org-brain)
-				    (or
-				     (and (get-buffer "*org-brain*")
-					  (switch-to-buffer "*org-brain*"))
-				     (when (and buffer-file-name
-						(file-in-directory-p
-						 buffer-file-name
-						 org-brain-path))
-				       (org-brain-visualize (org-brain-path-entry-name buffer-file-name) nil nil nil))
-				     (org-brain-visualize "Origo" nil nil nil))))
+;; ;; ** Org-brain notes
+;; (define-key my/open-map (kbd "n") (lambda () (interactive)
+;;				    (require 'org-brain)
+;;				    (or
+;;				     (and (get-buffer "*org-brain*")
+;;					  (switch-to-buffer "*org-brain*"))
+;;				     (when (and buffer-file-name
+;;						(file-in-directory-p
+;;						 buffer-file-name
+;;						 org-brain-path))
+;;				       (org-brain-visualize (org-brain-path-entry-name buffer-file-name) nil nil nil))
+;;				     (org-brain-visualize "Origo" nil nil nil))))
 
-(define-key my/open-map (kbd "N") (lambda () (interactive)
-				    (require 'org-brain)
-				    (org-brain-visualize
-				     (completing-read "Entry: "
-						      (org-brain--all-targets)))))
+;; (define-key my/open-map (kbd "N") (lambda () (interactive)
+;;				    (require 'org-brain)
+;;				    (org-brain-visualize
+;;				     (completing-read "Entry: "
+;;						      (org-brain--all-targets)))))
 
-(define-key my/open-map (kbd "C-n") (lambda () (interactive) (find-file org-brain-path)))
+;; (define-key my/open-map (kbd "C-n") (lambda () (interactive) (find-file org-brain-path)))
+
+;; ;; ** Org-roam notes
+(defun my/counsel-recoll (&optional initial-input action)
+  "ACTION accepts one argument, the string of what's returned"
+  (interactive)
+  (counsel-require-program "recoll")
+  (ivy-read "recoll: " 'my/counsel-recoll-function
+	    :initial-input initial-input
+	    :dynamic-collection t
+	    :history 'counsel-git-grep-history
+	    :action
+	    (or action
+		(lambda (x)
+		  (find-file (my/recoll-format-link x))))
+	    :caller 'counsel-recoll))
+
+(define-key my/open-map (kbd "n") 'my/org-roam-search)
+(define-key my/open-map (kbd "N") 'my/counsel-recoll)
 
 ;; ** Visit nixos config
 (defun my/nixos-config-visit ()
@@ -2049,7 +2093,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
   (interactive)
   (find-file trash-directory))
 
-(define-key my/open-map (kbd "t") 'my/trash-visit)
+(define-key my/open-map (kbd "T") 'my/trash-visit)
 
 ;; ** Open agenda
 (defun my/org-agenda-show-agenda-and-todo (&optional arg)
@@ -2089,12 +2133,20 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
 (define-key my/open-map (kbd "p") 'my/open-passwords)
 
-;; ** Visit agenda file
+;; ** Visit agenda
+;; *** Visit agenda file
 (defun my/agenda-file-visit ()
   (interactive)
   (find-file (car org-agenda-files)))
 
 (define-key my/open-map (kbd "A") 'my/agenda-file-visit)
+
+;; ** Open tasks
+(defun my/tasks-visit ()
+  (interactive)
+  (find-file (car (cdr org-agenda-files))))
+
+(define-key my/open-map (kbd "t") 'my/tasks-visit)
 
 ;; ** Open backup
 (defun my/backups-visit ()
@@ -2119,12 +2171,10 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (define-key my/open-map (kbd "W") (lambda () (interactive) (find-file my/wallpaper-folder)))
 
 ;; ** Open gui browser
-(defvar my/gui-browser "nyxt")
+(defvar my/gui-browser "chromium")
 
 (defun my/open-in-browser (&optional url)
-  (unless url
-    (setq url ""))
-  (start-process my/gui-browser nil my/gui-browser "--new-window" url))
+  (start-process my/gui-browser nil my/gui-browser "--new-window" (or url "")))
 
 (defun my/open-in-nyxt ()
   (let ((nyxt (my/get-buffer-regex "nyxt - ")))
@@ -2244,27 +2294,32 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
     (org-edit-src-exit)))
 
 ;; ** Capture
-(setq org-default-notes-file (concat my/notes-folder "Organize/Agenda.org"))
+(setq org-default-notes-file (car org-agenda-files))
 
 ;; *** Doct
 (straight-use-package 'doct)
 
 (setq org-capture-templates
-      (doct '(
+      (doct `(
 	      ;; Default todo
 	      ;; '(("t" "Task" entry (file+headline "" "Tasks")
 	      ;;    "* TODO %?\n  %u\n  %a"))
 	      ("Task"
 	       :keys "t"
-	       :file org-default-notes-file
-	       :headline "Tasks"
-	       :prepend t
+	       :file ,(car (cdr org-agenda-files))
+	       ;; :headline "Tasks"
+	       :prepend nil
 	       :template ("* TODO %?\n  %u\n  %a"))
 
-	      ("Learning"
+	      ("Learning backlog"
 	       :keys "l"
-	       :file org-default-notes-file
-	       :headline "Learning resources"
+	       :file ,(car (cddddr org-agenda-files))
+	       :prepend t
+	       :template ("* %?\n  %u\n  %a"))
+
+	      ("Learning focus"
+	       :keys "f"
+	       :file ,(car (cdddr org-agenda-files))
 	       :prepend t
 	       :template ("* %?\n  %u\n  %a"))
 	      )))
@@ -2279,9 +2334,13 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 
 (define-key my/leader-map (kbd "C") 'my/auto-org-capture)
 
+;; *** Keys
+(with-eval-after-load 'org-capture
+  (define-key org-capture-mode-map [remap save-buffer] (lambda () (interactive)
+							 (call-interactively 'org-capture-finalize)
+							 (call-interactively 'my/save-buffer))))
+
 ;; ** Agenda
-;; Give agenda file to use
-(setq org-agenda-files `(,org-default-notes-file))
 ;; (directory-files-recursively "~/Notes/Agenda/" ".org$")
 
 (setq org-agenda-window-setup 'current-window)
@@ -2301,6 +2360,16 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 				     ;; (agenda "" ((org-agenda-sorting-strategy '(habit-down time-up priority-down category-keep user-defined-up))))
 				     ;; (org-time-budgets-in-agenda)
 				     ))))
+
+;; *** Org-agenda file names
+;; Stop org agenda tasks from being prefixed by their file name
+(setq org-agenda-prefix-format
+      '(
+	;; (agenda . " %i %-12:c%?-12t% s")
+	(agenda  . "  • ")
+	(todo . " %i %-12:c")
+	(tags . " %i %-12:c")
+	(search . " %i %-12:c")))
 
 ;; *** log-mode
 ;; Shows clocked time in timeline view
@@ -2353,7 +2422,6 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; (add-hook 'org-agenda-finalize-hook 'org-timeline-insert-timeline :append)
 
 ;; *** Keys
-(setq org-agenda-mode-map (make-sparse-keymap))
 (with-eval-after-load 'org-agenda
   (define-key org-agenda-mode-map (kbd "n") 'org-agenda-next-line)
 
@@ -2550,8 +2618,6 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; (add-hook 'org-brain-visualize-mode-hook #'org-brain-polymode)
 
 ;; *** Keys
-(setq org-brain-visualize-mode-map (make-sparse-keymap))
-
 (with-eval-after-load 'org-brain
   ;; Movement
   (define-key org-brain-visualize-mode-map "n" 'forward-button)
@@ -2653,7 +2719,7 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; * Time management - chronometrist
 ;; (straight-use-package 'chronometrist)
 ;;(straight-use-package '(chronometrist :type git :host github :repo "contrapunctus-1/chronometrist"))
-;;(require 'chronometrist)
+;; (require 'chronometrist)
 
 ;; * Outline
 ;; Must be set before outline is loaded
@@ -2730,7 +2796,6 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 ;; (straight-use-package '(outshine :type git :host github :repo "alphapapa/outshine"))
 
 ;; Clean outshine-mode-map
-(setq outshine-mode-map (make-sparse-keymap))
 
 (add-hook 'outline-minor-mode-hook 'outshine-mode)
 
@@ -2926,12 +2991,13 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 (setq ivy-use-selectable-prompt t)
 
 ;; *** Fix ivy dispatching
+;; TODO: Exwm top minibuffer
 ;; So when using exwm with minibuffer at the top and trying to use the ivy menu you get an error like
 ;; window-resize: Cannot resize the root window of a frame
 ;; This fixes that, it might cause bugs though
-(defun ivy-shrink-after-dispatching ()
-  "Shrink the window after dispatching when action list is too large."
-  nil)
+;; (defun ivy-shrink-after-dispatching ()
+;;   "Shrink the window after dispatching when action list is too large."
+;;   nil)
 
 ;; *** Visuals
 (defun my/ivy-set-height ()
@@ -2943,8 +3009,6 @@ OFFSET is the offset to apply. This makes sure the timers spread out."
 	    (add-hook 'post-command-hook 'my/ivy-set-height)))
 
 (with-eval-after-load 'counsel
-  (setq ivy-height-alist nil)
-  (setq-default ivy-height-alist nil)
   (add-to-list 'ivy-height-alist '(swiper . 10))
   (add-to-list 'ivy-height-alist '(swiper-isearch . 10))
   (add-to-list 'ivy-height-alist '(counsel-switch-buffer . 10))
@@ -3011,8 +3075,6 @@ If the input is empty, select the previous history element instead."
   (interactive)
   (ivy-next-line ivy--length))
 
-(setq ivy-minibuffer-map (make-sparse-keymap))
-
 (define-prefix-command 'my/ivy-mode-map)
 (evil-define-key 'normal ivy-minibuffer-map (kbd (concat my/leader-map-key " a")) 'my/ivy-mode-map)
 
@@ -3075,10 +3137,15 @@ If the input is empty, select the previous history element instead."
 (setq counsel-rg-base-command "rg --with-filename --no-heading --line-number --color never %s")
 
 ;; *** Counsel-yank-pop
+;; **** Visual mode fix
 ;; Delete text under selection when pasing just like with normal evil paste
 (advice-add #'counsel-yank-pop :before (lambda (&optional arg)
 					 (if (string= evil-state 'visual)
 					     (delete-region (point) (mark)))))
+
+;; **** Remove text-properties from strings
+(advice-add #'counsel-yank-pop :before (lambda (&optional arg)
+					 (setq kill-ring (mapcar 'substring-no-properties kill-ring))))
 
 ;; *** Always run counsel ag in default directory
 (defvar my/rg-available (executable-find "rg"))
@@ -3267,7 +3334,7 @@ If the input is empty, select the previous history element instead."
 	 ((ivy-rich-candidate (:width 0.8))
 	  (ivy-rich-file-last-modified-time (:face font-lock-comment-face))))))
 
-(ivy-rich-mode 1)
+(ivy-rich-mode -1)
 
 ;; ** Company
 (straight-use-package 'company)
@@ -3387,7 +3454,6 @@ If the input is empty, select the previous history element instead."
 
 ;; *** Keys
 (with-eval-after-load 'company
-  (setq company-active-map (make-sparse-keymap))
   (define-key company-active-map (kbd "C-n") 'company-select-next)
   (define-key company-active-map (kbd "C-p") 'company-select-previous)
   (define-key company-active-map (kbd "C-h") 'company-show-doc-buffer)
@@ -3416,7 +3482,6 @@ If the input is empty, select the previous history element instead."
 ;;  (remove-hook 'company-box-hide-hook 'company-box-doc--hide))
 
 ;; ** Flycheck
-(setq flycheck-mode-map (make-sparse-keymap))
 (straight-use-package 'flycheck)
 
 ;; Decrease delay
@@ -3522,8 +3587,6 @@ If the input is empty, select the previous history element instead."
 ;; (setq which-key-idle-delay 1)
 
 ;; ** Yasnippet
-(setq yas-minor-mode-map (make-sparse-keymap))
-
 (straight-use-package 'yasnippet)
 
 (yas-global-mode 1)
@@ -3733,6 +3796,9 @@ If the input is empty, select the previous history element instead."
 (straight-use-package 'back-button)
 
 (setq back-button-no-wrap nil)
+
+;; **** Recenter view after using back-button
+(advice-add 'back-button-pop-local-mark :after (lambda (&rest r) (interactive) (recenter)))
 
 ;; **** Keys
 (my/evil-universal-define-key "C-b" 'back-button-local-backward)
@@ -4022,8 +4088,6 @@ If the input is empty, select the previous history element instead."
 
 ;; ** Winner-mode
 ;; Remove default keys
-(setq winner-mode-map (make-sparse-keymap))
-
 (winner-mode)
 
 ;; ** No more window resetting
@@ -4338,9 +4402,10 @@ If the input is empty, select the previous history element instead."
 (defun my/dired-sort-menu ()
   (interactive)
   (dired-sort-other
-   (pcase (completing-read "Sort by: " '( "date" "size" "name" "dir" "du" "~compatibility"))
+   (pcase (completing-read "Sort by: " '( "date" "date-reverse" "size" "name" "dir" "du" "~compatibility"))
      ("name" (progn (my/dired-du-disable-quietly) my/dired-base-ls-command))
      ("date" (progn (my/dired-du-disable-quietly) (concat my/dired-base-ls-command "-t")))
+     ("date-reverse" (progn (my/dired-du-disable-quietly) (concat my/dired-base-ls-command "-tr")))
      ("size" (progn (my/dired-du-disable-quietly) (concat my/dired-base-ls-command "--sort=size")))
      ("dir" (progn (my/dired-du-disable-quietly) (concat my/dired-base-ls-command "--group-directories-first")))
      ("~compatibility" (progn (my/dired-du-disable-quietly) "-alh"))
@@ -4349,8 +4414,6 @@ If the input is empty, select the previous history element instead."
 (defun my/dired-du-disable-quietly ()
   (if dired-du-mode
       (dired-du-mode -1)))
-
-(define-key dired-mode-map (kbd "s") 'my/dired-sort-menu)
 
 ;; *** Tramp compatibility
 ;; When dired is used over tramp sorting doesn't work
@@ -4385,7 +4448,10 @@ If the input is empty, select the previous history element instead."
 (add-hook 'dired-mode-hook 'dired-omit-mode)
 
 ;; ** Keys
-;; Reset dired mode map
+;; TODO ugly hack
+(setq dired-mode-map (make-sparse-keymap))
+(require 'dired)
+(require 'wdired)
 (setq dired-mode-map (make-sparse-keymap))
 
 (defun my/toggle-delete-to-trash ()
@@ -4421,6 +4487,8 @@ If the input is empty, select the previous history element instead."
 ;; *** Dired keys
 ;; Bind =Backspace= to go up one directory
 ;; (define-key dired-mode-map [?\d] 'dired-up-directory)
+(evil-define-key 'insert dired-mode-map (kbd "s") 'my/dired-sort-menu)
+
 (evil-define-key '(normal) dired-mode-map (kbd "k") 'dired-up-directory)
 
 (evil-define-key 'insert dired-mode-map (kbd "A") 'dired-do-find-regexp)
@@ -4428,7 +4496,7 @@ If the input is empty, select the previous history element instead."
 
 (evil-define-key '(normal insert) dired-mode-map (kbd "K") 'my/dired-kill-and-go-down)
 (evil-define-key '(normal insert) dired-mode-map (kbd "RET") 'dired-find-file)
-(evil-define-key '(normal insert) dired-mode-map(kbd "C") 'dired-do-copy)
+(evil-define-key '(normal insert) dired-mode-map (kbd "C") 'dired-do-copy)
 (evil-define-key '(normal insert) dired-mode-map (kbd "D") 'dired-do-delete)
 (evil-define-key '(normal insert) dired-mode-map  (kbd "j") 'dired-do-rename)
 (evil-define-key '(normal insert) dired-mode-map  (kbd "J") 'dired-do-rename)
@@ -4494,7 +4562,7 @@ If the input is empty, select the previous history element instead."
 (evil-define-key 'insert dired-mode-map (kbd "i") 'dired-maybe-insert-subdir)
 (evil-define-key 'insert dired-mode-map (kbd "k") 'dired-kill-subdir)
 
-(evil-define-key 'insert dired-mode-map (kbd "l") 'dired-do-redisplay)
+(evil-define-key 'insert dired-mode-map (kbd "r") 'dired-do-redisplay)
 (evil-define-key 'normal dired-mode-map (kbd "M-m") 'dired-mark-subdir-files)
 (evil-define-key '(normal insert) dired-mode-map (kbd "m") 'dired-mark)
 (evil-define-key '(normal insert) dired-mode-map (kbd "M") 'dired-toggle-marks)
@@ -4714,6 +4782,7 @@ If the input is empty, select the previous history element instead."
     ('c++-mode (call-interactively 'xref-find-definitions))
     ('objc-mode (call-interactively 'xref-find-definitions))
     ('csharp-mode (omnisharp-go-to-definition))
+    ('org-mode (my/org-roam-ivy-forwardlinks))
     ('haskell-mode
      (if my/haskell-hie-enable
 	 (lsp-find-definition)
@@ -4732,6 +4801,7 @@ If the input is empty, select the previous history element instead."
   (interactive)
   (pcase major-mode
     ('csharp-mode (omnisharp-find-usages-with-ido))
+    ('org-mode (my/org-roam-ivy-backlinks))
     (_ (call-interactively 'xref-find-references))))
 
 (define-key my/leader-map (kbd "u") 'my/auto-find-usages)
@@ -4888,7 +4958,8 @@ If the input is empty, select the previous history element instead."
     ('nix-mode
      (if (string-match-p "home" (buffer-file-name))
 	 (man "home-configuration.nix")
-       (my/nixos-options-ivy)))))
+       (my/nixos-options-ivy)))
+    (_ (my/search-packages))))
 
 (define-key my/leader-map (kbd "h") help-map)
 (define-key my/leader-map (kbd "H") 'my/auto-docs)
@@ -4957,9 +5028,6 @@ If the input is empty, select the previous history element instead."
   (define-key lsp-ui-flycheck-list-mode-map [remap newline] 'lsp-ui-flycheck-list--view))
 
 ;; ** DAP
-;; I have to clear the mode map before it's defined otherwise I can't unbind it
-(setq dap-mode-map (make-sparse-keymap))
-
 (straight-use-package 'dap-mode)
 (dap-mode 1)
 
@@ -4971,10 +5039,13 @@ If the input is empty, select the previous history element instead."
 
 ;; ** Lisps
 ;; *** Common lisp
+;; **** Sly
+(straight-use-package 'sly)
+
 ;; **** Slime
 ;; (straight-use-package 'slime)
 
-;; (setq inferior-lisp-program "/usr/bin/sbcl")
+;; (setq inferior-lisp-program "sbcl")
 ;; (setq slime-contribs '(slime-fancy))
 
 ;; ***** Slime comany
@@ -5027,9 +5098,6 @@ If the input is empty, select the previous history element instead."
 ;;		(+ (point) 2)
 ;;	      (point)))
 ;;	(scan-error (user-error "There isn't a complete s-expression before point"))))))
-
-;; **** Keys
-(setq racket-repl-mode-map (make-sparse-keymap))
 
 ;; *** Emacs-lisp
 ;; **** Eros
@@ -5677,9 +5745,10 @@ do the
 					       (find-file (car (directory-files default-directory nil ".svg$"))))))
 
 (setq my/haskell-compile-commands
-      '("cabal build"
+      '("cabal build -O0"
 	;; Prints stack trace after a <<loop>> error
 	"cabal run --enable-profiling --ghc-options=\"-fprof-auto\" all -- +RTS -xc"
+	"cabal run -O0"
 	"cabal run -O2"
 	"cabal run -O2 --enable-profiling --ghc-options=\"-threaded\" all -- +RTS -ls -N"
 	"profiling"
@@ -6142,9 +6211,6 @@ do the
 ;; ** C#
 (straight-use-package 'csharp-mode)
 
-;; csharp-maybe-insert-codedoc
-(setq csharp-mode-map (make-sparse-keymap))
-
 ;; *** REPL
 (defun my/csharp-run-repl()
   (interactive)
@@ -6482,7 +6548,7 @@ do the
 ;; ** Auto kill buffer
 (defun my/auto-kill-buffer ()
   (interactive)
-  (my/proc-track-kill)
+  ;; (my/proc-track-kill)
   (pcase major-mode
     ('mu4e-headers-mode (kill-current-buffer)
 			(run-with-timer 1 nil 'mu4e-alert-update-mail-count-modeline))
@@ -6515,24 +6581,126 @@ do the
 ;; * Automatic time tracking
 ;; ** activity-watch-mode
 ;; (straight-use-package 'activity-watch-mode)
+;; (global-activity-watch-mode)
+
+;; ** My own
+;; (straight-use-package 'emacsql)
+;; (straight-use-package 'emacsql-sqlite3)
+;; (setq my/time-db (emacsql-sqlite3 (concat user-emacs-directory ".cache/time.db")))
+;; (emacsql my/time-db [:create-table time-tracking ([(buffer-name string) (report-date date) (time int)])])
+
+;; (emacsql my/time-db [:insert :into time-tracking :values (["time tracking in emacs" "2020-11-09" 10])])
+
+;; (emacsql my/time-db [:select [buffer-name report-date time]
+;;			     :from time-tracking
+;;			     ])
+
+;; (emacsql my/time-db [:alter time-tracking ])
+
+;; ** Thyme
+(setq my/thyme-cache-dir (concat user-emacs-directory ".cache/thyme.json"))
+;; (remove-hook 'window-state-change-hook (lambda () (write-region (buffer-name) nil "/tmp/emacs-active-window")))
+
+(defun my/thyme-track ()
+  (if (file-exists-p my/thyme-cache-dir)
+      (my/thyme-report)
+    (my/thyme-init-tracking)))
+
+(defun my/thyme-init-tracking ()
+  (write-region "{\"Snapshots\":[]} " nil my/thyme-cache-dir)
+  (my/thyme-report t))
+
+(defun my/thyme-report (&optional init)
+  (let* ((time (format-time-string "%Y-%m-%dT%H:%M:%S.%1N00000000+01:00"))
+	 (str (concat
+	       "{\\\"Time\\\":\\\""time"\\\",\\\"Windows\\\":[{\\\"ID\\\":0,\\\"Desktop\\\":-1,\\\"Name\\\":\\\""(buffer-name)"\\\"}],\\\"Active\\\": 0,\\\"Visible\\\":null}"))
+	 (command
+	  (concat
+	   "truncate -s-3 " my/thyme-cache-dir " "
+	   ";echo \"" (concat
+		       ;; Don't insert comma on the first run
+		       (unless init ",")
+		       str
+		       "]}") "\" >> " my/thyme-cache-dir)))
+    (shell-command-to-string command)))
+
+(my/allocate-update-time 'my/thyme-track 30)
+
+;; *** Hide window
+;; Don't pop up thyme track window
+;; (add-to-list 'display-buffer-alist
+;;	     '("\\*Thyme track*" display-buffer-no-window))
+
+;; *** Show
+(defun my/thyme-show ()
+  (interactive)
+  (shell-command-to-string (concat "/etc/nixos/bin/thyme show -i " my/thyme-cache-dir " -w stats > /tmp/thyme-report.html"))
+  (my/open-in-browser "/tmp/thyme-report.html"))
+
+;; ** selfspy
+;; Delete selfspy for session
+;; (setq my/selfspy-data-dir "~/.selfspy/")
+
+;; (if (not (string= "" (shell-command-to-string "pgrep -f .selfspy-wrapped")))
+;;     (message "Selfspy is already running!")
+;;   (when (and (file-exists-p my/selfspy-data-dir) (file-exists-p (concat my/selfspy-data-dir "selfspy.pid.lock")))
+;;     (message "Selfspy DB locked, deleting!")
+;;     ;; Clear selfspy dir
+;;     (delete-directory my/selfspy-data-dir t nil))
+;;   (message "starting selfspy!")
+;;   (async-shell-command (concat "selfspy -n --data-dir " my/selfspy-data-dir) " *selfspy*"))
+
+;; (setq my/selfspy-selfstats-temp-file (concat temporary-file-directory ".selfstats"))
+
+;; (defun my/selfspy-report-format ()
+;;   (with-temp-buffer
+;;     (insert-file-contents my/selfspy-selfstats-temp-file)
+;;     (goto-char (string-match-p "indow titles sorted by activity\:" (buffer-string)))
+;;     (delete-region (point-min) (+ 1 (line-end-position)))
+
+;;     (let ((minibuf (string-match-p "Minibuf" (buffer-string))))
+;;       (when minibuf
+;;	(goto-char minibuf)
+;;	(delete-region (line-beginning-position) (+ 1 (line-end-position)))))
+;;     (buffer-string)))
+
+;; (defun my/selfspy-report-present ()
+;;   (my/fire-notification (my/selfspy-report-format)))
+
+;; (defun my/selfspy-report ()
+;;   (async-shell-command (concat "selfstats --back 20 m --tactive > " my/selfspy-selfstats-temp-file)))
+
+;; (my/allocate-update-time 'my/selfspy-report (* 60 20) my/status-line-update-time-max t)
+;; (my/allocate-update-time 'my/selfspy-report-present (* 60 20) (- my/status-line-update-time-max 1) t)
+
+;; ;; Kill selfspy safely
+;; (add-hook 'kill-emacs-hook (lambda ()
+;;			     (shell-command-to-string "
+;; selfspyPID=$(pgrep -f .selfspy-wrapped)
+;; kill -2 $selfspyPID
+
+;; while [ -e /proc/$selfspyPID ]
+;; do
+;; sleep .25
+;; done")))
 
 ;; ** Wakatime
 ;; *** Custom wakatime-save mechanism
-(with-eval-after-load 'wakatime-mode
-  ;; Undefine wakatime-bind-hooks
-  (defun wakatime-bind-hooks ())
+;; (with-eval-after-load 'wakatime-mode
+;;   ;; Undefine wakatime-bind-hooks
+;;   (defun wakatime-bind-hooks ())
 
-  (setq my/wakatime-idle-time (* 60 4))
-  (setq my/wakatime-report-time (/ my/wakatime-idle-time 2))
-  (setq my/wakatime-user-present nil)
-  (run-with-idle-timer my/wakatime-idle-time t (lambda () (message (concat "User no longer present at " (current-time-string))) (setq my/wakatime-user-present nil)))
-  (add-hook 'post-command-hook (lambda () (when (not my/wakatime-user-present) (message (concat "User present again at: " (current-time-string)))) (setq my/wakatime-user-present t)))
-  ;; Make the first report after the idle timer has been run
-  (run-with-timer my/wakatime-report-time my/wakatime-report-time
-		  (lambda () (when my/wakatime-user-present
-			  (message (concat "Reporting to wakatime at: " (current-time-string)))
-			  (wakatime-save))))
-  (message "custom wakatime save mechanism loaded"))
+;;   (setq my/wakatime-idle-time (* 60 4))
+;;   (setq my/wakatime-report-time (/ my/wakatime-idle-time 2))
+;;   (setq my/wakatime-user-present nil)
+;;   (run-with-idle-timer my/wakatime-idle-time t (lambda () (message (concat "User no longer present at " (current-time-string))) (setq my/wakatime-user-present nil)))
+;;   (add-hook 'post-command-hook (lambda () (when (not my/wakatime-user-present) (message (concat "User present again at: " (current-time-string)))) (setq my/wakatime-user-present t)))
+;;   ;; Make the first report after the idle timer has been run
+;;   (run-with-timer my/wakatime-report-time my/wakatime-report-time
+;;		  (lambda () (when my/wakatime-user-present
+;;			  (message (concat "Reporting to wakatime at: " (current-time-string)))
+;;			  (wakatime-save))))
+;;   (message "custom wakatime save mechanism loaded"))
 
 ;; * Macros
 ;; ** Newer macro manager
@@ -6761,6 +6929,11 @@ do the
   (eshell)
   (my/give-buffer-unique-name "*eshell*"))
 
+;; ** Eshell kill process
+(setq eshell-kill-processes-on-exit t)
+(setq eshell-kill-process-wait-time 0)
+;; (setq eshell-kill-process-signals '(SIGINT SIGQUIT SIGKILL))
+
 ;; ** Allow to delete prompt
 (with-eval-after-load 'eshell
   (add-hook 'eshell-mode-hook (lambda () (setq-local inhibit-read-only t))))
@@ -6913,11 +7086,11 @@ do the
 ;; (add-hook 'eshell-mode-hook 'eshell-eldoc-enable-for-buffer)
 
 ;; *** Eshell-help
-(straight-use-package 'esh-help)
+;; (straight-use-package 'esh-help)
 
-(with-eval-after-load 'eshell
-  (require 'esh-help)
-  (setup-esh-help-eldoc))
+;; (with-eval-after-load 'eshell
+;;   (require 'esh-help)
+;;   (setup-esh-help-eldoc))
 
 ;; ** Did you mean
 ;; (straight-use-package 'eshell-did-you-mean)
@@ -6977,34 +7150,41 @@ do the
 (setq eshell-banner-message "")
 
 ;; ** Custom prompt
-(defvar my/eshell-prompt-symbol)
-(if window-system
-    (setq my/eshell-prompt-symbol "λ")
+(defvar my/eshell-prompt-symbol "λ")
+(when (not window-system)
   (setq my/eshell-prompt-symbol "$"))
 
 (setq eshell-prompt-function
       (lambda ()
 	(concat (abbreviate-file-name (eshell/pwd))
-		(if (= (user-uid) 0) " # " ;;(concat " " my/eshell-prompt-symbol " ")
-		  "\n"
-		  ))))
+		" "
+		my/eshell-prompt-symbol
+		"\n")))
 
-(setq eshell-prompt-regexp
-      (concat "^[^#$\n]* [#" my/eshell-prompt-symbol "] "))
+;; Don't let the macro expand during compilation
+(eval `(setq eshell-prompt-regexp
+	     (rx bol (* graph) space (eval my/eshell-prompt-symbol) "\n")))
+
+;; **  Outline mode
+(with-eval-after-load 'eshell
+  (add-hook 'eshell-mode-hook (lambda ()
+				(setq-local outline-regexp eshell-prompt-regexp)
+				(setq-local outline-level (lambda () 1))
+				(add-to-invisibility-spec '(outline . my/fold-ellipsis)))))
 
 ;; ** Running Task tracking
-;; *** Alert when task is done
-(add-hook 'eshell-post-command-hook (lambda ()
-				      ;; Fix for eshell-mode boot-up triggering hook
-				      (when (or (not eshell-mode) (not (= 2 (line-number-at-pos (point)))))
-					(my/proc-track-done)
-					(my/alert-process-completed))))
+;; ;; *** Alert when task is done
+;; (add-hook 'eshell-post-command-hook (lambda ()
+;;				      ;; Fix for eshell-mode boot-up triggering hook
+;;				      (when (or (not eshell-mode) (not (= 2 (line-number-at-pos (point)))))
+;;					(my/proc-track-done)
+;;					(my/alert-process-completed))))
 
-;; *** Inform that task has begun
-(add-hook 'eshell-pre-command-hook (lambda ()
-				     ;; Fix for eshell-mode boot-up triggering hook
-				     (when (or (not eshell-mode) (not (= 2 (line-number-at-pos (point)))))
-				       (my/proc-track-start-new))))
+;; ;; *** Inform that task has begun
+;; (add-hook 'eshell-pre-command-hook (lambda ()
+;;				     ;; Fix for eshell-mode boot-up triggering hook
+;;				     (when (or (not eshell-mode) (not (= 2 (line-number-at-pos (point)))))
+;;				       (my/proc-track-start-new))))
 
 ;; ** Custom Goto beg of line
 (defun my/eshell-goto-beg-of-line ()
@@ -7282,6 +7462,38 @@ do the
 (define-key input-decode-map (kbd "M-u") (kbd ")"))
 
 ;; * nix
+;; ** Pretty sha
+;; https://github.com/alezost/pretty-sha-path.el
+(defvar my/pretty-sha-path-regexp
+  (rx "/"
+      (or "nix" "gnu")
+      "/store/"
+      ;; Hash-parts do not include "e", "o", "u" and "t".  See base32Chars
+      ;; at <https://github.com/NixOS/nix/blob/master/src/libutil/hash.cc>
+      (group (= 32 (any "0-9" "a-d" "f-n" "p-s" "v-z")))))
+
+(defun my/prettify-nix-string (str)
+  (if (string-match-p pretty-sha-path-regexp str)
+      (let ((str-new (substring-no-properties str 44)))
+	(substring-no-properties str-new 0 (string-match-p ".drv$" str-new)))
+    str))
+
+;; ** Search packages
+(defvar my/nix-pkg-list-file (concat user-emacs-directory ".cache/nix-pkg-list"))
+(setq my/nix-pkg-list-cache nil)
+
+(defun my/search-packages ()
+  (interactive)
+  (unless (file-exists-p my/nix-pkg-list-file)
+    (message "Writing nix pkg list to file")
+    (shell-command (concat "nix-env -qaP > " (expand-file-name my/nix-pkg-list-file))))
+
+  (unless my/nix-pkg-list-cache
+    (message "Loading nix pkg list into cache")
+    (setq my/nix-pkg-list-cache (s-split "\n" (f-read my/nix-pkg-list-file))))
+
+  (kill-new (string-trim-right (completing-read "Pkg: " my/nix-pkg-list-cache) " .*")))
+
 ;; ** Direnv
 (eval-and-compile
   (straight-use-package 'envrc)
@@ -7300,13 +7512,28 @@ do the
 ;; ** Nix-mode
 (straight-use-package 'nix-mode)
 
+;; *** Fix error
+;; This fixes an error that appears at times
+(setq Man-header-file-path nil)
+
+;; *** Eshell integration
+(defun my/nix-eshell-with-packages (&rest pkg)
+  (kill-local-variable 'exec-path)
+  (kill-local-variable 'eshell-path-env)
+  (require 'nix-mode)
+
+  (nix-instantiate-async (apply-partially 'nix-shell--callback (current-buffer))
+			 (nix-shell--with-packages-file pkg nil)))
+
+(defalias 'a #'my/nix-eshell-with-packages)
+
 ;; ** Nix-options
 ;; *** Company
 (straight-use-package 'company-nixos-options)
 
 ;; Run nixos-options on a hook because otherwise it's run on every startup which means increased startup time even if you aren't going to edit nix files
-(add-hook 'nix-mode-hook (lambda () (interactive)
-			   (setq-local company-backends (pushnew 'company-nixos-options company-backends))))
+;; (add-hook 'nix-mode-hook (lambda () (interactive)
+;;			   (setq-local company-backends (pushnew 'company-nixos-options company-backends))))
 
 ;; *** Ivy
 (defun my/nixos-options-ivy ()
@@ -7358,7 +7585,9 @@ do the
 ;; ** Touchpad
 (defun my/xinput-toggle-touchpad ()
   (interactive)
-  (my/xinput-toggle-device (my/get-xinput-device-ID "Touchpad")))
+  (my/xinput-toggle-device (my/get-xinput-device-ID "Touchpad"))
+  ;; Sometimes my touchpad likes to pretend to be a mouse
+  (my/xinput-toggle-device (my/get-xinput-device-ID "Mouse")))
 
 (defun my/xinput-enable-touchpad ()
   (interactive)
@@ -7422,7 +7651,7 @@ do the
 (with-eval-after-load 'elfeed
   (elfeed-org))
 
-(setq rmh-elfeed-org-files '("~/Notes/Documentation/Emacs/Elfeed/Feeds.org"))
+(setq rmh-elfeed-org-files `(,(concat my/notes-folder "20201026232230-Feeds.org")))
 
 ;; ** Feed discovery
 (straight-use-package '(feed-discovery :type git :host github :repo "HKey/feed-discovery"))
@@ -7531,10 +7760,6 @@ do the
     (eww-browse-url url)))
 
 ;; *** Keys
-;; **** Init
-(setq shr-map (make-sparse-keymap))
-(setq eww-mode-map (make-sparse-keymap))
-
 ;; **** Binds
 (evil-define-key 'normal eww-mode-map (kbd "w") 'evil-forward-word-begin)
 (evil-define-key 'normal eww-mode-map (kbd "H") 'eww-back-url)
@@ -7802,18 +8027,22 @@ do the
 ;; *** Auto compile project
 (defun my/auto-compile-project ()
   (interactive)
-  (let* (
-	 (nixos-collect-garbage (lambda () (my/sudo-compile "nix-collect-garbage -d")))
+  (let* ((nixos-collect-garbage (lambda () (my/sudo-compile "nix-collect-garbage -d")))
 	 (nixos-home (lambda () (compile "nix-channel --update; home-manager -f /etc/nixos/home.nix switch")))
 	 (nixos-system (lambda () (my/sudo-compile "nixos-rebuild switch --upgrade")))
+	 ;; (nixos-home--rollback (lambda () (compile "home-manager -f /etc/nixos/home.nix switch --rollback")))
+	 (nixos-system--rollback (lambda () (my/sudo-compile "nixos-rebuild switch --rollback")))
 	 (nixos (lambda ()
 		  ;; Not sure why but this is required
 		  (require 'ivy)
 
-		  (pcase (completing-read "compile " '("home" "system" "collect-garbage"))
+		  (pcase (completing-read "compile " '("home" "system" "collect-garbage" ;; "home--rollback"
+						       "system--rollback"))
 		    ("home" (funcall nixos-home))
 		    ("system" (funcall nixos-system))
-		    ("collect-garbage" (funcall nixos-collect-garbage))))))
+		    ("collect-garbage" (funcall nixos-collect-garbage))
+		    ;; ("home--rollback" (funcall nixos-home--rollback))
+		    ("system--rollback" (funcall nixos-system--rollback))))))
     (pcase major-mode
       ('org-mode (counsel-M-x "^org to "))
       ('plantuml-mode (plantuml-preview-buffer 0))
@@ -7881,11 +8110,13 @@ do the
 
 ;; *** Keys
 (with-eval-after-load 'magit
-  (evil-define-key '(normal motion) magit-mode-map (kbd "0") 'magit-diff-default-context)
-  (evil-define-key '(normal motion) magit-mode-map (kbd "1") #'magit-section-show-level-1)
-  (evil-define-key '(normal motion) magit-mode-map  (kbd "2") #'magit-section-show-level-2)
-  (evil-define-key '(normal motion) magit-mode-map  (kbd "3") #'magit-section-show-level-3)
-  (evil-define-key '(normal motion) magit-mode-map  (kbd "4") #'magit-section-show-level-4))
+  (define-key magit-mode-map (kbd "0") 'magit-diff-default-context)
+  (define-key magit-mode-map (kbd "1") #'magit-section-show-level-1)
+  (define-key magit-mode-map (kbd "2") #'magit-section-show-level-2)
+  (define-key magit-mode-map (kbd "3") #'magit-section-show-level-3)
+  (define-key magit-mode-map (kbd "4") #'magit-section-show-level-4)
+
+  (evil-define-key 'visual magit-diff-mode (kbd "k") #'magit-discard))
 
 ;; Can't unbind "s"?
 ;; (my/evil-normal-define-key-in-mode magit-mode-map  "s" 'isearch-forward)
@@ -7959,15 +8190,32 @@ do the
 ;; ** Volume keys
 (defun my/pulse-mute-toggle ()
   (interactive)
-  (my/message-at-point (my/local-env-shell-command-to-string "amixer -M set Master toggle")))
+  (my/pulse-toggle-vol))
 
 (defun my/pulse-raise-volume ()
   (interactive)
-  (my/message-at-point (my/local-env-shell-command-to-string "amixer -M set Master 2.5%+")))
+  (my/pulse-change-vol 1))
 
 (defun my/pulse-lower-volume ()
   (interactive)
-  (my/message-at-point (my/local-env-shell-command-to-string "amixer -M set Master 2.5%-")))
+  (my/pulse-change-vol -1))
+
+(defun my/pulse-toggle-vol ()
+  (my/local-env-shell-command-to-string (concat "
+for SINK in `pacmd list-sinks | grep 'index:' | cut -b12-`
+do
+  pactl set-sink-mute $SINK toggle
+done")))
+
+(defun my/pulse-change-vol (volume)
+  (let ((inc (if (> volume 0)
+		 "+"
+	       "-")))
+    (my/local-env-shell-command-to-string (concat "
+for SINK in `pacmd list-sinks | grep 'index:' | cut -b12-`
+do
+  pactl set-sink-volume $SINK " inc (number-to-string (abs volume)) "%
+done"))))
 
 ;; *** Hydra
 (with-eval-after-load 'hydra
@@ -8039,10 +8287,10 @@ do the
 
 (define-key my/music-map (kbd "o") (lambda () (interactive)
 				     (if my/is-spotify-loaded
-					 (progn
-					   (unless (get-buffer "Spotify")
+					 (let ((spotify-buffer (get-buffer "EXWM - Spotify")))
+					   (unless spotify-buffer
 					     (my/spotify-start))
-					   (switch-to-buffer (get-buffer "Spotify")))
+					   (switch-to-buffer spotify-buffer))
 				       (require 'counsel-spotify))))
 
 (global-set-key (kbd "<XF86AudioPlay>") 'counsel-spotify-play)
@@ -8432,6 +8680,10 @@ do the
 (define-prefix-command 'my/system-commands-map)
 (define-key my/leader-map (kbd "S") 'my/system-commands-map)
 
+;; ** Journalctl
+(straight-use-package 'journalctl-mode)
+(require 'journalctl-mode)
+
 ;; ** Suspend
 (define-prefix-command 'my/system-suspend-map)
 ;; (define-key my/system-commands-map (kbd "s") 'my/system-suspend-map)
@@ -8440,7 +8692,7 @@ do the
   (interactive)
   (ignore-errors
     (org-clock-out))
-  (shell-command "systemctl suspend"))
+  (my/local-env-shell-command-to-string "systemctl suspend"))
 ;; (define-key my/system-suspend-map (kbd "C-s") 'my/systemd-suspend-PC)
 (defalias 'my/systemd-sleep #'my/systemd-suspend-PC)
 
@@ -8514,12 +8766,13 @@ do the
   (interactive)
   (shell-command
    (concat "nmcli device wifi connect "
-	   (completing-read "Select network: "
-			    (progn
-			      (setq enwc-scan-interactive t)
-			      (map 'list
-				   (lambda (net) (enwc-value-from-scan 'essid net))
-				   (enwc-get-networks))))
+	   (shell-quote-argument
+	    (completing-read "Select network: "
+			     (progn
+			       (setq enwc-scan-interactive t)
+			       (map 'list
+				    (lambda (net) (enwc-value-from-scan 'essid net))
+				    (enwc-get-networks)))))
 	   (let ((pass (read-passwd "Enter password (RET for no password): ")))
 	     (when (not (string= pass ""))
 	       (concat " password " pass))))))
@@ -8675,6 +8928,28 @@ do the
 	      :history 'file-name-history
 	      :caller 'counsel-file-jump)))
 
+;; ** recoll
+;; *** Recoll link to normal link
+;; Recoll uses this syntax: file:///home/admin/file.org
+(defun my/recoll-format-link (recoll-link)
+  (when (string-match "file://\\(.*\\)\\'" recoll-link)
+    (match-string 1 recoll-link)))
+
+;; *** Index
+(defun my/recoll-index ()
+  (interactive)
+  (async-shell-command (concat "recollindex -c " my/recoll-folder) "*recoll sync*"))
+
+;; *** Find counsel-recoll-function
+(defun my/counsel-recoll-function (str)
+  "Run recoll for STR."
+  (or
+   (ivy-more-chars)
+   (progn
+     (counsel--async-command
+      (format "recoll -c %s -t -b %s"
+	      my/recoll-folder (shell-quote-argument str)))
+     nil)))
 
 ;; ** Auto grep
 (defun my/auto-grep ()
@@ -8691,17 +8966,11 @@ do the
       (projectile-find-file)
     (ellocate)))
 
-;; ** grep
-(setq grep-mode-map (make-sparse-keymap))
-
 ;; ** wgrep
 ;; Disable confirmation when saving edits
 (setq wgrep-auto-save-buffer t)
 
 ;; *** Keys
-;; Used in ivy occur
-(setq wgrep-mode-map (make-sparse-keymap))
-
 (with-eval-after-load 'wgrep
   (define-key wgrep-mode-map [remap save-buffer] 'wgrep-finish-edit)
 
@@ -8711,16 +8980,8 @@ do the
   (define-key my/wgrep-map (kbd "s") 'wgrep-finish-edit)
   (define-key my/wgrep-map (kbd "k") 'wgrep-abort-changes))
 
-;; ** Occur
-(setq occur-mode-map (make-sparse-keymap))
-(setq occur-edit-mode-map (make-sparse-keymap))
-
 ;; ** Ivy occur
 ;; *** Keys
-;; Also ivy-occur-grep
-(setq ivy-occur-mode-map (make-sparse-keymap))
-(setq-default ivy-occur-mode-map (make-sparse-keymap))
-
 (with-eval-after-load 'ivy
   (define-prefix-command 'my/ivy-occur-map)
   (evil-define-key 'normal ivy-occur-mode-map (kbd (concat my/leader-map-key " a")) 'my/ivy-occur-map)
@@ -8782,8 +9043,6 @@ do the
 (setq ispell-extra-args '("--sug-mode=bad-spellers" "--ignore-case"))
 
 ;; ** Flyspell
-(setq flyspell-mode-map (make-sparse-keymap))
-
 ;; This binds a key if t
 (setq flyspell-use-meta-tab nil)
 
@@ -8946,14 +9205,8 @@ do the
 					    ("Borders" . borders)
 					    ("Spray-chars" . spray-chars))))))))
 
-;; ** Picture mode keys
-(setq picture-mode-map (make-sparse-keymap))
-(setq-default picture-mode-map (make-sparse-keymap))
-
 ;; ** Keys
 (define-key my/leader-map (kbd "A") 'artist-mode)
-
-(setq artist-mode-map (make-sparse-keymap))
 
 (with-eval-after-load 'artist
   ;; (evil-define-key 'normal artist-mode-map (kbd "p") 'artist-previous-line)
@@ -8999,9 +9252,6 @@ do the
 
 ;; Enable pdf-links
 (add-hook 'pdf-view-mode-hook 'pdf-links-minor-mode)
-
-;; Remove default keys
-(setq pdf-view-mode-map (make-sparse-keymap))
 
 ;; *** Keys
 ;; Disable insert mode
@@ -9069,8 +9319,6 @@ do the
 ;; *** Blimp
 (straight-use-package 'blimp)
 
-(setq eimp-minor-mode-map (make-sparse-keymap))
-
 (setq eimp-enable-undo t)
 
 ;; (add-hook 'image-mode-hook 'blimp-mode)
@@ -9084,8 +9332,6 @@ do the
 
 ;; *** Keys
 (define-key my/pdf-view-mode-map (kbd "g") 'pdf-view-goto-label)
-
-(setq image-mode-map (make-sparse-keymap))
 
 (with-eval-after-load 'image-mode
   (define-key image-mode-map (kbd "-") 'image-decrease-size)
@@ -9338,7 +9584,6 @@ do the
 ;; http://haskell.github.io/haskell-mode/manual/latest/Unicode-support.html#Unicode-support
 ;; https://github.com/roelvandijk/emacs-haskell-unicode-input-method/blob/master/haskell-unicode-input-method.el
 ;; https://emacs.nasy.moe/#orgf407c8c
-
 (defconst my/haskell-symbols
   '(("\\" . ?λ)
     ("()" . ?∅)
@@ -9474,10 +9719,10 @@ do the
 	 (syntaxes-end (if (memq (char-syntax (char-before end)) '(?w ?_))
 			   '(?w ?_) '(?. ?\\))))
     (not (or (memq (char-syntax (or (char-before start) ?\s)) syntaxes-beg)
-	     (memq (char-syntax (or (char-after end) ?\s)) syntaxes-end)
-	     ;; It looks like this part makes it ignore comments, remove it
-	     ;;(nth 8 (syntax-ppss))
-	     ))))
+	   (memq (char-syntax (or (char-after end) ?\s)) syntaxes-end)
+	   ;; It looks like this part makes it ignore comments, remove it
+	   ;;(nth 8 (syntax-ppss))
+	   ))))
 
 (setq-default prettify-symbols-compose-predicate #'my/prettify-symbols-default-compose-p)
 
@@ -9495,8 +9740,6 @@ do the
 
 (setq olivetti-enable-visual-line-mode nil)
 (setq olivetti-recall-visual-line-mode-entry-state nil)
-
-(setq olivetti-mode-map (make-sparse-keymap))
 
 (setq-default olivetti-body-width 130)
 
@@ -9997,7 +10240,7 @@ do the
 			  (my/local-env-shell-command-to-string "sensors | grep \"Core 0:\"")))
      ;; If it returns "no sensors found"
      (not (string-match-p "No sensors found"
-			(my/local-env-shell-command-to-string "sensors | grep \"Core 0:\""))))
+			  (my/local-env-shell-command-to-string "sensors | grep \"Core 0:\""))))
     (setq my/mode-line-enable-cpu-temp t))
 
 (defvar my/cpu-temp "")
@@ -10266,20 +10509,20 @@ do the
   (add-hook 'org-clock-in-hook 'my/org-clock-mode-line-schedule))
 
 ;; *** Process running tracker
-(defvar my/proc-track-running 0)
-(defvar my/proc-track-proc-running nil)
+;; (defvar my/proc-track-running 0)
+;; (defvar my/proc-track-proc-running nil)
 
-(defun my/proc-track-start-new ()
-  (setq my/proc-track-running (+ my/proc-track-running 1))
-  (setq-local my/proc-track-proc-running t))
+;; (defun my/proc-track-start-new ()
+;;   (setq my/proc-track-running (+ my/proc-track-running 1))
+;;   (setq-local my/proc-track-proc-running t))
 
-(defun my/proc-track-done ()
-  (setq my/proc-track-running (- my/proc-track-running 1))
-  (setq-local my/proc-track-proc-running nil))
+;; (defun my/proc-track-done ()
+;;   (setq my/proc-track-running (- my/proc-track-running 1))
+;;   (setq-local my/proc-track-proc-running nil))
 
-(defun my/proc-track-kill ()
-  (when my/proc-track-proc-running
-    (my/proc-track-done)))
+;; (defun my/proc-track-kill ()
+;;   (when my/proc-track-proc-running
+;;     (my/proc-track-done)))
 
 ;; ** Format
 ;; Only applicable to X since terminal never stretches, etc
@@ -10307,14 +10550,13 @@ do the
 			 " ")))
 
 		     ;; Processes running:
-		     (:eval (concat "proc " (number-to-string my/proc-track-running)))
-
-		     " | "
+		     ;; (:eval (concat "proc " (number-to-string my/proc-track-running)))
+		     ;; " | "
 
 		     ;; Org clock
-		     (:eval (if (org-clocking-p)
-				(concat "Org " (propertize (string-trim-left (substring-no-properties org-mode-line-string)) 'face 'default) " | ")
-			      (concat "Org " (propertize "No clock" 'face 'diff-removed) " | ")))
+		     ;; (:eval (if (org-clocking-p)
+		     ;;		(concat "Org " (propertize (string-trim-left (substring-no-properties org-mode-line-string)) 'face 'default) " | ")
+		     ;;	      (concat "Org " (propertize "No clock" 'face 'diff-removed) " | ")))
 
 		     (:eval (if my/mode-line-show-GC-stats
 				(concat
@@ -10335,8 +10577,6 @@ do the
 				   str))
 			       " | "
 			       )))
-
-
 
 		     ;; (:eval (if my/mode-line-enable-network-traffic
 		     ;;		(concat
@@ -10383,10 +10623,13 @@ do the
 
 ;; ** mini-modeline
 (straight-use-package 'mini-modeline)
+(require 'mini-modeline)
 
+(setq mini-modeline-display-gui-line nil)
 (setq mini-modeline-enhance-visual nil)
 ;; Mini-modeline flashes during GC if this is t
 (setq garbage-collection-messages nil)
+(setq mini-modeline-truncate-p t)
 
 ;; This fixes a bug with ~counsel-describe-function~
 (setq mini-modeline-echo-duration 99999)
@@ -10399,6 +10642,23 @@ do the
 
 (setq mode-line-format nil)
 (setq-default mode-line-format nil)
+
+;; *** Auto shrink minibuffer size
+;; TODO: Exwm top minibuffer
+;; It seems that the mode-line height never gets reset by default. This fixes that
+(defvar my/mini-modeline-go nil)
+
+(defun my/mini-modeline-shrink ()
+  (if my/mini-modeline-go
+      (progn
+	(setq my/mini-modeline-go nil)
+	(window-resize (minibuffer-window mini-modeline-frame) (- (cdr mini-modeline--cache)
+								  (window-height (minibuffer-window mini-modeline-frame))))
+	(setq mini-modeline--last-change-size (current-time)))
+    (when (and (/= (window-height (minibuffer-window mini-modeline-frame)) 1) (not (string= major-mode "minibuffer-inactive-mode")))
+      (setq my/mini-modeline-go t))))
+
+(add-hook 'post-command-hook #'my/mini-modeline-shrink)
 
 ;; * Backups
 ;; Stop emacs from creating backup files
@@ -10451,7 +10711,9 @@ do the
 (add-to-list 'warning-suppress-types '(undo discard-info))
 
 ;; ** Undo tree
-(straight-use-package 'undo-tree)
+(eval-and-compile
+  (straight-use-package 'undo-tree)
+  (require 'undo-tree))
 
 ;; Fixes errors
 (setq undo-tree-enable-undo-in-region nil)
@@ -10463,9 +10725,6 @@ do the
 (setq undo-tree-visualizer-diff t)
 
 ;; *** Global undo-tree mode
-(eval-and-compile
-  (require 'undo-tree))
-
 (defun my/turn-on-undo-tree-mode (&optional print-message)
   (when (my/should-backup)
     (turn-on-undo-tree-mode print-message)))
@@ -10481,14 +10740,13 @@ do the
 (ignore-errors
   (make-directory my/undo-tree-history-dir))
 
-;; (setq-default undo-tree-auto-save-history t)
+(setq-default undo-tree-auto-save-history t)
 (setq undo-tree-history-directory-alist `(("." . ,my/undo-tree-history-dir)))
 
 ;; *** Keys
-(setq undo-tree-visualizer-mode-map (make-sparse-keymap))
-
 (with-eval-after-load 'undo-tree
-  (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "p") #'undo-tree-visualize-undo)
+  (define-key evil-normal-state-map (kbd "u") 'undo-tree-undo)
+  (define-key evil-normal-state-map (kbd "C-r") 'undo-tree-redo)
 
   (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "p") #'undo-tree-visualize-undo)
   (evil-define-key 'insert undo-tree-visualizer-mode-map (kbd "n") #'undo-tree-visualize-redo)
@@ -10510,12 +10768,13 @@ do the
   ;; Agenda
   (my/org-agenda-show-agenda-and-todo)
 
-  (split-window-right)
-  (other-window 1)
+  ;; (split-window-right)
+  ;; (other-window 1)
 
-  (find-file (concat my/notes-folder "Organize/Timeline/Achievements.png"))
-  (image-increase-size 50)
-  (image-forward-hscroll 10))
+  ;; (find-file (concat my/notes-folder "Organize/Timeline/Achievements.png"))
+  ;; (image-increase-size 50)
+  ;; (image-forward-hscroll 10)
+  )
 
 ;; ** Run it on startup
 ;; Timer here fixes crash on slow PCs
