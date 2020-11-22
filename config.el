@@ -6612,8 +6612,16 @@ do the
 
 (defun my/thyme-report (&optional init)
   (let* ((time (format-time-string "%Y-%m-%dT%H:%M:%S.%1N00000000+01:00"))
+	 (buf
+	  ;; Attempt to clean the buffer name string
+	  (replace-regexp-in-string (rx (or "\\" "\"")) ""
+				    (buffer-name)))
 	 (str (concat
-	       "{\\\"Time\\\":\\\""time"\\\",\\\"Windows\\\":[{\\\"ID\\\":0,\\\"Desktop\\\":-1,\\\"Name\\\":\\\""(buffer-name)"\\\"}],\\\"Active\\\": 0,\\\"Visible\\\":null}"))
+	       "{\\\"Time\\\":\\\""
+	       time
+	       "\\\",\\\"Windows\\\":[{\\\"ID\\\":0,\\\"Desktop\\\":-1,\\\"Name\\\":\\\""
+	       buf
+	       "\\\"}],\\\"Active\\\": 0,\\\"Visible\\\":null}"))
 	 (command
 	  (concat
 	   "truncate -s-3 " my/thyme-cache-dir " "
