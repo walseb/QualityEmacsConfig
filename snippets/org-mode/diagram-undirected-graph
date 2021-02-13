@@ -1,0 +1,9 @@
+# key: dug
+# name: diagram-undirected-graph
+# --
+#+BEGIN_SRC clojure
+(load-file "/etc/nixos/deps/clj/vijual/vijual_deps.clj")
+(eval '
+ (vijual/draw-graph ${1:[[:a :b] [:c :d] [:d :a]]
+ {:a "First" :b "Second" :c "Third"}}))
+#+END_SRC

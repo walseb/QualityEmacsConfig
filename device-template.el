@@ -4,19 +4,31 @@
 
 (defvar my/default-face-height 160)
 
-;;(defvar my/device/monitor-setup '(1 "DVI-D-1" 0 "DP-1" 2 "DVI-I-1"))
-;; For this to work every monitor has to be listed I think
-;; Get from doing "xrandr" in shell
-(defvar my/device/monitor-setup nil)
+;; Car is real name
+;; Cdr is name to be run through `my/font-installed'
+;; (font-family-list)
+;; ("Hasklig" . nil)
+;; ("Liga Inconsolata LGC" . nil)
+;; ("Inconsolata LGC" . nil)
+;; ("Inconsolata"  . nil)
+;; ("Px437 ATI 8x8" . nil)
+;; ("PxPlus VGA SquarePx". nil)
+;; ("PxPlus AmstradPC1512-2y" . nil)
+;; ;; ("PxPlus IBM VGA8". nil)
+;; ;; ("BlockZone" . nil)
+;; ("scientifica" . nil)
+;; ;; ("Unscii" . nil)
+;; ("Iosevka" . nil)
+;; ("DejaVu Sans Mono" . nil)
+;; ("Fira Mono" . nil)
+;; ("DejaVuSansMono" . "dejavu sans mono")
+;; ("NotoSansMono" . "Noto Sans Mono")
+(setq my/font '("Hasklig" . nil))
+(setq my/theme 'turbo)
 
-;; Xrandr command to run
-;; xrandr --auto && xrandr --output LVDS-1 --off to disable laptop screen
-(if (member "--my/docked" command-line-args)
-    (progn
-      (defvar my/carpalx-enable nil)
-      (defvar my/device/monitor-setup-command "xrandr --output HDMI-1 --primary --auto --output eDP-1 --off"))
-  (defvar my/device/monitor-setup-command "")
-  (defvar my/carpalx-enable t))
+;; (setq exwm-randr-workspace-monitor-plist '(1 "eDP" 0 "HDMI-A-0"))
+(setq exwm-randr-workspace-monitor-plist nil)
+(setq exwm-workspace-number 1)
 
 (defvar my/run-command-on-boot nil)
 

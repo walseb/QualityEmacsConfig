@@ -1,0 +1,6 @@
+# key: p
+# name: src-plantuml
+# --
+#+BEGIN_SRC plantuml
+$0
+#+END_SRC

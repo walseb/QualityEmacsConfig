@@ -1,0 +1,5 @@
+# name: typeclass
+# key: tc
+# --
+class ${1:TypeclassName} ${2:instanceVar} where
+  addToInt :: ${2:instanceVar} -> Int -> Int

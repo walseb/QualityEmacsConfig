@@ -1,6 +1,6 @@
 # key: ex
 # name: example
 # --
-#+begin_example
-
-#+end_example
+#+BEGIN_EXAMPLE
+$0
+#+END_EXAMPLE

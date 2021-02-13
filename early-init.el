@@ -5,7 +5,6 @@
       compilation-minor-mode-map (make-sparse-keymap)
       compilation-shell-minor-mode-map (make-sparse-keymap)
       compilation-mode-tool-bar-map (make-sparse-keymap)
-
       exwm-mode-map (make-sparse-keymap)
       help-mode-map (make-sparse-keymap)
       ibuffer-mode-map (make-sparse-keymap)
@@ -34,11 +33,16 @@
       flyspell-mode-map (make-sparse-keymap)
       picture-mode-map (make-sparse-keymap)
       artist-mode-map (make-sparse-keymap)
-      pdf-view-mode-map (make-sparse-keymap)
+      ;; pdf-view-mode-map (make-sparse-keymap)
       eimp-minor-mode-map (make-sparse-keymap)
       image-mode-map (make-sparse-keymap)
       olivetti-mode-map (make-sparse-keymap)
-      undo-tree-visualizer-mode-map (make-sparse-keymap))
+      undo-tree-visualizer-mode-map (make-sparse-keymap)
+      selectrum-minibuffer-map (make-sparse-keymap)
+      notmuch-show-mode-map (make-sparse-keymap)
+      nm-mode-map (make-sparse-keymap)
+      notmuch-tree-mode-map (make-sparse-keymap)
+      org-super-agenda-header-map (make-sparse-keymap))
 
 ;; * Ignore x-resources
 (advice-add #'x-apply-session-resources :override #'ignore)

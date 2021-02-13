@@ -1,0 +1,8 @@
+# key: dt
+# name: diagram-tree
+# --
+#+BEGIN_SRC clojure
+(load-file "/etc/nixos/deps/clj/vijual/vijual_deps.clj")
+(eval '
+ (vijual/draw-tree ${1:[[:north-america [:usa [:miami] [:seattle] [:idaho [:test]]]] [:europe [:germany] [:france [:paris] [:lyon] [:cannes]]]]}))
+#+END_SRC

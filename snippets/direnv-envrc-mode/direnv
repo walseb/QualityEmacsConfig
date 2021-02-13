@@ -1,0 +1,4 @@
+# name: direnv
+# key: i
+# --
+use nix

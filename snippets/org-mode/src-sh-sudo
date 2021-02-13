@@ -2,5 +2,5 @@
 # name: src-sh-sudo
 # --
 #+BEGIN_SRC sh :dir (concat "/sudo::" (expand-file-name default-directory)) :cache no
-
+$0
 #+END_SRC

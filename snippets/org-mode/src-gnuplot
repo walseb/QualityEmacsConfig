@@ -2,5 +2,5 @@
 # name: src-gnuplot
 # --
 #+BEGIN_SRC gnuplot
-
+$0
 #+END_SRC

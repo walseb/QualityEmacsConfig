@@ -3,7 +3,6 @@
 !.gitignore
 !init.el
 !config.el
-!myTheme-theme.el
 !early-init.el
 !readme.el
 !device-template.el
@@ -11,3 +10,4 @@
 
 !/snippets/
 !/configs/
+!/themes/

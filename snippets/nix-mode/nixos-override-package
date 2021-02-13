@@ -1,0 +1,21 @@
+# key: over
+# name: nixos-override-package
+# --
+{ pkgs, ... }:
+{
+  nixpkgs.config = {
+    packageOverrides = pkgs: {
+      ${1:Package-name}-master = (pkgs.${2:Package-name}.override { }).overrideAttrs (old: rec {
+	version = "master";
+
+	# fetchTarball "https://TarballURL"
+	src = pkgs.fetchFromGitHub {
+	  owner = "${4:Owner}";
+	  repo = "${3:Package-name}";
+	  rev = "";
+	  sha256 = "08bxwh2b8ih1pxdsqlks0byy9cfx8fln047a7q40n8ax45qyjybm";
+	};
+      });
+    };
+  };
+}

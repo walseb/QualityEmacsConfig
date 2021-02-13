@@ -2,5 +2,5 @@
 # name: src-artist
 # --
 #+BEGIN_SRC artist
-
+$0
 #+END_SRC

@@ -1,0 +1,6 @@
+# key: a
+# name: src-text
+# --
+#+BEGIN_SRC text
+$0
+#+END_SRC

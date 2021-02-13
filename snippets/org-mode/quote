@@ -1,6 +1,6 @@
 # key: q
 # name: quote
 # --
-#+begin_quote
-
-#+end_quote
+#+BEGIN_QUOTE
+$0
+#+END_QUOTE

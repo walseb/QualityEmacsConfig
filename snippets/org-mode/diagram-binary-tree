@@ -1,0 +1,8 @@
+# key: db
+# name: diagram-binary-tree
+# --
+#+BEGIN_SRC clojure
+(load-file "/etc/nixos/deps/clj/vijual/vijual_deps.clj")
+(eval '
+ (vijual/draw-binary-tree ${1:[1 [2 [3] [4]] [5]]}))
+#+END_SRC
