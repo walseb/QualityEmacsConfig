@@ -3057,6 +3057,12 @@ If NO-INIT is true, don't call the task on init
 (setq org-agenda-custom-commands
       '(("n" "Agenda and all TODOs" (
 				     (org-ql-block '(and
+						     (todo)
+						     (not (todo "DONE"))
+						     (tags "FOCUS"))
+						   ((org-ql-block-header "FOCUS")))
+
+				     (org-ql-block '(and
 						     (closed :on today)
 						     (todo "DONE"))
 						   ((org-ql-block-header "Completed today!")))
@@ -3088,15 +3094,9 @@ If NO-INIT is true, don't call the task on init
 
 				     (org-ql-block '(and
 						     (todo)
-						     (not (todo "DONE"))
-						     (tags "TODAY"))
-						   ((org-ql-block-header "TODAY")))
-
-				     (org-ql-block '(and
-						     (todo)
 						     (not (habit))
 						     (not (todo "DONE"))
-						     (not (tags "TODAY" "SCHEDULE" "BUY" "LEARNING" "PROJECT")))
+						     (not (tags "FOCUS" "SCHEDULE" "BUY" "LEARNING" "PROJECT")))
 						   ((org-ql-block-header "Tasks")
 						    (org-super-agenda-groups `((:name "A"
 										      :priority "A")
@@ -4982,6 +4982,10 @@ If the input is empty, select the previous history element instead."
 ;;     str-new))
 
 ;; * Window management
+;; ** When displaying new buffer, reuse same window
+;; https://youtu.be/-H2nU0rsUMY?t=2147
+(setq display-buffer-base-action '((display-buffer-same-window)))
+
 ;; ** Window split functions
 (defun my/window-split-up ()
   (interactive)
@@ -5045,10 +5049,6 @@ If the input is empty, select the previous history element instead."
 ;; ** Winner-mode
 ;; Remove default keys
 (winner-mode)
-
-;; ** No more window resetting
-;; (defmacro save-window-excursion (&rest body)
-;;  )
 
 ;; ** Switch to minibuffer
 (defun my/toggle-switch-to-minibuffer ()
@@ -9818,8 +9818,15 @@ done"))))
   (interactive)
   (async-shell-command (concat my/notmuch-update-command " &")))
 
+(defun my/notmuch-fetch-secure-timer ()
+  (run-with-timer (* 60 5) nil
+		  (lambda ()
+		    (my/notmuch-fetch-secure-timer)
+		    (my/notmuch-fetch-mail))))
+
 (when (file-exists-p "~/Maildir")
-  (my/allocate-update-time 'my/notmuch-fetch-mail (* 60 5)))
+  ;; (my/allocate-update-time 'my/notmuch-fetch-mail (* 60 5))
+  (my/notmuch-fetch-secure-timer))
 
 ;; *** Notmuch show mode
 (setq notmuch-show-indent-content nil)
@@ -10242,6 +10249,14 @@ done"))))
 (straight-use-package 'enwc)
 (setq enwc-default-backend 'nm)
 
+(defun my/enwc-reset-cache ()
+  (interactive)
+  (setq enwc-wireless-device ""
+	enwc-wired-device ""
+	enwc--setup-done nil)
+  (message "enwc cache reset!"))
+
+(define-key my/network-map (kbd "r") 'my/enwc-reset-cache)
 (define-key my/network-map (kbd "e") 'enwc)
 
 ;; *** Connect to wifi networks
@@ -11279,6 +11294,11 @@ done"))))
 
 (define-key my/leader-map (kbd "V") 'olivetti-mode)
 
+;; ** Focus
+;; (straight-use-package 'focus)
+;; (setq-default focus-current-thing 'paragraph)
+;; (add-hook 'window-state-change-hook 'focus-mode)
+
 ;; ** Fringe size
 ;; Used by diff-hl and flycheck
 ;; Fringe only on the left side
@@ -11505,9 +11525,17 @@ done"))))
 ;; ** Calculate frame width
 (defvar my/frame-width (frame-width))
 
-(defun my/frame-width-update()
+(defun my/frame-width-update ()
   (interactive)
   (setq my/frame-width (frame-width)))
+
+;; Only applicable to X since terminal never stretches, etc
+(add-hook 'exwm-workspace-switch-hook 'my/frame-width-update)
+
+(defun my/mode-line-align (left right)
+  "Return a string of `window-width' length containing LEFT, and RIGHT aligned respectively."
+  (let* ((available-width (- my/frame-width (length left) 2)))
+    (format (format "%%s %%%ds" available-width) left right)))
 
 ;; ** Mode line highlight face
 (defface my/mode-line-highlight
@@ -11635,105 +11663,121 @@ done"))))
 ;; ** Format
 ;; Don't set it directly here, because the variable is needed to fix exwm
 (setq-default header-line-format
-	      (quote
-	       (
-		;; Print if recursive editing
-		"%["
+	      '((:eval (my/mode-line-align
+			(substring-no-properties (format-mode-line
+						  (quote
+						   (
+						    ;; Print if recursive editing
+						    "%["
 
-		;; Information bar
-		mode-line-mule-info
-		mode-line-client
+						    ;; Information bar
+						    mode-line-mule-info
+						    mode-line-client
 
-		;; If buffer is modified
-		mode-line-modified
+						    ;; If buffer is modified
+						    mode-line-modified
 
-		;; Turns into @ when remote
-		mode-line-remote
+						    ;; Turns into @ when remote
+						    mode-line-remote
 
-		" "
+						    " "
 
-		;; Print current line number
-		;;"%l"
-		;;"%p"
-		;;(:eval (format "%d" (/ (window-start) 0.01 (point-max))))
-		;;"%p"
+						    ;; Print current line number
+						    ;;"%l"
+						    ;;"%p"
+						    ;;(:eval (format "%d" (/ (window-start) 0.01 (point-max))))
+						    ;;"%p"
 
-		;;"@"
-		;; Print total line number and buffer position
-		;; (:eval
-		;; (let
-		;; ((line-number-count (+ (count-lines (point-min) (point-max)) 1))
-		;; (point-pos (count-lines (point) (point-min))))
-		;; (let
-		;; ((point-in-buffer-percentage (floor (* (/ (float point-pos) line-number-count) 100))))
-		;; (concat (int-to-string point-in-buffer-percentage) "% ~" (int-to-string line-number-count)))))
+						    ;;"@"
+						    ;; Print total line number and buffer position
+						    ;; (:eval
+						    ;; (let
+						    ;; ((line-number-count (+ (count-lines (point-min) (point-max)) 1))
+						    ;; (point-pos (count-lines (point) (point-min))))
+						    ;; (let
+						    ;; ((point-in-buffer-percentage (floor (* (/ (float point-pos) line-number-count) 100))))
+						    ;; (concat (int-to-string point-in-buffer-percentage) "% ~" (int-to-string line-number-count)))))
 
-		(:eval (my/count-line-numbers))
+						    (:eval (my/count-line-numbers))
 
-		;;"%I"
+						    ;;"%I"
 
-		;; is narrowed
-		"%n"
+						    ;; is narrowed
+						    "%n"
 
-		;; Is loccur
-		(:eval (when (and (boundp 'loccur-mode) loccur-mode)
-			 " Loccur"))
+						    ;; Is loccur
+						    (:eval (when (and (boundp 'loccur-mode) loccur-mode)
+							     " Loccur"))
 
-		" | "
+						    " | "
 
-		;; Print error if any
-		"%e"
+						    ;; Print error if any
+						    "%e"
 
-		;; Print mode
-		(:eval (when defining-kbd-macro
-			 (concat
-			  (propertize
-			   "[MACRO]"
-			   'face 'my/mode-line-highlight)
-			  " ")))
+						    ;; Print mode
+						    (:eval (when defining-kbd-macro
+							     (concat
+							      (propertize
+							       "[MACRO]"
+							       'face 'my/mode-line-highlight)
+							      " ")))
 
-		;; Print buffer name
-		"%b > "
+						    ;; Print buffer name
+						    "%b > "
 
-		;; Print mode
-		;; "%m"
-		;; With this it also works properly in exwm-mode
-		(:eval (symbol-name major-mode))
-		" >"
+						    ;; Print mode
+						    ;; "%m"
+						    ;; With this it also works properly in exwm-mode
+						    (:eval (symbol-name major-mode))
+						    " >"
 
-		;; Git
-		(:eval
-		 (if (and my/projectile-project-name my/buffer-git-branch (not (string= my/projectile-project-name "-")))
-		     (concat
-		      " "
-		      my/buffer-git-branch
-		      ;; "@"
-		      ;; my/projectile-project-name
-		      (when my/git-changes-string
-			(concat
-			 "["
-			 my/git-changes-string
-			 "]"
-			 ))
-		      " >"
-		      )))
+						    ;; Git
+						    (:eval
+						     (if (and my/projectile-project-name my/buffer-git-branch (not (string= my/projectile-project-name "-")))
+							 (concat
+							  " "
+							  my/buffer-git-branch
+							  ;; "@"
+							  ;; my/projectile-project-name
+							  (when my/git-changes-string
+							    (concat
+							     "["
+							     my/git-changes-string
+							     "]"
+							     ))
+							  " >"
+							  )))
 
-		(:eval (envrc--lighter))
+						    (:eval (envrc--lighter))
 
-		(" "
-		 (company-candidates
-		  (:eval
-		   (if (consp company-backend)
-		       (my/company--group-lighter (nth company-selection
-						       company-candidates)
-						  company-lighter-base)
-		     (when company-backend
-		       (concat
-			"| "
-			(symbol-name company-backend)
-			))))
-		  ;; Symbol when company is not in use
-		  "")))))
+						    (" "
+						     (company-candidates
+						      (:eval
+						       (if (consp company-backend)
+							   (my/company--group-lighter (nth company-selection
+											   company-candidates)
+										      company-lighter-base)
+							 (when company-backend
+							   (concat
+							    "| "
+							    (symbol-name company-backend)
+							    ))))
+						      ;; Symbol when company is not in use
+						      ""))))))
+			;; "MAAN")
+			(format-mode-line
+			 (quote
+			  ((:eval
+			    (let (
+				  (root (projectile-project-root))
+				  (file (or (buffer-file-name) (expand-file-name default-directory)))
+				  )
+			      (if root
+				  (replace-regexp-in-string
+				   root
+				   ""
+				   file)
+				file))))))))))
 
 ;; * Status line
 ;; ** Modules
@@ -12044,14 +12088,6 @@ done"))))
 ;;     (my/proc-track-done)))
 
 ;; ** Format
-;; Only applicable to X since terminal never stretches, etc
-(add-hook 'exwm-workspace-switch-hook 'my/frame-width-update)
-
-(defun my/mode-line-align (left right)
-  "Return a string of `window-width' length containing LEFT, and RIGHT aligned respectively."
-  (let* ((available-width (- my/frame-width (length left) 2)))
-    (format (format "%%s %%%ds" available-width) left right)))
-
 ;; Remember to update `mini-modeline-r-format' after setting this manually
 (progn
   (setq-default my/status-line-format
@@ -12309,7 +12345,7 @@ done"))))
 
 ;; ** Persp-mode
 (straight-use-package 'persp-mode)
-(add-hook 'window-setup-hook (lambda () (persp-mode 1)))
+(add-hook 'exwm-init-hook (lambda () (persp-mode 1)))
 
 ;; Auto add new buffers
 (setq persp-add-buffer-on-after-change-major-mode nil)
