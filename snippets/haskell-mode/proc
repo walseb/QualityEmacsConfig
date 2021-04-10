@@ -1,4 +1,4 @@
 # name: proc
 # key: proc
 # --
-proc ${1:input} -> do
+proc ${1:inp} -> do

@@ -1,7 +1,12 @@
 (deftheme turbo "turbo")
 
-(let ((colors '((fg . "#efeff9")
-		(bg . "#110811dc131b")
+(let ((colors '(
+		(fg . "#efeff9")
+		(bg . "#000000")
+		;; (bg . "#110811dc131b")
+
+		;; (fg . "#000000")
+		;; (bg . "#FFFFFF")
 		(prompt . "purple")
 		(diff-add . "#0000b6b50000")
 		(diff-add . "#335533")

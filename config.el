@@ -67,7 +67,7 @@
 	 (my/fg-color-5 (my/ifc (color-darken-name my/fg-color 25) "white"))
 	 (my/fg-color-6 (my/ifc (color-darken-name my/fg-color 30) "white"))
 
-	 (my/bg-color (color-darken-name (cdr (assoc 'bg colors)) 10))
+	 (my/bg-color (cdr (assoc 'bg colors)))
 	 (my/bg-color-1 (my/ifc (color-lighten-name my/bg-color 5) "black"))
 	 (my/bg-color-2 (my/ifc (color-lighten-name my/bg-color 10) "black"))
 	 (my/bg-color-3 (my/ifc (color-lighten-name my/bg-color 15) "black"))
@@ -282,18 +282,24 @@
      ;; `(org-todo ((,class (:foreground ,my/mark-color))))
 
 
+     ;; Used for among other things overdue deadlines
+     `(org-warning ((,class (:foreground ,my/diff-removed-hl-color))))
+
      `(org-scheduled-previously ((,class (:foreground ,my/diff-removed-hl-color))))
      `(org-scheduled ((,class (:foreground ,outline-2-fg))))
+     `(org-upcoming-distant-deadline ((,class (:inherit org-upcoming-deadline))))
+     ;; `(org-upcoming-deadline ((,class (:inherit org-scheduled))))
 
-     `(org-scheduled-today ((,class (:inherit default))))
+     `(org-scheduled-today ((,class (:foreground ,outline-3-fg))))
      ;; `(org-scheduled-today ((,class (:foreground ,default))))
+
+     `(org-ql-view-due-date ((,class (:foreground ,my/diff-ancestor-hl-color))))
 
      `(org-tag ((,class (:foreground ,outline-1-fg :background ,outline-1-bg :weight normal))))
 
      `(org-agenda-calendar-event ((,class (:foreground "DeepSkyBlue"))))
      `(org-agenda-calendar-sexp ((,class (:inherit default))))
      `(org-agenda-clocking ((,class (:inherit secondary-selection))))
-     `(org-agenda-column-dateline ((,class (:inherit org-column))))
      `(org-agenda-current-time ((,class (:inherit org-time-grid))))
      `(org-agenda-date ((,class (:inherit default))))
      `(org-agenda-date-today ((,class (:inherit default :underline (:style line :color ,"white")))))
@@ -307,6 +313,10 @@
      `(org-agenda-filter-tags ((,class (:inherit default))))
      `(org-agenda-restriction-lock ((,class (:inherit default))))
      `(org-agenda-structure ((,class (:foreground ,my/bg-color :background ,my/mark-color))))
+
+     `(org-column ((,class (:foreground unspecified :background unspecified))))
+     `(org-agenda-column-dateline ((,class (:inherit org-column))))
+     `(org-column-title ((,class (:inherit org-column))))
 
      ;; Used by org src-blocks when in use, might also be used for other things
      `(secondary-selection ((,class (:background ,(color-darken-name my/bg-color-1 5)))))
@@ -332,6 +342,7 @@
      `(lazy-highlight ((,class (:foreground ,my/bg-color :background ,my/fg-color))))
 
      `(haskell-literate-comment-face ((,class (:foreground unspecified :background unspecified :inherit font-lock-comment-face))))
+     `(haskell-constructor-face ((,class (:inherit font-lock-keyword-face))))
 
      `(company-scrollbar-bg ((,class (:background ,my/bg-color))))
      `(company-scrollbar-fg ((,class (:background ,my/fg-color))))
@@ -516,6 +527,7 @@
     (let* ((symbol-font (and (cdr font) (my/get-best-symbol-font (cdr font)))))
       (set-face-attribute 'default nil
 			  :font (car font)
+			  ;; :font (concat (car my/font) ":antialias=false")
 			  ;; :height my/default-face-height
 			  ;; :weight 'normal
 			  ;; :width 'normal
@@ -560,6 +572,7 @@
 ;; Major modes
 ;; (symbol-name major-mode)
 (setq my/regex-major-mode-workspace-ignore (rx (or
+						"timer-list-mode"
 						"image-mode"
 						"exwm-mode"
 						"minibuffer-inactive-mode"
@@ -571,7 +584,13 @@
 
 (setq my/regex-major-mode-dont-save (eval `(rx (or
 						(regexp ,my/regex-major-mode-workspace-ignore)
+						"org-agenda-mode"
 						"eshell"
+						"shell-mode"
+						"term-mode"
+						"haskell-interactive-mode"
+						"dired-mode"
+						"wdired-mode"
 						))))
 
 ;; * Security
@@ -2216,17 +2235,20 @@ If NO-INIT is true, don't call the task on init
 ;; (add-hook 'org-mode-hook 'pixel-scroll-mode)
 
 ;; ** Increase and decrease brightness
-(defun my/increase-brightness ()
+(defun my/increase-brightness (&optional amount)
   (interactive)
-  (my/message-at-point (my/local-env-shell-command-to-string "xbacklight -inc 1; xbacklight -get")))
+  (my/message-at-point (my/local-env-shell-command-to-string (concat "xbacklight -inc " (number-to-string (or amount 1)) "; xbacklight -get"))))
 
-(defun my/decrease-brightness ()
+(defun my/decrease-brightness (&optional amount)
   (interactive)
-  (my/message-at-point (my/local-env-shell-command-to-string "xbacklight -dec 1; xbacklight -get")))
+  (my/message-at-point (my/local-env-shell-command-to-string (concat "xbacklight -dec " (number-to-string (or amount 1)) "; xbacklight -get"))))
 
 (when my/enable-brightness-binds
   (global-set-key (kbd "<XF86MonBrightnessUp>") 'my/increase-brightness)
-  (global-set-key (kbd "<XF86MonBrightnessDown>") 'my/decrease-brightness))
+  (global-set-key (kbd "<XF86MonBrightnessDown>") 'my/decrease-brightness)
+
+  (global-set-key (kbd "S-<XF86MonBrightnessUp>") (lambda () (interactive) (my/increase-brightness 10)))
+  (global-set-key (kbd "S-<XF86MonBrightnessDown>") (lambda () (interactive) (my/decrease-brightness 10))))
 
 ;; ** su
 (straight-use-package 'su)
@@ -2483,12 +2505,6 @@ If NO-INIT is true, don't call the task on init
      t
      )))
 
-;; ** Build config
-(defun my/build-config-docs ()
-  (interactive)
-  (my/config-visit)
-  (my/outorg-export-to-org-file "~/.emacs.d/readme.org"))
-
 ;; ** Man mode
 ;; ** Timer
 ;; Set timer to only run expired repeating hooks once after sleep
@@ -2579,7 +2595,6 @@ If NO-INIT is true, don't call the task on init
       ;; (my/message-at-point "Clock in! Also check agenda!")
       (unless (exwm-layout--fullscreen-p)
 
-
 	(when (my/timetrack-get-log (current-time))
 	  (my/timetrack-show `(,(my/timetrack-get-log (current-time))
 			       ,(my/timetrack-get-log
@@ -2665,7 +2680,8 @@ If NO-INIT is true, don't call the task on init
 
 (define-key my/open-map (kbd "g") 'my/project-planning-visit)
 
-;; ;; ** Org-roam notes
+;; ** Org-roam notes
+;; *** Recoll
 (defun my/counsel-recoll (&optional initial-input action)
   "ACTION accepts one argument, the string of what's returned"
   (interactive)
@@ -2680,7 +2696,28 @@ If NO-INIT is true, don't call the task on init
 		  (find-file (my/recoll-format-link x))))
 	    :caller 'counsel-recoll))
 
-(define-key my/open-map (kbd "N") 'my/counsel-recoll)
+;; (define-key my/open-map (kbd "N") 'my/counsel-recoll)
+
+;; *** By name
+(defun my/org-roam-by-name ()
+  (let ((roam-titles (org-roam-db-query `[:select [files:file titles:title] :from titles
+						  :left :join files
+						  :on (= titles:file files:file)
+						  ])))
+    (completing-read "Roam: "
+		     (mapcar '(lambda (a) (concat (cadr a) (make-string (frame-width) ? ) " - " (car a) )) roam-titles))))
+
+(defun my/org-roam-by-name-extract-file (entry)
+  (let* ((num (string-match-p "\ - \ /" entry))
+	 (num-aux (when num (+ 2 num))))
+    (substring-no-properties entry num-aux)))
+
+(defun my/org-roam-completing-read-by-name ()
+  "ACTION accepts one argument, the string of what's returned"
+  (interactive)
+  (find-file (my/org-roam-by-name-extract-file (my/org-roam-by-name))))
+
+(define-key my/open-map (kbd "N") 'my/org-roam-completing-read-by-name)
 
 ;; ** Visit nixos config
 (defun my/nixos-config-visit ()
@@ -2801,8 +2838,8 @@ If NO-INIT is true, don't call the task on init
 
 (defun my/launch-gui-browser ()
   (interactive)
-  (my/open-in-nyxt)
-  ;; (my/open-in-browser)
+  ;; (my/open-in-nyxt)
+  (my/open-in-browser)
   )
 
 ;; (defvar my/browser-bookmarks '(
@@ -2842,10 +2879,6 @@ If NO-INIT is true, don't call the task on init
 ;; Print out date of completion when changing task to done
 (setq org-log-done t)
 
-(define-prefix-command 'my/org-mode-map)
-(with-eval-after-load 'org
-  (evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a")) #'my/org-mode-map))
-
 ;; ** Refile
 ;; *** Refile all DONE
 (defun my/org-refile-all-done ()
@@ -2862,6 +2895,7 @@ If NO-INIT is true, don't call the task on init
 
 ;; *** Eldoc
 (with-eval-after-load 'org
+  (require 'org-eldoc)
   (require 'org-refile))
 
 (add-hook 'org-mode-hook #'org-eldoc-load)
@@ -2873,7 +2907,17 @@ If NO-INIT is true, don't call the task on init
 
 ;; ** Inline images
 ;; Set max image width to be third of display
-(setq org-image-actual-width (/ (display-pixel-width) 3))
+;; (setq org-image-actual-width (/ (display-pixel-width) 3))
+(setq org-image-actual-width t)
+
+;; *** Update after babel executes
+;; https://joy.pm/post/2017-09-17-a_graphviz_primer/
+(defun my/org-redisplay-inline-images ()
+  (when org-inline-image-overlays
+    (org-redisplay-inline-images)))
+
+(add-hook 'org-babel-after-execute-hook 'my/org-redisplay-inline-images)
+(add-to-list 'org-src-lang-modes ' ("dot" . graphviz-dot))
 
 ;; ** Babel
 ;; *** Supported runnable languages
@@ -3020,7 +3064,9 @@ If NO-INIT is true, don't call the task on init
   (pcase major-mode
     ;; ('mu4e-headers-mode (mu4e-org-store-and-capture))
     ;; ('mu4e-view-mode (mu4e-org-store-and-capture))
-    (_ (call-interactively 'org-capture))))
+    (_
+     ;; I needed this once because of whatever reason
+     (call-interactively 'org-capture))))
 
 (define-key my/leader-map (kbd "C") 'my/auto-org-capture)
 
@@ -3050,22 +3096,33 @@ If NO-INIT is true, don't call the task on init
 ;; Auto complete tags in agenda
 (setq org-complete-tags-always-offer-all-agenda-tags t)
 
-(setq org-agenda-tags-column 0)
+(setq org-agenda-tags-column 'auto)
+;; (setq org-agenda-tags-column 0)
 (setq org-agenda-show-inherited-tags t)
+
+(setq org-deadline-warning-days 365)
 
 ;; Put todos on top
 (setq org-agenda-custom-commands
       '(("n" "Agenda and all TODOs" (
 				     (org-ql-block '(and
-						     (todo)
-						     (not (todo "DONE"))
-						     (tags "FOCUS"))
-						   ((org-ql-block-header "FOCUS")))
-
-				     (org-ql-block '(and
 						     (closed :on today)
 						     (todo "DONE"))
 						   ((org-ql-block-header "Completed today!")))
+
+				     (org-ql-block '(or (and
+							 (todo)
+							 (not (todo "DONE"))
+							 (tags "GETDONE"))
+							(and
+							 (todo)
+							 (not (todo "DONE"))
+							 (or
+							  (scheduled :to -1)
+							  (deadline :to -1)
+							  (scheduled :to today)
+							  (deadline :to today))))
+						   ((org-ql-block-header "GETDONE")))
 
 				     (org-ql-block '(and
 						     (todo)
@@ -3096,7 +3153,7 @@ If NO-INIT is true, don't call the task on init
 						     (todo)
 						     (not (habit))
 						     (not (todo "DONE"))
-						     (not (tags "FOCUS" "SCHEDULE" "BUY" "LEARNING" "PROJECT")))
+						     (not (tags "GETDONE" "SCHEDULE" "BUY" "LEARNING" "PROJECT")))
 						   ((org-ql-block-header "Tasks")
 						    (org-super-agenda-groups `((:name "A"
 										      :priority "A")
@@ -3118,6 +3175,11 @@ If NO-INIT is true, don't call the task on init
 						     (not (todo "DONE"))
 						     (tags "BUY"))
 						   ((org-ql-block-header "Buy")))
+
+				     (org-ql-block '(and
+						     (tags "LEARNING")
+						     (level 1))
+						   ((org-ql-block-header "Active learning")))
 
 				     ;; Add org-agenda time budgets integration
 				     ;; (agenda "" ((org-agenda-sorting-strategy '(habit-down time-up priority-down category-keep user-defined-up))))
@@ -3212,7 +3274,10 @@ If NO-INIT is true, don't call the task on init
 
 ;; *** Time-grid
 (setq org-agenda-time-grid
-      '((weekly today require-timed)
+      '((
+	 ;; weekly
+	 daily
+	 today require-timed)
 	;; These are the yellow lines that show up
 	(800 1000 1200 1400 1600 1800 2000 2400)
 	"......"
@@ -3226,8 +3291,23 @@ If NO-INIT is true, don't call the task on init
 
 ;; (add-hook 'org-agenda-finalize-hook 'org-timeline-insert-timeline :append)
 
+;; *** Columns
+;; (setq org-agenda-view-columns-initially nil)
+
+;; (defun my/org-columns-set ()
+;;   (interactive)
+;;   (setq org-columns-default-format (concat "%" (number-to-string (- (frame-width) 11 5 3 8)) "ITEM %5TODO %3PRIORITY %8TAGS")))
+
+;; (my/org-columns-set)
+
+;; (with-eval-after-load 'exwm-randr
+;;   (add-hook 'exwm-randr-screen-change-hook 'my/org-columns-set))
+
 ;; *** Keys
 (with-eval-after-load 'org-agenda
+  (define-prefix-command 'my/org-agenda-mode-map)
+  (evil-define-key 'normal org-agenda-mode-map (kbd (concat my/leader-map-key " a")) #'my/org-agenda-mode-map)
+
   (define-key org-agenda-mode-map (kbd "n") 'org-agenda-next-line)
 
   (define-key org-agenda-mode-map (kbd "p") 'org-agenda-previous-line)
@@ -3238,12 +3318,16 @@ If NO-INIT is true, don't call the task on init
   (define-key org-agenda-mode-map (kbd "g") 'org-agenda-redo-all)
 
   (define-key org-agenda-mode-map (kbd "t") '(lambda () (interactive) (org-agenda-todo "DONE")))
+  (define-key org-agenda-mode-map (kbd "T") 'org-agenda-set-tags)
 
   (define-key org-agenda-mode-map (kbd "l") 'org-agenda-todo)
   (define-key org-agenda-mode-map (kbd "h") 'org-agenda-todo)
 
   (define-key org-agenda-mode-map (kbd "N") 'org-agenda-priority-down)
   (define-key org-agenda-mode-map (kbd "P") 'org-agenda-priority-up)
+
+  (define-key my/org-agenda-mode-map (kbd "t") 'org-agenda-schedule)
+  (define-key my/org-agenda-mode-map (kbd "d") 'org-agenda-deadline)
 
   ;;(define-key org-agenda-mode-map (kbd (concat my/leader-map-key " a")) #'my/agenda-space-map)
 
@@ -3319,8 +3403,6 @@ If NO-INIT is true, don't call the task on init
   (org-clock-update-time-maybe))
 
 ;; *** Keys
-(define-key my/org-mode-map (kbd "c") 'my/org-insert-clock-range)
-
 ;; (define-prefix-command 'my/clock-map)
 ;; (define-key my/leader-map (kbd "c") 'my/clock-map)
 
@@ -3386,7 +3468,7 @@ If NO-INIT is true, don't call the task on init
 ;; (straight-use-package 'org-ql)
 
 ;; ** Disable syntax highlighting in source code blocks
-(setq org-src-fontify-natively nil)
+;; (setq org-src-fontify-natively nil)
 
 ;; ** ob
 ;; *** ob-async
@@ -3454,7 +3536,34 @@ If NO-INIT is true, don't call the task on init
     (insert-file-contents file)
     (car (org-roam--extract-titles-title))))
 
-(defun my/org-roam-insert-link ()
+;; **** Completing read by name
+(defun my/org-roam-insert-link-by-name ()
+  (interactive)
+  (let* ((entry
+	  (my/org-roam-by-name))
+	 (file-or-new-title
+	  (my/org-roam-by-name-extract-file entry))
+	 (create-new-file (string= entry file-or-new-title)))
+    ;; False -> Link to file
+    ;; True -> Create new file
+    (if (not create-new-file)
+	(insert
+	 (org-roam-format-link
+	  (file-relative-name file-or-new-title default-directory)
+	  (my/org-file-to-roam-name file-or-new-title)))
+
+      (let ((file (format-time-string "%Y%m%d%H%M%S.org")))
+	(insert
+	 (org-roam-format-link
+	  file
+	  file-or-new-title))
+
+	(find-file
+	 (concat org-roam-directory file))
+	(insert (concat "#+title: " file-or-new-title "\n"))))))
+
+;; **** Recoll
+(defun my/org-roam-recoll-insert-link ()
   (interactive)
   (my/counsel-recoll nil (lambda (query)
 			   ;; False -> Link to file
@@ -3481,8 +3590,11 @@ If NO-INIT is true, don't call the task on init
   (interactive)
   (if (file-in-directory-p (buffer-file-name) org-roam-directory)
       ;; (call-interactively 'org-roam-insert)
-      (call-interactively 'my/org-roam-insert-link)
+      (call-interactively 'my/org-roam-insert-link-by-name)
+    ;; (call-interactively 'my/org-roam-recoll-insert-link)
     (call-interactively 'org-insert-link)))
+
+(define-key my/leader-map (kbd "i") 'my/auto-org-insert-link)
 
 ;; ** Org-noter
 (straight-use-package 'org-noter)
@@ -3490,6 +3602,11 @@ If NO-INIT is true, don't call the task on init
 (setq org-noter-always-create-frame nil)
 
 ;; ** Key
+(define-prefix-command 'my/org-mode-map)
+(evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a")) #'my/org-mode-map)
+
+;; (define-key my/org-mode-map (kbd "c") 'my/org-insert-clock-range)
+
 (define-key my/org-mode-map (kbd "s") 'org-schedule)
 
 (define-key my/org-mode-map (kbd "i") (lambda () (interactive) (org-toggle-inline-images t)))
@@ -3515,6 +3632,7 @@ If NO-INIT is true, don't call the task on init
 (define-key my/org-mode-map (kbd "b") 'my/org-present-prev)
 
 (define-key my/org-mode-map (kbd "t") 'org-time-stamp)
+(define-key my/org-mode-map (kbd "T") '(lambda () (interactive) (org-time-stamp '(16))))
 
 (define-key my/org-mode-map (kbd "r") 'org-refile)
 
@@ -3566,7 +3684,7 @@ If NO-INIT is true, don't call the task on init
 (define-key evil-inner-text-objects-map "h" 'evil-inside-heading)
 
 ;; ** Imenu
-(define-key my/leader-map (kbd "i") 'counsel-imenu)
+;; (define-key my/leader-map (kbd "i") 'counsel-imenu)
 
 ;; ** Counsel-outline
 (define-key my/leader-map (kbd "TAB") 'counsel-outline)
@@ -3610,7 +3728,7 @@ If NO-INIT is true, don't call the task on init
 (setq outorg-unindent-active-source-blocks-p nil)
 
 ;; *** Toggle current heading
-(define-key my/leader-map (kbd "f") 'my/outorg-toggle-heading)
+(define-key my/leader-map (kbd "F") 'my/outorg-toggle-heading)
 
 (defun my/outorg-toggle-heading ()
   (interactive)
@@ -3619,27 +3737,31 @@ If NO-INIT is true, don't call the task on init
     (outorg-edit-as-org)))
 
 ;; *** Toggle entire buffer
-(define-key my/leader-map (kbd "F") 'my/outorg-toggle)
+(define-key my/leader-map (kbd "f") 'my/outorg-toggle)
 
 (defun my/outorg-toggle ()
   (interactive)
   (if (eq major-mode 'org-mode)
       (outorg-copy-edits-and-exit)
-    (outorg-edit-as-org '(4))))
+    (let ((one-window (one-window-p)))
+      (outorg-edit-as-org '(4))
+      ;; Fix outorg bug
+      (when one-window
+	(delete-window (next-window))))))
 
 ;; *** Export
-(defun my/outorg-export-to-org-file (&optional name)
-  (interactive)
-  (let ((buffer (generate-new-buffer "outorg-org-output"))
-	(mode major-mode))
-    (copy-to-buffer buffer (point-min) (point-max))
-    (switch-to-buffer buffer)
-    (funcall mode)
-    (outorg-convert-to-org)
-    (if name
-	(write-file name)
-      (save-buffer))
-    (kill-buffer)))
+;; (defun my/outorg-export-to-org-file (&optional name)
+;;   (interactive)
+;;   (let ((buffer (generate-new-buffer "outorg-org-output"))
+;;	(mode major-mode))
+;;     (copy-to-buffer buffer (point-min) (point-max))
+;;     (switch-to-buffer buffer)
+;;     (funcall mode)
+;;     (outorg-convert-to-org)
+;;     (if name
+;;	(write-file name)
+;;       (save-buffer))
+;;     (kill-buffer)))
 
 ;; ** Visuals
 (setq counsel-outline-face-style nil)
@@ -3790,7 +3912,7 @@ If NO-INIT is true, don't call the task on init
 (selectrum-mode 1)
 
 (setq selectrum-fix-minibuffer-height nil)
-(setq selectrum-should-sort-p nil)
+(setq selectrum-should-sort nil)
 
 ;; *** Regex search
 ;; **** Orderless
@@ -5370,7 +5492,12 @@ If the input is empty, select the previous history element instead."
 (define-key my/wdired-mode-map (kbd "s") 'wdired-finish-edit)
 (define-key my/wdired-mode-map (kbd "k") 'wdired-abort-changes)
 
+;; (evil-define-key 'normal wdired-mode-map (kbd "o") '(lambda (interactive) ()
+;;						      (let ((buf (selected-window)))
+;;							(call-interactively 'dired-find-file-other-window)
+;;							(select-window buf))))
 (evil-define-key 'normal wdired-mode-map (kbd "o") 'dired-find-file-other-window)
+;; (evil-define-key 'normal wdired-mode-map (kbd "O") 'dired-find-file-other-window)
 
 ;; ** Dired collapse
 ;; (straight-use-package 'dired-collapse)
@@ -5547,9 +5674,9 @@ If the input is empty, select the previous history element instead."
 ;; (evil-define-key 'insert dired-mode-map (kbd "RET") 'dired-subtree-insert)
 ;; (evil-define-key 'insert dired-mode-map (kbd "i") 'dired-subtree-insert)
 ;; (evil-define-key 'insert dired-mode-map (kbd "k") 'dired-subtree-remove)
-(evil-define-key 'insert dired-mode-map (kbd "RET") 'dired-maybe-insert-subdir)
-(evil-define-key 'insert dired-mode-map (kbd "i") 'dired-maybe-insert-subdir)
-(evil-define-key 'insert dired-mode-map (kbd "k") 'dired-kill-subdir)
+;; (evil-define-key 'insert dired-mode-map (kbd "RET") 'dired-maybe-insert-subdir)
+;; (evil-define-key 'insert dired-mode-map (kbd "i") 'dired-maybe-insert-subdir)
+;; (evil-define-key 'insert dired-mode-map (kbd "k") 'dired-kill-subdir)
 
 (evil-define-key 'insert dired-mode-map (kbd "r") 'dired-do-redisplay)
 (evil-define-key 'normal dired-mode-map (kbd "M-m") 'dired-mark-subdir-files)
@@ -5962,65 +6089,36 @@ If the input is empty, select the previous history element instead."
 
 (define-key my/leader-map (kbd "T") 'zeal-at-point)
 
+;; ** Graphviz
+(straight-use-package 'graphviz-dot-mode)
+(setq graphviz-dot-indent-width 2)
+
+(add-to-list 'org-src-lang-modes '("dot" . graphviz-dot))
+
+(org-babel-do-load-languages 'org-babel-load-languages '((dot . t)))
+
 ;; ** Plantuml
-(straight-use-package 'plantuml-mode)
+;; (straight-use-package 'plantuml-mode)
 
 ;; Org src compatibility
-(add-to-list 'auto-mode-alist '("\\.plantuml\\'" . plantuml-mode))
+;; (add-to-list 'auto-mode-alist '("\\.plantuml\\'" . plantuml-mode))
 
-(add-hook 'plantuml-mode-hook 'my/plantuml-mode)
+;; (add-hook 'plantuml-mode-hook 'my/plantuml-mode)
 
 ;; *** Flycheck
-(straight-use-package 'flycheck-plantuml)
+;; (straight-use-package 'flycheck-plantuml)
 
-(with-eval-after-load 'flycheck
-  (with-eval-after-load 'plantuml
-    (flycheck-plantuml-setup)))
-(setq org-plantuml-jar-path "plantuml")
-(setq org-plantuml-exec-mode 'plantuml)
+;; (with-eval-after-load 'flycheck
+;;   (with-eval-after-load 'plantuml
+;;     (flycheck-plantuml-setup)))
+;; (setq org-plantuml-jar-path "plantuml")
+;; (setq org-plantuml-exec-mode 'plantuml)
 
 ;; *** Org integration
-(with-eval-after-load 'org
-  (add-to-list 'org-src-lang-modes '("plantuml" . plantuml))
+;; (with-eval-after-load 'org
+;;   (add-to-list 'org-src-lang-modes '("plantuml" . plantuml))
 
-  (org-babel-do-load-languages 'org-babel-load-languages '((plantuml . t))))
-
-;; **** Inline ascii
-;; https://lists.gnu.org/archive/html/emacs-orgmode/2013-03/msg00687.html
-(with-eval-after-load 'ob-plantuml
-  (setq org-babel-default-header-args:plantuml
-	'((:exports . "results")))
-
-  (defun org-babel-execute:plantuml (body params)
-    "Execute a block of plantuml code with org-babel.
-This function is called by `org-babel-execute-src-block'."
-    (let* ((cmdline (cdr (assq :cmdline params)))
-	   (in-file (org-babel-temp-file "plantuml-"))
-	   (java (or (cdr (assq :java params)) ""))
-	   (executable (cond ((eq org-plantuml-exec-mode 'plantuml) org-plantuml-executable-path)
-			     (t "java")))
-	   (executable-args (cond ((eq org-plantuml-exec-mode 'plantuml) org-plantuml-executable-args)
-				  ((string= "" org-plantuml-jar-path)
-				   (error "`org-plantuml-jar-path' is not set"))
-				  ((not (file-exists-p org-plantuml-jar-path))
-				   (error "Could not find plantuml.jar at %s" org-plantuml-jar-path))
-				  (t (list java
-					   "-jar"
-					   (shell-quote-argument (expand-file-name org-plantuml-jar-path))))))
-	   (full-body (org-babel-plantuml-make-body body params))
-	   (cmd (mapconcat #'identity
-			   (append
-			    (list executable)
-			    executable-args
-			    '("-ttxt")
-			    (list
-			     "-p"
-			     cmdline
-			     "<"
-			     (org-babel-process-file-name in-file)))
-			   " ")))
-      (with-temp-file in-file (insert full-body))
-      (message "%s" cmd) (org-babel-eval cmd ""))))
+;;   (org-babel-do-load-languages 'org-babel-load-languages '((plantuml . t))))
 
 ;; ** LSP
 (straight-use-package 'lsp-mode)
@@ -6335,7 +6433,7 @@ the overlay."
 
 ;; ***** Babel
 ;;(straight-use-package 'inf-clojure)
-;;(setq org-babel-clojure-backend 'cider)
+;; (setq org-babel-clojure-backend 'cider)
 
 ;; ***** Enlighten
 (add-hook 'clojure-mode-hook 'cider-enlighten-mode)
@@ -6476,23 +6574,20 @@ haskellNix ? import (builtins.fetchTarball \"" haskell-nix-version "\") {}
 (add-hook 'haskell-mode-hook (lambda () (modify-syntax-entry ?' "_")))
 
 ;; *** Custom syntax highlighting
-(with-eval-after-load 'haskell-mode
-  (define-derived-mode haskell-mode prog-mode "my/haskell-syntax-mode"
-    "Syntax highlighting for haskell"
-    (setq font-lock-defaults '(my/haskell-syntax-mode-font-lock))
-    (setq-local comment-start "--")
-    (setq-local comment-padding 1)
-    (setq-local comment-end "")
+;; (with-eval-after-load 'haskell-mode
+;;   (define-derived-mode haskell-mode prog-mode "my/haskell-syntax-mode"
+;;     "Syntax highlighting for haskell"
+;;     (setq font-lock-defaults '(my/haskell-syntax-mode-font-lock))
 
-    ;; Language extensions. Since these has to work inside comments, the `t' at the end is needed. I don't know if that's possible to do inside `my/haskell-syntax-mode-font-lock' though
-    (font-lock-add-keywords nil `((,(rx (or "OPTIONS_GHC" "LANGUAGE") space (+ graph)) 0 font-lock-function-name-face t)))
+;;     ;; Language extensions. Since these has to work inside comments, the `t' at the end is needed. I don't know if that's possible to do inside `my/haskell-syntax-mode-font-lock' though
+;;     (font-lock-add-keywords nil `((,(rx (or "OPTIONS_GHC" "LANGUAGE") space (+ graph)) 0 font-lock-function-name-face t)))
 
-    (setq-local imenu-create-index-function 'haskell-ds-create-imenu-index)
+;;     (setq-local imenu-create-index-function 'haskell-ds-create-imenu-index)
 
-    (setq-local indent-tabs-mode nil)
-    (setq-local tab-width 8)
+;;     (setq-local indent-tabs-mode nil)
+;;     (setq-local tab-width 8)
 
-    (haskell-indentation-mode)))
+;;     (haskell-indentation-mode)))
 
 ;; **** Keywords
 (setq my/haskell-syntax-mode-keywords '("module" "import" "qualified" "pattern" "hiding"
@@ -7014,8 +7109,9 @@ do the
   )
 
 (when my/haskell-hie-enable
-  ;; (straight-use-package 'lsp-haskell)
   (straight-use-package 'lsp-haskell)
+  ;; (straight-use-package '(lsp-haskell :type git :host github :repo "bubba/lsp-haskell" :branch "hls-download"))
+  ;; (setq lsp-haskell-server-path "/home/admin/Downloads/haskell-language-server-Linux-1.0.0/haskell-language-server-8.8.4")
 
   (require 'lsp)
   (require 'lsp-haskell)
@@ -7782,7 +7878,9 @@ do the
 					(run-with-timer 0.00001 nil 'my/timetrack-secure-timer)
 
 					(ignore-errors (my/timetrack-track)))))
-(my/timetrack-secure-timer)
+
+(when my/timetrack
+  (my/timetrack-secure-timer))
 
 ;; *** Show
 (setq my/timetrack-cache-view-file "/tmp/timetrack-report.html")
@@ -8968,6 +9066,7 @@ do the
 (evil-define-key 'normal w3m-mode-map (kbd "U") 'w3m-db-history)
 
 ;; ** Eww/shr
+(setq eww-browse-url-new-window-is-tab nil)
 ;; *** Disable header line
 (with-eval-after-load 'eww
   (defun eww-update-header-line-format () nil))
@@ -9276,6 +9375,7 @@ do the
 		    ("system-offline" (funcall nixos-system-offline))
 		    ("system--rollback" (funcall nixos-system--rollback))))))
     (pcase major-mode
+      ('graphviz-dot-mode (graphviz-dot-preview))
       ('org-mode (counsel-M-x "^org to "))
       ('plantuml-mode (plantuml-preview-buffer 0))
       ('java-mode (call-interactively 'dap-java-debug))
@@ -9727,7 +9827,7 @@ done"))))
   (when window-system
     (sit-for 1)
     (start-process "screenshot" nil "import" "-window" "root"
-		   (concat (getenv "HOME") "/Pictures/Screenshots/" (subseq (number-to-string (float-time)) 0 10) ".png"))))
+		   (concat (getenv "HOME") "/screenshot-" (subseq (number-to-string (float-time)) 0 10) ".png"))))
 
 ;; *** Region
 (defun my/take-screenshot-region ()
@@ -9749,20 +9849,21 @@ done"))))
 	(setq screenshot-base-path (concat default-directory "images/"))
       (setq screenshot-base-path default-directory))
 
-    ;; If screenshot path is not empty
-    (call-process "import" nil nil nil ".newScreen.png")
-
     ;; Ask for path
-    (setq screenshot-path (read-file-name "Screenshot file (.png already added) " screenshot-base-path))
-
-    (call-process "convert" nil nil nil ".newScreen.png" "-shave" "1x1" (concat screenshot-path ".png"))
-    (call-process "rm" nil nil nil ".newScreen.png")))
+    (let ((screenshot-path (read-file-name "Screenshot file " screenshot-base-path nil nil ".png")))
+      (when (or
+	     (not (file-exists-p screenshot-path))
+	     (y-or-n-p "File already exists, overwrite?"))
+	;; If screenshot path is not empty
+	(redisplay)
+	(shell-command-to-string (concat "import " (expand-file-name screenshot-path)))))))
 
 ;; ** Keys
 (global-set-key (kbd "<print>") 'my/take-screenshot-region-and-ask-for-name)
+(global-set-key (kbd "<S-print>") 'my/take-screenshot)
 
 ;;  (define-key my/leader-map (kbd "p r") 'my/take-screenshot-region)
-;;  (define-key my/leader-map (kbd "p w") 'my/take-screenshot)
+;; (define-key my/leader-map (kbd "p w") 'my/take-screenshot)
 
 ;; * Mail
 (setq sendmail-program "msmtp")
@@ -9878,7 +9979,10 @@ done"))))
 (define-key my/leader-map (kbd "M") (lambda ()
 				      (interactive)
 				      (kill-matching-buffers "^\*notmuch-" nil t)
-				      (notmuch-tree "date:-10day.. ")))
+
+				      (if (> my/mail-unread 0)
+					  (notmuch-tree "tag:unread")
+					(notmuch-tree "date:-10day.. "))))
 
 ;; **** Count emails
 (add-hook 'notmuch-tree-mode-hook 'my/mail-count-update)
@@ -10139,10 +10243,8 @@ done"))))
 (setq my/mail-unread 0)
 
 (defun my/mail-get-unread-count ()
-  (if (and (boundp 'mu4e) my/mu4e-unread-mail-count)
-      (string-to-number my/mu4e-unread-mail-count)
-    (require 'notmuch)
-    (string-to-number (notmuch-command-to-string "count" "tag:unread"))))
+  (require 'notmuch)
+  (string-to-number (notmuch-command-to-string "count" "tag:unread")))
 
 (defun my/mail-count-update ()
   (setq my/mail-unread (my/mail-get-unread-count)))
@@ -10171,12 +10273,16 @@ done"))))
 ;; ** Suspend
 (define-prefix-command 'my/system-suspend-map)
 
+(defun my/awake-restart-services ()
+  "Some timers crash after sleep, restart them"
+  (run-with-timer 5 nil #'my/vmstat-restart))
+
 (defun my/systemd-suspend-PC ()
   (interactive)
   (ignore-errors
     (org-clock-out))
   (my/local-env-shell-command-to-string "systemctl suspend")
-  (run-with-timer 5 nil #'my/vmstat-restart))
+  (my/awake-restart-services))
 
 (defalias 'my/systemd-sleep #'my/systemd-suspend-PC)
 
@@ -10192,7 +10298,8 @@ done"))))
   (let* ((org-timestamp (read-string "Time to wake up: " (my/org-generate-timestamp (time-add (current-time) (* 60 60 8)))))
 	 (unix-time (org-timestamp-format (org-timestamp-from-string org-timestamp) "%s")))
     (my/sudo-shell-command-to-string
-     (concat "sudo su; rtcwake -m mem -l -t " unix-time " &"))))
+     (concat "su; rtcwake -m mem -l -t " unix-time " &"))
+    (my/awake-restart-services)))
 
 ;; ** Multi-monitor
 (define-prefix-command 'my/system-monitor-map)
@@ -10299,7 +10406,9 @@ done"))))
 ;; *** Tramp nixos support
 (defvar tramp-remote-path)
 (eval-after-load 'tramp-sh
-  '(add-to-list 'tramp-remote-path "/run/current-system/sw/bin"))
+  (add-to-list 'tramp-remote-path "/run/current-system/sw/bin")
+  ;; home manager
+  (add-to-list 'tramp-remote-path "/home/admin/.nix-profile/bin"))
 
 ;; *** Buffer naming
 ;; Tramp buffers aren't prefixed with server name by default
@@ -10536,9 +10645,10 @@ done"))))
 
 ;; *** Workaround for new google API
 ;; https://github.com/atykhonov/google-translate/issues/137
-(defun google-translate--search-tkk ()
-  "Search TKK."
-  (list 430675 2721866130))
+(with-eval-after-load 'google-translate-tk
+  (defun google-translate--search-tkk ()
+    "Search TKK."
+    (list 430675 2721866130)))
 
 ;; ** Synonyms
 (straight-use-package 'synosaurus)
@@ -10581,25 +10691,13 @@ done"))))
 (define-key my/spell-map (kbd "d") 'ispell-change-dictionary)
 (define-key my/spell-map (kbd "s") 'flyspell-mode)
 
-;; List of major modes not to check
-(setq my/flyspell-do-not-check '(
-				 minibuffer-inactive-mode
-				 eshell-mode
-				 shell-mode
-				 term-mode
-
-				 wdired-mode
-
-				 haskell-interactive-mode
-				 ))
-
 (defun my/flyspell-mode-auto-select ()
   ;; Don't run this right when flyspell mode is on, the mode might not have changed yet. Instead wait a millisecond until the mode has been decided and then check for prog-mode
   (run-with-timer 0.5 nil (lambda ()
 			    (if (derived-mode-p 'prog-mode)
 				(flyspell-prog-mode)
 			      ;; It has to be both writable and not a part of the do not check list for spell checking to activate
-			      (when (and (not buffer-read-only) (not (member major-mode my/flyspell-do-not-check)))
+			      (when (and (not buffer-read-only) (not (string-match-p my/regex-major-mode-dont-save (symbol-name major-mode))))
 				(flyspell-mode 1))))))
 
 (define-globalized-minor-mode global-my/flyspell-mode
@@ -11223,7 +11321,8 @@ done"))))
 			     ;; (my/prettify-outline-heading-lisp-classic)
 			     ))
     (_ (append
-	(my/prettify-comment)
+	(when comment-start
+	  (my/prettify-comment))
 	my/generic-greek-symbols
 	my/generic-equality-symbols
 	;; my/generic-arrow-symbols
@@ -11475,13 +11574,13 @@ done"))))
 
 ;; *** Remove unnecessary font-locks
 ;; **** Haskell
-(setq haskell-font-lock-keywords '("do" "let" "proc" "where" "if" "then" "else"))
+;; (setq haskell-font-lock-keywords '("do" "let" "proc" "where" "if" "then" "else"))
 
-(defun haskell-font-lock-keywords ()
-  '())
+;; (defun haskell-font-lock-keywords ()
+;;   '())
 
 ;; ***** Cabal
-(setq haskell-cabal-font-lock-keywords '())
+;; (setq haskell-cabal-font-lock-keywords '())
 
 ;; **** Elisp
 (setq lisp-el-font-lock-keywords '())
@@ -11523,18 +11622,25 @@ done"))))
 
 ;; * Modeline
 ;; ** Calculate frame width
-(defvar my/frame-width (frame-width))
+;; (defvar my/frame-width (frame-width))
 
-(defun my/frame-width-update ()
-  (interactive)
-  (setq my/frame-width (frame-width)))
+;; (defun my/frame-width-update ()
+;;   (interactive)
+;;   (setq my/frame-width (frame-width)))
 
-;; Only applicable to X since terminal never stretches, etc
-(add-hook 'exwm-workspace-switch-hook 'my/frame-width-update)
+;; ;; Only applicable to X since terminal never stretches, etc
+;; (add-hook 'exwm-workspace-switch-hook 'my/frame-width-update)
+
+(defun my/window-width ()
+  "This window width includes margin width"
+  (let ((margins (window-margins)))
+    (if (car-safe margins)
+	(+ (car margins) (cdr margins) (window-width))
+      (window-width))))
 
 (defun my/mode-line-align (left right)
   "Return a string of `window-width' length containing LEFT, and RIGHT aligned respectively."
-  (let* ((available-width (- my/frame-width (length left) 2)))
+  (let* ((available-width (- (my/window-width) (length left) 2)))
     (format (format "%%s %%%ds" available-width) left right)))
 
 ;; ** Mode line highlight face
@@ -11764,15 +11870,15 @@ done"))))
 							    ))))
 						      ;; Symbol when company is not in use
 						      ""))))))
-			;; "MAAN")
 			(format-mode-line
 			 (quote
 			  ((:eval
-			    (let (
-				  (root (projectile-project-root))
-				  (file (or (buffer-file-name) (expand-file-name default-directory)))
-				  )
-			      (if root
+			    (let* (
+				   (tramp (file-remote-p default-directory))
+				   (root (and (not tramp) (projectile-project-root)))
+				   (file (and (not tramp) (or (buffer-file-name) (expand-file-name default-directory))))
+				   )
+			      (if (and root file)
 				  (replace-regexp-in-string
 				   root
 				   ""
@@ -12228,12 +12334,15 @@ done"))))
     (_ (error "my/calculate-should-backup had wrong return type"))))
 
 (defun my/calculate-should-backup ()
-  (if (and
-       (buffer-file-name)
-       (string-match-p my/regex-major-mode-dont-save (symbol-name major-mode))
-       (string-match-p my/regex-file-dont-save (buffer-file-name)))
-      'false
-    'true))
+  (if (buffer-file-name)
+      (if (and
+	   (not (string-match-p my/regex-file-dont-save (buffer-file-name)))
+	   (not (string-match-p my/regex-major-mode-dont-save (symbol-name major-mode))))
+	  'true
+	'false)
+    (if (not (string-match-p my/regex-major-mode-dont-save (symbol-name major-mode)))
+	'true
+      'false)))
 
 ;; ** Auto-save
 ;; Saves so that no data is lost in the event of a crash
@@ -12251,7 +12360,7 @@ done"))))
 
 (add-hook 'after-save-hook (lambda ()
 			     (require 'git-backup-ivy)
-			     (when (my/should-backup)
+			     (when (and (buffer-file-name) (my/should-backup))
 			       (git-backup-version-file git-backup-ivy-git-path git-backup-ivy-backup-path nil (buffer-file-name)))))
 
 (define-key my/leader-map (kbd "C-u") 'git-backup-ivy)
@@ -12278,8 +12387,8 @@ done"))))
 
 ;; *** Global undo-tree mode
 (defun my/turn-on-undo-tree-mode (&optional print-message)
-  (when (my/should-backup)
-    (turn-on-undo-tree-mode print-message)))
+  (setq-local undo-tree-auto-save-history (my/should-backup))
+  (turn-on-undo-tree-mode print-message))
 
 (define-globalized-minor-mode my/global-undo-tree-mode
   undo-tree-mode my/turn-on-undo-tree-mode)

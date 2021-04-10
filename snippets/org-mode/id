@@ -1,0 +1,6 @@
+# key: id
+# name: id
+# --
+:PROPERTIES:
+  :ID: ${1:`(downcase (replace-regexp-in-string " " "-" (car (last (org-get-outline-path t)))))`}
+:END:

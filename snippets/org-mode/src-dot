@@ -1,0 +1,8 @@
+# key: d
+# name: src-dot
+# --
+#+BEGIN_SRC dot :file /tmp/org-babel-dot.png :cmdline -Kdot -Tpng
+digraph ${2:name} {
+  $0
+}
+#+END_SRC

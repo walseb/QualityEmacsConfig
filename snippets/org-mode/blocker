@@ -1,0 +1,6 @@
+# key: b
+# name: blocker
+# --
+:PROPERTIES:
+  :BLOCKER: ${1:id}
+:END:

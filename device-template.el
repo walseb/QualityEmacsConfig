@@ -1,5 +1,7 @@
 (setq my/interruptions nil)
 
+(setq my/timetrack nil)
+
 (setq my/enable-brightness-binds t)
 
 (defvar my/default-face-height 160)
@@ -31,10 +33,6 @@
 (setq exwm-workspace-number 1)
 
 (defvar my/run-command-on-boot nil)
-
-(let ((my/run-mail-on-boot nil))
-  (when my/run-mail-on-boot
-    (add-hook 'after-init-hook '(lambda () (require 'mu4e)))))
 
 (defvar my/haskell-hie-enable nil)
 
