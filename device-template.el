@@ -4,7 +4,8 @@
 
 (setq my/enable-brightness-binds t)
 
-(defvar my/default-face-height 160)
+(setq my/default-face-height-docked 120)
+(setq my/default-face-height-portable 120)
 
 ;; Car is real name
 ;; Cdr is name to be run through `my/font-installed'
