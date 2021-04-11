@@ -9925,7 +9925,7 @@ done"))))
 		    (my/notmuch-fetch-secure-timer)
 		    (my/notmuch-fetch-mail))))
 
-(when (file-exists-p "~/Maildir")
+(when (and (executable-find "notmuch") (file-exists-p "~/Maildir"))
   ;; (my/allocate-update-time 'my/notmuch-fetch-mail (* 60 5))
   (my/notmuch-fetch-secure-timer))
 
@@ -10249,7 +10249,8 @@ done"))))
 (defun my/mail-count-update ()
   (setq my/mail-unread (my/mail-get-unread-count)))
 
-(my/allocate-update-time 'my/mail-count-update)
+(when (executable-find "notmuch")
+  (my/allocate-update-time 'my/mail-count-update))
 
 ;; ** Random color gnus logo colors
 ;; Show with (gnus-group-startup-message)
@@ -12095,9 +12096,9 @@ done"))))
 
 (defun my/vmstat-restart ()
   (my/vmstat-kill)
-  (my/vmstat-init))
+  (my/local-env-run 'my/vmstat-init))
 
-(my/vmstat-init)
+(my/local-env-run (my/vmstat-init))
 
 (defun my/get-cpu-load ()
   (with-temp-buffer
@@ -12530,7 +12531,8 @@ done"))))
   (other-window 1)
 
   ;; Agenda
-  (my/org-agenda-show-agenda-and-todo)
+  (when (file-exists-p my/notes-folder)
+    (my/org-agenda-show-agenda-and-todo))
 
   ;; (split-window-right)
   ;; (other-window 1)
