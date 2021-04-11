@@ -3956,7 +3956,7 @@ If NO-INIT is true, don't call the task on init
 	 candidate)
        candidates))))
 
-(setq selectrum-highlight-candidates-function #'my/selectrum-highlight)
+;; (setq selectrum-highlight-candidates-function #'my/selectrum-highlight)
 
 ;; ** Marginalia
 ;; Like ivy-rich
@@ -10406,7 +10406,7 @@ done"))))
 
 ;; *** Tramp nixos support
 (defvar tramp-remote-path)
-(eval-after-load 'tramp-sh
+(with-eval-after-load 'tramp-sh
   (add-to-list 'tramp-remote-path "/run/current-system/sw/bin")
   ;; home manager
   (add-to-list 'tramp-remote-path "/home/admin/.nix-profile/bin"))
@@ -12098,7 +12098,7 @@ done"))))
   (my/vmstat-kill)
   (my/local-env-run 'my/vmstat-init))
 
-(my/local-env-run (my/vmstat-init))
+(my/local-env-run 'my/vmstat-init)
 
 (defun my/get-cpu-load ()
   (with-temp-buffer
