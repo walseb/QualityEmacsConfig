@@ -3477,7 +3477,8 @@ If NO-INIT is true, don't call the task on init
 ;; ** Org-roam
 (straight-use-package 'org-roam)
 
-(add-hook 'after-init-hook 'org-roam-mode)
+(when (file-exists-p my/notes-folder)
+  (add-hook 'after-init-hook 'org-roam-mode))
 
 (setq org-roam-directory my/notes-folder)
 
