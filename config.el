@@ -638,9 +638,8 @@
 (my/load-if-exists (concat user-emacs-directory "private.el"))
 
 ;; * nix home-manager integration
-;; This just loads too much stuff into emacs
-;;(mapc 'load (file-expand-wildcards (expand-file-name "~/.nix-profile/share/emacs/site-lisp/ *.el*")))
 (load-file "~/.nix-profile/share/emacs/site-lisp/site-start.elc")
+(setq load-path (append load-path (file-expand-wildcards (expand-file-name "~/.nix-profile/share/emacs/site-lisp/*"))))
 (setq load-path (append load-path (file-expand-wildcards (expand-file-name "~/.nix-profile/share/emacs/site-lisp/elpa/*"))))
 
 ;; * Libraries
@@ -2866,7 +2865,6 @@ If NO-INIT is true, don't call the task on init
 
 ;; * Org
 (eval-and-compile
-  (straight-use-package 'org)
   (require 'org))
 
 (setq org-startup-folded t)
@@ -2886,8 +2884,6 @@ If NO-INIT is true, don't call the task on init
   (org-map-entries 'org-archive-subtree "/DONE" 'file))
 
 ;; ** Plus contrib
-(straight-use-package 'org-plus-contrib)
-
 ;; *** org-capture
 ;; **** mu4e
 (with-eval-after-load 'org
