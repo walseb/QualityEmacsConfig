@@ -160,7 +160,8 @@
 	    ("BLOCK" . ,my/comment-face)
 	    ("DONE" . ,outline-3-fg)
 	    ("MAYBE" . ,my/comment-face)
-	    ("EVENT" . ,my/comment-face)))
+	    ("REC" . ,my/comment-face)
+	    ("BLOCK-REC" . ,my/comment-face)))
 
     (custom-theme-set-faces
      name
@@ -577,6 +578,7 @@
 						"exwm-mode"
 						"minibuffer-inactive-mode"
 						(and bol "magit-")
+						"fundamental-mode"
 						)))
 
 ;; ** Don't save
@@ -656,7 +658,7 @@
 ;; * Persistent keys
 (defvar my/keys-mode-map (make-sparse-keymap))
 
-(define-minor-mode my/keys-mode nil t nil my/keys-mode-map)
+(define-minor-mode my/keys-mode "" t nil my/keys-mode-map)
 
 (add-to-list 'emulation-mode-map-alists `((my/keys-mode . ,my/keys-mode-map)))
 
@@ -705,6 +707,13 @@
 	(write-region content nil file)
 	(message (concat "Wrote file: " file " with contents")))))
 ;; " created with content: " content
+
+;; *** Overwrite or create file with content
+(defun my/create-or-overwrite-file-with-content (file content msg)
+  (delete-file file)
+  (write-region content nil file)
+  (when msg
+    (message (concat "Wrote file: " file " with contents"))))
 
 ;; *** Add to content to file or create file with content if file doesn't exist
 (defun my/add-to-or-create-file-with-content (file content)
@@ -844,6 +853,11 @@
 ;; ** Give buffer unique name
 (defun my/give-buffer-unique-name (base-name)
   (rename-buffer base-name t))
+
+;; ** Get buffer contents
+(defun my/buffer-string (buffer)
+  (with-current-buffer buffer
+    (buffer-string)))
 
 ;; ** Get buffer regex
 ;; https://www.reddit.com/r/emacs/comments/6i4xzf/need_help_regex_matching_a_buffer_name_and/dj47ulw/
@@ -1711,7 +1725,7 @@ If NO-INIT is true, don't call the task on init
 ;; *** Define mode
 (defvar my/exwm-mode-map (make-sparse-keymap))
 
-(define-minor-mode my/exwm-mode nil nil nil my/exwm-mode-map)
+(define-minor-mode my/exwm-mode "" nil nil my/exwm-mode-map)
 (add-hook 'exwm-manage-finish-hook 'my/exwm-mode)
 
 ;; *** Define functions
@@ -2242,9 +2256,15 @@ If NO-INIT is true, don't call the task on init
   (interactive)
   (my/message-at-point (my/local-env-shell-command-to-string (concat "xbacklight -dec " (number-to-string (or amount 1)) "; xbacklight -get"))))
 
+(defun my/set-brightness (&optional amount)
+  (interactive)
+  (my/message-at-point (my/local-env-shell-command-to-string (concat "xbacklight -set " (number-to-string (read-number "Brightness (0-100): ")) "; xbacklight -get"))))
+
 (when my/enable-brightness-binds
-  (global-set-key (kbd "<XF86MonBrightnessUp>") 'my/increase-brightness)
-  (global-set-key (kbd "<XF86MonBrightnessDown>") 'my/decrease-brightness)
+  ;; (global-set-key (kbd "<XF86MonBrightnessUp>") 'my/increase-brightness)
+  ;; (global-set-key (kbd "<XF86MonBrightnessDown>") 'my/decrease-brightness)
+  (global-set-key (kbd "<XF86MonBrightnessUp>") 'my/set-brightness)
+  (global-set-key (kbd "<XF86MonBrightnessDown>") 'my/set-brightness)
 
   (global-set-key (kbd "S-<XF86MonBrightnessUp>") (lambda () (interactive) (my/increase-brightness 10)))
   (global-set-key (kbd "S-<XF86MonBrightnessDown>") (lambda () (interactive) (my/decrease-brightness 10))))
@@ -2583,29 +2603,31 @@ If NO-INIT is true, don't call the task on init
 
 (defun my/break-screen ()
   ;; Restart timer
-  (let* ((is-clocked-in (progn (require 'org-inlinetask) (org-clocking-p)))
-	 (time (if is-clocked-in
-		   my/break-time
-		 my/not-clocked-in-break-time)))
+  ;; (let* ((is-clocked-in (progn (require 'org-inlinetask) (org-clocking-p)))
+  ;;	 (time (if is-clocked-in
+  ;;		   my/break-time
+  ;;		 my/not-clocked-in-break-time)))
 
-    (my/break-timer-run time)
+  (my/break-timer-run time)
 
-    (when my/interruptions
-      ;; (my/message-at-point "Clock in! Also check agenda!")
-      (unless (exwm-layout--fullscreen-p)
+  (when my/interruptions
+    ;; (my/message-at-point "Clock in! Also check agenda!")
+    (unless (exwm-layout--fullscreen-p)
 
-	(when (my/timetrack-get-log (current-time))
-	  (my/timetrack-show `(,(my/timetrack-get-log (current-time))
-			       ,(my/timetrack-get-log
-				 (time-subtract (current-time) (seconds-to-time (* 60 60))))))))
+      (when (my/timetrack-get-log (current-time))
+	(my/timetrack-show `(,(my/timetrack-get-log (current-time))
+			     ,(my/timetrack-get-log
+			       (time-subtract (current-time) (seconds-to-time (* 60 60))))))))
 
-      (when (not is-clocked-in)
-	(my/alert-statusline-message-temporary "Clock in!" 'med))
-      ;; Clock
-      ;; (run-with-timer 0.2 nil (lambda () (sleep-for 5)))
-      ;; (org-mru-clock-in)
+    ;; (when (not is-clocked-in)
+    (my/alert-statusline-message-temporary "Clock in!" 'med)
+    ;; )
+    ;; Clock
+    ;; (run-with-timer 0.2 nil (lambda () (sleep-for 5)))
+    ;; (org-mru-clock-in)
 
-      (my/fire-notification (my/get-random-txt) (my/get-random-wallpaper)))))
+    (my/fire-notification (my/get-random-txt) (my/get-random-wallpaper))))
+;; )
 
 (defun my/break-timer-run (time)
   (interactive)
@@ -2867,6 +2889,10 @@ If NO-INIT is true, don't call the task on init
 (eval-and-compile
   (require 'org))
 
+;; Somehow org-clock stuff isn't loading after I require, so I need to manually load it in again
+(with-eval-after-load 'org-agenda
+  (load "org"))
+
 (setq org-startup-folded t)
 
 (setq org-startup-folded nil)
@@ -3051,7 +3077,7 @@ If NO-INIT is true, don't call the task on init
 	       :keys "e"
 	       :file "/home/admin/Notes/Organize/Agenda/20201026232230-Events.org"
 	       :prepend t
-	       :template ("* EVENT %?\nSCHEDULED: %T\n%a"))
+	       :template ("* ROUT %?\nSCHEDULED: %T\n%a"))
 	      )))
 
 ;; *** Auto capture
@@ -3227,7 +3253,7 @@ If NO-INIT is true, don't call the task on init
 
 ;; *** log-mode
 ;; Shows clocked time in timeline view
-(setq org-agenda-start-with-log-mode 'clock)
+;; (setq org-agenda-start-with-log-mode 'clock)
 
 ;; **** Colorize and resize blocks
 ;; https://orgmode.org/worg/org-hacks.html
@@ -3335,18 +3361,14 @@ If NO-INIT is true, don't call the task on init
   (define-key org-agenda-mode-map [remap newline] 'org-agenda-goto))
 
 ;; ** Clock
-(eval-and-compile
-  ;; This is required by the status line
-  (require 'org-clock))
-
 (setq org-clock-into-drawer "CLOCK-LOGBOOK")
 (setq org-clock-mode-line-total 'today)
 (setq org-extend-today-until 6)
 (setq my/org-clocks-file org-default-notes-file)
 
-(add-hook 'after-init-hook (lambda ()
-			     (require 'org)
-			     (org-clock-auto-clockout-insinuate)))
+;; (add-hook 'after-init-hook (lambda ()
+;;			     (require 'org)
+;;			     (org-clock-auto-clockout-insinuate)))
 
 ;; *** org-mru-clock
 (straight-use-package 'org-mru-clock)
@@ -3603,8 +3625,6 @@ If NO-INIT is true, don't call the task on init
 (evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a")) #'my/org-mode-map)
 
 ;; (define-key my/org-mode-map (kbd "c") 'my/org-insert-clock-range)
-
-(define-key my/org-mode-map (kbd "s") 'org-schedule)
 
 (define-key my/org-mode-map (kbd "i") (lambda () (interactive) (org-toggle-inline-images t)))
 (define-key my/org-mode-map (kbd "I") 'org-toggle-link-display)
@@ -5394,7 +5414,6 @@ If the input is empty, select the previous history element instead."
 (defun my/custom-buffer-name ()
   ;; Don't run when using tramp
   (when (not (file-remote-p default-directory))
-    ;; Make sure it runs after projectile is initialized
     (let* ((eshell-name (when (string-match-p ".eshell*" (buffer-name))
 			  (my/un-uniquify-buffer (buffer-name))))
 	   (path (or (buffer-file-name) dired-directory eshell-name)))
@@ -5417,18 +5436,20 @@ If the input is empty, select the previous history element instead."
 	(concat (my/custom-buffer-name-file (concat "ORG: " document-title)))))))
 
 (defun my/custom-buffer-name-file (path)
-  (let ((project-name (projectile-project-name)))
-    (when (or (not (string-match-p "=>" path)) (not (string-match-p project-name path)))
-      (if (string= project-name "-")
-	  (my/file-top-path path)
-	(concat project-name " => " (my/file-top-path path))))))
+  (require 'vc-git)
+  (when (and (boundp 'projectile-project-name))
+    (let ((project-name (projectile-project-name))
+	  (branch-name (car (vc-git-branches))))
+      (when (or (not (string-match-p "=>" path)) (not (string-match-p project-name path)))
+	(if (string= project-name "-")
+	    (my/file-top-path path)
+	  (concat project-name (when branch-name (concat "@" branch-name)) " => " (my/file-top-path path)))))))
 
 (define-minor-mode my/custom-buffer-name-mode "")
 
 (define-globalized-minor-mode global-my/custom-buffer-name-mode my/custom-buffer-name-mode my/custom-buffer-name)
 
-(with-eval-after-load 'projectile
-  (global-my/custom-buffer-name-mode))
+(global-my/custom-buffer-name-mode 1)
 
 ;; **** Eshell support
 (add-hook 'eshell-mode-hook (lambda () (run-with-timer 0.1 nil #'my/custom-buffer-name)))
@@ -7757,10 +7778,12 @@ do the
       ('gnus-summary-mode (gnus-summary-exit))
       ('ediff-mode (call-interactively #'ediff-quit))
       (_
-       (let ((clocking (org-clocking-buffer)))
-	 (if (and clocking (eq (current-buffer) clocking))
-	     (read-string "Clock out before killing this buffer.")
-	   (kill-current-buffer)))))))
+       (if (boundp 'org-clocking-buffer)
+	   (let ((clocking (org-clocking-buffer)))
+	     (if (and clocking (eq (current-buffer) clocking))
+		 (read-string "Clock out before killing this buffer.")
+	       (kill-current-buffer)))
+	 (kill-current-buffer))))))
 
 ;; ** Autotab
 ;; By default modes like outshine and org-mode redefines TAB. This changes the meaning of tab depending on modes
@@ -9525,7 +9548,7 @@ do the
 ;; * Media
 (defun my/pulse-get-volume ()
   (interactive)
-  (let* ((str (shell-command-to-string "pactl list sinks"))
+  (let* ((str (my/local-env-shell-command-to-string "pactl list sinks"))
 	 (list (split-string str "\n"))
 	 (result (-filter (lambda (a) (string-match-p (rx bol "\t" (or "State" "Name" "Volume" "Monitor Source") ":" space) a)) list))
 	 (trim (lambda (a) (string-trim a (rx space) (rx space)))))
@@ -9855,12 +9878,28 @@ done"))))
 	(redisplay)
 	(shell-command-to-string (concat "import " (expand-file-name screenshot-path)))))))
 
+;; *** Screenshot emacs frame
+(defun my/emacs-screenshot (fmt)
+  (interactive)
+  (x-export-frames nil fmt))
+
 ;; ** Keys
 (global-set-key (kbd "<print>") 'my/take-screenshot-region-and-ask-for-name)
 (global-set-key (kbd "<S-print>") 'my/take-screenshot)
 
 ;;  (define-key my/leader-map (kbd "p r") 'my/take-screenshot-region)
 ;; (define-key my/leader-map (kbd "p w") 'my/take-screenshot)
+
+;; * Tasks
+;; ** Auto export agenda screenshot
+(straight-use-package 'htmlize)
+
+(defun my/export-agenda-syncthing ()
+  (let ((buf (htmlize-buffer)))
+    (my/create-or-overwrite-file-with-content "~/sync/org-agenda-img/agenda.html" (my/buffer-string buf) nil)))
+
+(when my/auto-export-agenda-syncthing
+  (add-hook 'org-agenda-finalize-hook 'my/export-agenda-syncthing))
 
 ;; * Mail
 (setq sendmail-program "msmtp")
@@ -10297,7 +10336,7 @@ done"))))
 	 (unix-time (org-timestamp-format (org-timestamp-from-string org-timestamp) "%s")))
     (my/sudo-shell-command-to-string
      (concat "su; rtcwake -m mem -l -t " unix-time " &"))
-    (my/awake-restart-services)))
+  (my/awake-restart-services)))
 
 ;; ** Multi-monitor
 (define-prefix-command 'my/system-monitor-map)
@@ -11432,14 +11471,16 @@ done"))))
 
 ;; *** Global mode
 ;; **** Disable it on certain modes
-(setq my/symbol-overlay-ignore-modes '(image-mode pdf-view-mode))
+;; TODO: This mode is somehow enabled in fundamental mode, this hack prevents it
+(setq my/symbol-overlay-ignore-modes '(image-mode pdf-view-mode fundamental-mode))
 
 ;; **** Definition
 (define-minor-mode my/symbol-overlay-mode "" nil "" nil
-  (when my/symbol-overlay-mode
-    (unless (member major-mode my/symbol-overlay-ignore-modes)
-      (require 'symbol-overlay)
-      (add-hook 'post-command-hook 'my/symbol-overlay-post-command nil t))))
+  (when (and
+	 my/symbol-overlay-mode
+	 (not (member major-mode my/symbol-overlay-ignore-modes)))
+    (require 'symbol-overlay)
+    (add-hook 'post-command-hook 'my/symbol-overlay-post-command nil t)))
 
 (define-globalized-minor-mode my/global-symbol-overlay my/symbol-overlay-mode my/symbol-overlay-mode)
 (my/global-symbol-overlay 1)
@@ -11671,30 +11712,30 @@ done"))))
     "???"))
 
 ;; *** Git project and branch name
-(require 'vc-git)
+;; (require 'vc-git)
 
-;; When projectile-mode is on, project name is updated on every keypress, here it is fixed
-(defvar-local my/projectile-project-name nil)
-(defvar-local my/buffer-git-branch nil)
-;; Make sure every buffer is only scanned once
-(defvar-local my/projectile-project-buffer-already-scanned nil)
+;; ;; When projectile-mode is on, project name is updated on every keypress, here it is fixed
+;; (defvar-local my/projectile-project-name nil)
+;; (defvar-local my/buffer-git-branch nil)
+;; ;; Make sure every buffer is only scanned once
+;; (defvar-local my/projectile-project-buffer-already-scanned nil)
 
-(defun my/update-projectile-project-name ()
-  (interactive)
-  ;; Some virtual buffers don't work, but dired-mode does
-  (when (and
-	 (not (file-remote-p default-directory))
-	 (or
-	  (eq major-mode 'dired-mode)
-	  (and buffer-file-name (file-exists-p buffer-file-name) (not my/projectile-project-buffer-already-scanned))
-	  ))
-    (setq my/projectile-project-buffer-already-scanned t)
-    (setq my/projectile-project-name (projectile-project-name))
-    (setq my/buffer-git-branch (car (vc-git-branches)))))
+;; (defun my/update-projectile-project-name ()
+;;   (interactive)
+;;   ;; Some virtual buffers don't work, but dired-mode does
+;;   (when (and
+;;	 (not (file-remote-p default-directory))
+;;	 (or
+;;	  (eq major-mode 'dired-mode)
+;;	  (and buffer-file-name (file-exists-p buffer-file-name) (not my/projectile-project-buffer-already-scanned))
+;;	  ))
+;;     (setq my/projectile-project-buffer-already-scanned t)
+;;     (setq my/projectile-project-name (projectile-project-name))
+;;     (setq my/buffer-git-branch (car (vc-git-branches)))))
 
-(if (>= emacs-major-version 27)
-    (add-hook 'window-state-change-hook 'my/update-projectile-project-name)
-  (add-hook 'window-configuration-change-hook 'my/update-projectile-project-name))
+;; (if (>= emacs-major-version 27)
+;;     (add-hook 'window-state-change-hook 'my/update-projectile-project-name)
+;;   (add-hook 'window-configuration-change-hook 'my/update-projectile-project-name))
 
 ;; *** Git changes
 (defvar-local my/git-changes-string nil)
@@ -11829,28 +11870,28 @@ done"))))
 						    ;; Print buffer name
 						    "%b > "
 
+						    ;; Git
+						    (:eval
+						     ;; (if (and my/projectile-project-name my/buffer-git-branch (not (string= my/projectile-project-name "-")))
+						     ;;		 (concat
+						     ;;		  " "
+						     ;;		  my/buffer-git-branch
+						     ;;		  ;; "@"
+						     ;;		  ;; my/projectile-project-name
+						     (when my/git-changes-string
+						       (concat
+							"["
+							my/git-changes-string
+							"]"
+							" >"
+							))
+						     )
+
 						    ;; Print mode
 						    ;; "%m"
 						    ;; With this it also works properly in exwm-mode
 						    (:eval (symbol-name major-mode))
 						    " >"
-
-						    ;; Git
-						    (:eval
-						     (if (and my/projectile-project-name my/buffer-git-branch (not (string= my/projectile-project-name "-")))
-							 (concat
-							  " "
-							  my/buffer-git-branch
-							  ;; "@"
-							  ;; my/projectile-project-name
-							  (when my/git-changes-string
-							    (concat
-							     "["
-							     my/git-changes-string
-							     "]"
-							     ))
-							  " >"
-							  )))
 
 						    (:eval (envrc--lighter))
 
@@ -12077,6 +12118,7 @@ done"))))
 (my/allocate-update-time 'my/update-time)
 
 ;; *** CPU load average
+;; **** vmstat task
 (setq my/vmstat-file (concat "/tmp/vmstat-" (number-to-string (float-time))))
 
 (defun my/vmstat-init ()
@@ -12097,13 +12139,25 @@ done"))))
 
 (my/local-env-run 'my/vmstat-init)
 
+;; **** Fetching
+(defvar my/cpu-load "")
+
 (defun my/get-cpu-load ()
-  (with-temp-buffer
-    (insert-file-contents my/vmstat-file)
-    (goto-char (point-max))
-    ;; (re-search-backward (rx (any num) (any space) (any num) (any space) (any num) eol))
-    (re-search-backward "[[:digit:]]+[[:space:]]+[[:digit:]]+[[:space:]]+[[:digit:]]$")
-    (- 100 (thing-at-point 'number))))
+  (when (file-exists-p my/vmstat-file)
+    (ignore-errors
+      (with-temp-buffer
+	(insert-file-contents my/vmstat-file)
+	(goto-char (point-max))
+	;; (re-search-backward (rx (any num) (any space) (any num) (any space) (any num) eol))
+	(re-search-backward "[[:digit:]]+[[:space:]]+[[:digit:]]+[[:space:]]+[[:digit:]]$")
+	(- 100 (thing-at-point 'number))))))
+
+(defun my/update-cpu-load ()
+  (let ((cpu (my/get-cpu-load)))
+    (when cpu
+      (setq my/cpu-load (number-to-string cpu)))))
+
+(my/allocate-update-time 'my/update-cpu-load)
 
 ;; **** UNIX load
 ;; (defvar my/cpu-load-average 0)
@@ -12260,7 +12314,7 @@ done"))))
 		     (:eval
 		      (concat
 		       "C "
-		       (number-to-string (my/get-cpu-load))
+		       my/cpu-load
 		       ;; "%%%% "
 		       " - "
 

@@ -6,6 +6,7 @@
 
 (setq my/default-face-height-docked 120)
 (setq my/default-face-height-portable 120)
+(setq my/auto-export-agenda-syncthing nil)
 
 ;; Car is real name
 ;; Cdr is name to be run through `my/font-installed'
