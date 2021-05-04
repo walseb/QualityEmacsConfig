@@ -1,0 +1,4 @@
+# name: Lambda Interactive
+# key: li
+# --
+(lambda () (interactive) $0)

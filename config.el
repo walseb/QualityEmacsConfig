@@ -627,7 +627,7 @@
 			 ,(concat my/agenda-folder "20201026232230-Tasks.org")
 			 ,(concat my/agenda-folder "20201026232230-Recurring_Tasks.org")
 			 ,(concat my/agenda-folder "20201121040920-learning_focus.org")
-			 ,(concat my/notes-folder "20210123202936.org")
+			 ,(concat my/organize-folder "20201026232231-Projects.org")
 			 ))
 
 ;; * Private config
@@ -1062,7 +1062,7 @@ If NO-INIT is true, don't call the task on init
 
 ;; ** Device checks
 ;; *** USB
-(setq my/devices-carpalx-keyboards-list '("ergodone" "ergodox"))
+(setq my/devices-carpalx-keyboards-list '("ergodone" "ergodox" "hotdox"))
 
 (defun my/devices-plugged-in-carpalx-kbd ()
   (-first (lambda (a)
@@ -2497,6 +2497,9 @@ If NO-INIT is true, don't call the task on init
 (setq enable-recursive-minibuffers t)
 (minibuffer-depth-indicate-mode 1)
 
+;; *** Disable fringes
+;; (add-hook 'minibuffer-setup-hook (lambda () (set-window-fringes (selected-window) 0 0 nil)))
+
 ;; *** Keys
 (define-key minibuffer-inactive-mode-map [remap keyboard-quit] 'minibuffer-keyboard-quit)
 
@@ -3339,7 +3342,9 @@ If NO-INIT is true, don't call the task on init
 
   (define-key org-agenda-mode-map (kbd "g") 'org-agenda-redo-all)
 
-  (define-key org-agenda-mode-map (kbd "t") '(lambda () (interactive) (org-agenda-todo "DONE")))
+  (define-key org-agenda-mode-map (kbd "t") (lambda () (interactive) (org-agenda-todo "DONE")))
+  (define-key org-agenda-mode-map (kbd "$") (lambda () (interactive) (org-agenda-todo "DONE")))
+
   (define-key org-agenda-mode-map (kbd "T") 'org-agenda-set-tags)
 
   (define-key org-agenda-mode-map (kbd "l") 'org-agenda-todo)
@@ -3371,39 +3376,39 @@ If NO-INIT is true, don't call the task on init
 ;;			     (org-clock-auto-clockout-insinuate)))
 
 ;; *** org-mru-clock
-(straight-use-package 'org-mru-clock)
+;; (straight-use-package 'org-mru-clock)
 
-(setq org-mru-clock-keep-formatting t)
+;; (setq org-mru-clock-keep-formatting t)
 
-(setq org-mru-clock-files (lambda () `(,my/org-clocks-file)))
-(setq org-mru-clock-how-many 999)
+;; (setq org-mru-clock-files (lambda () `(,my/org-clocks-file)))
+;; (setq org-mru-clock-how-many 999)
 
-(define-key my/leader-map (kbd "k") 'org-mru-clock-in)
-(define-key my/leader-map (kbd "C-k") 'org-clock-out)
-(define-key my/leader-map (kbd "M-k") (lambda () (interactive) (find-file my/org-clocks-file)))
+;; (define-key my/leader-map (kbd "k") 'org-mru-clock-in)
+;; (define-key my/leader-map (kbd "C-k") 'org-clock-out)
+;; (define-key my/leader-map (kbd "M-k") (lambda () (interactive) (find-file my/org-clocks-file)))
 
-;; **** Custom prompt
-(with-eval-after-load 'org-mru-clock
-  (defun org-mru-clock-format-entry ()
-    "Return the parent heading string appended to the heading at point."
-    (let* ((heading (org-get-heading 'no-tags 'no-todo))
-	   (time (org-clock-sum-current-item
-		  (org-clock-get-sum-start)))
-	   (limit (org-entry-get nil "MinTime"))
-	   (is-done (if (< time (string-to-number limit))
-			"todo"
-		      ""))
-	   (parent
-	    (save-excursion
-	      (org-up-heading-safe)
-	      (org-get-heading 'no-tags 'no-todo)))
-	   (parent-post (if parent
-			    (format "%\ 4s %\ 3s / %\ 3s min | " is-done time limit)
-			  ""))
-	   (with-parent (concat parent-post heading)))
-      (if org-mru-clock-keep-formatting
-	  with-parent
-	(substring-no-properties with-parent)))))
+;; ;; **** Custom prompt
+;; (with-eval-after-load 'org-mru-clock
+;;   (defun org-mru-clock-format-entry ()
+;;     "Return the parent heading string appended to the heading at point."
+;;     (let* ((heading (org-get-heading 'no-tags 'no-todo))
+;;	   (time (org-clock-sum-current-item
+;;		  (org-clock-get-sum-start)))
+;;	   (limit (org-entry-get nil "MinTime"))
+;;	   (is-done (if (< time (string-to-number limit))
+;;			"todo"
+;;		      ""))
+;;	   (parent
+;;	    (save-excursion
+;;	      (org-up-heading-safe)
+;;	      (org-get-heading 'no-tags 'no-todo)))
+;;	   (parent-post (if parent
+;;			    (format "%\ 4s %\ 3s / %\ 3s min | " is-done time limit)
+;;			  ""))
+;;	   (with-parent (concat parent-post heading)))
+;;       (if org-mru-clock-keep-formatting
+;;	  with-parent
+;;	(substring-no-properties with-parent)))))
 
 ;; *** org-time-budgets
 ;; (straight-use-package 'org-time-budgets)
@@ -3433,6 +3438,14 @@ If NO-INIT is true, don't call the task on init
 ;; ** Ivy-todo
 ;; (straight-use-package 'ivy-todo)
 ;; (setq ivy-todo-file my/org-clocks-file)
+
+;; ** Links
+;; *** Open link in current window
+(setq org-link-frame-setup '((vm . vm-visit-folder)
+			     (vm-imap . vm-visit-imap-folder)
+			     (gnus . gnus)
+			     (file . find-file)
+			     (wl . wl)))
 
 ;; ** Custom links
 ;; ***  Find wallpaper
@@ -3495,13 +3508,13 @@ If NO-INIT is true, don't call the task on init
 ;; ** Org-roam
 (straight-use-package 'org-roam)
 
+(with-eval-after-load 'org
+  (require 'org-roam))
+
 (when (file-exists-p my/notes-folder)
   (add-hook 'after-init-hook 'org-roam-mode))
 
 (setq org-roam-directory my/notes-folder)
-
-(with-eval-after-load 'org-roam
-  (setq deft-directory org-roam-directory))
 
 ;; *** Naming
 (setq org-roam-rename-file-on-title-change nil)
@@ -3550,10 +3563,10 @@ If NO-INIT is true, don't call the task on init
 ;; *** Add link
 (defun my/org-file-to-roam-name (file)
   "turn file name into org-roam name"
-  (require 'org-roam)
-  (with-temp-buffer
-    (insert-file-contents file)
-    (car (org-roam--extract-titles-title))))
+  (when (fboundp 'org-roam--extract-titles-title)
+    (with-temp-buffer
+      (insert-file-contents file)
+      (car (org-roam--extract-titles-title)))))
 
 ;; **** Completing read by name
 (defun my/org-roam-insert-link-by-name ()
@@ -3654,6 +3667,8 @@ If NO-INIT is true, don't call the task on init
 (define-key my/org-mode-map (kbd "r") 'org-refile)
 
 (define-key my/org-mode-map (kbd "E") (lambda () (interactive) (counsel-M-x "^org export-")))
+
+(define-key my/org-mode-map (kbd "$") (lambda () (interactive) (org-todo 'done)))
 
 ;; * Time management - chronometrist
 ;; (straight-use-package 'chronometrist)
@@ -3910,10 +3925,11 @@ If NO-INIT is true, don't call the task on init
 ;; Used for universal folding
 (straight-use-package 'yafolding)
 
-(define-globalized-minor-mode global-yafolding-mode
+(define-globalized-minor-mode my/global-yafolding-mode
   yafolding-mode yafolding-mode)
-(yafolding-mode)
-(global-yafolding-mode 1)
+
+(yafolding-mode 1)
+(my/global-yafolding-mode 1)
 
 (setq yafolding-ellipsis-content my/fold-ellipsis)
 (setq yafolding-show-fringe-marks nil)
@@ -5075,10 +5091,10 @@ If the input is empty, select the previous history element instead."
 (define-key ibuffer-mode-map (kbd "n") 'evil-next-line)
 (define-key ibuffer-mode-map (kbd "p") 'evil-previous-line)
 
-(define-key ibuffer-mode-map (kbd "m") 'ibuffer-mark-forward)
+(define-key ibuffer-mode-map (kbd "m") 'ibuffer-mark-for-delete)
 (define-key ibuffer-mode-map (kbd "u") 'ibuffer-unmark-forward)
 (define-key ibuffer-mode-map (kbd "M") 'ibuffer-toggle-mark)
-(define-key ibuffer-mode-map (kbd "D") 'ibuffer-kill-line)
+(define-key ibuffer-mode-map (kbd "d") 'ibuffer-do-kill-on-deletion-marks)
 
 ;; I don't know who but someone binds spacebar in ibuffer-mode-map
 (define-key ibuffer-mode-map (kbd "SPC") nil)
@@ -5398,7 +5414,7 @@ If the input is empty, select the previous history element instead."
 ;; *** Don't ask for confirmation when killing window
 (setq kill-buffer-query-functions (delq 'process-kill-buffer-query-function kill-buffer-query-functions))
 
-
+;; ** Buffer settings
 ;; *** Kill all buffers
 (defun my/kill-all-buffers ()
   (interactive)
@@ -5412,8 +5428,11 @@ If the input is empty, select the previous history element instead."
 ;; *** Custom buffer names - Auto rename buffers
 ;; Checkout the `relative-buffers' package
 (defun my/custom-buffer-name ()
-  ;; Don't run when using tramp
-  (when (not (file-remote-p default-directory))
+  (when (and
+	 (not (file-remote-p default-directory))
+	 (not (string-match-p my/regex-major-mode-dont-save (symbol-name major-mode)))
+	 ;; Allow buffers without files
+	 (not (or (not (buffer-file-name)) (string-match-p my/regex-file-dont-save (buffer-file-name)))))
     (let* ((eshell-name (when (string-match-p ".eshell*" (buffer-name))
 			  (my/un-uniquify-buffer (buffer-name))))
 	   (path (or (buffer-file-name) dired-directory eshell-name)))
@@ -5429,8 +5448,7 @@ If the input is empty, select the previous history element instead."
 	     t)))))))
 
 (defun my/name-org-roam-buffer (path)
-  (when (eq major-mode 'org-mode)
-    (require 'org-roam)
+  (when (and (eq major-mode 'org-mode) (fboundp 'org-roam--extract-titles-title))
     (let ((document-title (car (org-roam--extract-titles-title))))
       (when document-title
 	(concat (my/custom-buffer-name-file (concat "ORG: " document-title)))))))
@@ -5447,9 +5465,14 @@ If the input is empty, select the previous history element instead."
 
 (define-minor-mode my/custom-buffer-name-mode "")
 
-(define-globalized-minor-mode global-my/custom-buffer-name-mode my/custom-buffer-name-mode my/custom-buffer-name)
+(define-globalized-minor-mode my/global-custom-buffer-name-mode my/custom-buffer-name-mode my/custom-buffer-name)
 
-(global-my/custom-buffer-name-mode 1)
+(my/global-custom-buffer-name-mode 1)
+
+;; *** Update org buffers title on save
+;; UGLY: Somehow, using a org-mode-hook instead results in errors when persp-mode is loaded
+(add-hook 'after-save-hook (lambda () (when (eq major-mode 'org-mode)
+					(my/custom-buffer-name))))
 
 ;; **** Eshell support
 (add-hook 'eshell-mode-hook (lambda () (run-with-timer 0.1 nil #'my/custom-buffer-name)))
@@ -6401,6 +6424,20 @@ the overlay."
 
 ;; **** Formatting
 (straight-use-package 'elisp-format)
+
+;; **** Debugging
+;; ***** Clear all breakpoints
+;; https://emacs.stackexchange.com/questions/32212/clearing-removing-all-breakpoints
+(defun my/edebug-remove-all-instrumentation ()
+  "Remove all edebug instrumentation by visiting each function
+definition and running `eval-defun`."
+  (interactive)
+  (mapatoms
+   (lambda (symbol)
+     (when-let (pos (car-safe (get symbol 'edebug)))
+       (with-current-buffer (marker-buffer pos)
+	 (goto-char (marker-position pos))
+	 (eval-defun nil))))))
 
 ;; **** Keys
 (define-prefix-command 'my/emacs-lisp-mode-map)
@@ -7811,7 +7848,7 @@ do the
 ;; ** Timetrack
 (setq my/timetrack-cache-dir (concat user-emacs-directory ".cache/timetrack/"))
 ;; (concat my/timetrack-cache-dir "timetrack-" (number-to-string (org-today)) ".data"))
-(setq my/timetrack-dt 30)
+(setq my/timetrack-dt 60)
 (setq my/timetrack-html-dir (concat my/emacs-configs-dir "timetrack/"))
 (setq my/timetrack-html-beg (concat my/timetrack-html-dir "timetrack-beg.html"))
 (setq my/timetrack-html-end (concat my/timetrack-html-dir "timetrack-end.html"))
@@ -7820,7 +7857,15 @@ do the
   (concat my/timetrack-cache-dir "timetrack-" (format-time-string "%Y-%m-%d_%H" time) ".data"))
 
 (defun my/timetrack-get-all-logs-day-string (&optional time)
-  (my/get-files-by-regex (format-time-string "timetrack-%Y-%m-%d_.*.data$" nil) my/timetrack-cache-dir))
+  ;; Filter out any before 8
+  (let ((files-today (my/get-files-by-regex (format-time-string "timetrack-%Y-%m-%d_.*.data$" nil) my/timetrack-cache-dir)))
+    (or
+     (-filter (lambda (a)
+		(ignore-errors
+		  (let ((hour-pos (+ (string-match-p "_" a) 1)))
+		    (> (string-to-number (substring-no-properties a hour-pos (+ 2 hour-pos))) 8))))
+	      files-today)
+     files-today)))
 
 (defun my/timetrack-get-log (&optional time)
   (let ((result (my/timetrack-get-log-string time)))
@@ -7887,10 +7932,12 @@ do the
 	(my/timetrack--internal-append name project file)))))
 
 (defun my/timetrack--internal-append (name project file)
-  (f-append
-   (my/timetrack-track--internal-generate-entry name project)
-   'utf-8
-   file))
+  (my/local-env-shell-command-to-string (concat "printf " "'" (my/timetrack-track--internal-generate-entry name project) "'" " >> " file)))
+;; (f-append
+;;  (my/timetrack-track--internal-generate-entry "tset" "test")
+;;  'utf-8
+;;  file)
+;; )
 
 (defun my/timetrack-secure-timer ()
   (run-with-timer my/timetrack-dt nil (lambda ()
@@ -7907,6 +7954,10 @@ do the
 
 (defun my/timetrack-show (&optional files)
   (interactive)
+  (my/timetrack--view-build my/timetrack-cache-view-file my/timetrack-cache-view-file files)
+  (my/open-in-browser my/timetrack-cache-view-file))
+
+(defun my/timetrack--view-build (result-file &optional files)
   (unless files
     (setq files
 	  (list (let ((all-files
@@ -7915,22 +7966,26 @@ do the
 		  (concat my/timetrack-cache-dir (completing-read "Show file: " all-files nil t
 								  ;; (number-to-string (org-today))
 								  (format-time-string "%Y-%m-%d")))))))
-  (my/timetrack-show-write files)
-  (my/open-in-browser my/timetrack-cache-view-file))
+  (my/timetrack--view-build-write result-file files))
 
-(defun my/timetrack-show-write (files)
-  (when (f-exists-p my/timetrack-cache-view-file)
-    (f-delete my/timetrack-cache-view-file))
+(defun my/timetrack--view-build-write (result-file files)
+  (when (f-exists-p result-file)
+    (f-delete result-file))
   (shell-command-to-string (concat "cat "
 				   my/timetrack-html-beg " "
 				   (-reduce 'concat (mapcar (-partial 'concat " ") files)) " "
 				   my/timetrack-html-end " "
 				   ">> "
-				   my/timetrack-cache-view-file)))
+				   result-file)))
+
 ;; **** Configurations
+(defun my/timetrack--view-build-today (result-file)
+  (my/timetrack--view-build result-file (mapcar (lambda (a) (concat my/timetrack-cache-dir a)) (or (my/timetrack-get-all-logs-day-string)))))
+
 (defun my/timetrack-show-today ()
   (interactive)
-  (my/timetrack-show (mapcar (lambda (a) (concat my/timetrack-cache-dir a)) (my/timetrack-get-all-logs-day-string))))
+  (my/timetrack--view-build-today my/timetrack-cache-view-file)
+  (my/open-in-browser my/timetrack-cache-view-file))
 
 ;; ** selfspy
 ;; Delete selfspy for session
@@ -9376,6 +9431,7 @@ do the
 	 (nixos-system-string "nixos-rebuild switch --upgrade")
 	 ;; (nixos-home-and-system (lambda () (compile (concat nixos-system-string ";" "su admin;" nixos-home-string))))
 	 (nixos-home (lambda () (compile nixos-home-string)))
+	 (nixos-home-and-system (lambda () (my/sudo-compile (concat nixos-system-string "; runuser -l admin -c '" nixos-home-string "'"))))
 	 (nixos-system (lambda () (my/sudo-compile nixos-system-string)))
 	 (nixos-system-offline (lambda () (my/sudo-compile "nixos-rebuild switch --option substitute false")))
 	 ;; (nixos-home--rollback (lambda () (compile "home-manager -f /etc/nixos/home.nix switch --rollback")))
@@ -9385,11 +9441,13 @@ do the
 		  (require 'ivy)
 
 		  (pcase (completing-read "compile " '(;; "home&system"
-						       "home" "system" "system-offline" "collect-garbage" ;; "home--rollback"
+						       "home&system" "home" "system" "system-offline" "collect-garbage" ;; "home--rollback"
 						       "system--rollback"))
 		    ;; ("home&system" (funcall nixos-home-and-system))
 		    ("home" (funcall nixos-home))
 		    ("system" (funcall nixos-system))
+		    ("home&system" (funcall nixos-home-and-system))
+
 		    ("collect-garbage" (funcall nixos-collect-garbage))
 		    ;; ("home--rollback" (funcall nixos-home--rollback))
 		    ("system-offline" (funcall nixos-system-offline))
@@ -9569,30 +9627,42 @@ do the
 
 (defun my/pulse-raise-volume ()
   (interactive)
-  (my/pulse-change-vol 1)
+  (my/pulse-change-vol-rel 1)
   (my/pulse-print-volume))
 
 (defun my/pulse-lower-volume ()
   (interactive)
-  (my/pulse-change-vol -1)
+  (my/pulse-change-vol-rel -1)
   (my/pulse-print-volume))
 
+;; Pipewire support
 (defun my/pulse-toggle-vol ()
-  (my/local-env-shell-command-to-string (concat "
-for SINK in `pacmd list-sinks | grep 'index:' | cut -b12-`
-do
-  pactl set-sink-mute $SINK toggle
-done")))
+  (my/local-env-shell-command-to-string "pamixer --toggle-mute"))
 
-(defun my/pulse-change-vol (volume)
+;; Using pactl
+;; (defun my/pulse-toggle-vol ()
+;;   (my/local-env-shell-command-to-string "pactl set-sink-mute @default_sink@ toggle"))
+
+(defun my/pulse-change-vol-rel (volume)
   (let ((inc (if (> volume 0)
-		 "+"
-	       "-")))
-    (my/local-env-shell-command-to-string (concat "
-for SINK in `pacmd list-sinks | grep 'index:' | cut -b12-`
-do
-  pactl set-sink-volume $SINK " inc (number-to-string (abs volume)) "%
-done"))))
+		 "-i"
+	       "-d")))
+    (my/local-env-shell-command-to-string
+     (concat
+      "pamixer "
+      inc " "
+      (number-to-string (abs volume))))))
+
+;; Using pactl
+;; (defun my/pulse-change-vol-rel (volume)
+;;   (let ((inc (if (> volume 0)
+;;		 "+"
+;;	       "-")))
+;;     (my/local-env-shell-command-to-string
+;;      (concat
+;;       "pactl set-sink-volume @default_sink@ "
+;;       inc
+;;       (number-to-string (abs volume)) "%"))))
 
 ;; *** Hydra
 (with-eval-after-load 'hydra
@@ -9896,10 +9966,55 @@ done"))))
 
 (defun my/export-agenda-syncthing ()
   (let ((buf (htmlize-buffer)))
-    (my/create-or-overwrite-file-with-content "~/sync/org-agenda-img/agenda.html" (my/buffer-string buf) nil)))
+    (my/create-or-overwrite-file-with-content "~/sync/org-agenda-img/agenda.html" (my/buffer-string buf) nil)
+    (my/timetrack--view-build-today my/timetrack-cache-view-file)
+    (let ((tmp (make-temp-file "test")))
+      (my/local-env-shell-command-to-string
+       (concat
+	"cat " my/timetrack-cache-view-file " " "~/sync/org-agenda-img/agenda.html"
+	" >> "
+	tmp " &&  mv " tmp " " "~/sync/org-agenda-img/agenda.html")))
+    (run-with-timer 1 nil (lambda () (kill-buffer buf)))))
 
 (when my/auto-export-agenda-syncthing
   (add-hook 'org-agenda-finalize-hook 'my/export-agenda-syncthing))
+
+;; * Timer
+(defvar my/stopwatch-current nil)
+(defvar my/stopwatch-current-name nil)
+(defvar my/stopwatch-log (get-buffer-create " *Stopwatch log*"))
+
+(defun my/stopwatch-init ()
+  (interactive)
+  (my/stopwatch-stop)
+  (let ((name (read-string "Name: ")))
+    (when (not (string= "" name))
+      (setq my/stopwatch-current-name name)
+      (setq my/stopwatch-current (time-convert nil 'integer)))))
+
+(defun my/stopwatch-stop ()
+  (when my/stopwatch-current
+    ;;   (kill-new (my/stopwatch-format)))
+    (with-current-buffer my/stopwatch-log
+      (goto-char (point-max))
+      (insert (concat (my/stopwatch-format) "\n" )))
+    (setq my/stopwatch-current nil)
+    (setq my/stopwatch-current-name nil)))
+
+(defun my/stopwatch-format ()
+(when my/stopwatch-current
+  (let ((diff-time (- (time-convert nil 'integer) my/stopwatch-current)))
+    (concat
+     my/stopwatch-current-name
+     " "
+     (format "%02d:"
+	     (/ diff-time 3600))
+     (format "%02d:"
+	     (% (/ diff-time 60) 60))
+     (format "%02d"
+	     (% diff-time 60))))))
+
+(define-key my/leader-map (kbd "k") 'my/stopwatch-init)
 
 ;; * Mail
 (setq sendmail-program "msmtp")
@@ -10316,6 +10431,11 @@ done"))))
 
 (defun my/systemd-suspend-PC ()
   (interactive)
+  ;; Ensure syncthing isn't left with a backup symlink
+  (when (save-some-buffers)
+    (message "Waiting 10 seconds for syncthing sync")
+    (sleep-for 10))
+
   (ignore-errors
     (org-clock-out))
   (my/local-env-shell-command-to-string "systemctl suspend")
@@ -10325,6 +10445,11 @@ done"))))
 
 (defun my/systemd-hibernate-PC ()
   (interactive)
+  ;; Ensure syncthing isn't left with a backup symlink
+  (when (save-some-buffers)
+    (message "Waiting 10 seconds for syncthing sync")
+    (sleep-for 10))
+
   (ignore-errors
     (org-clock-out))
   (shell-command "systemctl hibernate"))
@@ -10737,9 +10862,9 @@ done"))))
 			      (when (and (not buffer-read-only) (not (string-match-p my/regex-major-mode-dont-save (symbol-name major-mode))))
 				(flyspell-mode 1))))))
 
-(define-globalized-minor-mode global-my/flyspell-mode
+(define-globalized-minor-mode my/global-flyspell-mode
   flyspell-mode my/flyspell-mode-auto-select)
-(global-my/flyspell-mode 1)
+(my/global-flyspell-mode 1)
 
 ;; **** Personal directory
 (setq ispell-personal-dictionary (concat user-emacs-directory ".aspell.en.pws"))
@@ -11045,15 +11170,39 @@ done"))))
   (define-key my/image-mode-map (kbd "a") 'my/blimp-annotate-middle))
 
 ;; * Spray
-(straight-use-package 'spray)
+;; Speed reading
+;; (straight-use-package 'spray)
+(straight-use-package '(spray :type git :host github :repo "walseb/spray"))
 
 (setq spray-wpm 500)
+(setq spray-height 1000)
 
 (with-eval-after-load 'spray
-  (define-key spray-mode-map (kbd "p") 'spray-slower)
-  (define-key spray-mode-map (kbd "n") 'spray-faster))
+  (define-key spray-mode-map (kbd "n") (lambda () (interactive)
+					 (setq cursor-type nil)
+					 (spray-slower)))
+  (define-key spray-mode-map (kbd "p") (lambda () (interactive)
+					 (setq cursor-type nil)
+					 (spray-faster)))
+
+  (define-key spray-mode-map (kbd "SPC") (lambda () (interactive)
+					   (setq cursor-type nil)
+					   (spray-start/stop)))
+  )
+
 
 (define-key my/leader-map (kbd "M-v") 'spray-mode)
+
+;; ** Read only
+;; (remove-hook 'spray-mode-hook (lambda ()
+;;				(add-hook 'window-configuration-change-hook (lambda () (spray-mode -1)) nil t)))
+
+;; (add-hook 'spray-mode-hook 'read-only-mode)
+;; (advice-add #'spray-start :before (lambda (&optional arg)
+;;				    (read-only-mode 'toggle)))
+
+;; (advice-add #'spray-stop :before (lambda (&optional arg)
+;;				   (read-only-mode 'toggle)))
 
 ;; * Ligatures
 ;; Check out prettify-utils
@@ -11420,13 +11569,13 @@ done"))))
 				   notmuch-tree-mode
 				   nm-mode))
 
-(define-globalized-minor-mode global-olivetti-mode
+(define-globalized-minor-mode my/global-olivetti-mode
   nil (lambda ()
 	(unless (memq major-mode my/olivetti-disabled-modes)
 	  (unless (string= " *diff-hl* " (buffer-name (current-buffer)))
 	    (olivetti-mode 1)))))
 
-(global-olivetti-mode 1)
+(my/global-olivetti-mode 1)
 
 (define-key my/leader-map (kbd "V") 'olivetti-mode)
 
@@ -11435,10 +11584,16 @@ done"))))
 ;; (setq-default focus-current-thing 'paragraph)
 ;; (add-hook 'window-state-change-hook 'focus-mode)
 
-;; ** Fringe size
-;; Used by diff-hl and flycheck
-;; Fringe only on the left side
+;; ** Fringe mode
 (fringe-mode '(5 . 5))
+;; (defvar my/fringes '(5 . 5))
+
+;; (define-globalized-minor-mode my/global-fringe-mode
+;;   nil (lambda ()
+;;	(message "test")
+;;	(set-window-fringes nil (car my/fringes) (cdr my/fringes) nil)))
+
+;; (my/global-fringe-mode 1)
 
 ;; ** Beacon
 ;; (straight-use-package 'beacon)
@@ -11582,10 +11737,10 @@ done"))))
 ;; Really buggy and makes buffer switching slow
 ;; (straight-use-package 'hl-anything)
 
-;; (define-globalized-minor-mode global-hl-highlight-mode
+;; (define-globalized-minor-mode my/global-hl-highlight-mode
 ;;   hl-highlight-mode hl-highlight-mode)
 ;; (hl-highlight-mode)
-;; (global-hl-highlight-mode 1)
+;; (my/global-hl-highlight-mode 1)
 
 ;; (define-key my/leader-map (kbd "M") 'hl-highlight-thingatpt-local)
 
@@ -12253,6 +12408,15 @@ done"))))
 		  (format-mode-line
 		   (quote
 		    (
+		     (:eval
+		      (let ((fmt (my/stopwatch-format)))
+			(when fmt
+			  (concat
+			   fmt
+			   " |"
+			   )
+			  )))
+
 		     (:eval my/past-alerts)
 		     " "
 
@@ -12445,7 +12609,7 @@ done"))))
 (define-globalized-minor-mode my/global-undo-tree-mode
   undo-tree-mode my/turn-on-undo-tree-mode)
 
-(my/global-undo-tree-mode t)
+(my/global-undo-tree-mode 1)
 
 ;; *** Persistent history
 (setq my/undo-tree-history-dir (concat user-emacs-directory "undo-tree"))
@@ -12506,7 +12670,9 @@ done"))))
 
 ;; ** Persp-mode
 (straight-use-package 'persp-mode)
-(add-hook 'exwm-init-hook (lambda () (persp-mode 1)))
+;; This stops persp-mode from erroring somehow
+(add-hook 'exwm-init-hook 'persp-mode)
+;; (add-hook 'exwm-init-hook '(lambda () (run-with-idle-timer 2 nil '(lambda () (persp-mode 1)))))
 
 ;; Auto add new buffers
 (setq persp-add-buffer-on-after-change-major-mode nil)
