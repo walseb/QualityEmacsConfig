@@ -1,0 +1,8 @@
+# name: subgraph
+# key: sub
+# --
+subgraph cluster_${1:name} {
+  label="${2:name}";
+
+  $0
+}

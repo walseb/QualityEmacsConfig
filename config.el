@@ -28,10 +28,6 @@
 	(eval-print-last-sexp)))
     (load bootstrap-file nil 'nomessage)))
 
-;; * xrandr setup
-;; (if (and (window-system) (bound-and-true-p my/device/monitor-setup-command) (not (string= my/device/monitor-setup-command "")))
-;;     (async-shell-command my/device/monitor-setup-command " *xrandr setup buffer*"))
-
 ;; * Theme
 (setq custom-theme-directory (concat user-emacs-directory "themes/"))
 
@@ -154,14 +150,12 @@
 	    ))
 
     (setq org-todo-keyword-faces
-	  `(("IN-PROGRESS" . ,outline-1-fg)
-	    ("TODO" . ,my/mark-color)
+	  `(;; ("TODO" . ,my/mark-color)
+	    ("TODO" . ,(color-lighten-name my/comment-face 10))
 	    ("HOLD" . ,my/comment-face)
+	    ("WAIT" . ,my/comment-face)
 	    ("BLOCK" . ,my/comment-face)
-	    ("DONE" . ,outline-3-fg)
-	    ("MAYBE" . ,my/comment-face)
-	    ("REC" . ,my/comment-face)
-	    ("BLOCK-REC" . ,my/comment-face)))
+	    ("DONE" . ,outline-3-fg)))
 
     (custom-theme-set-faces
      name
@@ -280,14 +274,14 @@
 
      `(org-table ((,class (:foreground ,my/mark-color))))
 
-     ;; `(org-todo ((,class (:foreground ,my/mark-color))))
-
+     `(org-todo ((,class (:inherit default))))
 
      ;; Used for among other things overdue deadlines
      `(org-warning ((,class (:foreground ,my/diff-removed-hl-color))))
 
      `(org-scheduled-previously ((,class (:foreground ,my/diff-removed-hl-color))))
-     `(org-scheduled ((,class (:foreground ,outline-2-fg))))
+     ;; `(org-scheduled ((,class (:foreground ,outline-2-fg))))
+     `(org-scheduled ((,class (:inherit default))))
      `(org-upcoming-distant-deadline ((,class (:inherit org-upcoming-deadline))))
      ;; `(org-upcoming-deadline ((,class (:inherit org-scheduled))))
 
@@ -297,6 +291,9 @@
      `(org-ql-view-due-date ((,class (:foreground ,my/diff-ancestor-hl-color))))
 
      `(org-tag ((,class (:foreground ,outline-1-fg :background ,outline-1-bg :weight normal))))
+
+     `(org-super-agenda-header ((,class (:inherit outline-1))))
+     `(org-agenda-structure ((,class (:inherit outline-1))))
 
      `(org-agenda-calendar-event ((,class (:foreground "DeepSkyBlue"))))
      `(org-agenda-calendar-sexp ((,class (:inherit default))))
@@ -313,7 +310,7 @@
      `(org-agenda-filter-regexp ((,class (:inherit default))))
      `(org-agenda-filter-tags ((,class (:inherit default))))
      `(org-agenda-restriction-lock ((,class (:inherit default))))
-     `(org-agenda-structure ((,class (:foreground ,my/bg-color :background ,my/mark-color))))
+     ;; `(org-agenda-structure ((,class (:foreground ,my/bg-color :background ,my/mark-color))))
 
      `(org-column ((,class (:foreground unspecified :background unspecified))))
      `(org-agenda-column-dateline ((,class (:inherit org-column))))
@@ -620,15 +617,10 @@
 (setq my/recoll-folder (concat my/notes-folder ".recoll/"))
 
 (setq my/organize-folder (concat my/notes-folder "Organize/"))
-(setq my/agenda-folder (concat my/organize-folder "Agenda/"))
 
 ;; * Files
-(setq org-agenda-files `(,(concat my/agenda-folder "20201026232230-Agenda.org")
-			 ,(concat my/agenda-folder "20201026232230-Tasks.org")
-			 ,(concat my/agenda-folder "20201026232230-Recurring_Tasks.org")
-			 ,(concat my/agenda-folder "20201121040920-learning_focus.org")
-			 ,(concat my/organize-folder "20201026232231-Projects.org")
-			 ))
+(setq org-agenda-files `(,(concat my/organize-folder "Store.org")
+			 ,(concat my/organize-folder "Store-persistent.org")))
 
 ;; * Private config
 (defun my/load-if-exists (f)
@@ -1252,7 +1244,9 @@ If NO-INIT is true, don't call the task on init
 				 (vterm-mode . insert)
 
 				 (timer-list-mode . insert)
-				 )
+
+				 (jump-tree-visualizer-mode . insert)
+				 (undo-tree-visualizer-mode . insert))
 	 do (evil-set-initial-state mode state))
 
 ;; *** Disable motion state
@@ -1618,6 +1612,8 @@ If NO-INIT is true, don't call the task on init
 (my/evil-universal-define-key my/mod-leader-map-key my/leader-map)
 
 ;; * exwm
+;; ** Xrandr auto setup monitors
+(call-process "xrandr" nil nil nil "--auto")
 
 ;; ** Keys before exwm init
 (setq exwm-input-prefix-keys nil)
@@ -2549,10 +2545,13 @@ If NO-INIT is true, don't call the task on init
 
 ;; ** Calendar
 (with-eval-after-load 'calendar
-  (define-key calendar-mode-map (kbd "l") 'calendar-forward-month)
-  (define-key calendar-mode-map (kbd "h") 'calendar-backward-month)
+  (define-key calendar-mode-map (kbd "L") 'calendar-forward-month)
+  (define-key calendar-mode-map (kbd "H") 'calendar-backward-month)
+  (define-key calendar-mode-map (kbd "l") 'calendar-forward-day)
+  (define-key calendar-mode-map (kbd "h") 'calendar-backward-day)
   (define-key calendar-mode-map (kbd "g") 'calendar-goto-today)
-  (define-key calendar-mode-map (kbd "RET") 'org-calendar-select))
+  (define-key calendar-mode-map (kbd "RET") 'org-calendar-select)
+  (evil-define-key 'normal calendar-mode-map (kbd "RET") 'org-calendar-select))
 
 ;; ** Explain pause mode
 (straight-use-package '(explain-pause-mode :type git :host github :repo "lastquestion/explain-pause-mode"))
@@ -2597,6 +2596,12 @@ If NO-INIT is true, don't call the task on init
 (with-eval-after-load 'timer-list
   (define-key timer-list-mode-map "k" 'timer-list-cancel))
 
+;; ** Help
+;; (straight-use-package 'helpful)
+;; (define-key help-map (kbd "f") #'helpful-callable)
+;; (define-key help-map (kbd "v") #'helpful-variable)
+;; (define-key help-map (kbd "k") #'helpful-key)
+
 ;; * Productivity
 ;; ** Break timer
 ;; In seconds
@@ -2618,9 +2623,9 @@ If NO-INIT is true, don't call the task on init
     (unless (exwm-layout--fullscreen-p)
 
       (when (my/timetrack-get-log (current-time))
-	(my/timetrack-show `(,(my/timetrack-get-log (current-time))
-			     ,(my/timetrack-get-log
-			       (time-subtract (current-time) (seconds-to-time (* 60 60))))))))
+	(my/timetrack-show-specific `(,(my/timetrack-get-log (current-time))
+				      ,(my/timetrack-get-log
+					(time-subtract (current-time) (seconds-to-time (* 60 60))))))))
 
     ;; (when (not is-clocked-in)
     (my/alert-statusline-message-temporary "Clock in!" 'med)
@@ -2650,7 +2655,7 @@ If NO-INIT is true, don't call the task on init
 					  (setq kill-ring old-kill-ring)
 					  return))))
 				  "Tech"
-				  (list (concat my/agenda-folder "20201026232230-Agenda.org"))))))
+				  (list (concat org-default-notes-file))))))
     (kill-new (car kill-ring))
     result))
 
@@ -2696,13 +2701,6 @@ If NO-INIT is true, don't call the task on init
   (find-file (concat user-emacs-directory "scratch.org")))
 
 (define-key my/open-map (kbd "s") 'my/switch-to-scratch)
-
-;; ** Open project planning
-(defun my/project-planning-visit ()
-  (interactive)
-  (find-file (concat my/organize-folder "20201026232231-Projects.org")))
-
-(define-key my/open-map (kbd "g") 'my/project-planning-visit)
 
 ;; ** Org-roam notes
 ;; *** Recoll
@@ -2779,7 +2777,8 @@ If NO-INIT is true, don't call the task on init
   (let ((buf (get-buffer org-agenda-buffer-name)))
     (if buf
 	(switch-to-buffer buf)
-      (org-agenda arg "n"))))
+      (org-agenda nil arg)
+      (goto-char (point-min)))))
 
 (define-key my/open-map (kbd "a") 'my/org-agenda-show-agenda-and-todo)
 
@@ -2818,13 +2817,6 @@ If NO-INIT is true, don't call the task on init
   (find-file (car org-agenda-files)))
 
 (define-key my/open-map (kbd "A") 'my/agenda-file-visit)
-
-;; ** Open tasks
-(defun my/tasks-visit ()
-  (interactive)
-  (find-file (car (cdr org-agenda-files))))
-
-(define-key my/open-map (kbd "t") 'my/tasks-visit)
 
 ;; ** Open backup
 (defun my/backups-visit ()
@@ -2903,8 +2895,49 @@ If NO-INIT is true, don't call the task on init
 ;; Set org src indent to be 0
 (setq org-edit-src-content-indentation 0)
 
+;; ** Log actions
 ;; Print out date of completion when changing task to done
 (setq org-log-done t)
+
+;; Log reschedule
+(setq org-log-reschedule 'time)
+
+;; *** Set rescheduled count property based on reschedule amount of times
+;; https://koenig-haunstetten.de/2021/05/23/fighting-procrastination-with-orgmode/
+;; org-rescheduled-count code to identify rescheduled-count tasks
+(defun my/org-get-logbook-notes ()
+  (save-excursion
+    (unless (org-at-heading-p)
+      (outline-previous-heading))
+    (when (re-search-forward ":LOGBOOK:" (save-excursion
+					   (outline-next-heading)
+					   (point))
+			     t)
+      (let* ((elt (org-element-property-drawer-parser nil))
+	     (beg (org-element-property :contents-begin elt))
+	     (end (org-element-property :contents-end elt)))
+	(when (and beg end)
+	  (buffer-substring-no-properties beg end))))))
+
+(defun my/org-rescheduled-count-set (add-count)
+  (interactive)
+  (let ((lognotes (my/org-get-logbook-notes)))
+    (when lognotes
+      (let ((count (+ (or add-count 0) (s-count-matches "Rescheduled from" lognotes))))
+	(when (> count 0)
+	  (org-entry-put nil "RESCHEDULED-COUNT" (number-to-string count)))))))
+
+;; (defun my/set-rescheduled-count ()
+;;   (interactive)
+;;   (org-map-entries #'my/org-rescheduled-count-set))
+
+(with-eval-after-load 'org
+  (advice-add #'org-schedule :after (lambda (&rest arg)
+				      (my/org-rescheduled-count-set 1))))
+
+;; ** Tags
+(setq org-agenda-use-tag-inheritance nil)
+(setq org-use-tag-inheritance nil)
 
 ;; ** Refile
 ;; *** Refile all DONE
@@ -2965,6 +2998,12 @@ If NO-INIT is true, don't call the task on init
 (straight-use-package 'org-superstar)
 
 (add-hook 'org-mode-hook 'org-superstar-mode)
+
+(setq org-superstar-headline-bullets-list
+      '(?●
+	?▲
+	?■
+	?⬟))
 
 ;; ** Visuals
 ;; *** Org-appear
@@ -3027,14 +3066,14 @@ If NO-INIT is true, don't call the task on init
 	      ;;    "* TODO %?\n  %u\n  %a"))
 	      ("Task"
 	       :keys "t"
-	       :file ,(car (cdr org-agenda-files))
 	       ;; :headline "Tasks"
+	       :file ,org-default-notes-file
 	       :prepend nil
-	       :template ("* TODO %?\n%u\n%a"))
+	       :template ("* TODO %?\n%u\n%a\nProblem:\nOutcome:\nNext Step:\n"))
 
 	      ("Schedule"
 	       :keys "s"
-	       :file ,(car (cdr org-agenda-files))
+	       :file ,org-default-notes-file
 	       :prepend nil
 	       :template ,(concat "* TODO %a :SCHEDULE:\nSCHEDULED: %T--"
 				  "%(my/org-generate-timestamp (time-add (current-time) (* 60 60 1)))"
@@ -3046,27 +3085,21 @@ If NO-INIT is true, don't call the task on init
 	      ;;  :prepend nil
 	      ;;  :template ("* TODO %? ::MILESTONE:\nDEADLINE: %T\n%a"))
 
-	      ("Learning backlog"
-	       :keys "l"
-	       :file ,(concat my/agenda-folder "20201121040936-learning_backlog.org")
-	       :prepend t
-	       :template ("* %?\n%u\n%a"))
-
 	      ("Learning focus"
-	       :keys "f"
-	       :file ,(car (cdddr org-agenda-files))
+	       :keys "l"
+	       :file ,org-default-notes-file
 	       :prepend t
-	       :template ("* %?\n%u\n%a"))
+	       :template ("* TODO %? :LEARNING:\n%u\n%a"))
 
-	      ("Buy stuff"
-	       :keys "B"
-	       :file ,(car (cdr org-agenda-files))
-	       :prepend nil
-	       :template ("* TODO %? :BUY:\n%u\n%a"))
+	      ("Learning backlog"
+	       :keys "L"
+	       :prepend t
+	       :file ,org-default-notes-file
+	       :template ("* TODO %? :LEARNING_BACKLOG:\n%u\n%a"))
 
 	      ("Buy groceries"
 	       :keys "b"
-	       :file "/home/admin/Notes/Organize/Agenda/20201104235900-Android_Notes.org"
+	       :file "/home/admin/Notes/Organize/Notes.org"
 	       :prepend nil
 	       :template ("* <-- Please remove this %?"))
 
@@ -3074,13 +3107,72 @@ If NO-INIT is true, don't call the task on init
 	       :keys "a"
 	       :file "/home/admin/Notes/20210131223157.org"
 	       :prepend nil
-	       :template ("* %?\n%u"))
+	       :template ("* TODO %?\n%u"))
+
+	      ("Problems"
+	       :keys "p"
+	       :file ,org-default-notes-file
+	       :template ("* TODO %? :PROBLEM:\n%u\n%a"))
+
+	      ("Decisions"
+	       :keys "d"
+	       :file ,org-default-notes-file
+	       :template ("* TODO %? :DECISION:\n%u\n%a"))
 
 	      ("Event"
 	       :keys "e"
-	       :file "/home/admin/Notes/Organize/Agenda/20201026232230-Events.org"
-	       :prepend t
-	       :template ("* ROUT %?\nSCHEDULED: %T\n%a"))
+	       :file ,org-default-notes-file
+	       :template ("* TODO %? :EVENT:\n%u\n%a"))
+
+	      ("Maybe"
+	       :keys "m"
+	       :file ,org-default-notes-file
+	       :template ("* TODO %? :MAYBE:\n%u\n%a"))
+
+	      ("Clothes"
+	       :keys "c"
+	       :file ,org-default-notes-file
+	       :template ("* TODO %? :CLOTHES:\n%u\n%a"))
+
+	      ("Organize"
+	       :keys "o"
+	       :file ,org-default-notes-file
+	       :template ("* TODO %? :ORGANIZE:\n%u\n%a"))
+
+	      ("Fiction"
+	       :keys "f"
+	       :file ,(cadr org-agenda-files)
+	       :template ("* TODO %? :FICTION:\n%u\n%a"))
+
+	      ("Entertainment"
+	       :keys "E"
+	       :file ,org-default-notes-file
+	       :template ("* TODO %? :ENTERTAINMENT:\n%u\n%a"))
+
+	      ("Health"
+	       :keys "h"
+	       :file ,org-default-notes-file
+	       :template ("* TODO %? :HEALTH:\n%u\n%a"))
+
+	      ("Setup (environment)"
+	       :keys "S"
+	       :file ,org-default-notes-file
+	       :template ("* TODO %? :ENV:\n%u\n%a"))
+
+	      ("Buy online"
+	       :keys "B"
+	       :file ,org-default-notes-file
+	       :template ("* TODO %? :BUY:\n%u\n%a"))
+
+	      ("Notes Inbox"
+	       :keys "n"
+	       :file ,org-default-notes-file
+	       :template ("* TODO %? :NOTES_INBOX:\n%u\n%a"))
+
+	      ("Thinking Inbox"
+	       :keys "T"
+	       :file ,org-default-notes-file
+	       :template ("* TODO %? :THINKING_INBOX:\n%u\n%a"))
 	      )))
 
 ;; *** Auto capture
@@ -3101,119 +3193,328 @@ If NO-INIT is true, don't call the task on init
 							 (call-interactively 'org-capture-finalize)
 							 (call-interactively 'my/save-buffer))))
 
-;; ** Super agenda
-(straight-use-package 'org-super-agenda)
-(straight-use-package 'org-ql)
-(org-super-agenda-mode 1)
-
 ;; ** Agenda
-;; (directory-files-recursively "~/Notes/Agenda/" ".org$")
+;; Speed improvements
+;; (setq org-agenda-fontify-priorities nil)
+;; (defun org-agenda-fontify-priorities ()
+;;   (interactive)
+;;   )
+(setq org-agenda-time-grid nil)
+;; (setq org-agenda-time-grid '((daily today require-timed) "----------------------" nil))
 
 (setq org-agenda-window-setup 'current-window)
 
-(setq org-agenda-start-day "-1d")
+;; (setq org-agenda-start-day "-1d")
+(setq org-agenda-start-day nil)
 (setq org-agenda-start-on-weekday nil)
-(setq org-agenda-span 50)
+(setq org-agenda-span 0)
 
-(setq org-agenda-todo-ignore-scheduled 'all)
-(setq org-agenda-block-separator nil)
+;; (setq org-agenda-todo-ignore-scheduled 'all)
+;; (setq org-agenda-block-separator nil)
+;; (setq org-agenda-block-separator "")
+;; (setq org-super-agenda-header-separator "")
+(setq org-agenda-block-separator " ")
+
+;; Hide date heading from agenda
+(setq org-agenda-format-date "")
+
+;; Hide unnecessary text
+(setq org-agenda-compact-blocks t)
 
 ;; Auto complete tags in agenda
 (setq org-complete-tags-always-offer-all-agenda-tags t)
 
 (setq org-agenda-tags-column 'auto)
 ;; (setq org-agenda-tags-column 0)
-(setq org-agenda-show-inherited-tags t)
+;; (setq org-agenda-show-inherited-tags t)
 
 (setq org-deadline-warning-days 365)
 
+;; *** Super agenda
+(straight-use-package 'org-super-agenda)
+(straight-use-package 'org-ql)
+(org-super-agenda-mode 1)
+
+;; Set nested header face
+(setq org-super-agenda-header-separator "\n")
+(setq org-super-agenda-header-prefix "  ")
+
+(setq org-super-agenda-header-properties '(face outline-2 org-agenda-structural-header t))
+
+;; *** Agenda blocks
+(progn
+  (setq my/agb-completed-today '(org-ql-block '(and
+						(todo)
+						(closed :on today)
+						(todo "DONE"))
+					      ((org-ql-block-header "Completed today!"))))
+
+  (setq my/agb-notes-inbox '(org-ql-block '(and
+					    (todo)
+					    (tags "NOTES_INBOX")
+					    (not (todo "DONE" "HOLD")))
+					  ((org-ql-block-header "Notes inbox"))))
+
+  (setq my/agb-decisions '(org-ql-block '(and
+					  (todo)
+					  (tags "DECISION")
+					  (not (todo "DONE" "HOLD")))
+					((org-ql-block-header "Decisions"))))
+
+  (setq my/agb-problems '(org-ql-block '(and
+					 (todo)
+					 (tags "PROBLEM")
+					 (not (todo "DONE" "HOLD")))
+				       ((org-ql-block-header "Problems"))))
+
+  (setq my/agb-thinking-inbox '(org-ql-block '(and
+					       (todo)
+					       (tags "THINKING_INBOX")
+					       (not (todo "DONE" "HOLD")))
+					     ((org-ql-block-header "Thinking inbox"))))
+
+  (setq my/agb-get-done '(org-ql-block '(and
+					 (todo)
+					 ;; (not (habit))
+					 (not (todo "DONE" "HOLD"))
+					 (not (tags "PROJSTEP"))
+					 (scheduled :to today))
+				       ((org-ql-block-header "TODAY"))))
+
+
+  (setq my/agb-rec '(org-ql-block '(and
+				    (todo)
+				    (tags "REC")
+				    (not (todo "DONE" "HOLD")))
+				  ((org-ql-block-header "REC"))))
+
+  ;; Add org-agenda time budgets integration
+  ;; (agenda "" ((org-agenda-sorting-strategy '(habit-down time-up priority-down category-keep user-defined-up))))
+  ;; (org-time-budgets-in-agenda)
+  (setq my/agb-habits '(agenda "" ((org-super-agenda-groups
+				    '((:name ""
+					     :habit t)
+				      (:discard (:anything t)))))))
+
+  (setq my/agb-events '(org-ql-block '(and
+				       (todo)
+				       (tags "EVENT")
+				       (or
+					(priority "A")
+					(scheduled :to 10))
+				       (not (todo "DONE")))
+				     ((org-ql-block-header "Events"))))
+
+  (setq my/agb-careers '(org-ql-block '(and
+					(todo)
+					(not (todo "DONE"))
+					(tags "CAREER"))
+				      ((org-ql-block-header "Careers"))))
+
+  (setq my/agb-projects
+	'(org-ql-block '(and
+			 (todo)
+			 (not (todo "DONE" "HOLD"))
+			 (or
+			  (tags "PROJECT")
+			  (parent
+			   (and
+			    (tags "PROJECT")
+			    (not (todo "HOLD"))))))
+		       ((org-ql-block-header "Projects")
+			(org-super-agenda-groups `(
+						   (
+						    :auto-outline-path
+						    ;; :auto-parent
+						    ))))))
+
+  (setq my/agb-env
+	'(org-ql-block '(and
+			 (todo)
+			 (not (todo "DONE"))
+			 (tags "ENV")
+			 (not (tags "MAYBE")))
+		       ((org-ql-block-header "ENV"))))
+
+  (setq my/agb-health
+	'(org-ql-block '(and
+			 (todo)
+			 (or
+			  (not (scheduled))
+			  (scheduled :to 20))
+			 (tags "HEALTH")
+			 (not (todo "DONE" "HOLD")))
+		       ((org-ql-block-header "Health"))))
+
+  (setq my/agb-tasks
+	'(org-ql-block '(and
+			 (todo)
+			 (not (tags "DECISION" "PROBLEM" "FICTION" "ENTERTAINMENT" "HEALTH" "MAYBE" "ORGANIZE" "CLOTHES" "LEARNING"  "NOTES_INBOX" "LEARNING_BACKLOG" "PROJSTEP" "CAREER" "PROJECT" "EVENT" "ENV" "REC" "BUY"))
+			 (not (habit))
+			 ;; Only put here if they will occur in 20 days time
+			 (or
+			  (not (scheduled))
+			  (scheduled :to 20))
+			 (not (todo "DONE" "HOLD")))
+		       ((org-ql-block-header "Tasks")
+			(org-super-agenda-groups `((:name "Tasks"
+							  :auto-priority))))))
+
+  (setq my/agb-organize
+	'(org-ql-block '(and
+			 (todo)
+			 (tags "ORGANIZE")
+			 (or
+			  (not (scheduled))
+			  (scheduled :to 20))
+			 (not (todo "DONE" "HOLD")))
+		       ((org-ql-block-header "Organize"))))
+
+  (setq my/agb-clothes
+	'(org-ql-block '(and
+			 (todo)
+			 (not (todo "DONE" "HOLD"))
+			 (tags "CLOTHES"))
+		       ((org-ql-block-header "Clothes"))))
+
+  (setq my/agb-maybe
+	'(org-ql-block '(and
+			 (todo)
+			 (not (habit))
+			 (not (todo "DONE" "HOLD"))
+			 (tags "MAYBE"))
+		       ((org-ql-block-header "Maybe"))))
+
+  (setq my/agb-active-learning
+	'(org-ql-block '(and
+			 (todo)
+			 (tags "LEARNING")
+			 (not (todo "DONE" "HOLD")))
+		       ((org-ql-block-header "Active learning"))))
+
+  (setq my/agb-learning-backlog
+	'(org-ql-block '(and
+			 (todo)
+			 (tags "LEARNING_BACKLOG")
+			 (not (todo "DONE" "HOLD")))
+		       ((org-ql-block-header "Learning backlog"))))
+
+  (setq my/agb-fiction
+	'(org-ql-block '(and
+			 (todo)
+			 (tags "FICTION")
+			 (not (todo "DONE" "HOLD")))
+		       ((org-ql-block-header "Fiction"))))
+
+  (setq my/agb-entertainment
+	'(org-ql-block '(and
+			 (todo)
+			 (tags "ENTERTAINMENT")
+			 (not (todo "DONE" "HOLD")))
+		       ((org-ql-block-header "Entertainment"))))
+
+  (setq my/agb-buy-online
+	'(org-ql-block '(and
+			 (todo)
+			 (tags "BUY")
+			 (not (todo "DONE" "HOLD")))
+		       ((org-ql-block-header "Buy online"))))
+
+  (setq my/agb-hold
+	'(org-ql-block '(todo "HOLD")
+		       ((org-ql-block-header "Hold")))))
+
+;; *** Agenda definition
 ;; Put todos on top
 (setq org-agenda-custom-commands
-      '(("n" "Agenda and all TODOs" (
-				     (org-ql-block '(and
-						     (closed :on today)
-						     (todo "DONE"))
-						   ((org-ql-block-header "Completed today!")))
+      (list
+       (list "p" "@Productive" `(,my/agb-completed-today
+				 ,my/agb-get-done
+				 ,my/agb-careers
+				 ,my/agb-projects
+				 ,my/agb-decisions
+				 ,my/agb-rec
+				 ,my/agb-habits
+				 ,my/agb-events
+				 ,my/agb-tasks
+				 ,my/agb-hold
+				 ))
 
-				     (org-ql-block '(or (and
-							 (todo)
-							 (not (todo "DONE"))
-							 (tags "GETDONE"))
-							(and
-							 (todo)
-							 (not (todo "DONE"))
-							 (or
-							  (scheduled :to -1)
-							  (deadline :to -1)
-							  (scheduled :to today)
-							  (deadline :to today))))
-						   ((org-ql-block-header "GETDONE")))
+       (list "p" "@Chores" `(,my/agb-completed-today
+			     ,my/agb-decisions
+			     ,my/agb-problems
+			     ,my/agb-get-done
+			     ,my/agb-rec
+			     ,my/agb-habits
+			     ,my/agb-tasks
+			     ,my/agb-events
+			     ,my/agb-env
+			     ,my/agb-health
+			     ,my/agb-organize
+			     ,my/agb-clothes
+			     ,my/agb-maybe
+			     ,my/agb-buy-online
+			     ,my/agb-hold
+			     ))
 
-				     (org-ql-block '(and
-						     (todo)
-						     (tags "PLANNING"))
-						   ((org-ql-block-header "Planning")))
+       (list "n" "Overview" `(,my/agb-completed-today
+			      ,my/agb-decisions
+			      ,my/agb-problems
+			      ,my/agb-get-done
+			      ,my/agb-rec
+			      ,my/agb-habits
+			      ,my/agb-events
+			      ,my/agb-careers
+			      ,my/agb-projects
+			      ,my/agb-env
+			      ,my/agb-health
+			      ,my/agb-tasks
+			      ,my/agb-organize
+			      ,my/agb-clothes
+			      ,my/agb-maybe
+			      ,my/agb-active-learning
+			      ,my/agb-notes-inbox
+			      ,my/agb-thinking-inbox
+			      ,my/agb-fiction
+			      ,my/agb-entertainment
+			      ,my/agb-buy-online
+			      ,my/agb-hold
+			      ))
+       (list "i" "@Intellectual" `(,my/agb-completed-today
+				   ,my/agb-thinking-inbox
+				   ,my/agb-notes-inbox
+				   ,my/agb-active-learning
+				   ,my/agb-learning-backlog
+				   ,my/agb-fiction
+				   ,my/agb-entertainment
+				   ,my/agb-organize
+				   ,my/agb-careers
+				   ,my/agb-projects
+				   ,my/agb-hold
 
-				     (org-ql-block '(and
-						     (todo)
-						     (not (habit))
-						     (not (todo "DONE"))
-						     (tags "SCHEDULE"))
-						   ((org-ql-block-header "Schedule")
-						    (org-super-agenda-groups `(
-									       ;; (:name "Overdue schedule"
-									       ;;	      :scheduled past)
-									       (:name "Schedule"
-										      :auto-planning t)))))
+				   ))
 
-				     (org-ql-block '(and
-						     (todo)
-						     (not (habit))
-						     (not (todo "DONE"))
-						     (tags "PROJECT")
-						     (level 1))
-						   ((org-ql-block-header "Projects")))
+       (list "m" "Minimum" `(,my/agb-completed-today
+			     ,my/agb-get-done
+			     ,my/agb-rec
+			     ,my/agb-habits
+			     ,my/agb-events
+			     ))
+       ))
 
-				     (org-ql-block '(and
-						     (todo)
-						     (not (habit))
-						     (not (todo "DONE"))
-						     (not (tags "GETDONE" "SCHEDULE" "BUY" "LEARNING" "PROJECT")))
-						   ((org-ql-block-header "Tasks")
-						    (org-super-agenda-groups `((:name "A"
-										      :priority "A")
-									       (:name "B"
-										      :priority "B")
-									       (:name "C"
-										      :priority "C")
-									       (:name "D"
-										      :priority "D")
-									       ))))
+;; *** Show properties in agenda
+(straight-use-package 'org-agenda-property)
 
+(setq org-agenda-property-list '("RESCHEDULED-COUNT" "STYLE"))
+(setq org-agenda-property-separator " ")
+(setq org-agenda-property-column 80)
 
-				     ;; (alltodo nil)
-				     (agenda nil)
-
-				     (org-ql-block '(and
-						     (todo)
-						     (not (habit))
-						     (not (todo "DONE"))
-						     (tags "BUY"))
-						   ((org-ql-block-header "Buy")))
-
-				     (org-ql-block '(and
-						     (tags "LEARNING")
-						     (level 1))
-						   ((org-ql-block-header "Active learning")))
-
-				     ;; Add org-agenda time budgets integration
-				     ;; (agenda "" ((org-agenda-sorting-strategy '(habit-down time-up priority-down category-keep user-defined-up))))
-				     ;; (org-time-budgets-in-agenda)
-				     ))))
+(with-eval-after-load 'org-agenda
+  (require 'org-agenda-property))
 
 ;; *** Sort habits
 ;; Sort habits by priority, etc. See https://emacs.stackexchange.com/questions/32430/how-to-sort-habits-by-priority-in-the-org-agenda-view
-(defun hw-org-agenda-sort-habits (a b)
+(defun my/org-agenda-sort-habits (a b)
   "Sort habits first by user priority, then by schedule+deadline+consistency."
   (let ((ha (get-text-property 1 'org-habit-p a))
 	(hb (get-text-property 1 'org-habit-p b)))
@@ -3224,7 +3525,7 @@ If NO-INIT is true, don't call the task on init
 	      ((< pa pb) -1)
 	      ((= pa pb) (org-cmp-values a b 'priority)))))))
 
-(setq org-agenda-cmp-user-defined 'hw-org-agenda-sort-habits
+(setq org-agenda-cmp-user-defined 'my/org-agenda-sort-habits
       org-agenda-sorting-strategy '((agenda time-up user-defined-down habit-down)
 				    (todo priority-down category-keep)
 				    (tags priority-down category-keep)
@@ -3254,59 +3555,74 @@ If NO-INIT is true, don't call the task on init
 (setq org-time-stamp-custom-formats
       '("<%Y-%m-%d>" . "<%Y-%m-%d %H:%M>"))
 
+;; **** Skip time
+;; https://emacs.stackexchange.com/questions/19823/how-to-postpone-skip-an-org-mode-repeated-task-by-a-cycle-or-two
+;; (defun my/org-timestamp-cycle-up (&optional arg)
+;;   (interactive "p")
+;;   (my/org-timestamp-cycle (prefix-numeric-value (or arg 1))))
+
+;; (defun my/org-timestamp-cycle-down (&optional arg)
+;;   (interactive "p")
+;;   (my/org-timestamp-cycle (- (prefix-numeric-value (or arg 1)))))
+
+;; (defun my/org-timestamp-cycle (cycle)
+;;   (interactive "p")
+;;   (let ((repeat (org-get-repeat)))
+;;     (string-match "\\([.+]\\)?\\(\\+[0-9]+\\)\\([dwmy]\\)" repeat)
+;;     (let ((n (string-to-number (match-string 2 repeat)))
+;;	  (what (match-string 3 repeat))
+;;	  (whata '(("d" . day) ("m" . month) ("y" . year))))
+;;       (when (string= what "w")
+;;	(setq what "d" n (* n 7)))
+;;       (org-timestamp-change (* cycle n) (cdr (assoc what whata))))))
+
 ;; *** log-mode
 ;; Shows clocked time in timeline view
 ;; (setq org-agenda-start-with-log-mode 'clock)
 
 ;; **** Colorize and resize blocks
 ;; https://orgmode.org/worg/org-hacks.html
-(defun my/org-agenda-log-mode-colorize-block ()
-  "Set different line spacing based on clock time duration."
-  (save-excursion
-    (let* ((colors (cl-case (alist-get 'background-mode (frame-parameters))
-		     ('light
-		      (list "#F6B1C3" "#FFFF9D" "#BEEB9F" "#ADD5F7"))
-		     ('dark
-		      (list "#aa557f" "DarkGreen" "DarkSlateGray" "DarkSlateBlue"))))
-	   pos
-	   duration)
-      (nconc colors colors)
-      (goto-char (point-min))
-      (while (setq pos (next-single-property-change (point) 'duration))
-	(goto-char pos)
-	(when (and (not (equal pos (point-at-eol)))
-		   (setq duration (org-get-at-bol 'duration)))
-	  ;; larger duration bar height
-	  (let ((line-height (if (< duration 15) 1.0 (+ 0.5 (/ duration 30))))
-		(ov (make-overlay (point-at-bol) (1+ (point-at-eol)))))
-	    (overlay-put ov 'face `(:background ,(car colors) :foreground "black"))
-	    (setq colors (cdr colors))
-	    (overlay-put ov 'line-height line-height)
-	    (overlay-put ov 'line-spacing (1- line-height))))))))
+;; (defun my/org-agenda-log-mode-colorize-block ()
+;;   "Set different line spacing based on clock time duration."
+;;   (save-excursion
+;;     (let* ((colors (cl-case (alist-get 'background-mode (frame-parameters))
+;;		     ('light
+;;		      (list "#F6B1C3" "#FFFF9D" "#BEEB9F" "#ADD5F7"))
+;;		     ('dark
+;;		      (list "#aa557f" "DarkGreen" "DarkSlateGray" "DarkSlateBlue"))))
+;;	   pos
+;;	   duration)
+;;       (nconc colors colors)
+;;       (goto-char (point-min))
+;;       (while (setq pos (next-single-property-change (point) 'duration))
+;;	(goto-char pos)
+;;	(when (and (not (equal pos (point-at-eol)))
+;;		   (setq duration (org-get-at-bol 'duration)))
+;;	  ;; larger duration bar height
+;;	  (let ((line-height (if (< duration 15) 1.0 (+ 0.5 (/ duration 30))))
+;;		(ov (make-overlay (point-at-bol) (1+ (point-at-eol)))))
+;;	    (overlay-put ov 'face `(:background ,(car colors) :foreground "black"))
+;;	    (setq colors (cdr colors))
+;;	    (overlay-put ov 'line-height line-height)
+;;	    (overlay-put ov 'line-spacing (1- line-height))))))))
 
-(add-hook 'org-agenda-finalize-hook 'my/org-agenda-log-mode-colorize-block)
-
-;; *** Super agenda
-;; Just used to group org-ql queries currently
-(straight-use-package 'org-super-agenda)
-;; (with-eval-after-load 'org-agenda
-;;   (org-super-agenda-mode 1))
+;; (add-hook 'org-agenda-finalize-hook 'my/org-agenda-log-mode-colorize-block)
 
 ;; *** Idle-agenda
-(setq my/idle-agenda-delay (* 60 5))
+;; (setq my/idle-agenda-delay (* 60 5))
 
 ;; (run-with-idle-timer my/idle-agenda-delay t 'my/startup-view)
 
 ;; *** Time-grid
-(setq org-agenda-time-grid
-      '((
-	 ;; weekly
-	 daily
-	 today require-timed)
-	;; These are the yellow lines that show up
-	(800 1000 1200 1400 1600 1800 2000 2400)
-	"......"
-	"----------------"))
+;; (setq org-agenda-time-grid
+;;       '((
+;;	 ;; weekly
+;;	 daily
+;;	 today require-timed)
+;;	;; These are the yellow lines that show up
+;;	(800 1000 1200 1400 1600 1800 2000 2400)
+;;	"......"
+;;	"----------------"))
 
 ;; *** org-timeline
 ;; (straight-use-package 'org-timeline)
@@ -3353,8 +3669,14 @@ If NO-INIT is true, don't call the task on init
   (define-key org-agenda-mode-map (kbd "N") 'org-agenda-priority-down)
   (define-key org-agenda-mode-map (kbd "P") 'org-agenda-priority-up)
 
-  (define-key my/org-agenda-mode-map (kbd "t") 'org-agenda-schedule)
-  (define-key my/org-agenda-mode-map (kbd "d") 'org-agenda-deadline)
+  (define-key org-agenda-mode-map (kbd "s") 'org-agenda-schedule)
+
+  (define-key org-agenda-mode-map (kbd "r") (lambda () (interactive)
+					      (org-agenda-schedule nil "+1")))
+
+  (define-key my/org-agenda-mode-map (kbd "s") 'org-agenda-schedule)
+
+  (evil-define-key 'normal org-agenda-mode-map (kbd "RET") 'org-agenda-switch-to)
 
   ;;(define-key org-agenda-mode-map (kbd (concat my/leader-map-key " a")) #'my/agenda-space-map)
 
@@ -3411,6 +3733,7 @@ If NO-INIT is true, don't call the task on init
 ;;	(substring-no-properties with-parent)))))
 
 ;; *** org-time-budgets
+;; https://github.com/leoc/org-time-budgets
 ;; (straight-use-package 'org-time-budgets)
 
 ;; *** Quicly clock offline time
@@ -3471,6 +3794,9 @@ If NO-INIT is true, don't call the task on init
 
 ;; log into LOGBOOK drawer
 (setq org-log-into-drawer t)
+
+;; Treat done the same even if it was done after deadline
+(setq org-habit-show-done-always-green t)
 
 ;; ** Present
 (defun my/org-present-next ()
@@ -3661,10 +3987,14 @@ If NO-INIT is true, don't call the task on init
 (define-key my/org-mode-map (kbd "f") 'my/org-present-next)
 (define-key my/org-mode-map (kbd "b") 'my/org-present-prev)
 
-(define-key my/org-mode-map (kbd "t") 'org-time-stamp)
-(define-key my/org-mode-map (kbd "T") '(lambda () (interactive) (org-time-stamp '(16))))
+(define-key my/org-mode-map (kbd "s") 'org-schedule)
+
+(define-key my/org-mode-map (kbd "t") '(lambda () (interactive) (org-time-stamp nil t)))
+(define-key my/org-mode-map (kbd "T") '(lambda () (interactive) (org-time-stamp '(16) t)))
 
 (define-key my/org-mode-map (kbd "r") 'org-refile)
+
+(define-key my/org-mode-map (kbd "a") 'org-toggle-archive-tag)
 
 (define-key my/org-mode-map (kbd "E") (lambda () (interactive) (counsel-M-x "^org export-")))
 
@@ -4889,19 +5219,32 @@ If the input is empty, select the previous history element instead."
 ;; (my/evil-universal-define-key "C-b" 'history-prev-history)
 ;; (my/evil-universal-define-key "C-o" 'history-next-history)
 
-;; *** back-button
-(straight-use-package 'back-button)
+;; *** Jump-tree
+(straight-use-package 'jump-tree)
+(global-jump-tree-mode 1)
+(setq jump-tree-visualizer-timestamps t)
 
-(setq back-button-no-wrap nil)
+(my/evil-universal-define-key "C-b" 'jump-tree-jump-prev)
+(my/evil-universal-define-key "C-o" 'jump-tree-jump-next)
+(my/evil-normal-define-key "&" 'jump-tree-visualize)
 
-;; **** Recenter view after using back-button
-(advice-add 'back-button-pop-local-mark :after (lambda (&rest r) (interactive) (recenter)))
+;; **** Visualize mode
+(define-key jump-tree-visualizer-mode-map (kbd "l") 'jump-tree-visualize-switch-branch-right)
+(define-key jump-tree-visualizer-mode-map (kbd "h") 'jump-tree-visualize-switch-branch-left)
 
-;; **** Keys
-(my/evil-universal-define-key "C-b" 'back-button-local-backward)
-(my/evil-universal-define-key "C-o" 'back-button-local-forward)
-(global-set-key (kbd "C-b") 'back-button-local-backward)
-(global-set-key (kbd "C-o") 'back-button-local-forward)
+;; ;; *** back-button
+;; (straight-use-package 'back-button)
+
+;; (setq back-button-no-wrap nil)
+
+;; ;; **** Recenter view after using back-button
+;; (advice-add 'back-button-pop-local-mark :after (lambda (&rest r) (interactive) (recenter)))
+
+;; ;; **** Keys
+;; (my/evil-universal-define-key "C-b" 'back-button-local-backward)
+;; (my/evil-universal-define-key "C-o" 'back-button-local-forward)
+;; (global-set-key (kbd "C-b") 'back-button-local-backward)
+;; (global-set-key (kbd "C-o") 'back-button-local-forward)
 
 ;; ** Avy
 (straight-use-package 'avy)
@@ -5889,7 +6232,11 @@ If the input is empty, select the previous history element instead."
 ;; TODO: Keep here while image-mode bug exists
 (add-to-list 'whitespace-cleanup-mode-ignore-modes 'fundamental-mode)
 
-;; *** indent guide
+;; *** Indent
+;; **** Auto indent
+;; (straight-use-package '(spaceship-mode :type git :host github :repo "tenbillionwords/spaceship-mode"))
+
+;; **** indent guide
 ;; (straight-use-package 'highlight-indent-guides)
 
 ;; (add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
@@ -6020,7 +6367,7 @@ If the input is empty, select the previous history element instead."
       (_
        ;; eval-region doesn't return anything, just prints to the minibuffer so eros can't be used here
        (eros--eval-overlay
-	(eval-region beg end t)
+	(eval (car (read-from-string (buffer-substring-no-properties beg end))))
 	end)))))
 
 (defun my/auto-eval-buffer ()
@@ -6292,35 +6639,6 @@ If the input is empty, select the previous history element instead."
 					   (format (concat " " eros-eval-result-prefix "%s "))
 					   (prepend-face 'eros-result-overlay-face)
 					   &allow-other-keys)
-  "Place an overlay displaying VALUE at the end of line.
-
-VALUE is used as the overlay's after-string property, meaning it
-is displayed at the end of the overlay.  The overlay itself is
-placed from beginning to end of current line.
-
-Return nil if the overlay was not placed or if it might not be
-visible, and return the overlay otherwise.
-
-Return the overlay if it was placed successfully, and nil if it
-failed.
-
-This function takes some optional keyword arguments:
-
-- If WHERE is a number or a marker, apply the overlay over the
-  entire line at that place (defaulting to `point').  If it is a
-  cons cell, the car and cdr determine the start and end of the
-  overlay.
-
-- DURATION takes the same possible values as the
-  `eros-eval-result-duration' variable.
-
-- TYPE is passed to `eros--make-overlay' (defaults to `result').
-
-- FORMAT is a string passed to `format'.  It should have exactly
-  one %s construct (for VALUE).
-
-All arguments beyond these (PROPS) are properties to be used on
-the overlay."
   (declare (indent 1))
   (while (keywordp (car props))
     (setq props (cddr props)))
@@ -7852,6 +8170,7 @@ do the
 (setq my/timetrack-html-dir (concat my/emacs-configs-dir "timetrack/"))
 (setq my/timetrack-html-beg (concat my/timetrack-html-dir "timetrack-beg.html"))
 (setq my/timetrack-html-end (concat my/timetrack-html-dir "timetrack-end.html"))
+(setq my/timetrack-lock nil)
 
 (defun my/timetrack-get-log-string (&optional time)
   (concat my/timetrack-cache-dir "timetrack-" (format-time-string "%Y-%m-%d_%H" time) ".data"))
@@ -7873,12 +8192,16 @@ do the
       result)))
 
 (defun my/timetrack-track (&optional name-override project-override)
-  (setq my/timetrack-cache-todays-file (my/timetrack-get-log-string))
-  (unless (file-exists-p my/timetrack-cache-dir)
-    (make-directory my/timetrack-cache-dir t))
-  (unless (file-exists-p my/timetrack-cache-todays-file)
-    (shell-command-to-string (concat "touch " my/timetrack-cache-todays-file)))
-  (my/timetrack-track--internal name-override project-override))
+  (unless my/timetrack-lock
+    (setq my/timetrack-lock t)
+    (ignore-errors
+      (setq my/timetrack-cache-todays-file (my/timetrack-get-log-string))
+      (unless (file-exists-p my/timetrack-cache-dir)
+	(make-directory my/timetrack-cache-dir t))
+      (unless (file-exists-p my/timetrack-cache-todays-file)
+	(shell-command-to-string (concat "touch " my/timetrack-cache-todays-file)))
+      (my/timetrack-track--internal name-override project-override))
+    (setq my/timetrack-lock nil)))
 
 (defun my/timetrack-track--internal (&optional name-override project-override)
   (require 'projectile)
@@ -7897,7 +8220,8 @@ do the
 		 project-name-raw))
 	     "N/A"
 	     ))))
-    (make-thread (lambda () (my/timetrack-track--internal-ugly-cleanup-hack name project my/timetrack-cache-todays-file)))))
+    (eval `(make-thread (lambda () (my/timetrack-track--internal-ugly-cleanup-hack ,name ,project ,my/timetrack-cache-todays-file))))))
+;; (my/timetrack-track--internal-ugly-cleanup-hack "test" "man" ~/test.test)
 
 (defun my/timetrack-track--internal-generate-entry (name project)
   (let ((javascript-unix-time (my/javascript-epoch)))
@@ -7943,49 +8267,51 @@ do the
   (run-with-timer my/timetrack-dt nil (lambda ()
 					;; Just to get rid of the stack, elisp doesn't have tail-call optimization
 					(run-with-timer 0.00001 nil 'my/timetrack-secure-timer)
-
 					(ignore-errors (my/timetrack-track)))))
 
 (when my/timetrack
   (my/timetrack-secure-timer))
 
 ;; *** Show
-(setq my/timetrack-cache-view-file "/tmp/timetrack-report.html")
+(setq my/timetrack--view-cache-file "/tmp/timetrack-report.html")
 
-(defun my/timetrack-show (&optional files)
-  (interactive)
-  (my/timetrack--view-build my/timetrack-cache-view-file my/timetrack-cache-view-file files)
-  (my/open-in-browser my/timetrack-cache-view-file))
+(defun my/timetrack--view-concat-files (files)
+  (-reduce 'concat (mapcar (-partial 'concat " ") files)))
 
-(defun my/timetrack--view-build (result-file &optional files)
+(defun my/timetrack--view-completion (&optional files)
   (unless files
     (setq files
-	  (list (let ((all-files
-		       (my/get-files-by-regex "^timetrack-.*\.data$" my/timetrack-cache-dir)
-		       ))
+	  (list (let ((all-files (my/get-files-by-regex "^timetrack-.*\.data$" my/timetrack-cache-dir)))
 		  (concat my/timetrack-cache-dir (completing-read "Show file: " all-files nil t
 								  ;; (number-to-string (org-today))
 								  (format-time-string "%Y-%m-%d")))))))
-  (my/timetrack--view-build-write result-file files))
+  files)
 
-(defun my/timetrack--view-build-write (result-file files)
+(defun my/timetrack--view-inject (result-file files)
   (when (f-exists-p result-file)
     (f-delete result-file))
   (shell-command-to-string (concat "cat "
 				   my/timetrack-html-beg " "
-				   (-reduce 'concat (mapcar (-partial 'concat " ") files)) " "
+				   (my/timetrack--view-concat-files files)  " "
 				   my/timetrack-html-end " "
 				   ">> "
 				   result-file)))
 
 ;; **** Configurations
-(defun my/timetrack--view-build-today (result-file)
-  (my/timetrack--view-build result-file (mapcar (lambda (a) (concat my/timetrack-cache-dir a)) (or (my/timetrack-get-all-logs-day-string)))))
+(defun my/timetrack-show-specific (&optional files)
+  (interactive)
+  (my/timetrack--view-inject my/timetrack--view-cache-file (my/timetrack--view-completion files))
+  (my/open-in-browser my/timetrack--view-cache-file))
+
+(defun my/timetrack-show-build-today (to-file)
+  (interactive)
+  (my/timetrack--view-inject to-file
+			     (mapcar (lambda (a) (concat my/timetrack-cache-dir a)) (or (my/timetrack-get-all-logs-day-string)))))
 
 (defun my/timetrack-show-today ()
   (interactive)
-  (my/timetrack--view-build-today my/timetrack-cache-view-file)
-  (my/open-in-browser my/timetrack-cache-view-file))
+  (my/timetrack-show-build-today my/timetrack--view-cache-file)
+  (my/open-in-browser my/timetrack--view-cache-file))
 
 ;; ** selfspy
 ;; Delete selfspy for session
@@ -8189,8 +8515,26 @@ do the
 (setq espy-password-file "~/pass/pass.org.gpg")
 
 (define-key my/password-map (kbd "r") 'my/reset-gpg-agent)
-(define-key my/password-map (kbd "u") 'espy-get-user)
-(define-key my/password-map (kbd "p") 'espy-get-pass)
+
+;; **** Custom get
+(defvar my/secret-clipboard nil)
+
+(defun my/espy-get-user ()
+  (interactive)
+  (require 'espy)
+  (setq my/secret-clipboard (espy-get-content "Get user: " espy-user-prefix))
+  (gui-select-text my/secret-clipboard))
+
+(defun my/espy-get-pass ()
+  (interactive)
+  (require 'espy)
+  (setq my/secret-clipboard (espy-get-content "Get password: " espy-pass-prefix))
+  (gui-select-text my/secret-clipboard))
+
+(define-key my/password-map (kbd "u") 'my/espy-get-user)
+(define-key my/password-map (kbd "p") 'my/espy-get-pass)
+(global-set-key (kbd "<S-insert>") (lambda () (interactive)
+				     (insert my/secret-clipboard)))
 
 ;; *** Auto-clean kill ring
 ;; (defvar my/pass-in-killring nil)
@@ -8449,6 +8793,7 @@ do the
 ;; (eshell-did-you-mean-setup)
 
 ;; ** Eshell commands
+;; *** Clone
 (defun eshell/clone (addr)
   (run-with-timer 0 nil (lambda ()
 			  (insert (concat "git clone --recurse-submodules -j8 "
@@ -9426,32 +9771,25 @@ do the
 ;; *** Auto compile project
 (defun my/auto-compile-project ()
   (interactive)
-  (let* ((nixos-collect-garbage (lambda () (my/sudo-compile "nix-collect-garbage -d")))
+  (let* (
 	 (nixos-home-string "nix-channel --update; home-manager -f /etc/nixos/home.nix switch")
 	 (nixos-system-string "nixos-rebuild switch --upgrade")
-	 ;; (nixos-home-and-system (lambda () (compile (concat nixos-system-string ";" "su admin;" nixos-home-string))))
-	 (nixos-home (lambda () (compile nixos-home-string)))
-	 (nixos-home-and-system (lambda () (my/sudo-compile (concat nixos-system-string "; runuser -l admin -c '" nixos-home-string "'"))))
-	 (nixos-system (lambda () (my/sudo-compile nixos-system-string)))
-	 (nixos-system-offline (lambda () (my/sudo-compile "nixos-rebuild switch --option substitute false")))
-	 ;; (nixos-home--rollback (lambda () (compile "home-manager -f /etc/nixos/home.nix switch --rollback")))
-	 (nixos-system--rollback (lambda () (my/sudo-compile "nixos-rebuild switch --rollback")))
-	 (nixos (lambda ()
-		  ;; Not sure why but this is required
-		  (require 'ivy)
+	 (nixos-build (lambda ()
+			;; Not sure why but this is required
+			;; (require 'ivy)
 
-		  (pcase (completing-read "compile " '(;; "home&system"
-						       "home&system" "home" "system" "system-offline" "collect-garbage" ;; "home--rollback"
-						       "system--rollback"))
-		    ;; ("home&system" (funcall nixos-home-and-system))
-		    ("home" (funcall nixos-home))
-		    ("system" (funcall nixos-system))
-		    ("home&system" (funcall nixos-home-and-system))
+			(pcase (completing-read "compile " '("home + system" "home" "system" "system-offline" "collect-garbage" "system--rollback"))
+			  ;; ("home&system" (funcall nixos-home-and-system))
+			  ("home" (compile nixos-home-string))
 
-		    ("collect-garbage" (funcall nixos-collect-garbage))
-		    ;; ("home--rollback" (funcall nixos-home--rollback))
-		    ("system-offline" (funcall nixos-system-offline))
-		    ("system--rollback" (funcall nixos-system--rollback))))))
+			  ("system" (my/sudo-compile nixos-system-string))
+
+			  ("home + system" (my/sudo-compile (concat nixos-system-string "; runuser -l admin -c '" nixos-home-string "'")))
+
+			  ("collect-garbage" (my/sudo-compile "nix-collect-garbage -d"))
+			  ;; ("home--rollback" (compile "home-manager -f /etc/nixos/home.nix switch --rollback"))
+			  ("system-offline" (my/sudo-compile "nixos-rebuild switch --option substitute false"))
+			  ("system--rollback" (my/sudo-compile "nixos-rebuild switch --rollback"))))))
     (pcase major-mode
       ('graphviz-dot-mode (graphviz-dot-preview))
       ('org-mode (counsel-M-x "^org to "))
@@ -9459,10 +9797,10 @@ do the
       ('java-mode (call-interactively 'dap-java-debug))
       ('nix-mode
        (when (file-in-directory-p (buffer-file-name) "/etc/nixos/")
-	 (funcall nixos)))
+	 (funcall nixos-build)))
       (_
        (if (file-in-directory-p (or (buffer-file-name) default-directory) "/etc/nixos/")
-	   (funcall nixos)
+	   (funcall nixos-build)
 	 (pcase (projectile-project-type)
 	   ;; ('haskell-cabal (my/cabal-compile))
 	   ('nix (my/cabal-compile))
@@ -9967,14 +10305,14 @@ do the
 (defun my/export-agenda-syncthing ()
   (let ((buf (htmlize-buffer)))
     (my/create-or-overwrite-file-with-content "~/sync/org-agenda-img/agenda.html" (my/buffer-string buf) nil)
-    (my/timetrack--view-build-today my/timetrack-cache-view-file)
+    (my/timetrack-show-build-today my/timetrack--view-cache-file)
     (let ((tmp (make-temp-file "test")))
       (my/local-env-shell-command-to-string
        (concat
-	"cat " my/timetrack-cache-view-file " " "~/sync/org-agenda-img/agenda.html"
+	"cat " my/timetrack--view-cache-file " " "~/sync/org-agenda-img/agenda.html"
 	" >> "
 	tmp " &&  mv " tmp " " "~/sync/org-agenda-img/agenda.html")))
-    (run-with-timer 1 nil (lambda () (kill-buffer buf)))))
+    (eval `(run-with-timer 1 nil (lambda () (kill-buffer ,buf))))))
 
 (when my/auto-export-agenda-syncthing
   (add-hook 'org-agenda-finalize-hook 'my/export-agenda-syncthing))
@@ -10002,17 +10340,17 @@ do the
     (setq my/stopwatch-current-name nil)))
 
 (defun my/stopwatch-format ()
-(when my/stopwatch-current
-  (let ((diff-time (- (time-convert nil 'integer) my/stopwatch-current)))
-    (concat
-     my/stopwatch-current-name
-     " "
-     (format "%02d:"
-	     (/ diff-time 3600))
-     (format "%02d:"
-	     (% (/ diff-time 60) 60))
-     (format "%02d"
-	     (% diff-time 60))))))
+  (when my/stopwatch-current
+    (let ((diff-time (- (time-convert nil 'integer) my/stopwatch-current)))
+      (concat
+       my/stopwatch-current-name
+       " "
+       (format "%02d:"
+	       (/ diff-time 3600))
+       (format "%02d:"
+	       (% (/ diff-time 60) 60))
+       (format "%02d"
+	       (% diff-time 60))))))
 
 (define-key my/leader-map (kbd "k") 'my/stopwatch-init)
 
@@ -10163,6 +10501,7 @@ do the
 (define-key notmuch-tree-mode-map (kbd "s") 'my/notmuch-tree-query)
 (define-key notmuch-tree-mode-map (kbd "S") 'notmuch-tree-to-search)
 (define-key notmuch-tree-mode-map (kbd "RET") 'notmuch-tree-show-message)
+(evil-define-key 'normal notmuch-tree-mode-map (kbd "RET") 'notmuch-tree-show-message)
 
 (define-key notmuch-tree-mode-map (kbd "u") '(lambda () (interactive) (notmuch-tree-tag '("+unread"))))
 
@@ -10425,19 +10764,28 @@ do the
 ;; ** Suspend
 (define-prefix-command 'my/system-suspend-map)
 
+(defun my/before-suspend ()
+  (save-some-buffers)
+  (let ((buf (get-buffer org-agenda-buffer-name)))
+    (when buf
+      (kill-buffer buf)))
+  (my/org-agenda-show-agenda-and-todo "n")
+  ;; Ensure syncthing isn't left with a backup symlink
+  ;; (when saved
+  ;;   (message "Waiting 7 seconds for syncthing sync")))
+  (ignore-errors
+    (org-clock-out))
+  (redisplay)
+  (sleep-for 7))
+
 (defun my/awake-restart-services ()
   "Some timers crash after sleep, restart them"
   (run-with-timer 5 nil #'my/vmstat-restart))
 
 (defun my/systemd-suspend-PC ()
   (interactive)
-  ;; Ensure syncthing isn't left with a backup symlink
-  (when (save-some-buffers)
-    (message "Waiting 10 seconds for syncthing sync")
-    (sleep-for 10))
+  (my/before-suspend)
 
-  (ignore-errors
-    (org-clock-out))
   (my/local-env-shell-command-to-string "systemctl suspend")
   (my/awake-restart-services))
 
@@ -10446,12 +10794,7 @@ do the
 (defun my/systemd-hibernate-PC ()
   (interactive)
   ;; Ensure syncthing isn't left with a backup symlink
-  (when (save-some-buffers)
-    (message "Waiting 10 seconds for syncthing sync")
-    (sleep-for 10))
-
-  (ignore-errors
-    (org-clock-out))
+  (my/before-suspend)
   (shell-command "systemctl hibernate"))
 
 ;; *** Sleep and wake at time
@@ -10461,7 +10804,7 @@ do the
 	 (unix-time (org-timestamp-format (org-timestamp-from-string org-timestamp) "%s")))
     (my/sudo-shell-command-to-string
      (concat "su; rtcwake -m mem -l -t " unix-time " &"))
-  (my/awake-restart-services)))
+    (my/awake-restart-services)))
 
 ;; ** Multi-monitor
 (define-prefix-command 'my/system-monitor-map)
@@ -10904,21 +11247,37 @@ do the
 (define-key my/spell-map (kbd "c") 'my/toggle-company-ispell)
 
 ;; *** Langtool
-(straight-use-package 'langtool)
+;; (straight-use-package 'langtool)
 
-(setq langtool-language-tool-jar
-      (ignore-errors
-	(concat
-	 (f-dirname
-	  (file-truename
-	   (executable-find "languagetool")))
-	 "/../share/languagetool-commandline.jar")))
+;; (setq langtool-language-tool-jar
+;;       (ignore-errors
+;;	(concat
+;;	 (f-dirname
+;;	  (file-truename
+;;	   (executable-find "languagetool")))
+;;	 "/../share/languagetool-commandline.jar")))
 
-(setq langtool-autoshow-idle-delay 0)
-(setq langtool-mother-tongue "en-US")
+;; (setq langtool-autoshow-idle-delay 0)
+;; (setq langtool-mother-tongue "en-US")
 
-(define-key my/spell-map (kbd "l") 'langtool-check)
-(define-key my/spell-map (kbd "L") 'langtool-check-done)
+;; (define-key my/spell-map (kbd "l") 'langtool-check)
+;; (define-key my/spell-map (kbd "L") 'langtool-check-done)
+
+;; *** Langtool-flycheck
+;; (straight-use-package '(flycheck-languagetool :type git :host github :repo "emacs-languagetool/flycheck-languagetool"))
+
+;; (setq flycheck-languagetool-commandline-jar
+;;       (ignore-errors
+;;	(concat
+;;	 (f-dirname
+;;	  (file-truename
+;;	   (executable-find "languagetool")))
+;;	 "/../share/languagetool-commandline.jar")))
+
+;; (with-eval-after-load 'flycheck
+;;   (require 'flycheck-languagetool))
+
+;; (setq flycheck-languagetool-active-modes '(text-mode))
 
 ;; * Calc
 (define-key my/leader-map (kbd "c") 'calc)
@@ -12408,15 +12767,6 @@ do the
 		  (format-mode-line
 		   (quote
 		    (
-		     (:eval
-		      (let ((fmt (my/stopwatch-format)))
-			(when fmt
-			  (concat
-			   fmt
-			   " |"
-			   )
-			  )))
-
 		     (:eval my/past-alerts)
 		     " "
 
@@ -12425,6 +12775,16 @@ do the
 			(concat
 			 (propertize (concat " ") 'face `(:background ,(my/get-current-evil-cursor-color)))
 			 " ")))
+
+		     (:eval
+		      (let ((fmt (my/stopwatch-format)))
+			(if fmt
+			    (concat
+			     fmt
+			     " | "
+			     )
+			  (concat (propertize "CLK" 'face `(:inherit my/default-inverted)) " | ")
+			  )))
 
 		     ;; Processes running:
 		     ;; (:eval (concat "proc " (number-to-string my/proc-track-running)))

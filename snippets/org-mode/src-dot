@@ -3,6 +3,10 @@
 # --
 #+BEGIN_SRC dot :file /tmp/org-babel-dot.png :cmdline -Kdot -Tpng
 digraph ${2:name} {
+  a[label = "a Label"];
+  b[label = "b Label"];
+
+  a -> b
   $0
 }
 #+END_SRC

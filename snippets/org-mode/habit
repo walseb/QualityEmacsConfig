@@ -1,0 +1,7 @@
+# key: ha
+# name: habit
+# --
+SCHEDULED: <${1:DATE} +1d>
+:PROPERTIES:
+:STYLE:    habit
+:END:
