@@ -3173,6 +3173,11 @@ If NO-INIT is true, don't call the task on init
 	       :keys "T"
 	       :file ,org-default-notes-file
 	       :template ("* TODO %? :THINKING_INBOX:\n%u\n%a"))
+
+	      ("Project"
+	       :keys "P"
+	       :file ,org-default-notes-file
+	       :template ("* TODO %? :PROJECT:\n%u\n%a"))
 	      )))
 
 ;; *** Auto capture
@@ -3351,6 +3356,11 @@ If NO-INIT is true, don't call the task on init
 			 (todo)
 			 (not (tags "DECISION" "PROBLEM" "FICTION" "ENTERTAINMENT" "HEALTH" "MAYBE" "ORGANIZE" "CLOTHES" "LEARNING"  "NOTES_INBOX" "LEARNING_BACKLOG" "PROJSTEP" "CAREER" "PROJECT" "EVENT" "ENV" "REC" "BUY"))
 			 (not (habit))
+			 ;; Check for project parents
+			 (not (parent
+			       (and
+				(tags "PROJECT")
+				(not (todo "HOLD")))))
 			 ;; Only put here if they will occur in 20 days time
 			 (or
 			  (not (scheduled))
@@ -9771,8 +9781,7 @@ do the
 ;; *** Auto compile project
 (defun my/auto-compile-project ()
   (interactive)
-  (let* (
-	 (nixos-home-string "nix-channel --update; home-manager -f /etc/nixos/home.nix switch")
+  (let* ((nixos-home-string "nix-channel --update; home-manager -f /etc/nixos/home.nix switch")
 	 (nixos-system-string "nixos-rebuild switch --upgrade")
 	 (nixos-build (lambda ()
 			;; Not sure why but this is required
