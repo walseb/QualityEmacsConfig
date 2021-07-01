@@ -1,0 +1,5 @@
+# name: gadt
+# key: g
+# --
+data ${1:Type} a where
+  ${2:Constructor} :: ${3:Type Int}

@@ -1,16 +1,8 @@
-(deftheme turbo "turbo")
+(deftheme turboLight "turboLight")
 
-(let ((colors '(
-		(fg . "#efeff9")
-
-		;; Black
-		;; (bg . "#000000")
-
-		;; Blue
-		(bg . "#0b0c17")
-
-		;; (bg . "#110811dc131b")
-
+(let ((colors `(
+		(fg . "#000000")
+		(bg . "#FFFFFF")
 		(prompt . "purple")
 		(diff-add . "#0000b6b50000")
 		(diff-add . "#335533")
@@ -24,21 +16,21 @@
 		(spell-error . "green")
 		(spell-warning . "green3")
 		(outline-1 . "#4f97d7")
-		(outline-1-bg . "#293239")
+		(outline-1-bg . ,(color-darken-name "#FFFFFF" 10))
 		(outline-2 . "#2d9574")
-		(outline-2-bg . "#293235")
+		(outline-2-bg . ,(color-darken-name "#FFFFFF" 15))
 		(outline-3 . "#67b11d")
-		(outline-3-bg . "#293235")
+		(outline-3-bg . ,(color-darken-name "#FFFFFF" 20))
 		(outline-4 . "#b1951d")
-		(outline-4-bg . "#32322c")
+		(outline-4-bg . ,(color-darken-name "#FFFFFF" 25))
 		(scrollbar . "light sea green")
 		(link . "#67b11d")
 		;; Either t or nil. If t then use background color as foreground color
-		(hover-overlay-invert-fg . nil)
+		(hover-overlay-invert-fg . t)
 		(hover-overlay-bg . "#7c7c00000000")
 		)
 	      )
-      (theme 'turbo))
+      (theme 'turboLight))
   
-  (my/create-theme theme colors t)
+  (my/create-theme theme colors nil)
   (provide-theme theme))

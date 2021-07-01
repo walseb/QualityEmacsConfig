@@ -28,6 +28,7 @@
 ;; ("DejaVuSansMono" . "dejavu sans mono")
 ;; ("NotoSansMono" . "Noto Sans Mono")
 (setq my/font '("Hasklig" . nil))
+(setq my/font-disable-anti-alias nil)
 (setq my/theme 'turbo)
 
 ;; (setq exwm-randr-workspace-monitor-plist '(1 "eDP" 0 "HDMI-A-0"))

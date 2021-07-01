@@ -52,29 +52,34 @@
       (eval a)
     (eval b)))
 
-(defun my/create-theme (name colors)
+(defun my/darken-or-lighten (name percent darken)
+  (if darken
+      (color-darken-name name percent)
+    (color-lighten-name name percent)))
+
+(defun my/create-theme (name colors dark-theme)
   (let* ((class '((class color) (min-colors 1)))
 
 	 (my/fg-color (my/ifc (cdr (assoc 'fg colors)) "white"))
-	 (my/fg-color-1 (my/ifc (color-darken-name my/fg-color 5) "white"))
-	 (my/fg-color-2 (my/ifc (color-darken-name my/fg-color 10) "white"))
-	 (my/fg-color-3 (my/ifc (color-darken-name my/fg-color 15) "white"))
-	 (my/fg-color-4 (my/ifc (color-darken-name my/fg-color 20) "white"))
-	 (my/fg-color-5 (my/ifc (color-darken-name my/fg-color 25) "white"))
-	 (my/fg-color-6 (my/ifc (color-darken-name my/fg-color 30) "white"))
+	 (my/fg-color-1 (my/ifc (my/darken-or-lighten my/fg-color 5 dark-theme) "white"))
+	 (my/fg-color-2 (my/ifc (my/darken-or-lighten my/fg-color 10 dark-theme) "white"))
+	 (my/fg-color-3 (my/ifc (my/darken-or-lighten my/fg-color 15 dark-theme) "white"))
+	 (my/fg-color-4 (my/ifc (my/darken-or-lighten my/fg-color 20 dark-theme) "white"))
+	 (my/fg-color-5 (my/ifc (my/darken-or-lighten my/fg-color 25 dark-theme) "white"))
+	 (my/fg-color-6 (my/ifc (my/darken-or-lighten my/fg-color 30 dark-theme) "white"))
 
 	 (my/bg-color (cdr (assoc 'bg colors)))
-	 (my/bg-color-1 (my/ifc (color-lighten-name my/bg-color 5) "black"))
-	 (my/bg-color-2 (my/ifc (color-lighten-name my/bg-color 10) "black"))
-	 (my/bg-color-3 (my/ifc (color-lighten-name my/bg-color 15) "black"))
-	 (my/bg-color-4 (my/ifc (color-lighten-name my/bg-color 20) "black"))
+	 (my/bg-color-1 (my/ifc (my/darken-or-lighten my/bg-color 5 (not dark-theme)) "black"))
+	 (my/bg-color-2 (my/ifc (my/darken-or-lighten my/bg-color 10 (not dark-theme)) "black"))
+	 (my/bg-color-3 (my/ifc (my/darken-or-lighten my/bg-color 15 (not dark-theme)) "black"))
+	 (my/bg-color-4 (my/ifc (my/darken-or-lighten my/bg-color 20 (not dark-theme)) "black"))
 
 	 (my/prompt-color (my/ifc (cdr (assoc 'prompt colors)) "magenta"))
 
-	 (my/diff-added-color (my/ifc (color-darken-name (cdr (assoc 'diff-add colors)) 20) "green"))
-	 (my/diff-changed-color (my/ifc (color-darken-name (cdr (assoc 'diff-change colors)) 20) "yellow"))
-	 (my/diff-removed-color (my/ifc (color-darken-name (cdr (assoc 'diff-remove colors)) 20) "red"))
-	 (my/diff-ancestor-color (my/ifc (color-darken-name (cdr (assoc 'diff-ancestor colors)) 20) "blue"))
+	 (my/diff-added-color (my/ifc (my/darken-or-lighten (cdr (assoc 'diff-add colors)) 20 dark-theme) "green"))
+	 (my/diff-changed-color (my/ifc (my/darken-or-lighten (cdr (assoc 'diff-change colors)) 20 dark-theme) "yellow"))
+	 (my/diff-removed-color (my/ifc (my/darken-or-lighten (cdr (assoc 'diff-remove colors)) 20 dark-theme) "red"))
+	 (my/diff-ancestor-color (my/ifc (my/darken-or-lighten (cdr (assoc 'diff-ancestor colors)) 20 dark-theme) "blue"))
 
 	 (my/diff-added-hl-color (my/ifc (cdr (assoc 'diff-add colors)) my/bg-color))
 	 (my/diff-changed-hl-color (my/ifc (cdr (assoc 'diff-change colors)) my/bg-color))
@@ -82,12 +87,12 @@
 	 (my/diff-ancestor-hl-color (my/ifc (cdr (assoc 'diff-ancestor colors)) my/bg-color))
 
 	 (my/mark-color (my/ifc (cdr (assoc 'mark colors)) "yellow"))
-	 (my/mark-color-1 (my/ifc (color-darken-name my/mark-color 5) "yellow"))
-	 (my/mark-color-2 (my/ifc (color-darken-name my/mark-color 10) "yellow"))
-	 (my/mark-color-3 (my/ifc (color-darken-name my/mark-color 15) "yellow"))
-	 (my/mark-color-4 (my/ifc (color-darken-name my/mark-color 20) "yellow"))
-	 (my/mark-color-5 (my/ifc (color-darken-name my/mark-color 25) "yellow"))
-	 (my/mark-color-6 (my/ifc (color-darken-name my/mark-color 30) "yellow"))
+	 (my/mark-color-1 (my/ifc (my/darken-or-lighten my/mark-color 5 dark-theme) "yellow"))
+	 (my/mark-color-2 (my/ifc (my/darken-or-lighten my/mark-color 10 dark-theme) "yellow"))
+	 (my/mark-color-3 (my/ifc (my/darken-or-lighten my/mark-color 15 dark-theme) "yellow"))
+	 (my/mark-color-4 (my/ifc (my/darken-or-lighten my/mark-color 20 dark-theme) "yellow"))
+	 (my/mark-color-5 (my/ifc (my/darken-or-lighten my/mark-color 25 dark-theme) "yellow"))
+	 (my/mark-color-6 (my/ifc (my/darken-or-lighten my/mark-color 30 dark-theme) "yellow"))
 
 	 ;; "deep sky blue"
 	 (my/error-color (cdr (assoc 'error colors)))
@@ -100,18 +105,18 @@
 	 (my/mode-line-color my/bg-color-2)
 
 	 ;; #212026
-	 (my/hl-line-color (color-lighten-name my/bg-color 15))
+	 (my/hl-line-color (my/darken-or-lighten my/bg-color 15 (not dark-theme)))
 
-	 (my/comment-face (my/ifc (color-lighten-name my/bg-color 30)
+	 (my/comment-face (my/ifc (my/darken-or-lighten my/bg-color 30 (not dark-theme))
 				  "white"))
 
 	 (my/comment-delimiter-fg-color (my/ifc my/bg-color-4
 						"white"))
 	 (my/comment-delimiter-bg-color (my/ifc my/bg-color-2
 						"black"))
-	 (my/outline-foreground-face (my/ifc (color-lighten-name my/bg-color 2)
+	 (my/outline-foreground-face (my/ifc (my/darken-or-lighten my/bg-color 2 (not dark-theme))
 					     "white"))
-	 (my/outline-background-face (my/ifc (color-darken-name my/fg-color 50)
+	 (my/outline-background-face (my/ifc (my/darken-or-lighten my/fg-color 50 dark-theme)
 					     "black"))
 
 	 (outline-1-fg (cdr (assoc 'outline-1 colors)))
@@ -151,7 +156,7 @@
 
     (setq org-todo-keyword-faces
 	  `(;; ("TODO" . ,my/mark-color)
-	    ("TODO" . ,(color-lighten-name my/comment-face 10))
+	    ("TODO" . ,(my/darken-or-lighten my/comment-face 10 (not dark-theme)))
 	    ("HOLD" . ,my/comment-face)
 	    ("WAIT" . ,my/comment-face)
 	    ("BLOCK" . ,my/comment-face)
@@ -246,21 +251,22 @@
      `(ediff-current-diff-Ancestor ((,class (:background ,my/diff-ancestor-color))))
      `(ediff-current-diff-B ((,class (:background ,my/diff-added-color))))
      `(ediff-current-diff-C ((,class (:background ,my/diff-changed-color))))
-     `(ediff-even-diff-A ((,class (:background ,(color-darken-name my/diff-removed-color 18)))))
-     `(ediff-even-diff-Ancestor ((,class (:background ,(color-darken-name my/diff-ancestor-color 30)))))
-     `(ediff-even-diff-B ((,class (:background ,(color-darken-name my/diff-added-color 18)))))
-     `(ediff-even-diff-C ((,class (:background ,(color-darken-name my/diff-changed-color 18)))))
+     `(ediff-even-diff-A ((,class (:background ,(my/darken-or-lighten my/diff-removed-color 18 dark-theme)))))
+     `(ediff-even-diff-Ancestor ((,class (:background ,(my/darken-or-lighten my/diff-ancestor-color 30 dark-theme)))))
+     `(ediff-even-diff-B ((,class (:background ,(my/darken-or-lighten my/diff-added-color 18 dark-theme)))))
+     `(ediff-even-diff-C ((,class (:background ,(my/darken-or-lighten my/diff-changed-color 18 dark-theme)))))
      `(ediff-fine-diff-A ((,class (:background ,my/diff-removed-hl-color))))
      `(ediff-fine-diff-Ancestor ((,class (:background ,my/diff-ancestor-hl-color))))
      `(ediff-fine-diff-B ((,class (:background ,my/diff-added-hl-color))))
      `(ediff-fine-diff-C ((,class (:background ,my/diff-changed-hl-color))))
-     `(ediff-odd-diff-A ((,class (:background ,(color-darken-name my/diff-removed-color 20)))))
-     `(ediff-odd-diff-Ancestor ((,class (:background ,(color-darken-name my/diff-ancestor-color 50)))))
-     `(ediff-odd-diff-B ((,class (:background ,(color-darken-name my/diff-added-color 20)))))
-     `(ediff-odd-diff-C ((,class (:background ,(color-darken-name my/diff-changed-color 20)))))
+     `(ediff-odd-diff-A ((,class (:background ,(my/darken-or-lighten my/diff-removed-color 20 dark-theme)))))
+     `(ediff-odd-diff-Ancestor ((,class (:background ,(my/darken-or-lighten my/diff-ancestor-color 50 dark-theme)))))
+     `(ediff-odd-diff-B ((,class (:background ,(my/darken-or-lighten my/diff-added-color 20 dark-theme)))))
+     `(ediff-odd-diff-C ((,class (:background ,(my/darken-or-lighten my/diff-changed-color 20 dark-theme)))))
 
      `(org-verbatim ((,class (:weight bold))))
      `(org-quote ((,class (:slant italic))))
+     ;; `(org-quote ((,class (:inherit org-code))))
      `(org-mode-line-clock ((,class (:foreground ,my/fg-color :background ,my/fg-color :height unspecified))))
      `(org-mode-line-clock-overrun ((,class (:foreground ,my/fg-color :background ,my/error-color :height unspecified))))
 
@@ -317,7 +323,7 @@
      `(org-column-title ((,class (:inherit org-column))))
 
      ;; Used by org src-blocks when in use, might also be used for other things
-     `(secondary-selection ((,class (:background ,(color-darken-name my/bg-color-1 5)))))
+     `(secondary-selection ((,class (:background ,(my/darken-or-lighten my/bg-color-1 5 dark-theme)))))
 
      `(show-paren-match ((,class (:background ,my/fg-color :foreground ,my/bg-color))))
      `(show-paren-match-expression ((,class (:background ,my/fg-color :foreground ,my/bg-color))))
@@ -352,7 +358,7 @@
      `(popup-menu-selection-face ((,class (:foreground ,my/bg-color :background ,my/fg-color))))
      `(popup-menu-face ((,class (:foreground ,my/fg-color :background ,my/bg-color-1))))
 
-     `(minibuffer-prompt ((,class (:foreground ,my/mark-color))))
+     `(minibuffer-prompt ((,class (:foreground ,my/mark-color :background ,(my/darken-or-lighten my/bg-color 5 (not dark-theme))))))
 
      ;; Modified outside of emacs
      `(ivy-modified-outside-buffer ((,class (:foreground ,my/bg-color :background ,my/diff-removed-color))))
@@ -520,12 +526,11 @@
 
 ;; ** Set fonts
 (defun my/set-font (font)
-  (interactive)
   (when window-system
     (let* ((symbol-font (and (cdr font) (my/get-best-symbol-font (cdr font)))))
       (set-face-attribute 'default nil
-			  :font (car font)
-			  ;; :font (concat (car my/font) ":antialias=false")
+			  ;; :font (car font)
+			  :font (concat (car my/font) (when my/font-disable-anti-alias ":antialias=false"))
 			  ;; :height my/default-face-height
 			  ;; :weight 'normal
 			  ;; :width 'normal
@@ -635,6 +640,9 @@
 (load-file "~/.nix-profile/share/emacs/site-lisp/site-start.elc")
 (setq load-path (append load-path (file-expand-wildcards (expand-file-name "~/.nix-profile/share/emacs/site-lisp/*"))))
 (setq load-path (append load-path (file-expand-wildcards (expand-file-name "~/.nix-profile/share/emacs/site-lisp/elpa/*"))))
+
+;; Make load path absolute. This saves emacs from having its paths be outdated after a nix home manager rebuild
+(setq load-path (mapcar (lambda (path) (file-truename path)) load-path))
 
 ;; * Libraries
 (eval-and-compile
@@ -2195,6 +2203,8 @@ If NO-INIT is true, don't call the task on init
 (global-visual-line-mode 1)
 
 (setq my/visual-line-mode-blacklist '(
+				      org-agenda-mode
+
 				      vterm-mode
 				      proced-mode
 				      net-utils-mode
@@ -2602,6 +2612,26 @@ If NO-INIT is true, don't call the task on init
 ;; (define-key help-map (kbd "v") #'helpful-variable)
 ;; (define-key help-map (kbd "k") #'helpful-key)
 
+;; ** Current Week
+(defun my/week ()
+  (interactive)
+  (message (format-time-string "%W")))
+
+;; ** Delete current file
+;; https://gist.github.com/hyOzd/23b87e96d43bca0f0b52
+(defun my/delete-this-file-and-buffer ()
+  (interactive)
+  (let ((filename (buffer-file-name)))
+    (if filename
+	(if (y-or-n-p (concat "Do you really want to delete file " filename " ?"))
+	    (progn
+	      (delete-file filename)
+	      (message "Deleted file %s." filename)
+	      (kill-buffer)))
+      (message "Not a file visiting buffer!"))))
+
+(define-key my/leader-map (kbd "C-d") 'my/delete-this-file-and-buffer)
+
 ;; * Productivity
 ;; ** Break timer
 ;; In seconds
@@ -2764,6 +2794,15 @@ If NO-INIT is true, don't call the task on init
 
 (define-key my/open-map (kbd "c") 'my/config-visit)
 
+;; ** Visit logs
+(defun my/logs-visit ()
+  (interactive)
+  (find-file org-default-notes-file)
+  (goto-char (point-min))
+  (goto-char (search-forward "* TODO Logs")))
+
+(define-key my/open-map (kbd "l") 'my/logs-visit)
+
 ;; ** Open trash
 (defun my/trash-visit ()
   (interactive)
@@ -2778,9 +2817,17 @@ If NO-INIT is true, don't call the task on init
     (if buf
 	(switch-to-buffer buf)
       (org-agenda nil arg)
+      (my/export-agenda-syncthing)
       (goto-char (point-min)))))
 
 (define-key my/open-map (kbd "a") 'my/org-agenda-show-agenda-and-todo)
+
+;; ** Open downloads
+(defun my/open-phone-notes ()
+  (interactive)
+  (find-file "~/Notes/Organize/Notes.org"))
+
+(define-key my/open-map (kbd "n") 'my/open-phone-notes)
 
 ;; ** Open messages
 (defun my/open-messages ()
@@ -2895,6 +2942,9 @@ If NO-INIT is true, don't call the task on init
 ;; Set org src indent to be 0
 (setq org-edit-src-content-indentation 0)
 
+;; This messes with rescheduling late at night
+;; (setq org-extend-today-until 6)
+
 ;; ** Log actions
 ;; Print out date of completion when changing task to done
 (setq org-log-done t)
@@ -3006,8 +3056,8 @@ If NO-INIT is true, don't call the task on init
 	?⬟))
 
 ;; ** Visuals
-;; *** Org-appear
-(straight-use-package '(org-appear :type git :host github :repo "awth13/org-appear"))
+;; *** Prettify symbols mode Org-appear
+(straight-use-package 'org-appear)
 (add-hook 'org-mode-hook 'org-appear-mode)
 (setq org-appear-autoemphasis t)
 (setq org-appear-autolinks t)
@@ -3025,6 +3075,9 @@ If NO-INIT is true, don't call the task on init
 ;; *** Disable code block indent
 ;; Should I change this??
 ;; (setq org-edit-src-content-indentation 0)
+
+;; *** Fontify quotes
+;; (setq org-fontify-quote-and-verse-blocks t)
 
 ;; *** Ellipsis face
 (setq org-ellipsis my/fold-ellipsis)
@@ -3059,126 +3112,68 @@ If NO-INIT is true, don't call the task on init
 ;; *** Doct
 (straight-use-package 'doct)
 
-(setq org-capture-templates
-      (doct `(
-	      ;; Default todo
-	      ;; '(("t" "Task" entry (file+headline "" "Tasks")
-	      ;;    "* TODO %?\n  %u\n  %a"))
-	      ("Task"
-	       :keys "t"
-	       ;; :headline "Tasks"
-	       :file ,org-default-notes-file
-	       :prepend nil
-	       :template ("* TODO %?\n%u\n%a\nProblem:\nOutcome:\nNext Step:\n"))
+(let* ((timestamp "%u")
+       (link "%a")
+       (capture-base (lambda (tags &optional body) (concat "* TODO %? ? "
+							   tags
+							   "\n" timestamp
+							   "\n" link
+							   (or body "")
+							   ))))
+  (funcall capture-base "")
+  )
 
-	      ("Schedule"
-	       :keys "s"
-	       :file ,org-default-notes-file
-	       :prepend nil
-	       :template ,(concat "* TODO %a :SCHEDULE:\nSCHEDULED: %T--"
-				  "%(my/org-generate-timestamp (time-add (current-time) (* 60 60 1)))"
-				  "%?"))
+(let* ((cursor "%?")
+       (timestamp "%u")
+       (link "%a")
+       (generate-tags-string (lambda (tags)
+			       (concat (when tags ":") (string-join tags ":") (when tags ":"))))
+       (capture-base (lambda (&optional tags body no-time-estimation)
+		       (concat "* TODO"
+			       " " cursor
+			       (unless no-time-estimation (concat " " "?"))
+			       (or (concat " " (funcall generate-tags-string tags)) "")
+			       "\n" timestamp
+			       "\n" link
+			       (or body "")
+			       )))
+       (generate-entry (lambda (name key &optional tags body file no-time-estimation)
+			 `(,name
+			   :keys ,key
+			   ;; :headline "Tasks"
+			   :file ,(or file org-default-notes-file)
+			   :template (,(funcall capture-base tags body no-time-estimation)))
+			 )))
 
-	      ;; ("Milestone"
-	      ;;  :keys "m"
-	      ;;  :file ,(car (cdr org-agenda-files))
-	      ;;  :prepend nil
-	      ;;  :template ("* TODO %? ::MILESTONE:\nDEADLINE: %T\n%a"))
+  (setq org-capture-templates
+	(doct `(
+		,(funcall generate-entry "Task" "t" nil "\nProblem:\nOutcome:\nNext Step:\n")
+		,(funcall generate-entry "Learning focus" "l" (list "LEARNING"))
+		,(funcall generate-entry "Learning backlog" "L" (list "LEARNING_BACKLOG"))
+		,(funcall generate-entry "Problems" "p" (list "PROBLEM"))
+		,(funcall generate-entry "Decisions" "d" (list "DECISION"))
+		,(funcall generate-entry "Event" "e" (list "EVENT"))
+		,(funcall generate-entry "Maybe" "m" (list "MAYBE"))
+		,(funcall generate-entry "Clothes" "c" (list "CLOTHES"))
+		,(funcall generate-entry "Organize" "o" (list "ORGANIZE"))
+		,(funcall generate-entry "Fiction" "f" (list "MEDIA" "FICTION") nil (cadr org-agenda-files) t)
+		,(funcall generate-entry "Media" "M" (list "MEDIA") nil (cadr org-agenda-files) t)
+		,(funcall generate-entry "Entertainment" "E" (list "ENTERTAINMENT") nil)
+		,(funcall generate-entry "Health" "h" (list "HEALTH") nil)
+		,(funcall generate-entry "Setup (environment)" "s" (list "ENV") nil)
+		,(funcall generate-entry "Buy online" "B" (list "BUY") nil)
+		,(funcall generate-entry "Notes Inbox" "n" (list "NOTES_INBOX") nil)
+		,(funcall generate-entry "Thinking Inbox" "T" (list "THINKING_INBOX") nil)
+		,(funcall generate-entry "Project" "P" (list "PROJECT") nil)
+		,(funcall generate-entry "Emacs" ";" (list "EMACS") nil)
+		,(funcall generate-entry "Inbox" "i" (list "INBOX") nil)
 
-	      ("Learning focus"
-	       :keys "l"
-	       :file ,org-default-notes-file
-	       :prepend t
-	       :template ("* TODO %? :LEARNING:\n%u\n%a"))
-
-	      ("Learning backlog"
-	       :keys "L"
-	       :prepend t
-	       :file ,org-default-notes-file
-	       :template ("* TODO %? :LEARNING_BACKLOG:\n%u\n%a"))
-
-	      ("Buy groceries"
-	       :keys "b"
-	       :file "/home/admin/Notes/Organize/Notes.org"
-	       :prepend nil
-	       :template ("* <-- Please remove this %?"))
-
-	      ("Achievement"
-	       :keys "a"
-	       :file "/home/admin/Notes/20210131223157.org"
-	       :prepend nil
-	       :template ("* TODO %?\n%u"))
-
-	      ("Problems"
-	       :keys "p"
-	       :file ,org-default-notes-file
-	       :template ("* TODO %? :PROBLEM:\n%u\n%a"))
-
-	      ("Decisions"
-	       :keys "d"
-	       :file ,org-default-notes-file
-	       :template ("* TODO %? :DECISION:\n%u\n%a"))
-
-	      ("Event"
-	       :keys "e"
-	       :file ,org-default-notes-file
-	       :template ("* TODO %? :EVENT:\n%u\n%a"))
-
-	      ("Maybe"
-	       :keys "m"
-	       :file ,org-default-notes-file
-	       :template ("* TODO %? :MAYBE:\n%u\n%a"))
-
-	      ("Clothes"
-	       :keys "c"
-	       :file ,org-default-notes-file
-	       :template ("* TODO %? :CLOTHES:\n%u\n%a"))
-
-	      ("Organize"
-	       :keys "o"
-	       :file ,org-default-notes-file
-	       :template ("* TODO %? :ORGANIZE:\n%u\n%a"))
-
-	      ("Fiction"
-	       :keys "f"
-	       :file ,(cadr org-agenda-files)
-	       :template ("* TODO %? :FICTION:\n%u\n%a"))
-
-	      ("Entertainment"
-	       :keys "E"
-	       :file ,org-default-notes-file
-	       :template ("* TODO %? :ENTERTAINMENT:\n%u\n%a"))
-
-	      ("Health"
-	       :keys "h"
-	       :file ,org-default-notes-file
-	       :template ("* TODO %? :HEALTH:\n%u\n%a"))
-
-	      ("Setup (environment)"
-	       :keys "S"
-	       :file ,org-default-notes-file
-	       :template ("* TODO %? :ENV:\n%u\n%a"))
-
-	      ("Buy online"
-	       :keys "B"
-	       :file ,org-default-notes-file
-	       :template ("* TODO %? :BUY:\n%u\n%a"))
-
-	      ("Notes Inbox"
-	       :keys "n"
-	       :file ,org-default-notes-file
-	       :template ("* TODO %? :NOTES_INBOX:\n%u\n%a"))
-
-	      ("Thinking Inbox"
-	       :keys "T"
-	       :file ,org-default-notes-file
-	       :template ("* TODO %? :THINKING_INBOX:\n%u\n%a"))
-
-	      ("Project"
-	       :keys "P"
-	       :file ,org-default-notes-file
-	       :template ("* TODO %? :PROJECT:\n%u\n%a"))
-	      )))
+		("Buy groceries"
+		 :keys "b"
+		 :file "/home/admin/Notes/Organize/Notes.org"
+		 :prepend nil
+		 :template ("* <-- Please remove this %?"))
+		))))
 
 ;; *** Auto capture
 (defun my/auto-org-capture ()
@@ -3216,8 +3211,7 @@ If NO-INIT is true, don't call the task on init
 
 ;; (setq org-agenda-todo-ignore-scheduled 'all)
 ;; (setq org-agenda-block-separator nil)
-;; (setq org-agenda-block-separator "")
-;; (setq org-super-agenda-header-separator "")
+;; (setq org-super-agenda-header-separator "\n")
 (setq org-agenda-block-separator " ")
 
 ;; Hide date heading from agenda
@@ -3229,8 +3223,9 @@ If NO-INIT is true, don't call the task on init
 ;; Auto complete tags in agenda
 (setq org-complete-tags-always-offer-all-agenda-tags t)
 
-(setq org-agenda-tags-column 'auto)
-;; (setq org-agenda-tags-column 0)
+;; (setq org-agenda-tags-column 'auto)
+
+;; (Setq org-agenda-tags-column 0)
 ;; (setq org-agenda-show-inherited-tags t)
 
 (setq org-deadline-warning-days 365)
@@ -3252,46 +3247,61 @@ If NO-INIT is true, don't call the task on init
 						(todo)
 						(closed :on today)
 						(todo "DONE"))
-					      ((org-ql-block-header "Completed today!"))))
+					      ((org-ql-block-header "\nCompleted today!"))))
 
   (setq my/agb-notes-inbox '(org-ql-block '(and
 					    (todo)
 					    (tags "NOTES_INBOX")
 					    (not (todo "DONE" "HOLD")))
-					  ((org-ql-block-header "Notes inbox"))))
+					  ((org-ql-block-header "\nNotes inbox"))))
+
+  (setq my/agb-inbox '(org-ql-block '(and
+				      (todo)
+				      (tags "INBOX")
+				      (not (todo "DONE")))
+				    ((org-ql-block-header "\nInbox"))))
 
   (setq my/agb-decisions '(org-ql-block '(and
 					  (todo)
 					  (tags "DECISION")
 					  (not (todo "DONE" "HOLD")))
-					((org-ql-block-header "Decisions"))))
+					((org-ql-block-header "\nDecisions"))))
 
   (setq my/agb-problems '(org-ql-block '(and
 					 (todo)
 					 (tags "PROBLEM")
 					 (not (todo "DONE" "HOLD")))
-				       ((org-ql-block-header "Problems"))))
+				       ((org-ql-block-header "\nProblems"))))
 
   (setq my/agb-thinking-inbox '(org-ql-block '(and
 					       (todo)
 					       (tags "THINKING_INBOX")
 					       (not (todo "DONE" "HOLD")))
-					     ((org-ql-block-header "Thinking inbox"))))
+					     ((org-ql-block-header "\nThinking inbox"))))
 
   (setq my/agb-get-done '(org-ql-block '(and
 					 (todo)
-					 ;; (not (habit))
+					 ;; (not (and (not (tags "REQ")) (habit)))
 					 (not (todo "DONE" "HOLD"))
-					 (not (tags "PROJSTEP"))
+					 ;; (not (tags "PROJSTEP"))
 					 (scheduled :to today))
-				       ((org-ql-block-header "TODAY"))))
+				       ((org-ql-block-header "\nTODAY"))))
 
+  (setq my/agb-future '(org-ql-block '(and
+				       (todo)
+				       ;; (not (habit))
+				       (not (todo "DONE" "HOLD"))
+				       ;; (not (tags "PROJSTEP"))
+				       (not (or (habit)
+						(tags "REC")))
+				       (scheduled :from 1 :to 7))
+				     ((org-ql-block-header "\nFuture"))))
 
   (setq my/agb-rec '(org-ql-block '(and
 				    (todo)
 				    (tags "REC")
 				    (not (todo "DONE" "HOLD")))
-				  ((org-ql-block-header "REC"))))
+				  ((org-ql-block-header "\nREC"))))
 
   ;; Add org-agenda time budgets integration
   ;; (agenda "" ((org-agenda-sorting-strategy '(habit-down time-up priority-down category-keep user-defined-up))))
@@ -3301,6 +3311,11 @@ If NO-INIT is true, don't call the task on init
 					     :habit t)
 				      (:discard (:anything t)))))))
 
+  (setq my/agb-emacs '(org-ql-block '(and
+				      (todo)
+				      (tags "EMACS"))
+				    ((org-ql-block-header "\nEmacs improvements"))))
+
   (setq my/agb-events '(org-ql-block '(and
 				       (todo)
 				       (tags "EVENT")
@@ -3308,30 +3323,28 @@ If NO-INIT is true, don't call the task on init
 					(priority "A")
 					(scheduled :to 10))
 				       (not (todo "DONE")))
-				     ((org-ql-block-header "Events"))))
+				     ((org-ql-block-header "\nEvents"))))
 
   (setq my/agb-careers '(org-ql-block '(and
 					(todo)
 					(not (todo "DONE"))
 					(tags "CAREER"))
-				      ((org-ql-block-header "Careers"))))
+				      ((org-ql-block-header "\nCareers"))))
 
-  (setq my/agb-projects
-	'(org-ql-block '(and
-			 (todo)
-			 (not (todo "DONE" "HOLD"))
-			 (or
-			  (tags "PROJECT")
-			  (parent
-			   (and
-			    (tags "PROJECT")
-			    (not (todo "HOLD"))))))
-		       ((org-ql-block-header "Projects")
-			(org-super-agenda-groups `(
-						   (
-						    :auto-outline-path
-						    ;; :auto-parent
-						    ))))))
+  (setq my/agb-projects '(org-ql-block '(and
+					 (todo)
+					 (not (todo "DONE"))
+					 (or
+					  (tags "PROJECT")
+					  (and
+					   (not (todo "HOLD"))
+					   (parent (tags "PROJECT")))))
+				       ((org-ql-block-header "\nProjects")
+					(org-super-agenda-groups `(
+								   (
+								    :auto-outline-path
+								    ;; :auto-parent
+								    ))))))
 
   (setq my/agb-env
 	'(org-ql-block '(and
@@ -3339,7 +3352,7 @@ If NO-INIT is true, don't call the task on init
 			 (not (todo "DONE"))
 			 (tags "ENV")
 			 (not (tags "MAYBE")))
-		       ((org-ql-block-header "ENV"))))
+		       ((org-ql-block-header "\nENV"))))
 
   (setq my/agb-health
 	'(org-ql-block '(and
@@ -3349,24 +3362,22 @@ If NO-INIT is true, don't call the task on init
 			  (scheduled :to 20))
 			 (tags "HEALTH")
 			 (not (todo "DONE" "HOLD")))
-		       ((org-ql-block-header "Health"))))
+		       ((org-ql-block-header "\nHealth"))))
 
   (setq my/agb-tasks
 	'(org-ql-block '(and
 			 (todo)
-			 (not (tags "DECISION" "PROBLEM" "FICTION" "ENTERTAINMENT" "HEALTH" "MAYBE" "ORGANIZE" "CLOTHES" "LEARNING"  "NOTES_INBOX" "LEARNING_BACKLOG" "PROJSTEP" "CAREER" "PROJECT" "EVENT" "ENV" "REC" "BUY"))
+			 (not (tags "DECISION" "PROBLEM" "FICTION" "ENTERTAINMENT" "HEALTH" "MAYBE" "ORGANIZE" "CLOTHES" "LEARNING"  "NOTES_INBOX" "LEARNING_BACKLOG" "PROJSTEP" "CAREER" "PROJECT" "EVENT" "ENV" "REC" "BUY" "MEDIA"))
 			 (not (habit))
 			 ;; Check for project parents
 			 (not (parent
-			       (and
-				(tags "PROJECT")
-				(not (todo "HOLD")))))
+			       (tags "PROJECT")))
 			 ;; Only put here if they will occur in 20 days time
 			 (or
 			  (not (scheduled))
 			  (scheduled :to 20))
 			 (not (todo "DONE" "HOLD")))
-		       ((org-ql-block-header "Tasks")
+		       ((org-ql-block-header "\nTasks")
 			(org-super-agenda-groups `((:name "Tasks"
 							  :auto-priority))))))
 
@@ -3378,14 +3389,14 @@ If NO-INIT is true, don't call the task on init
 			  (not (scheduled))
 			  (scheduled :to 20))
 			 (not (todo "DONE" "HOLD")))
-		       ((org-ql-block-header "Organize"))))
+		       ((org-ql-block-header "\nOrganize"))))
 
   (setq my/agb-clothes
 	'(org-ql-block '(and
 			 (todo)
 			 (not (todo "DONE" "HOLD"))
 			 (tags "CLOTHES"))
-		       ((org-ql-block-header "Clothes"))))
+		       ((org-ql-block-header "\nClothes"))))
 
   (setq my/agb-maybe
 	'(org-ql-block '(and
@@ -3393,46 +3404,53 @@ If NO-INIT is true, don't call the task on init
 			 (not (habit))
 			 (not (todo "DONE" "HOLD"))
 			 (tags "MAYBE"))
-		       ((org-ql-block-header "Maybe"))))
+		       ((org-ql-block-header "\nMaybe"))))
 
   (setq my/agb-active-learning
 	'(org-ql-block '(and
 			 (todo)
 			 (tags "LEARNING")
 			 (not (todo "DONE" "HOLD")))
-		       ((org-ql-block-header "Active learning"))))
+		       ((org-ql-block-header "\nActive learning"))))
 
   (setq my/agb-learning-backlog
 	'(org-ql-block '(and
 			 (todo)
 			 (tags "LEARNING_BACKLOG")
 			 (not (todo "DONE" "HOLD")))
-		       ((org-ql-block-header "Learning backlog"))))
+		       ((org-ql-block-header "\nLearning backlog"))))
+
+  (setq my/agb-media
+	'(org-ql-block '(and
+			 (todo)
+			 (tags "MEDIA")
+			 (not (todo "DONE" "HOLD")))
+		       ((org-ql-block-header "\nMedia"))))
 
   (setq my/agb-fiction
 	'(org-ql-block '(and
 			 (todo)
 			 (tags "FICTION")
 			 (not (todo "DONE" "HOLD")))
-		       ((org-ql-block-header "Fiction"))))
+		       ((org-ql-block-header "\nFiction"))))
 
   (setq my/agb-entertainment
 	'(org-ql-block '(and
 			 (todo)
 			 (tags "ENTERTAINMENT")
 			 (not (todo "DONE" "HOLD")))
-		       ((org-ql-block-header "Entertainment"))))
+		       ((org-ql-block-header "\nEntertainment"))))
 
   (setq my/agb-buy-online
 	'(org-ql-block '(and
 			 (todo)
 			 (tags "BUY")
 			 (not (todo "DONE" "HOLD")))
-		       ((org-ql-block-header "Buy online"))))
+		       ((org-ql-block-header "\nBuy online"))))
 
   (setq my/agb-hold
 	'(org-ql-block '(todo "HOLD")
-		       ((org-ql-block-header "Hold")))))
+		       ((org-ql-block-header "\nHold")))))
 
 ;; *** Agenda definition
 ;; Put todos on top
@@ -3440,13 +3458,16 @@ If NO-INIT is true, don't call the task on init
       (list
        (list "p" "@Productive" `(,my/agb-completed-today
 				 ,my/agb-get-done
+				 ,my/agb-future
 				 ,my/agb-careers
 				 ,my/agb-projects
 				 ,my/agb-decisions
 				 ,my/agb-rec
 				 ,my/agb-habits
 				 ,my/agb-events
+				 ;; You can't place a \n above the events for whatever reason
 				 ,my/agb-tasks
+				 ,my/agb-media
 				 ,my/agb-hold
 				 ))
 
@@ -3454,6 +3475,7 @@ If NO-INIT is true, don't call the task on init
 			     ,my/agb-decisions
 			     ,my/agb-problems
 			     ,my/agb-get-done
+			     ,my/agb-future
 			     ,my/agb-rec
 			     ,my/agb-habits
 			     ,my/agb-tasks
@@ -3468,8 +3490,10 @@ If NO-INIT is true, don't call the task on init
 			     ))
 
        (list "n" "Overview" `(,my/agb-completed-today
+			      ,my/agb-inbox
 			      ,my/agb-decisions
 			      ,my/agb-problems
+			      ,my/agb-future
 			      ,my/agb-get-done
 			      ,my/agb-rec
 			      ,my/agb-habits
@@ -3485,9 +3509,11 @@ If NO-INIT is true, don't call the task on init
 			      ,my/agb-active-learning
 			      ,my/agb-notes-inbox
 			      ,my/agb-thinking-inbox
+			      ,my/agb-media
 			      ,my/agb-fiction
 			      ,my/agb-entertainment
 			      ,my/agb-buy-online
+			      ,my/agb-emacs
 			      ,my/agb-hold
 			      ))
        (list "i" "@Intellectual" `(,my/agb-completed-today
@@ -3495,6 +3521,7 @@ If NO-INIT is true, don't call the task on init
 				   ,my/agb-notes-inbox
 				   ,my/agb-active-learning
 				   ,my/agb-learning-backlog
+				   ,my/agb-media
 				   ,my/agb-fiction
 				   ,my/agb-entertainment
 				   ,my/agb-organize
@@ -3505,11 +3532,17 @@ If NO-INIT is true, don't call the task on init
 				   ))
 
        (list "m" "Minimum" `(,my/agb-completed-today
+			     ,my/agb-future
 			     ,my/agb-get-done
 			     ,my/agb-rec
 			     ,my/agb-habits
 			     ,my/agb-events
 			     ))
+
+       (list "t" "Tired" `(
+			   ,my/agb-emacs
+			   ,my/agb-media
+			   ))
        ))
 
 ;; *** Show properties in agenda
@@ -3518,6 +3551,8 @@ If NO-INIT is true, don't call the task on init
 (setq org-agenda-property-list '("RESCHEDULED-COUNT" "STYLE"))
 (setq org-agenda-property-separator " ")
 (setq org-agenda-property-column 80)
+
+(setq org-agenda-property-position 'where-it-fits)
 
 (with-eval-after-load 'org-agenda
   (require 'org-agenda-property))
@@ -3669,7 +3704,6 @@ If NO-INIT is true, don't call the task on init
   (define-key org-agenda-mode-map (kbd "g") 'org-agenda-redo-all)
 
   (define-key org-agenda-mode-map (kbd "t") (lambda () (interactive) (org-agenda-todo "DONE")))
-  (define-key org-agenda-mode-map (kbd "$") (lambda () (interactive) (org-agenda-todo "DONE")))
 
   (define-key org-agenda-mode-map (kbd "T") 'org-agenda-set-tags)
 
@@ -3683,6 +3717,9 @@ If NO-INIT is true, don't call the task on init
 
   (define-key org-agenda-mode-map (kbd "r") (lambda () (interactive)
 					      (org-agenda-schedule nil "+1")))
+
+  (define-key org-agenda-mode-map (kbd ".") (lambda () (interactive)
+					      (org-agenda-schedule nil "today")))
 
   (define-key my/org-agenda-mode-map (kbd "s") 'org-agenda-schedule)
 
@@ -3700,7 +3737,6 @@ If NO-INIT is true, don't call the task on init
 ;; ** Clock
 (setq org-clock-into-drawer "CLOCK-LOGBOOK")
 (setq org-clock-mode-line-total 'today)
-(setq org-extend-today-until 6)
 (setq my/org-clocks-file org-default-notes-file)
 
 ;; (add-hook 'after-init-hook (lambda ()
@@ -3780,6 +3816,40 @@ If NO-INIT is true, don't call the task on init
 			     (file . find-file)
 			     (wl . wl)))
 
+;; *** Create links
+(defun my/org-store-link-kill-ring ()
+  (interactive)
+  (call-interactively 'org-store-link)
+  (kill-new
+   (org-link-make-string (substring-no-properties (caar org-stored-links))
+			 (ignore-errors (substring-no-properties (cadar org-stored-links)))))
+  (setq org-stored-links nil))
+
+(define-key my/leader-map (kbd "w") 'my/org-store-link-kill-ring)
+
+;; *** Global org-link support
+(straight-use-package '(org-link-minor-mode :type git :host github :repo "seanohalpin/org-link-minor-mode"))
+
+(setq my/org-link-minor-mode-whitelist '(prog-mode text-mode))
+
+(setq my/org-link-minor-mode-blacklist '(special-mode org-mode))
+
+(defun my/org-link-minor-mode-activate ()
+  (when (and (-find (lambda (mode) (derived-mode-p mode)) my/org-link-minor-mode-whitelist)
+	     (not (-find (lambda (mode) (derived-mode-p mode)) my/org-link-minor-mode-blacklist))
+	     (fboundp 'org-link-minor-mode))
+    (org-link-minor-mode 1)
+    ;; Org appear seems buggy outside of org-mode
+    ;; (org-appear-mode 1)
+    ))
+
+(define-minor-mode my/org-link-minor-mode "")
+
+(define-globalized-minor-mode my/global-org-link-minor-mode
+  my/org-link-minor-mode my/org-link-minor-mode-activate)
+
+(my/global-org-link-minor-mode 1)
+
 ;; ** Custom links
 ;; ***  Find wallpaper
 ;; Functions used in the find wallpaper snippet
@@ -3798,9 +3868,14 @@ If NO-INIT is true, don't call the task on init
 (with-eval-after-load 'org
   (require 'org-habit))
 
+(setq org-habit-show-habits-only-for-today nil)
 (setq org-habit-show-all-today t)
 
-(setq org-habit-graph-column 100)
+(setq org-habit-graph-column 120)
+
+;; Check org-habit-graph-column
+(with-eval-after-load 'org-habit
+  (setq org-agenda-tags-column (+ 1 org-habit-preceding-days org-habit-following-days org-habit-graph-column)))
 
 ;; log into LOGBOOK drawer
 (setq org-log-into-drawer t)
@@ -3842,7 +3917,8 @@ If NO-INIT is true, don't call the task on init
 (straight-use-package 'ob-async)
 
 ;; ** Org-roam
-(straight-use-package 'org-roam)
+(straight-use-package '(org-roam :type git :host github :repo "org-roam/org-roam" :branch "master"))
+;; (straight-use-package '(org-roam :type git :host github :repo "org-roam/org-roam" :branch "v2"))
 
 (with-eval-after-load 'org
   (require 'org-roam))
@@ -3969,6 +4045,9 @@ If NO-INIT is true, don't call the task on init
 
 (setq org-noter-always-create-frame nil)
 
+;; ** Table
+;; (straight-use-package 'org-transform-tree-table)
+
 ;; ** Key
 (define-prefix-command 'my/org-mode-map)
 (evil-define-key 'normal org-mode-map (kbd (concat my/leader-map-key " a")) #'my/org-mode-map)
@@ -4008,7 +4087,7 @@ If NO-INIT is true, don't call the task on init
 
 (define-key my/org-mode-map (kbd "E") (lambda () (interactive) (counsel-M-x "^org export-")))
 
-(define-key my/org-mode-map (kbd "$") (lambda () (interactive) (org-todo 'done)))
+(define-key my/org-mode-map (kbd "3") (lambda () (interactive) (org-todo 'done)))
 
 ;; * Time management - chronometrist
 ;; (straight-use-package 'chronometrist)
@@ -5046,10 +5125,6 @@ If the input is empty, select the previous history element instead."
 ;; Needed because its font isn't loaded on install, but is needed in theme
 (define-key my/leader-map (kbd "I") 'ivy-yasnippet)
 
-;; *** Keys
-(my/evil-normal-define-key "TAB" #'my/auto-tab)
-(my/evil-insert-define-key "TAB" #'my/auto-tab)
-
 ;; * Movement
 ;; ** Isearch
 (define-key isearch-mode-map (kbd "C-n") 'my/isearch-repeat-forward)
@@ -5357,6 +5432,8 @@ If the input is empty, select the previous history element instead."
 ;; ** Link-hint
 (straight-use-package 'link-hint)
 
+(define-key my/leader-map (kbd "l") 'link-hint-open-link)
+
 ;; ** Scroll
 (my/evil-universal-define-key "C-u" 'evil-scroll-up)
 (my/evil-universal-define-key "C-w" 'evil-scroll-down)
@@ -5419,7 +5496,6 @@ If the input is empty, select the previous history element instead."
 ;; (define-key my/leader-map (kbd "p") 'my/avy-goto-line-above-keep-horizontal-position)
 
 ;; (define-key my/keys-mode-map (kbd "M-l") 'link-hint-open-link)
-(define-key my/leader-map (kbd "l") 'link-hint-open-link)
 ;; (define-key my/keys-mode-map (kbd "M-???") 'link-hint-copy-link)
 
 ;; * Bookmark management
@@ -5814,7 +5890,9 @@ If the input is empty, select the previous history element instead."
       (when (or (not (string-match-p "=>" path)) (not (string-match-p project-name path)))
 	(if (string= project-name "-")
 	    (my/file-top-path path)
-	  (concat project-name (when branch-name (concat "@" branch-name)) " => " (my/file-top-path path)))))))
+	  (concat project-name
+		  ;; (when branch-name (concat "@" branch-name))
+		  " => " (my/file-top-path path)))))))
 
 (define-minor-mode my/custom-buffer-name-mode "")
 
@@ -6333,7 +6411,9 @@ If the input is empty, select the previous history element instead."
       ;; Without pretty print it formats results of "[[[ ... ]]]" as "| ... |"
       ;; ('org-mode (org-babel-execute-src-block))
       ;; ('org-mode (ob-async-org-babel-execute-src-block))
-      ('org-mode (org-babel-execute-src-block nil nil '((:result-params . ("pp")))))
+      ('org-mode (org-ctrl-c-ctrl-c)
+		 ;; (org-babel-execute-src-block nil nil '((:result-params . ("pp"))))
+		 )
       ('scheme-mode (geiser-eval-definition nil))
       ('clojure-mode (cider-eval-last-sexp))
       ;; ('racket-mode (geiser-eval-definition nil))
@@ -8162,11 +8242,16 @@ do the
      ;; Fixes a bug where if cursor is at heading, the one above gets narrowed
      (call-interactively 'yas-expand))))
 
+
 ;; *** Fix org-mode
 (with-eval-after-load 'org
   (add-to-list 'org-tab-first-hook (lambda ()
 				     (let ((yas-fallback-behavior 'return-nil))
 				       (yas-expand)))))
+
+;; *** Keys
+(my/evil-normal-define-key "TAB" #'my/auto-tab)
+(my/evil-insert-define-key "TAB" #'my/auto-tab)
 
 ;; * Automatic time tracking
 ;; ** activity-watch-mode
@@ -8186,14 +8271,14 @@ do the
   (concat my/timetrack-cache-dir "timetrack-" (format-time-string "%Y-%m-%d_%H" time) ".data"))
 
 (defun my/timetrack-get-all-logs-day-string (&optional time)
-  ;; Filter out any before 8
-  (let ((files-today (my/get-files-by-regex (format-time-string "timetrack-%Y-%m-%d_.*.data$" nil) my/timetrack-cache-dir)))
+  (let ((files-today (my/get-files-by-regex (format-time-string "timetrack-%Y-%m-%d_.*.data$" time) my/timetrack-cache-dir)))
     (or
-     (-filter (lambda (a)
-		(ignore-errors
-		  (let ((hour-pos (+ (string-match-p "_" a) 1)))
-		    (> (string-to-number (substring-no-properties a hour-pos (+ 2 hour-pos))) 8))))
-	      files-today)
+     ;; ;; Filter out any events before 08:00
+     ;; (-filter (lambda (a)
+     ;;			(ignore-errors
+     ;;			  (let ((hour-pos (+ (string-match-p "_" a) 1)))
+     ;;			    (> (string-to-number (substring-no-properties a hour-pos (+ 2 hour-pos))) 8))))
+     ;;		      files-today)
      files-today)))
 
 (defun my/timetrack-get-log (&optional time)
@@ -8213,23 +8298,35 @@ do the
       (my/timetrack-track--internal name-override project-override))
     (setq my/timetrack-lock nil)))
 
+(defun my/timetrack-track--get-buffer-category (&optional name-override project-override)
+  (let ((name (or name-override exwm-title (buffer-name)))
+	(project
+	 (let ((project-special-case (or project-override
+					 (if (string-match-p "EXWM" (buffer-name))
+					     (if (string-match-p "Youtube" (buffer-name))
+						 "Youtube"
+					       "EXWM")
+					   (if (string-match-p "*Org Agenda*" (buffer-name))
+					       "Agenda"
+					     nil
+					     )))))
+	   (or
+	    project-special-case
+	    (let ((project-name-raw (projectile-project-name)))
+	      (when (and project-name-raw (not (string= project-name-raw "-")))
+		project-name-raw))
+	    "N/A"
+	    ))))
+    (cons name project)))
+
 (defun my/timetrack-track--internal (&optional name-override project-override)
   (require 'projectile)
-  (let* ((name (or name-override exwm-title (buffer-name)))
-	 (project
-	  (let ((project-special-case (or project-override
-					  (if (string-match-p "EXWM" (buffer-name))
-					      (if (string-match-p "Youtube" (buffer-name))
-						  "Youtube"
-						"EXWM")
-					    nil))))
-	    (or
-	     project-special-case
-	     (let ((project-name-raw (projectile-project-name)))
-	       (when (and project-name-raw (not (string= project-name-raw "-")))
-		 project-name-raw))
-	     "N/A"
-	     ))))
+  (let* (
+	 (categories (my/timetrack-track--get-buffer-category name-override project-override))
+
+	 (name (car categories))
+	 (project (cdr categories))
+	 )
     (eval `(make-thread (lambda () (my/timetrack-track--internal-ugly-cleanup-hack ,name ,project ,my/timetrack-cache-todays-file))))))
 ;; (my/timetrack-track--internal-ugly-cleanup-hack "test" "man" ~/test.test)
 
@@ -8300,12 +8397,13 @@ do the
 (defun my/timetrack--view-inject (result-file files)
   (when (f-exists-p result-file)
     (f-delete result-file))
-  (shell-command-to-string (concat "cat "
-				   my/timetrack-html-beg " "
-				   (my/timetrack--view-concat-files files)  " "
-				   my/timetrack-html-end " "
-				   ">> "
-				   result-file)))
+  (shell-command-to-string (concat
+			    "cat"
+			    " " my/timetrack-html-beg
+			    " " (my/timetrack--view-concat-files files)
+			    " " my/timetrack-html-end
+			    " | " "sed 's/RANDOM_STRING/" (number-to-string (abs (random))) "/g'"
+			    " >> " result-file)))
 
 ;; **** Configurations
 (defun my/timetrack-show-specific (&optional files)
@@ -8313,14 +8411,14 @@ do the
   (my/timetrack--view-inject my/timetrack--view-cache-file (my/timetrack--view-completion files))
   (my/open-in-browser my/timetrack--view-cache-file))
 
-(defun my/timetrack-show-build-today (to-file)
+(defun my/timetrack-show-build-day (to-file time)
   (interactive)
   (my/timetrack--view-inject to-file
-			     (mapcar (lambda (a) (concat my/timetrack-cache-dir a)) (or (my/timetrack-get-all-logs-day-string)))))
+			     (mapcar (lambda (a) (concat my/timetrack-cache-dir a)) (my/timetrack-get-all-logs-day-string time))))
 
 (defun my/timetrack-show-today ()
   (interactive)
-  (my/timetrack-show-build-today my/timetrack--view-cache-file)
+  (my/timetrack-show-build-day my/timetrack--view-cache-file (current-time))
   (my/open-in-browser my/timetrack--view-cache-file))
 
 ;; ** selfspy
@@ -9856,7 +9954,7 @@ do the
 ;; (setq-default magit-diff-refine-ignore-whitespace nil)
 
 ;; *** Forge
-(straight-use-package '(forge :type git :host github :repo "magit/forge"))
+;; (straight-use-package '(forge :type git :host github :repo "magit/forge"))
 
 ;; *** Todos
 ;; (straight-use-package 'magit-todos)
@@ -10311,30 +10409,34 @@ do the
 ;; ** Auto export agenda screenshot
 (straight-use-package 'htmlize)
 
+(defvar my/export-agenda-cache-file-today (make-temp-file "today"))
+(defvar my/export-agenda-cache-file-yesterday (make-temp-file "yesterday"))
+
 (defun my/export-agenda-syncthing ()
   (let ((buf (htmlize-buffer)))
     (my/create-or-overwrite-file-with-content "~/sync/org-agenda-img/agenda.html" (my/buffer-string buf) nil)
-    (my/timetrack-show-build-today my/timetrack--view-cache-file)
+    (my/timetrack-show-build-day my/export-agenda-cache-file-today (current-time))
+    (my/timetrack-show-build-day my/export-agenda-cache-file-yesterday (time-subtract (current-time) (* 60 60 24)))
     (let ((tmp (make-temp-file "test")))
       (my/local-env-shell-command-to-string
        (concat
-	"cat " my/timetrack--view-cache-file " " "~/sync/org-agenda-img/agenda.html"
+	"cat " my/export-agenda-cache-file-yesterday  " " my/export-agenda-cache-file-today " " "~/sync/org-agenda-img/agenda.html"
 	" >> "
 	tmp " &&  mv " tmp " " "~/sync/org-agenda-img/agenda.html")))
     (eval `(run-with-timer 1 nil (lambda () (kill-buffer ,buf))))))
 
-(when my/auto-export-agenda-syncthing
-  (add-hook 'org-agenda-finalize-hook 'my/export-agenda-syncthing))
+;; (when my/auto-export-agenda-syncthing
+;;   (add-hook 'org-agenda-finalize-hook 'my/export-agenda-syncthing))
 
 ;; * Timer
 (defvar my/stopwatch-current nil)
 (defvar my/stopwatch-current-name nil)
 (defvar my/stopwatch-log (get-buffer-create " *Stopwatch log*"))
 
-(defun my/stopwatch-init ()
+(defun my/stopwatch-init (&optional name)
   (interactive)
   (my/stopwatch-stop)
-  (let ((name (read-string "Name: ")))
+  (let ((name (or name (read-string "Name: "))))
     (when (not (string= "" name))
       (setq my/stopwatch-current-name name)
       (setq my/stopwatch-current (time-convert nil 'integer)))))
@@ -10342,9 +10444,10 @@ do the
 (defun my/stopwatch-stop ()
   (when my/stopwatch-current
     ;;   (kill-new (my/stopwatch-format)))
-    (with-current-buffer my/stopwatch-log
-      (goto-char (point-max))
-      (insert (concat (my/stopwatch-format) "\n" )))
+    (when (buffer-live-p my/stopwatch-log)
+      (with-current-buffer my/stopwatch-log
+	(goto-char (point-max))
+	(insert (concat (my/stopwatch-format) "\n" ))))
     (setq my/stopwatch-current nil)
     (setq my/stopwatch-current-name nil)))
 
@@ -10784,6 +10887,7 @@ do the
   ;;   (message "Waiting 7 seconds for syncthing sync")))
   (ignore-errors
     (org-clock-out))
+  (my/stopwatch-init "Sleep")
   (redisplay)
   (sleep-for 7))
 
@@ -10878,11 +10982,14 @@ do the
   (message "enwc cache reset!"))
 
 (define-key my/network-map (kbd "r") 'my/enwc-reset-cache)
-(define-key my/network-map (kbd "e") 'enwc)
+(define-key my/network-map (kbd "e") (lambda () (interactive)
+				       ;; (require 'enwc)
+				       (enwc)))
 
 ;; *** Connect to wifi networks
 (defun my/nm-connect-to-wifi-network ()
   (interactive)
+  (require 'enwc-backend)
   (require 'enwc)
   (shell-command
    (concat "nmcli device wifi connect " "\""
@@ -11406,6 +11513,14 @@ do the
 
 ;; Enable pdf-links
 ;;(add-hook 'pdf-view-mode-hook 'pdf-links-minor-mode)
+
+;; *** org-pdftools
+(straight-use-package 'org-pdftools)
+(with-eval-after-load 'org
+  (require 'org-pdftools-autoloads)
+  (add-hook 'org-mode-hook (lambda ()
+			     (require 'org-pdftools)
+			     (org-pdftools-setup-link))))
 
 ;; *** Keys
 (with-eval-after-load 'pdf-tools
@@ -12073,28 +12188,28 @@ do the
 ;; ** Highlight changes
 (define-key my/leader-map (kbd "q") 'highlight-changes-mode)
 
-;; ** Scrollbar
-(straight-use-package 'yascroll)
-(global-yascroll-bar-mode)
-(setq yascroll:scroll-bar '(left-fringe))
-(setq yascroll:disabled-modes '(image-mode))
+;; ;; ** Scrollbar
+;; (straight-use-package 'yascroll)
+;; (global-yascroll-bar-mode)
+;; (setq yascroll:scroll-bar '(left-fringe))
+;; (setq yascroll:disabled-modes '(image-mode exwm-mode))
 
-(setq yascroll:disabled-modes (append yascroll:disabled-modes '(pdf-view-mode)))
+;; (setq yascroll:disabled-modes (append yascroll:disabled-modes '(pdf-view-mode)))
 
-;; *** Fix for emacs 27
-;; The function ~window-fringes~ returns a list of 4 results on some versions of emacs because of some reason. This fixes that
-(when (>= emacs-major-version 27)
-  (defun yascroll:choose-scroll-bar ()
-    (when (memq window-system yascroll:enabled-window-systems)
-      (cl-destructuring-bind (left-width right-width outside-margins pers)
-	  (window-fringes)
-	(cl-loop for scroll-bar in (yascroll:listify yascroll:scroll-bar)
-		 if (or (eq scroll-bar 'text-area)
-			(and (eq scroll-bar 'left-fringe)
-			     (> left-width 0))
-			(and (eq scroll-bar 'right-fringe)
-			     (> right-width 0)))
-		 return scroll-bar)))))
+;; ;; *** Fix for emacs 27
+;; ;; The function ~window-fringes~ returns a list of 4 results on some versions of emacs because of some reason. This fixes that
+;; (when (>= emacs-major-version 27)
+;;   (defun yascroll:choose-scroll-bar ()
+;;     (when (memq window-system yascroll:enabled-window-systems)
+;;       (cl-destructuring-bind (left-width right-width outside-margins pers)
+;;	  (window-fringes)
+;;	(cl-loop for scroll-bar in (yascroll:listify yascroll:scroll-bar)
+;;		 if (or (eq scroll-bar 'text-area)
+;;			(and (eq scroll-bar 'left-fringe)
+;;			     (> left-width 0))
+;;			(and (eq scroll-bar 'right-fringe)
+;;			     (> right-width 0)))
+;;		 return scroll-bar)))))
 
 ;; ** Hl-Todo
 (straight-use-package 'hl-todo)
@@ -12183,6 +12298,7 @@ do the
   (setq nix-font-lock-keywords '()))
 
 ;; * Modeline
+;; Related: [[file:~/.emacs.d/config.el::;; * Status line][Status line]]
 ;; ** Calculate frame width
 ;; (defvar my/frame-width (frame-width))
 
@@ -12448,6 +12564,7 @@ do the
 				file))))))))))
 
 ;; * Status line
+;; Related: [[file:~/.emacs.d/config.el::;; * Modeline][Modeline]]
 ;; ** Modules
 ;; http://www.holgerschurig.de/en/emacs-tayloring-the-built-in-mode-line/
 
@@ -12489,12 +12606,20 @@ do the
 	 (cpu-temp-str (or intel-cpu-temp-str ryzen-cpu-temp-str)))
     (when cpu-temp-str
       (let*
-	  ((cpu-temp-pos-beg (string-match-p "\+.*C\s" cpu-temp-str))
-	   (cpu-temp-pos-end (string-match-p "  " cpu-temp-str cpu-temp-pos-beg))
+	  ((cpu-temp-pos-beg (string-match-p (rx (+ num) "." (+ num) any "C") cpu-temp-str))
+	   (cpu-temp-pos-end (string-match-p (rx "." (+ num) any "C") cpu-temp-str cpu-temp-pos-beg))
 	   ;; Removes ".2°C"
 	   ;; (cpu-temp-pos-end-short (- cpu-temp-pos-end 4))
 	   )
-	(setq my/cpu-temp (substring cpu-temp-str cpu-temp-pos-beg cpu-temp-pos-end))))))
+	(let ((cpu-temp-formatted (my/format-cpu-temp (string-to-number (substring cpu-temp-str cpu-temp-pos-beg cpu-temp-pos-end)))))
+	  (setq my/cpu-temp cpu-temp-formatted))))))
+
+(defun my/format-cpu-temp (temp)
+  (concat
+   (if (> temp 80)
+       (propertize (number-to-string temp) 'face `(:background "red"))
+     (number-to-string temp))
+   "°C"))
 
 (if my/mode-line-enable-cpu-temp
     (my/allocate-update-time 'my/update-cpu-temp))
@@ -12848,7 +12973,7 @@ do the
 		      (concat
 		       "C "
 		       my/cpu-load
-		       ;; "%%%% "
+		       "%%%%"
 		       " - "
 
 		       (if my/mode-line-enable-cpu-temp
@@ -12882,6 +13007,9 @@ do the
 
 ;; (setq mini-modeline-frame (window-frame (minibuffer-window)))
 ;; (setq mini-modeline-frame nil)
+
+;; Update every second
+(setq mini-modeline-update-interval 1)
 
 (setq mode-line-format nil)
 (setq-default mode-line-format nil)
@@ -13111,21 +13239,14 @@ do the
   (interactive)
   (delete-other-windows)
   ;; Wall
-  (my/show-random-wallpaper)
+  ;; (my/show-random-wallpaper)
 
-  (split-window-below)
-  (other-window 1)
-
-  ;; Agenda
-  (when (file-exists-p my/notes-folder)
-    (my/org-agenda-show-agenda-and-todo))
-
-  ;; (split-window-right)
+  ;; (split-window-below)
   ;; (other-window 1)
 
-  ;; (find-file (concat my/notes-folder "Organize/Timeline/Achievements.png"))
-  ;; (image-increase-size 50)
-  ;; (image-forward-hscroll 10)
+  ;; Agenda
+  ;; (when (file-exists-p my/notes-folder)
+  ;;   (my/org-agenda-show-agenda-and-todo))
   )
 
 ;; ** Run it on startup
